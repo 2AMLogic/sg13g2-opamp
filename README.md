@@ -35,10 +35,14 @@ that only a decision record can open.
 
 ## Target specification (DRAFT — engineering to ratify)
 
+See [`spec/target-spec.md`](spec/target-spec.md) for the full DRAFT table:
 DC gain, GBW and phase margin into a stated capacitive load, slew rate,
 input-referred noise, offset sigma (basis stated), CMRR, PSRR, swing,
 supply/power at 1.2 V. Rows filled only from committed benches, PVT corners
-recorded.
+recorded. See also [`spec/porting-plan.md`](spec/porting-plan.md) for what
+transfers from this PDK's own `sg13g2-bandgap` and `sg13g2-ldo` siblings, and
+the [gap-to-T1 tracker](https://github.com/2AMLogic/sg13g2-opamp/issues/3)
+for this block's current distance from a sim-validated design.
 
 ## License
 
