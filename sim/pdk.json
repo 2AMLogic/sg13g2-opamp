@@ -1,0 +1,27 @@
+{
+  "_comment": "Pinned SG13G2 PDK revision this sim/ tree's committed evidence records were generated against. Every record under sim/*/records/*.md must trace to this file (or a later commit that bumps it) -- see sim/README.md 'PDK pin' section. Not consumed by tooling; kept as a plain, greppable fact sheet. Follows sg13g2-bandgap/sim/pdk.json's shape (same PDK, same pinned release).",
+  "source": "IHP-GmbH/IHP-Open-PDK",
+  "fetch_method": "klayout-tools scripts/fetch-ihp-sg13g2.sh (2AMLogic/klayout-tools)",
+  "release_tag": "v0.3.0",
+  "release_url": "https://github.com/IHP-GmbH/IHP-Open-PDK/archive/refs/tags/v0.3.0.tar.gz",
+  "pdk_root_layout": "PDK_ROOT/ihp-sg13g2 (open_pdks-shaped install, klt pdk find/list convention)",
+  "variant": "ihp-sg13g2",
+  "local_install_verified": {
+    "path_marker": "<PDK_ROOT>/ihp-sg13g2/.fetched-version",
+    "value_read": "0.3.0",
+    "checked": "2026-09-08"
+  },
+  "osdi_toolchain": {
+    "_comment": "Provenance of the OSDI (Verilog-A compact model) binaries every MOS-instantiating testbench in this tree loads. sim/tools/build-osdi.sh is the executable source of truth (copied structurally from sg13g2-bandgap/sim/tools/build-osdi.sh, adjusted only for this repo's cache directory name); this block restates its pins as a greppable fact sheet.",
+    "approach": "source-compile the PDK's own Verilog-A models with a checksum-pinned prebuilt OpenVAF-Reloaded compiler",
+    "build_script": "sim/tools/build-osdi.sh",
+    "compiler_repo": "OpenVAF/OpenVAF-Reloaded",
+    "compiler_tag": "v24.0.1mob",
+    "compiler_invocation_name": "openvaf-r",
+    "models_built": ["psp103.osdi", "psp103_nqs.osdi", "r3_cmc.osdi", "mosvar.osdi"],
+    "install_dir": "PDK_ROOT/ihp-sg13g2/libs.tech/ngspice/osdi (PDK-install territory, not tracked in this repo)",
+    "models_this_study_actually_needs": ["psp103.osdi"],
+    "note": "All four are loaded by every testbench in this tree per the shared build-osdi.sh --check convention, even though sim/gm-id-characterization/ only instantiates sg13_lv_nmos/sg13_lv_pmos (PSP103.6, psp103.osdi) -- no resistor (r3_cmc) or bipolar device appears in this study.",
+    "ngspice_actually_used": "ngspice-46"
+  }
+}

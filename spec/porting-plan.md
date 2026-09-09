@@ -176,11 +176,22 @@ fleet's blocks embed but never characterize on their own terms.
 - **Load capacitance (`CL`) target.** `target-spec.md`'s GBW/PM rows are
   stated "into stated CL" per `CLAUDE.md`, but no CL value has been chosen
   yet — tied to the topology decision above, not independent of it.
-- **Device characterization.** `CLAUDE.md`'s "gm/ID first" ordering means
-  the next concrete step, once this bootstrap pass merges, is a gm/ID
-  characterization sweep over SG13G2's LV core MOS flavor, committed to
-  `sim/` before any sizing work — the same practice `sg13g2-bandgap`
-  already followed on this PDK for its own devices.
+- **Device characterization — done (issue #5).** `CLAUDE.md`'s "gm/ID
+  first" ordering named this as the next concrete step once the bootstrap
+  pass merged. It landed as
+  [`sim/gm-id-characterization/`](../sim/gm-id-characterization/README.md):
+  gm/Id, gm/gds, Cgg and fT vs Vgs/overdrive for `sg13_lv_nmos`/
+  `sg13_lv_pmos`, across four channel lengths (0.13/0.26/0.52/1.04 um) and
+  all five `cornerMOSlv.lib` process corners — confirming this document's
+  own guess (above) that the LV device menu is the one to characterize, and
+  confirming `spec/target-spec.md` §1's `[TBD-1]` corner-grid guess against
+  the real PDK install. Verification note (this pass, checked against
+  `sg13g2-bandgap`'s current tree): that repo has **no** gm/ID or Vth
+  characterization sweep of its own to have "already followed" — the
+  phrasing above pre-dates that check and is corrected here rather than
+  silently rewritten; the *practice* (gm/ID before sizing) is still the
+  same one `CLAUDE.md` states directly. This study's own numbers, not any
+  sibling's, are what future sizing work here should cite.
 - **Gap-to-T1 tracker.** Tracks the block's current distance from the
   klayout-tools T1 ("sim-validated") design-evidence tier — every
   checklist item is currently unmet, since no schematic/layout/sim work has

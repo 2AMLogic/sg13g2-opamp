@@ -1,0 +1,83 @@
+* sg13g2-opamp -- gm/ID characterization sweep, sg13_lv_nmos (issue #5)
+* Generated from sim/gm-id-characterization/testbench/tb_gmid_nmos.spice.tmpl
+* by sim/gm-id-characterization/run_gmid_sweep.sh -- do not edit a generated
+* netlist-snapshots/*.spice file directly, edit this template and re-run the
+* sweep. Full methodology and rationale are in
+* sim/gm-id-characterization/README.md; this header is a short pointer.
+*
+* Generated for: device=sg13_lv_nmos length=0.13u corner=mos_ss
+* PDK: ihp-sg13g2 /Users/rwalters/share/pdk (see sim/pdk.json for the pinned release)
+* OSDI models: /Users/rwalters/share/pdk/ihp-sg13g2/libs.tech/ngspice/osdi (built by sim/tools/build-osdi.sh)
+*
+* METHOD (no OP-info interface exists on this OSDI/PSP103 build -- see
+* README.md "Why finite-difference DC/AC, not model op-point queries" for
+* why this is a DC/AC-derived measurement, not a queried model parameter):
+*   - Id, gm, gds: one nested `.dc` sweep. Outer axis is Vd at
+*     {VDS_NOM-DVDS, VDS_NOM, VDS_NOM+DVDS} (3 points); inner axis is Vg
+*     over the full weak-to-strong-inversion range. gm = d(Id)/d(Vgs) via
+*     ngspice's `deriv()` on the central (Vd=VDS_NOM) block; gds =
+*     d(Id)/d(Vds) via a central difference across the outer Vd axis at
+*     matching Vgs indices.
+*   - Cgg, fT: a second pass, looped one Vgs point at a time (`alter` +
+*     single-frequency `ac`), reading the imaginary part of the gate
+*     current phasor (Cgg = Im(Ig) / (2*pi*f)). fT = gm / (2*pi*Cgg) is
+*     computed by the driver script from the two passes' results, matched
+*     by Vgs.
+* Both device terminals: source and body tied to 0 V (vss) -- the standard
+* gm/ID characterization bias (Vsb=0), per Sedra/Silveira-style sweeps.
+
+.lib "/Users/rwalters/share/pdk/ihp-sg13g2/libs.tech/ngspice/models/cornerMOSlv.lib" mos_ss
+
+.options temp=27 tnom=27
+
+Vg g 0 dc 0.6 ac 1
+Vd d 0 dc 0.6
+Vs s 0 dc 0
+Vb b 0 dc 0
+
+Xdut d g s b sg13_lv_nmos w=10u l=0.13u ng=1 m=1
+
+.control
+pre_osdi /Users/rwalters/share/pdk/ihp-sg13g2/libs.tech/ngspice/osdi/psp103.osdi
+pre_osdi /Users/rwalters/share/pdk/ihp-sg13g2/libs.tech/ngspice/osdi/psp103_nqs.osdi
+pre_osdi /Users/rwalters/share/pdk/ihp-sg13g2/libs.tech/ngspice/osdi/mosvar.osdi
+pre_osdi /Users/rwalters/share/pdk/ihp-sg13g2/libs.tech/ngspice/osdi/r3_cmc.osdi
+
+* --- Pass 1: Id, gm, gds from a nested DC sweep (single ngspice analysis,
+* stays within the dc1 plot the whole time -- see README.md "ngspice
+* cross-plot vector gotcha" for why the AC loop below must not try to read
+* these vectors back after it starts running `ac`).
+dc Vg 0.05 1.15 0.02 Vd 0.58 0.62 0.02
+let ids_all = -i(vd)
+let vgs_all = v(g)
+let ids_lo = ids_all[0,55]
+let ids_mid = ids_all[56,111]
+let ids_hi = ids_all[112,167]
+let vgs = vgs_all[56,111]
+let gm = deriv(ids_mid)
+let gds = (ids_hi - ids_lo) / 0.04
+wrdata /Users/rwalters/GitHub/sg13g2-opamp/.loom/worktrees/issue-5/sim/gm-id-characterization/corners/20260909-063633-b402592/nmos_0.13u_mos_ss_dc.csv vgs ids_mid gm gds
+
+* --- Pass 2: Cgg from a single-frequency AC loop, one Vgs point at a time.
+* Vgs values are regenerated here by plain arithmetic (NOT by reading back
+* the `vgs` vector above) so this loop has no dependency on the dc1 plot
+* once `ac` switches ngspice's current plot away from it -- see README.md
+* "ngspice cross-plot vector gotcha". For the same reason, Vgs is `echo`ed
+* on its OWN line *before* `ac` runs and Cgg on a separate line *after* --
+* printing them together on one line after `ac` has already switched the
+* current plot silently drops the Vgs value. The driver script pairs
+* GMID_VGS/GMID_CGG lines by their sequence order, not by joining on a
+* shared vector.
+let i = 0
+dowhile i < 56
+  let vgv = 0.05 + i*0.02
+  echo "GMID_VGS $&vgv"
+  alter Vg = $&vgv
+  ac lin 1 10meg 10meg
+  let ig = i(vg)
+  let cval = abs(imag(ig)) / (2*3.14159265358979*10meg)
+  echo "GMID_CGG $&cval"
+  let i = i + 1
+end
+.endc
+.end
