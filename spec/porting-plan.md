@@ -106,14 +106,15 @@ new (neither sibling is a standalone, general-purpose op-amp).
 - **gm/ID-first sizing.** `CLAUDE.md`'s "gm/ID first, committed to `sim/`
   before sizing" is the same practice `sg13g2-bandgap` follows; nothing
   about a two-stage op-amp topology changes that ordering.
-- **The decision-record process itself**, once one is needed. No
-  `spec/decision-records/` directory exists in this repo yet (this
-  bootstrap pass makes no decisions requiring one). When the first real
-  decision is made (e.g. picking a compensation scheme, or opening the
-  3.3 V I/O stretch row), it should follow one of the two precedented
-  conventions — `sg13g2-bandgap`'s `NNNN-<slug>.md` or `sg13g2-ldo`'s
-  `DR-NNN-<slug>.md` — picked once and kept consistent within this repo;
-  the fleet has not converged on one, so neither choice is wrong.
+- **The decision-record process itself**, once one is needed. At the time
+  of this bootstrap pass (issue #2), no `spec/decision-records/` directory
+  existed in this repo yet (that pass made no decisions requiring one).
+  **Update (issue #6)**: the first real decision has now landed —
+  [`spec/decision-records/0001-topology-and-cl.md`](decision-records/0001-topology-and-cl.md) —
+  following `sg13g2-bandgap`'s `NNNN-<slug>.md` convention (the only one
+  with live precedent in the fleet, per that record's own header), rather
+  than `sg13g2-ldo`'s `DR-NNN-<slug>.md`; this repo now follows that
+  convention going forward.
 
 ## 2. What changes, and why
 
@@ -168,14 +169,22 @@ fleet's blocks embed but never characterize on their own terms.
 
 ## 4. Open items and next steps
 
-- **Topology decision.** Neither sibling's amplifier schematic transfers
-  directly (§3), so the first real design decision this repo needs is its
-  own two-stage Miller-compensated topology choice (input-pair polarity,
-  output-stage class, cascode-or-not) — not yet made, and out of scope for
-  this bootstrap pass.
-- **Load capacitance (`CL`) target.** `target-spec.md`'s GBW/PM rows are
-  stated "into stated CL" per `CLAUDE.md`, but no CL value has been chosen
-  yet — tied to the topology decision above, not independent of it.
+- **Topology decision — resolved (issue #6).** Neither sibling's amplifier
+  schematic transfers directly (§3), so the first real design decision this
+  repo needed was its own two-stage Miller-compensated topology choice
+  (input-pair polarity, output-stage class, cascode-or-not). Landed as
+  [`spec/decision-records/0001-topology-and-cl.md`](decision-records/0001-topology-and-cl.md)
+  (status `proposed`): NMOS input pair, single-ended Class-A common-source
+  output stage with a PMOS gain device, non-cascoded — each choice cited
+  directly against `sim/gm-id-characterization/records/*.csv`'s gm/Id,
+  gm/gds and fT figures (issue #5). Actual sizing (widths/lengths/currents)
+  remains a follow-on step.
+- **Load capacitance (`CL`) target — resolved (issue #6).** `target-spec.md`'s
+  GBW/PM rows are stated "into stated CL" per `CLAUDE.md`; this is now set
+  to `CL = 2 pF`, per the same decision record above, chosen on independent
+  engineering judgment (no twin-repo precedent exists yet) as a
+  representative moderate load for this standalone canary op-amp's own
+  bench.
 - **Device characterization — done (issue #5).** `CLAUDE.md`'s "gm/ID
   first" ordering named this as the next concrete step once the bootstrap
   pass merged. It landed as

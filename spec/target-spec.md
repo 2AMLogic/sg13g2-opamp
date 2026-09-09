@@ -1,8 +1,11 @@
 # Target specification — sg13g2-opamp
 
-- **Status**: **DRAFT** — engineering input, not yet ratified. No decision
-  record exists yet in this repo; ratification is a future issue, once
-  gm/ID device-characterization data lands under `sim/`.
+- **Status**: **DRAFT** — engineering input, not yet ratified. A first
+  decision record now exists
+  ([`decision-records/0001-topology-and-cl.md`](decision-records/0001-topology-and-cl.md),
+  status `proposed`), but nothing in this repo has been through the
+  ratification process yet; ratification of this table as a whole is a
+  future issue, once the remaining `[TBD-#n]` sizing rows are filled in.
 - **Date**: 2026-09-06
 - **Assembled by**: Loom Builder agent, issue #2 (bootstrap/scaffolding pass)
 - **Scope**: 1.2 V core (LV) variant only, matching this repo's own
@@ -35,7 +38,7 @@ glance:
 
 | Tag | Meaning |
 |---|---|
-| **[DR-n]** | Carried unchanged from decision record `n`. None exist yet in this repo — no row currently carries this tag. |
+| **[DR-n]** | Carried unchanged from decision record `n`. `[DR-1]` ([`decision-records/0001-topology-and-cl.md`](decision-records/0001-topology-and-cl.md)) is the first, carried by the corner-grid and CL rows in §1 below. |
 | **[P]** | **Proposed by this bootstrap pass** — an engineering placeholder with no measured SG13G2 device data behind it yet (e.g. carried from the block's own README/CLAUDE.md framing, or a structural convention borrowed from a sibling repo's ratified spec). Needs an explicit ratification decision before it binds. |
 | **[TBD-#n]** | Deliberately unset — no SG13G2 device data exists yet to propose even a placeholder number. `#n` is the row's index in §2 below, so a future characterization pass can address each unset row individually. Tracked collectively under the gap-to-T1 tracker (linked from `README.md` and `porting-plan.md`) — item 5, "Full PVT corner simulation vs a ratified spec" — rather than one issue per row; no per-row characterization issue has been filed yet. |
 
@@ -59,15 +62,15 @@ this placeholder prediction of where the number will eventually bind. A
 | Supply voltage, VDD | **1.2 V ±10% → 1.08–1.32 V** [P] | Primary variant, using SG13G2's LV core devices (`sg13_lv_nmos`/`sg13_lv_pmos`, PSP 103.6 model, `V_GS ≤ 1.65 V @125°C`). Matches this repo's own `README.md` draft framing ("supply/power at 1.2 V") — not yet cross-checked against a ratified sibling spec, since neither `sg13g2-bandgap` nor `sg13g2-ldo` targets a 1.2 V-primary rail (both are 3.3 V-primary, per `sg13g2-bandgap/spec/porting-plan.md` DR-0002). This repo's 1.2 V choice is this block's own, carried from its own README, not inherited from a sibling. |
 | Supply voltage, VDD (stretch) | **3.3 V I/O (HV flavor) — not opened** [P] | SG13G2's `sg13_hv_nmos`/`sg13_hv_pmos` (3.3 V I/O, `V_GS ≤ 3.3 V Maximum`) are named here only so a future decision record has a place to point at. Per `CLAUDE.md`, opening this row requires its own decision record; it is not in scope now. Never mixed with 1.2 V-flavor (LV) devices in one variant. |
 | Operating temperature | **−40…+125 °C** [P] | Matches the fleet-wide convention (`sg13g2-bandgap`, `gf180-bandgap`, `gf180-temp-por`) for a commercial-grade PDK part. No SG13G2-specific device data has been checked against this range yet for this block — proposed by analogy, not measured. |
-| Corner grid | **[TBD-1]** | Process corners for SG13G2's LV MOS flavor are not yet enumerated in this repo. SG13G2 ships per-device-family corner files (`cornerMOSlv.lib`, `cornerMOShv.lib`, `cornerRES.lib`, `cornerCAP.lib`, per `sg13g2-bandgap/spec/porting-plan.md` §7) — the likely template is the standard `tt`/`ff`/`ss`/`fs`/`sf` grid on `cornerMOSlv.lib`, but this has not been confirmed against this block's actual device menu (which resistor/cap flavors it uses, if any) yet — see [`porting-plan.md`](porting-plan.md) §4. |
-| Load capacitance, CL | **[TBD-2]** | GBW/phase-margin targets are stated "into stated CL" per `CLAUDE.md`; no CL has been chosen yet since no application/bench context exists for this standalone op-amp characterization. |
+| Corner grid | **`cornerMOSlv.lib`: `tt`/`ff`/`ss`/`sf`/`fs` [DR-1]** | Ratified by [decision record 0001](decision-records/0001-topology-and-cl.md): the standard five-corner `mos_tt`/`mos_ff`/`mos_ss`/`mos_sf`/`mos_fs` grid on `cornerMOSlv.lib`, confirmed against the real PDK install by issue #5's gm/ID characterization sweep (`sim/gm-id-characterization/`) and now carried into this table. Temperature axis (`−40…+125 °C` row above) is crossed with this grid at testbench time, not folded into the corner-file grid itself. |
+| Load capacitance, CL | **2 pF [DR-1]** | Ratified by [decision record 0001](decision-records/0001-topology-and-cl.md): a representative moderate load for this standalone canary op-amp's own bench (no downstream consumer or twin-repo precedent to match), chosen so GBW/slew targets derived from it stay meaningful for this block's likely bias-current budget. See the decision record's `## Alternatives considered` for rejected larger/consumer-matched CL choices. |
 
 ## 2. Performance targets
 
 | Parameter | Target | Stretch | Statistical basis | Binding corner (predicted) | Status |
 |---|---|---|---|---|---|
 | Open-loop DC gain | **[TBD-3]** | — | — (deterministic corner-worst-case candidate) | SS / −40 °C (lowest gm, highest output impedance loss) | not started |
-| GBW (into stated CL, [TBD-2] above) | **[TBD-4]** | — | — | SS / −40 °C / low VDD (slowest devices) | not started |
+| GBW (into stated CL = 2 pF [DR-1], above) | **[TBD-4]** | — | — | SS / −40 °C / low VDD (slowest devices) | not started |
 | Phase margin (at GBW, same CL) | **≥ 60° [P]** | ≥ 45° at the FF/hot corner if 60° is unreachable there | — (deterministic corner-worst-case) | FF / 125 °C (fastest devices, most peaking risk) | not started |
 | Slew rate | **[TBD-5]** | — | — | SS / −40 °C / low VDD (lowest tail-current headroom) | not started |
 | Input-referred noise | **[TBD-6]** — band not yet chosen | — | n/a until a band is set | n/a | not started |
@@ -81,23 +84,29 @@ this placeholder prediction of where the number will eventually bind. A
 Every `[TBD-#n]` row above is deliberately left unset rather than guessed,
 per `CLAUDE.md`'s "no claim without a testbench" and "gm/ID first" rules,
 and per this issue's explicit scope (scaffolding only, no circuit design or
-simulation). Filling any of them requires, at minimum, a topology decision
-(tracked in [`porting-plan.md`](porting-plan.md)) and a gm/ID
-device-characterization pass committed to `sim/`, per `CLAUDE.md`'s
+simulation). The topology decision and gm/ID device-characterization pass
+these rows depend on are now both committed
+([`decision-records/0001-topology-and-cl.md`](decision-records/0001-topology-and-cl.md)
+and `sim/gm-id-characterization/`, respectively) — filling the remaining
+`[TBD-#n]` rows above is now a sizing exercise against that topology and
+that data, not a decision that is still outstanding, per `CLAUDE.md`'s
 "gm/ID first, committed to `sim/` before sizing."
 
 ## 3. What this table is not
 
-- **Not ratified.** No `spec/decision-records/` directory exists yet in
-  this repo. Ratification (per `CLAUDE.md`'s two-key mechanism — an EE key
-  and a market key) is a future issue's job, once the `[TBD-#n]` rows above
+- **Not ratified.** `spec/decision-records/` now exists (`0001-topology-and-cl.md`,
+  status `proposed`), but nothing in this repo has passed ratification
+  (per `CLAUDE.md`'s two-key mechanism — an EE key and a market key) yet —
+  that is a future issue's job, once the remaining `[TBD-#n]` rows above
   have real SG13G2 device data behind them. Per the generalized 2026-08-28
   ruling (cited in issue #2's original body), a scope-only spec DR ratified
   with both keys needs no separate per-PR operator statement — but that
   ruling applies at ratification time, not to this DRAFT.
-- **Not a commitment that every `[TBD-#n]` row will end up non-trivial.**
-  Some rows (e.g. the corner grid, or the load capacitance) may turn out to
-  be determined jointly with a topology decision rather than independently.
+- **Not a commitment that every remaining `[TBD-#n]` row will end up
+  non-trivial.** The corner grid and load capacitance rows in §1 are now
+  resolved (`[DR-1]`); the remaining `[TBD-#n]` rows in §2 may still turn
+  out to be determined jointly with future sizing work rather than
+  independently.
 - **Not opening the 3.3 V I/O (HV) stretch row.** It is named, not scoped
   in.
 - **Not sizing an HBT input stage.** Per `CLAUDE.md`, this block is
@@ -107,6 +116,10 @@ device-characterization pass committed to `sim/`, per `CLAUDE.md`'s
 
 ## 4. Sources
 
+- [`decision-records/0001-topology-and-cl.md`](decision-records/0001-topology-and-cl.md) —
+  the `[DR-1]`-tagged corner-grid and CL rows in §1 above; the topology
+  decision (input-pair polarity, output-stage class, cascode-or-not) that
+  the remaining `[TBD-#n]` sizing rows in §2 will size against.
 - `CLAUDE.md` (this repo) — the row set, the "CMOS only" and "gm/ID first"
   rules, and the friction protocol.
 - `README.md` (this repo) — the 1.2 V-primary supply framing this table's
