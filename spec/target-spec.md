@@ -69,16 +69,16 @@ this placeholder prediction of where the number will eventually bind. A
 
 | Parameter | Target | Stretch | Statistical basis | Binding corner (predicted) | Status |
 |---|---|---|---|---|---|
-| Open-loop DC gain | **[TBD-3]** | — | — (deterministic corner-worst-case candidate) | SS / −40 °C (lowest gm, highest output impedance loss) | not started |
-| GBW (into stated CL = 2 pF [DR-1], above) | **[TBD-4]** | — | — | SS / −40 °C / low VDD (slowest devices) | not started |
-| Phase margin (at GBW, same CL) | **≥ 60° [P]** | ≥ 45° at the FF/hot corner if 60° is unreachable there | — (deterministic corner-worst-case) | FF / 125 °C (fastest devices, most peaking risk) | not started |
+| Open-loop DC gain | **37.8 dB worst-case, 45.2 dB best-case [P]** — measured `sim/open-loop-ac/records/20260910-221601-22feaba.csv`, citing `design/opamp_sizing.md`'s sizing pass | — | — (deterministic corner-worst-case candidate) | Predicted: SS / −40 °C (lowest gm, highest output impedance loss). **Measured worst case is instead FS / 125 °C / 1.08 V** — gain falls monotonically with rising temperature across this grid, the opposite of the pre-schematic guess; see `sim/open-loop-ac/README.md` "Measured vs. predicted binding corners" | Measured (not yet ratified) |
+| GBW (into stated CL = 2 pF [DR-1], above) | **4.74 MHz worst-case, 6.62 MHz best-case [P]** — measured `sim/open-loop-ac/records/20260910-221601-22feaba.csv` | — | — | Predicted: SS / −40 °C / low VDD (slowest devices). **Measured worst case is instead FS / 125 °C / 1.08 V**, same correction as the DC-gain row above | Measured (not yet ratified) |
+| Phase margin (at GBW, same CL) | **≥ 60° [P]** — measured worst case 76.4° at FF / 125 °C / 1.32 V, clearing this target with comfortable margin (`sim/open-loop-ac/records/20260910-221601-22feaba.csv`) | ≥ 45° at the FF/hot corner if 60° is unreachable there | — (deterministic corner-worst-case) | FF / 125 °C (fastest devices, most peaking risk) — **confirmed** by measurement, the one row where the pre-schematic prediction and the measured worst corner agree | not started (target itself unchanged; measured number is new) |
 | Slew rate | **[TBD-5]** | — | — | SS / −40 °C / low VDD (lowest tail-current headroom) | not started |
 | Input-referred noise | **[TBD-6]** — band not yet chosen | — | n/a until a band is set | n/a | not started |
 | Input-referred offset | **[TBD-7]** | — | **3σ, mismatch MC N≥300 + process corners [P]** — matches `gf180-bandgap`'s ratified statistical-basis convention (also carried by the `gf180-opamp` twin); sample count not yet re-derived for this topology or for SG13G2's own mismatch decks (`sg13g2_moslv_mod_mismatch.lib`) | to be determined once a topology is drawn — likely SS/FF split-corner pairing on the input differential pair | not started |
 | CMRR | **[TBD-8]** | — | — (deterministic corner-worst-case) | to be determined | not started |
 | PSRR | **[TBD-9]** | — | — (deterministic corner-worst-case) | to be determined | not started |
 | Output swing | **[TBD-10]** | — | — | low VDD / worst output-stage headroom corner | not started |
-| Quiescent power | **[TBD-11]** | — | — (deterministic corner-worst-case) | FF / 125 °C / 1.32 V (leakage + fastest devices) — matches `gf180-bandgap`'s ratified Iq binding-corner convention, adapted to this block's 1.2 V rail | not started |
+| Quiescent power | **Iq = 119.7 uA worst-case (total Vdd current, incl. the external 10 uA `ibias` reference), 99.9 uA best-case [P]** — measured `sim/open-loop-ac/records/20260910-221601-22feaba.csv`; signal-path-only figures (excluding `ibias`) are ~10 uA lower per point, see that record's `ivdd_signal_path_a` column and `design/opamp_sizing.md`'s "Iq reporting note" | — | — (deterministic corner-worst-case) | Predicted: FF / 125 °C / 1.32 V (leakage + fastest devices) — matches `gf180-bandgap`'s ratified Iq binding-corner convention. **Measured worst case is instead SS / −40 °C / 1.32 V** — the coldest, slowest corner drew the most current in this design, opposite the leakage-dominated prediction (consistent with a bias point where lower `Vth`-headroom margin, not leakage, sets `Iq` at this corner) | Measured (not yet ratified) |
 | Area | **[TBD-12]** | — | n/a (not a PVT line) | n/a | not started |
 
 Every `[TBD-#n]` row above is deliberately left unset rather than guessed,
@@ -120,6 +120,16 @@ that data, not a decision that is still outstanding, per `CLAUDE.md`'s
   the `[DR-1]`-tagged corner-grid and CL rows in §1 above; the topology
   decision (input-pair polarity, output-stage class, cascode-or-not) that
   the remaining `[TBD-#n]` sizing rows in §2 will size against.
+- `design/opamp_sizing.md` (issue #9) — the gm/ID sizing pass, citing
+  `sim/gm-id-characterization/records/*.csv`, that sizes the DR-1 topology
+  into `design/opamp_core.sch`; the `[P]`-tagged DC gain, GBW, phase margin
+  and quiescent power rows in §2 above trace to this sizing and the bench
+  below, not to a hand guess.
+- `sim/open-loop-ac/records/20260910-221601-22feaba.{csv,md}` (issue #9) —
+  the open-loop AC PVT-grid bench (45 points,
+  `mos_tt/ss/ff/sf/fs` x `{-40,27,125} °C` x `{1.08,1.20,1.32} V`) this
+  update's `[P]`-tagged DC gain, GBW, phase margin and quiescent power
+  numbers in §2 above are measured from.
 - `CLAUDE.md` (this repo) — the row set, the "CMOS only" and "gm/ID first"
   rules, and the friction protocol.
 - `README.md` (this repo) — the 1.2 V-primary supply framing this table's

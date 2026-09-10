@@ -1,0 +1,104 @@
+* sg13g2-opamp -- open-loop AC bench, design/opamp_core.sch (issue #9)
+* Generated from
+* sim/open-loop-ac/testbench/tb_openloop_ac.spice.tmpl by
+* sim/open-loop-ac/run_pvt_sweep.sh -- do not edit a generated
+* netlist-snapshots/*.spice file directly, edit this template and re-run
+* the sweep.
+*
+* Point: corner=mos_sf temp_c=125 vdd_v=1.08
+* PDK: ihp-sg13g2 /Users/rwalters/share/pdk (see sim/pdk.json for the pinned release)
+* OSDI models: /Users/rwalters/share/pdk/ihp-sg13g2/libs.tech/ngspice/osdi (built by sim/tools/build-osdi.sh)
+* DUT netlist snapshot: /Users/rwalters/GitHub/sg13g2-opamp/.loom/worktrees/issue-9/sim/open-loop-ac/netlist-snapshots/20260910-221601-22feaba/opamp_core.spice (frozen copy of
+*   design/netlist/opamp_core.spice alongside this generated testbench, so
+*   the exact DUT netlist this point ran against is reviewable later)
+*
+* ------------------------------------------------------------------ method
+* design/netlist/opamp_core.spice is a FLAT xschem netlist (its
+* "**.subckt"/"**.ends" lines are full-line SPICE comments, not an active
+* subcircuit wrapper -- verified directly against the generated file), so
+* .include'ing it makes its own node names (vdd, vss, inn, inp, out, ibias,
+* plus the internal d1/d2/tail nodes) live directly at this testbench's top
+* level. No "X..." instantiation is needed or used.
+*
+* DC bias / AC loop-break: Lbreak = 1e18 H from inn to out. An ideal
+* inductor is a dead short at DC (any inductance), so at DC this forces
+* inn = out, and with the amplifier's own large open-loop gain the loop
+* self-consistently settles near a unity-gain-buffer-like bias point
+* (Vout(dc) close to Vinp(dc) = Vcm = VDD/2) -- the "op point established
+* by the standard large-L feedback trick" this issue's scope names.
+* Empirically (this bench's own dev-time check, see README.md "Choosing
+* Lbreak"), a much smaller L (e.g. 1e9 H, the value
+* sg13g2-bandgap/sim/loop-gain-phase-margin/ uses for a DIFFERENT
+* measurement) is NOT large enough here: inn's only other AC path to
+* ground is M1's femtofarad-scale gate capacitance, so the L-Cgg corner
+* frequency (~sqrt(1/(L*Cgg)) app.) lands within this sweep's own frequency
+* range for L=1e9 H, corrupting exactly the low-frequency Av0 plateau this
+* bench needs to read cleanly. L=1e18 H pushes that corner far below 1 Hz
+* (this template's lowest swept frequency), restoring a flat low-frequency
+* plateau -- confirmed empirically before this template was committed (see
+* README.md).
+*
+* The AC test signal (1 V magnitude, so vdb(out) IS Av(f) in dB directly,
+* no extra scaling) is injected at inp; inn carries no separate AC source
+* (Lbreak isolates it from out at AC). Since design/opamp_core.sch's own
+* header ("polarity") and design/opamp_sizing.md establish inp as the
+* NON-inverting input, this measures Av(f) = Vout(f)/Vinp(f) referenced to
+* the non-inverting input directly -- phase starts near 0 deg at low
+* frequency (not near 180 deg), so phase margin below is computed as
+* PM = 180 deg + phase_at_unity_gain (phase becomes negative as poles roll
+* off), not the 180-degree-referenced convention a loop-gain-style,
+* negative-feedback-referenced measurement would use.
+*
+* ibias: a single external ideal current-source bias pin, per
+* design/opamp_sizing.md "Bias scope" -- 10 uA sunk from vdd through the
+* ibias node into the DUT's own diode-connected Mbias, which mirrors 1:1
+* into the tail (M5) and at a ~5.41x ratio into the output-stage sink (M7).
+* This current is NOT part of the DUT's own bias-generation scope (no bias
+* generator is designed in this issue) -- run_pvt_sweep.sh reports total
+* Vdd supply current AND this fixed 10 uA separately, per
+* opamp_sizing.md's "Iq reporting note", rather than picking one silently.
+*
+* Per-point DC sanity check (op landed near mid-rail, no internal node
+* fully railed) is computed by run_pvt_sweep.sh from this file's own
+* echoed OP_* lines below -- see README.md "Per-point sanity checks" for
+* the exact pass/fail rule, and why it is a necessary, not sufficient,
+* proxy for "the input pair is really in saturation" (this OSDI/PSP103
+* build exposes no queryable per-device operating-point parameters -- see
+* sim/gm-id-characterization/README.md "Why finite-difference DC/AC, not
+* model op-point queries" for the same limitation encountered there).
+
+.lib "/Users/rwalters/share/pdk/ihp-sg13g2/libs.tech/ngspice/models/cornerCAP.lib" cap_typ
+.include "/Users/rwalters/GitHub/sg13g2-opamp/.loom/worktrees/issue-9/sim/open-loop-ac/netlist-snapshots/20260910-221601-22feaba/opamp_core.spice"
+
+.lib "/Users/rwalters/share/pdk/ihp-sg13g2/libs.tech/ngspice/models/cornerMOSlv.lib" mos_sf
+
+.options temp=125 tnom=27
+
+Vdd vdd 0 dc 1.08
+Vss vss 0 dc 0
+Iibias vdd ibias dc 10u
+Vinp inp 0 dc 0.54 ac 1
+Lbreak inn out 1e18
+Cload out vss 2e-12
+
+.control
+pre_osdi /Users/rwalters/share/pdk/ihp-sg13g2/libs.tech/ngspice/osdi/psp103.osdi
+pre_osdi /Users/rwalters/share/pdk/ihp-sg13g2/libs.tech/ngspice/osdi/psp103_nqs.osdi
+pre_osdi /Users/rwalters/share/pdk/ihp-sg13g2/libs.tech/ngspice/osdi/mosvar.osdi
+pre_osdi /Users/rwalters/share/pdk/ihp-sg13g2/libs.tech/ngspice/osdi/r3_cmc.osdi
+
+op
+echo "OP_VOUT $&v(out)"
+echo "OP_VD1 $&v(d1)"
+echo "OP_VD2 $&v(d2)"
+echo "OP_VTAIL $&v(tail)"
+echo "OP_VIBIAS $&v(ibias)"
+let ivdd_op = -i(vdd)
+echo "OP_IVDD $&ivdd_op"
+
+ac dec 20 1 1g
+let vout_db = db(v(out))
+let vout_ph = cph(v(out)) * 180 / 3.14159265358979
+wrdata /Users/rwalters/GitHub/sg13g2-opamp/.loom/worktrees/issue-9/sim/open-loop-ac/corners/20260910-221601-22feaba/mos_sf_125C_1.08V_ac.csv vout_db vout_ph
+.endc
+.end

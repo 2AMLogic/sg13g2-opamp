@@ -1,0 +1,87 @@
+#### Project-local xschem configuration for sg13g2-opamp (issue #9).
+####
+#### Ported from sg13g2-bandgap/design/xschemrc (same PDK, same fleet
+#### convention): reset XSCHEM_LIBRARY_PATH to a known-good baseline first,
+#### since a leftover per-machine ~/.xschem/xschemrc can otherwise silently
+#### override it with stale content. Load this explicitly and unambiguously
+#### with:
+####   xschem --rcfile design/xschemrc ...
+#### (cwd-relative "./xschemrc" auto-discovery only fires if xschem's cwd
+#### happens to be this directory.)
+
+set XSCHEM_LIBRARY_PATH {}
+append XSCHEM_LIBRARY_PATH :${XSCHEM_SHAREDIR}/xschem_library/devices
+
+#### PDK_ROOT / PDK: pass through from the shell environment. This repo's
+#### PDK variant directory is always named "ihp-sg13g2" (IHP-Open-PDK's own
+#### layout, klayout-tools klt pdk find/list convention -- see sim/env.sh
+#### for the same resolution order used by every run_*.sh in this repo).
+
+if {[info exists env(PDK_ROOT)]} {
+  set PDK_ROOT $env(PDK_ROOT)
+}
+if {[info exists env(PDK)]} {
+  set PDK $env(PDK)
+} else {
+  set PDK ihp-sg13g2
+}
+
+#### ---------------------------------------------------------------------
+#### SG13G2 PDK resolution + this repo's libraries.
+####
+#### Resolves the PDK the same way sim/env.sh (and klt pdk find) does
+#### (PDK_ROOT+PDK env, falling back to the usual open_pdks install
+#### prefixes) so xschem and any run_*.sh script agree on which PDK
+#### install is in use. Nothing here hardcodes a machine-specific path.
+
+if { ![info exists PDK_ROOT] || $PDK_ROOT eq {} } {
+    foreach candidate [list /usr/share/pdk /usr/local/share/pdk \
+                            [file join $env(HOME) share pdk] \
+                            [file join $env(HOME) .ciel] \
+                            [file join $env(HOME) .volare]] {
+        if { [file isdir [file join $candidate $PDK libs.tech xschem]] } {
+            set PDK_ROOT $candidate
+            break
+        }
+    }
+}
+
+if { ![info exists PDK_ROOT] || $PDK_ROOT eq {} } {
+    puts stderr "xschemrc: no $PDK install found under PDK_ROOT or the usual prefixes."
+    puts stderr "xschemrc: set PDK_ROOT (and optionally PDK) and restart xschem -- see"
+    puts stderr "xschemrc: scripts/fetch-ihp-sg13g2.sh in klayout-tools, or klt pdk find."
+} else {
+    set env(PDK_ROOT) $PDK_ROOT
+    set env(PDK) $PDK
+    set pdk_xschemrc [file join $PDK_ROOT $PDK libs.tech xschem xschemrc]
+    if { [file exists $pdk_xschemrc] } {
+        source $pdk_xschemrc
+    } else {
+        puts stderr "xschemrc: $pdk_xschemrc not found; $PDK symbols unavailable."
+    }
+}
+
+#### ------------------------------------------------------- repo libraries ---
+#### Re-assert the generic devices library and add this repo's directories
+#### last, so that sourcing the PDK's xschemrc above cannot drop them.
+set REPO_ROOT [file dirname [file dirname [file normalize [info script]]]]
+
+if { ![info exists XSCHEM_LIBRARY_PATH] } { set XSCHEM_LIBRARY_PATH {} }
+append XSCHEM_LIBRARY_PATH :${XSCHEM_SHAREDIR}/xschem_library/devices
+
+append XSCHEM_LIBRARY_PATH :[pwd]
+append XSCHEM_LIBRARY_PATH :[file join $REPO_ROOT design]
+
+# Testbenches live at sim/<experiment-slug>/testbench/ (fleet convention,
+# see sg13g2-bandgap/sim/README.md) -- glob is a no-op until sim/ has any.
+foreach tb_dir [glob -nocomplain -type d [file join $REPO_ROOT sim * testbench]] {
+    append XSCHEM_LIBRARY_PATH :$tb_dir
+}
+
+# Netlists land next to the schematics they came from, not in a scratch dir,
+# so the ngspice fragment a future testbench includes is reviewable in git.
+set netlist_dir [file join $REPO_ROOT design netlist]
+file mkdir $netlist_dir
+
+# Start on an empty sheet rather than the PDK's demo top-level.
+set XSCHEM_START_WINDOW {}

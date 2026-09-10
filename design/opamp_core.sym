@@ -1,0 +1,37 @@
+v {xschem version=3.4.8RC file_version=1.3
+* opamp_core symbol -- two-stage Miller-compensated op-amp core (issue #9).
+* Pins match design/opamp_core.sch's iopin list and pin order exactly:
+* vdd, vss, inn, inp, out, ibias. inn is the inverting input, inp the
+* non-inverting input -- see opamp_core.sch's own "polarity" header section
+* and design/opamp_sizing.md for the derivation. ibias is a single current
+* input (an ideal external current source in the testbench mirrors into
+* this pin) -- no bias generator is part of this block, per issue #9's
+* explicit scope.
+}
+G {}
+K {type=subcircuit
+format="@spiceprefix@name @pinlist opamp_core"
+template="name=x1
+spiceprefix=X"
+}
+V {}
+S {}
+E {}
+L 4 -30 -60 30 -60 {}
+L 4 -30 60 30 60 {}
+L 4 -30 -60 -30 60 {}
+L 4 30 -60 30 60 {}
+B 5 -32 -62 -28 -58 {name=vdd dir=inout pinnumber=1}
+B 5 -32 52 -28 56 {name=vss dir=inout pinnumber=2}
+B 5 -32 -6 -28 -2 {name=inn dir=inout pinnumber=3}
+B 5 -32 22 -28 26 {name=inp dir=inout pinnumber=4}
+B 5 28 -4 32 0 {name=out dir=inout pinnumber=5}
+B 5 -32 -32 -28 -28 {name=ibias dir=inout pinnumber=6}
+T {vdd} -25 -60 0 1 0.2 0.2 {}
+T {vss} -25 54 0 1 0.2 0.2 {}
+T {inn} -25 -4 0 1 0.2 0.2 {}
+T {inp} -25 24 0 1 0.2 0.2 {}
+T {out} 25 -2 0 0 0.2 0.2 {}
+T {ibias} -25 -30 0 1 0.2 0.2 {}
+T {@name} -28 65 0 0 0.2 0.2 {}
+T {opamp_core} -22 0 0 0 0.2 0.2 {}
