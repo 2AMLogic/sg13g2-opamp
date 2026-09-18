@@ -42,10 +42,14 @@ glance:
 | **[P]** | **Proposed by this bootstrap pass** — an engineering placeholder with no measured SG13G2 device data behind it yet (e.g. carried from the block's own README/CLAUDE.md framing, or a structural convention borrowed from a sibling repo's ratified spec). Needs an explicit ratification decision before it binds. |
 | **[TBD-#n]** | Deliberately unset — no SG13G2 device data exists yet to propose even a placeholder number. `#n` is the row's index in §2 below, so a future characterization pass can address each unset row individually. Tracked collectively under the gap-to-T1 tracker (linked from `README.md` and `porting-plan.md`) — item 5, "Full PVT corner simulation vs a ratified spec" — rather than one issue per row; no per-row characterization issue has been filed yet. |
 
-**Status** column values: `not started` (no `sim/` evidence exists for this
-row at all — true of every row in this pass) — there is no `ratifiable` or
-`conditional` row yet, unlike the more mature siblings this table's shape is
-borrowed from.
+**Status** column values in use: `not started` (no `sim/` evidence exists for
+this row at all), `Measured (not yet ratified)` (a committed `sim/` record
+backs the number, but no ratification decision has been taken), and
+`Measured, systematic only (not yet ratified; statistical basis outstanding)`
+— used by the offset row, whose deterministic corner sweep is committed while
+the statistical basis its own column commits to is not. There is still no
+`ratifiable` or `conditional` row, unlike the more mature siblings this
+table's shape is borrowed from.
 
 **Binding corner** — the corner at which a row's hard edge is expected to
 bind, reasoned from the topology's *generic* behavior (a two-stage
@@ -74,7 +78,7 @@ this placeholder prediction of where the number will eventually bind. A
 | Phase margin (at GBW, same CL) | **≥ 60° [P]** — measured worst case 76.4° at FF / 125 °C / 1.32 V, clearing this target with comfortable margin (`sim/open-loop-ac/records/20260910-221601-22feaba.csv`) | ≥ 45° at the FF/hot corner if 60° is unreachable there | — (deterministic corner-worst-case) | FF / 125 °C (fastest devices, most peaking risk) — **confirmed** by measurement, the one row where the pre-schematic prediction and the measured worst corner agree | not started (target itself unchanged; measured number is new) |
 | Slew rate | **[TBD-5]** | — | — | SS / −40 °C / low VDD (lowest tail-current headroom) | not started |
 | Input-referred noise | **[TBD-6]** — band not yet chosen | — | n/a until a band is set | n/a | not started |
-| Input-referred offset | **[TBD-7]** | — | **3σ, mismatch MC N≥300 + process corners [P]** — matches `gf180-bandgap`'s ratified statistical-basis convention (also carried by the `gf180-opamp` twin); sample count not yet re-derived for this topology or for SG13G2's own mismatch decks (`sg13g2_moslv_mod_mismatch.lib`) | to be determined once a topology is drawn — likely SS/FF split-corner pairing on the input differential pair | not started |
+| Input-referred offset | **Systematic (deterministic, corner-only): +21.9 mV worst-case, +11.4 mV best-case [P]** — measured `sim/input-offset/records/20260918-203858-90844d2.csv`, two independent methods agreeing to ≤ 0.3 mV at every point. **Random (mismatch) contribution not yet measured** — the total offset of a real part is this systematic term plus a random term no bench in this repo has produced yet | — | **3σ, mismatch MC N≥300 + process corners [P]** — unchanged: `sim/input-offset/` is deliberately deterministic (no Monte Carlo, no mismatch deck, no random draw), so it does **not** discharge this column; sample count still not re-derived for this topology or for SG13G2's own mismatch decks (`sg13g2_moslv_mod_mismatch.lib`). Tracked by the Monte Carlo follow-on | Predicted: "likely SS/FF split-corner pairing on the input differential pair". **Partly confirmed, partly corrected by measurement**: the split corners are indeed the extremes (`FS` worst / `SF` best in 7 of 9 temperature-supply cells, bracketing `TT` in all 9), but the prediction named no temperature or supply and those dominate — the measured binding point is **FS / 125 °C / 1.08 V**, the same binding point as DC gain and GBW. The mismatch rationale behind the original prediction is untested here by construction; see `sim/input-offset/README.md` "Measured vs. predicted binding corner" | Measured, systematic only (not yet ratified; statistical basis outstanding) |
 | CMRR | **[TBD-8]** | — | — (deterministic corner-worst-case) | to be determined | not started |
 | PSRR | **[TBD-9]** | — | — (deterministic corner-worst-case) | to be determined | not started |
 | Output swing | **[TBD-10]** | — | — | low VDD / worst output-stage headroom corner | not started |
@@ -130,6 +134,13 @@ that data, not a decision that is still outstanding, per `CLAUDE.md`'s
   `mos_tt/ss/ff/sf/fs` x `{-40,27,125} °C` x `{1.08,1.20,1.32} V`) this
   update's `[P]`-tagged DC gain, GBW, phase margin and quiescent power
   numbers in §2 above are measured from.
+- `sim/input-offset/records/20260918-203858-90844d2.{csv,md}` (issue #11) —
+  the deterministic, corner-only DC input-referred offset bench (45 points,
+  same grid and same `point_id` keys as the AC record above, measured two
+  independent ways) the `[P]`-tagged **systematic** half of the
+  input-referred offset row in §2 is measured from. Explicitly **not** the
+  source of that row's statistical-basis column, which needs a Monte Carlo
+  mismatch pass this record does not perform.
 - `CLAUDE.md` (this repo) — the row set, the "CMOS only" and "gm/ID first"
   rules, and the friction protocol.
 - `README.md` (this repo) — the 1.2 V-primary supply framing this table's
