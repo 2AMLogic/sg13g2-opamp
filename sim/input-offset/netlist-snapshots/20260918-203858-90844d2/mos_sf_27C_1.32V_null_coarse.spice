@@ -1,0 +1,112 @@
+* sg13g2-opamp -- DC input-referred offset, open-loop null sweep (issue #11)
+* design/opamp_core.sch, deterministic/corner-only (no Monte Carlo).
+* Generated from
+* sim/input-offset/testbench/tb_offset_null.spice.tmpl by
+* sim/input-offset/run_offset_sweep.sh -- do not edit a generated
+* netlist-snapshots/*.spice file directly, edit this template and re-run
+* the sweep.
+*
+* Point: corner=mos_sf temp_c=27 vdd_v=1.32 pass=coarse
+* Sweep: Vid from -0.1 V to 0.1 V, step 500e-6 V
+* PDK: ihp-sg13g2 /Users/rwalters/share/pdk (see sim/pdk.json for the pinned release)
+* OSDI models: /Users/rwalters/share/pdk/ihp-sg13g2/libs.tech/ngspice/osdi (built by sim/tools/build-osdi.sh)
+* DUT netlist snapshot: /Users/rwalters/GitHub/sg13g2-opamp/.loom/worktrees/issue-11/sim/input-offset/netlist-snapshots/20260918-203858-90844d2/opamp_core.spice (frozen copy of
+*   design/netlist/opamp_core.spice alongside this generated testbench, so
+*   the exact DUT netlist this point ran against is reviewable later)
+*
+* ------------------------------------------------------------------ method
+* design/netlist/opamp_core.spice is a FLAT xschem netlist (its
+* "**.subckt"/"**.ends" lines are full-line SPICE comments, not an active
+* subcircuit wrapper), so .include'ing it makes its own node names (vdd,
+* vss, inn, inp, out, ibias, plus the internal d1/d2/tail nodes) live
+* directly at this testbench's top level -- same convention as
+* sim/open-loop-ac/testbench/tb_openloop_ac.spice.tmpl. No "X..."
+* instantiation is needed or used.
+*
+* WHAT IS MEASURED. Input-referred DC offset is defined here, operationally,
+* as the differential input voltage
+*
+*     Vid = V(inp) - V(inn)
+*
+* that forces the output to the same mid-rail target the rest of this
+* repo's benches bias to, Vout = Vcm = VDD/2. Both inputs are driven from a
+* single common-mode source so that the input common-mode level stays
+* EXACTLY at Vcm for every swept Vid:
+*
+*     V(inp) = Vcm + Vid/2      V(inn) = Vcm - Vid/2
+*
+* This is the "sweep a differential DC offset to null the output" method.
+* It needs no gain correction of any kind: the reported number is a
+* directly-swept input voltage, not an output error divided by a separately
+* measured gain. (The second, independent closed-loop cross-check --
+* tb_offset_cl.spice.tmpl -- IS a referred-back measurement, and exists to
+* corroborate this one; see README.md "Two methods".)
+*
+* NO FEEDBACK IS USED HERE. Unlike sim/open-loop-ac/, this bench does not
+* need the Lbreak DC-servo trick: the DC operating point of a standalone
+* open-loop op-amp is ill-posed only in the sense that its output rails for
+* any input away from the null -- which is precisely what makes the null
+* findable. The output is a monotonic, saturating S-curve in Vid; the single
+* crossing of Vout = Vcm IS the offset. run_offset_sweep.sh checks that the
+* crossing is unique and that the small-signal slope there is a real gain
+* (not a railed, degenerate point) -- see README.md "Per-point sanity
+* checks".
+*
+* SIGN CONVENTION. inp is this design's NON-inverting input (design/
+* opamp_core.sch's own "polarity" header, design/opamp_sizing.md), so Vout
+* rises with Vid. A POSITIVE reported Vos therefore means "inp must be held
+* above inn by Vos to bring the output to mid-rail", i.e. the amplifier's
+* own systematic imbalance pushes the output LOW and the input must
+* compensate upward.
+*
+* DETERMINISTIC ONLY. Every device instance in design/netlist/opamp_core.spice
+* is nominal and every matched pair is instantiated identically, so what this
+* bench measures is the SYSTEMATIC (topology + corner + bias) offset only.
+* Random device mismatch contributes nothing here by construction -- no
+* mismatch deck is loaded and no random draw is made. See README.md "What
+* this bench does not claim".
+*
+* ibias: a single external ideal 10 uA current source, per
+* design/opamp_sizing.md "Bias scope" -- identical to sim/open-loop-ac/'s
+* treatment, so the two benches bias the same DUT the same way.
+*
+* Cload is present (CL = 2e-12 F [DR-1]) purely so this bench's DUT
+* environment matches sim/open-loop-ac/'s; it has no effect on a DC
+* analysis.
+*
+* RECORDED VECTORS (v(out)). run_offset_sweep.sh renders this
+* template twice per grid point: a wide COARSE locate pass that records
+* v(out) alone (the S-curve, enough to prove the Vout = Vcm crossing is
+* unique), and a narrow FINE pass around that crossing that additionally
+* records every internal node and the supply current, so the DUT's
+* operating point AT the null is committed evidence rather than something
+* re-derived later. Keeping the coarse pass single-vector is what keeps
+* this experiment's corners/ directory to a couple of megabytes instead of
+* seventeen.
+
+.lib "/Users/rwalters/share/pdk/ihp-sg13g2/libs.tech/ngspice/models/cornerCAP.lib" cap_typ
+.include "/Users/rwalters/GitHub/sg13g2-opamp/.loom/worktrees/issue-11/sim/input-offset/netlist-snapshots/20260918-203858-90844d2/opamp_core.spice"
+
+.lib "/Users/rwalters/share/pdk/ihp-sg13g2/libs.tech/ngspice/models/cornerMOSlv.lib" mos_sf
+
+.options temp=27 tnom=27
+
+Vdd vdd 0 dc 1.32
+Vss vss 0 dc 0
+Iibias vdd ibias dc 10u
+Vcm cm 0 dc 0.66
+Vid id 0 dc 0
+Binp inp 0 v = v(cm) + v(id)/2
+Binn inn 0 v = v(cm) - v(id)/2
+Cload out vss 2e-12
+
+.control
+pre_osdi /Users/rwalters/share/pdk/ihp-sg13g2/libs.tech/ngspice/osdi/psp103.osdi
+pre_osdi /Users/rwalters/share/pdk/ihp-sg13g2/libs.tech/ngspice/osdi/psp103_nqs.osdi
+pre_osdi /Users/rwalters/share/pdk/ihp-sg13g2/libs.tech/ngspice/osdi/mosvar.osdi
+pre_osdi /Users/rwalters/share/pdk/ihp-sg13g2/libs.tech/ngspice/osdi/r3_cmc.osdi
+
+dc Vid -0.1 0.1 500e-6
+wrdata /Users/rwalters/GitHub/sg13g2-opamp/.loom/worktrees/issue-11/sim/input-offset/corners/20260918-203858-90844d2/mos_sf_27C_1.32V_null_coarse.csv v(out)
+.endc
+.end

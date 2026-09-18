@@ -35,3 +35,15 @@ rebuilding. Every experiment's `run_*.sh` preflights this before simulating.
   `cornerMOSlv.lib` process corners (issue #5). The first engineering
   artifact for this block, per `spec/porting-plan.md` §4's "gm/ID first"
   ordering.
+- [`open-loop-ac/`](open-loop-ac/) — open-loop DC gain (`Av0`), GBW into
+  `CL = 2 pF` [DR-1], phase margin, gain margin and Iq for
+  `design/opamp_core.sch`, across the full 45-point `mos_tt/ss/ff/sf/fs` x
+  `{-40, 27, 125} °C` x `{1.08, 1.20, 1.32} V` PVT grid (issue #9). The
+  first circuit-level (rather than device-level) bench in this tree.
+- [`input-offset/`](input-offset/) — deterministic, corner-only DC
+  input-referred offset of `design/opamp_core.sch` on that same 45-point PVT
+  grid (issue #11), measured two independent ways (open-loop differential
+  null sweep, plus a closed-loop DC error referred back through
+  `open-loop-ac/`'s per-point `Av0`). **Systematic offset only** — no Monte
+  Carlo and no mismatch deck; the statistical half of
+  `spec/target-spec.md`'s offset row is a separate follow-on (issue #17).
