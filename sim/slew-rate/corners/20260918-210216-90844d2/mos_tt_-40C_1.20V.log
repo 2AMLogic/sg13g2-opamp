@@ -1,0 +1,60 @@
+Warning: m=xx on .subckt line will override multiplier m hierarchy!
+
+Note: Starting dynamic gmin stepping
+Note: Dynamic gmin stepping completed
+Note: Starting dynamic gmin stepping
+Note: Dynamic gmin stepping completed
+
+Note: Compatibility modes selected: hs a
+
+
+Circuit: * sg13g2-opamp -- large-signal step (slew-rate) bench, design/opamp_core.sch (issue #12)
+
+Doing analysis at TEMP = -40.000000 and TNOM = 27.000000
+
+Using SPARSE 1.3 as Direct Linear Solver
+Warning: Interpolated raw file data!
+
+
+No. of Data Rows : 1
+OP_VOUT 0.586646
+OP_VD1 0.624877
+OP_VD2 0.4391
+OP_VTAIL 0.120022
+OP_VIBIAS 0.416365
+OP_IVDD 0.000115741
+Doing analysis at TEMP = -40.000000 and TNOM = 27.000000
+
+Using SPARSE 1.3 as Direct Linear Solver
+Warning: Interpolated raw file data!
+
+
+Initial Transient Solution
+--------------------------
+
+Node                                   Voltage
+----                                   -------
+d1                                    0.624877
+inn                                   0.586646
+tail                                  0.120022
+vss                                          0
+d2                                      0.4391
+inp                                        0.6
+vdd                                        1.2
+ibias                                 0.416365
+out                                   0.586646
+xcc.1                                 0.586646
+nstep                                        0
+lbreak#branch                     -8.68451e-14
+vstepn#branch                                0
+vinp#branch                       -1.15308e-13
+vss#branch                         0.000115741
+vdd#branch                        -0.000115741
+
+ Reference value :  3.81800e-08 Reference value :  2.35825e-07 Reference value :  4.43125e-07 Reference value :  6.51275e-07
+No. of Data Rows : 801
+TR_VINN_MAX 0.886646
+TR_VINN_MIN 0.286646
+TR_VOUT_MAX 1.11598
+TR_VOUT_MIN -0.00674384
+Note: Simulation executed from .control section 
