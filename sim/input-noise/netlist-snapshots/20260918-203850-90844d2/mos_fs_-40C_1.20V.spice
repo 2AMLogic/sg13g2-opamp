@@ -1,0 +1,132 @@
+* sg13g2-opamp -- input-referred noise bench, design/opamp_core.sch (issue #13)
+* Generated from
+* sim/input-noise/testbench/tb_noise.spice.tmpl by
+* sim/input-noise/run_noise_sweep.sh -- do not edit a generated
+* netlist-snapshots/*.spice file directly, edit this template and re-run
+* the sweep.
+*
+* Point: corner=mos_fs temp_c=-40 vdd_v=1.20
+* PDK: ihp-sg13g2 /Users/rwalters/share/pdk (see sim/pdk.json for the pinned release)
+* OSDI models: /Users/rwalters/share/pdk/ihp-sg13g2/libs.tech/ngspice/osdi (built by sim/tools/build-osdi.sh)
+* DUT netlist snapshot: /Users/rwalters/GitHub/sg13g2-opamp/.loom/worktrees/issue-13/sim/input-noise/netlist-snapshots/20260918-203850-90844d2/opamp_core.spice (frozen copy of
+*   design/netlist/opamp_core.spice alongside this generated testbench, so
+*   the exact DUT netlist this point ran against is reviewable later)
+*
+* ------------------------------------------------------------------ method
+* design/netlist/opamp_core.spice is a FLAT xschem netlist (its
+* "**.subckt"/"**.ends" lines are full-line SPICE comments, not an active
+* subcircuit wrapper), so .include'ing it makes its own node names (vdd,
+* vss, inn, inp, out, ibias, plus the internal d1/d2/tail nodes) live
+* directly at this testbench's top level -- same as
+* sim/open-loop-ac/testbench/tb_openloop_ac.spice.tmpl. No "X..."
+* instantiation is needed or used.
+*
+* CONFIGURATION: unity-gain closed loop, NOT the open-loop Lbreak trick.
+* Vfb (a 0 V, noiseless, ideal source used as a wire + current probe) ties
+* inn to out, making the DUT a real voltage follower: the DC operating
+* point is set by real feedback (no ideal-inductor trick needed), and the
+* noise gain from the amplifier's own input to out is 1 across the whole
+* measurement band. ngspice's `noise` analysis divides the output noise by
+* the measured Vinp->out transfer function, so with a noise gain of 1 its
+* `inoise_spectrum` IS the amplifier's input-referred noise density
+* directly.
+*
+* Why not the open-loop Lbreak = 1e18 H configuration sim/open-loop-ac/
+* uses: it is correct for `ac`, but prototyping this bench (see README.md
+* "Why closed loop") showed it produces a NON-PHYSICAL input-referred
+* noise spectrum -- a 1/f slope in *amplitude* (10x per decade, i.e.
+* S_v proportional to 1/f^2) where both theory and a single-device probe
+* of this same PDK's sg13_lv_nmos give a textbook 1/f power slope
+* (3.16x per decade in amplitude). The unity-gain configuration below
+* reproduces the textbook shape exactly, so it is the configuration this
+* bench claims numbers from. The issue's own scope permits either ("...or
+* a closed-loop configuration if that better suits `.noise` analysis").
+*
+* MEASUREMENT BAND (see README.md "Choosing the band" for the full
+* rationale and the sibling-repo precedent):
+*   - integrated: 100 Hz - 1 MHz, reported as V_ni,rms (uVrms)
+*   - spot density: 100 Hz, 1 kHz, 10 kHz, 100 kHz, 1 MHz (nV/sqrt(Hz))
+* `dec 20` starting at exactly 100 Hz puts those five spot frequencies on
+* indices 0/20/40/60/80 of the swept vector; run_noise_sweep.sh re-derives
+* each spot frequency from the written CSV and asserts it, rather than
+* trusting the index arithmetic silently.
+*
+* UNITS (empirically pinned, not assumed): in ngspice-46,
+* `inoise_spectrum`/`onoise_spectrum` are densities in V/sqrt(Hz) and
+* `inoise_total`/`onoise_total` are already-square-rooted RMS volts over
+* the swept band. testbench/tb_noise_units_check.spice re-verifies both
+* against a closed-form 4kTR resistor reference on every sweep run --
+* see README.md "Units check".
+*
+* The second, wider `noise` sweep (1 Hz - 100 MHz, dec 10) is
+* REFERENCE-ONLY curve evidence (flicker corner, thermal floor, and the
+* out-of-band rise above the closed-loop bandwidth where input-referral
+* stops being meaningful). No recorded claim is read from it.
+*
+* The `ac` sweep is a per-point guard, not a result: it re-measures the
+* closed-loop gain at both band edges so run_noise_sweep.sh can assert the
+* noise gain really is ~1 across the claimed band at THIS corner (a point
+* whose unity-gain bandwidth had collapsed below 1 MHz would otherwise
+* report an inflated input-referred number at the band top).
+*
+* ibias: a single external ideal current-source bias pin, per
+* design/opamp_sizing.md "Bias scope" -- 10 uA sunk from vdd through the
+* ibias node, exactly as sim/open-loop-ac/ does. An ideal current source
+* is noiseless in ngspice, so every noise volt measured here originates in
+* the DUT's own devices; the real bias generator's noise contribution is
+* out of scope for this bench (no bias generator is designed yet).
+
+.lib "/Users/rwalters/share/pdk/ihp-sg13g2/libs.tech/ngspice/models/cornerCAP.lib" cap_typ
+.include "/Users/rwalters/GitHub/sg13g2-opamp/.loom/worktrees/issue-13/sim/input-noise/netlist-snapshots/20260918-203850-90844d2/opamp_core.spice"
+
+.lib "/Users/rwalters/share/pdk/ihp-sg13g2/libs.tech/ngspice/models/cornerMOSlv.lib" mos_fs
+
+.options temp=-40 tnom=27
+
+Vdd vdd 0 dc 1.20
+Vss vss 0 dc 0
+Iibias vdd ibias dc 10u
+Vinp inp 0 dc 0.6 ac 1
+Vfb inn out dc 0
+Cload out vss 2e-12
+
+.control
+pre_osdi /Users/rwalters/share/pdk/ihp-sg13g2/libs.tech/ngspice/osdi/psp103.osdi
+pre_osdi /Users/rwalters/share/pdk/ihp-sg13g2/libs.tech/ngspice/osdi/psp103_nqs.osdi
+pre_osdi /Users/rwalters/share/pdk/ihp-sg13g2/libs.tech/ngspice/osdi/mosvar.osdi
+pre_osdi /Users/rwalters/share/pdk/ihp-sg13g2/libs.tech/ngspice/osdi/r3_cmc.osdi
+
+op
+echo "OP_VOUT $&v(out)"
+echo "OP_VD1 $&v(d1)"
+echo "OP_VD2 $&v(d2)"
+echo "OP_VTAIL $&v(tail)"
+echo "OP_VIBIAS $&v(ibias)"
+let ivdd_op = -i(vdd)
+echo "OP_IVDD $&ivdd_op"
+
+* --- claimed band: 100 Hz - 1 MHz, dec 20 (81 points) ------------------
+noise v(out) Vinp dec 20 100 1meg
+setplot noise1
+wrdata /Users/rwalters/GitHub/sg13g2-opamp/.loom/worktrees/issue-13/sim/input-noise/corners/20260918-203850-90844d2/mos_fs_-40C_1.20V_noise.csv inoise_spectrum onoise_spectrum
+setplot noise2
+let vni_int = inoise_total
+let vno_int = onoise_total
+echo "NOISE_INOISE_TOTAL $&vni_int"
+echo "NOISE_ONOISE_TOTAL $&vno_int"
+
+* --- reference-only wide curve: 1 Hz - 100 MHz, dec 10 -----------------
+noise v(out) Vinp dec 10 1 100meg
+setplot noise3
+wrdata /Users/rwalters/GitHub/sg13g2-opamp/.loom/worktrees/issue-13/sim/input-noise/corners/20260918-203850-90844d2/mos_fs_-40C_1.20V_noise_wide.csv inoise_spectrum onoise_spectrum
+
+* --- per-point noise-gain guard at both band edges ---------------------
+setplot const
+ac dec 20 100 1meg
+let clgain = mag(v(out))
+let clgain_lo = clgain[0]
+let clgain_hi = clgain[80]
+echo "AC_CLGAIN_100HZ $&clgain_lo"
+echo "AC_CLGAIN_1MHZ $&clgain_hi"
+.endc
+.end
