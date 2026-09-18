@@ -47,6 +47,10 @@ rebuilding. Every experiment's `run_*.sh` preflights this before simulating.
   `open-loop-ac/`'s per-point `Av0`). **Systematic offset only** — no Monte
   Carlo and no mismatch deck; the statistical half of
   `spec/target-spec.md`'s offset row is a separate follow-on (issue #17).
+- [`slew-rate/`](slew-rate/) — rising/falling large-signal slew rate into
+  `CL = 2 pF` [DR-1] at a fixed input common mode `VDD/2`, over the same
+  45-point PVT grid (issue #12). Source of `spec/target-spec.md`'s
+  slew-rate row.
 - [`input-noise/`](input-noise/) — input-referred voltage noise of the same
   schematic in a unity-gain closed-loop configuration, over the same
   45-point PVT grid and the same `CL` (issue #13): integrated

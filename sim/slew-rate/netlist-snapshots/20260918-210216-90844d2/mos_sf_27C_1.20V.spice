@@ -1,0 +1,122 @@
+* sg13g2-opamp -- large-signal step (slew-rate) bench, design/opamp_core.sch (issue #12)
+* Generated from
+* sim/slew-rate/testbench/tb_slew.spice.tmpl by
+* sim/slew-rate/run_slew_sweep.sh -- do not edit a generated
+* netlist-snapshots/*.spice file directly, edit this template and re-run
+* the sweep.
+*
+* Point: corner=mos_sf temp_c=27 vdd_v=1.20
+* PDK: ihp-sg13g2 /Users/rwalters/share/pdk (see sim/pdk.json for the pinned release)
+* OSDI models: /Users/rwalters/share/pdk/ihp-sg13g2/libs.tech/ngspice/osdi (built by sim/tools/build-osdi.sh)
+* DUT netlist snapshot: /Users/rwalters/GitHub/sg13g2-opamp/.loom/worktrees/issue-12/sim/slew-rate/netlist-snapshots/20260918-210216-90844d2/opamp_core.spice (frozen copy of
+*   design/netlist/opamp_core.spice alongside this generated testbench, so
+*   the exact DUT netlist this point ran against is reviewable later)
+*
+* ------------------------------------------------------------------ method
+* design/netlist/opamp_core.spice is a FLAT xschem netlist (its
+* "**.subckt"/"**.ends" lines are full-line SPICE comments, not an active
+* subcircuit wrapper), so .include'ing it makes its own node names (vdd,
+* vss, inn, inp, out, ibias, plus the internal d1/d2/tail nodes) live
+* directly at this testbench's top level -- same arrangement
+* sim/open-loop-ac/testbench/tb_openloop_ac.spice.tmpl uses.
+*
+* DC bias: Lbreak = 1e18 H from inn to out, the same ideal-inductor DC
+* feedback trick sim/open-loop-ac/ uses (an ideal inductor is a dead short
+* at DC, so inn = out at DC and the loop self-consistently settles near a
+* unity-gain-buffer bias point, Vout(dc) close to Vinp(dc) = Vcm = VDD/2),
+* and an open circuit on this bench's nanosecond timescale (dI/dt = V/L,
+* i.e. ~1e-18 A/s for a 1 V swing, so the inductor current -- and therefore
+* the charge delivered to inn -- is frozen for the whole transient).
+*
+* Large-signal drive: the two inputs are stepped ANTIPHASE by 0.3 V
+* each, so the differential input is +/- 2*0.3 V while the input
+* common mode stays fixed at Vcm = VDD/2. inp is driven directly; inn is
+* driven through Cinj = 1 uF from the antiphase source node nstep, which is
+* a short at these timescales (inn's own capacitance is M1's ~5 fF gate
+* cap, so the coupling ratio is 1:1 to ~5 ppm) while leaving the Lbreak DC
+* servo above to set inn's bias. run_slew_sweep.sh re-derives the achieved
+* inn excursion per point from this file's own TR_VINN_* lines and fails
+* the point if the drive did not arrive as intended.
+*
+* Why antiphase (and not a single-ended step into a unity-gain buffer):
+* this amplifier's NMOS tail device has little Vds headroom at Vcm = VDD/2
+* on the 1.08 V rail (design/opamp_sizing.md "Headroom check": tail node =
+* Vcm - Vgs1, ~0.21 V nominal and less at the slow/cold corner). A
+* single-ended step moves the input common mode by half the step, which
+* moves the tail node, which moves the tail current -- and the tail current
+* IS the quantity a slew measurement is trying to read. Measured during
+* this bench's development at mos_ss/-40 C/1.08 V, a single-ended +/-0.15 V
+* step produced 6.6 V/us rising against 2.5 V/us falling -- a 2.6x
+* asymmetry that is a common-mode artifact of the drive, not a property of
+* the amplifier; an antiphase drive of the SAME differential amplitude
+* returns 5.30 / 5.15 V/us at that corner, and this bench's committed
+* +/-0.3 V-per-input drive returns 7.54 / 7.51 V/us. See README.md "Why an
+* antiphase differential drive" and "Choosing the drive amplitude".
+*
+* Step sequence (out is open-loop at these timescales, so each step drives
+* the output all the way to a rail and the measured window sits in the
+* linear ramp between them):
+*   t = 0            inputs balanced at the DC bias point; out ~ Vcm
+*   t = 50n        step DOWN  -- out slews to the low rail and parks
+*   t = 300n        step UP    -- full-swing RISING edge  (measured)
+*   t = 550n        step DOWN  -- full-swing FALLING edge (measured)
+*   t = 800n    end
+*
+* ibias: a single external ideal current-source bias pin, per
+* design/opamp_sizing.md "Bias scope" -- 10 uA sunk from vdd through the
+* ibias node into the DUT's own diode-connected Mbias. run_slew_sweep.sh
+* reports total Vdd supply current AND this fixed 10 uA separately, per
+* opamp_sizing.md's "Iq reporting note", exactly as sim/open-loop-ac/ does.
+*
+* Per-point DC sanity check (op landed near mid-rail, no internal node
+* fully railed) is computed by run_slew_sweep.sh from this file's own
+* echoed OP_* lines below -- same rule, and same honest scope, as
+* sim/open-loop-ac/README.md "Per-point sanity checks" documents.
+
+.lib "/Users/rwalters/share/pdk/ihp-sg13g2/libs.tech/ngspice/models/cornerCAP.lib" cap_typ
+.include "/Users/rwalters/GitHub/sg13g2-opamp/.loom/worktrees/issue-12/sim/slew-rate/netlist-snapshots/20260918-210216-90844d2/opamp_core.spice"
+
+.lib "/Users/rwalters/share/pdk/ihp-sg13g2/libs.tech/ngspice/models/cornerMOSlv.lib" mos_sf
+
+.options temp=27 tnom=27
+* uniform output grid, so the committed waveform IS the data the recorded
+* slew numbers are measured from (run_slew_sweep.sh re-reads this file's
+* own wrdata output; nothing is computed from discarded internal steps)
+.options interp
+
+Vdd vdd 0 dc 1.20
+Vss vss 0 dc 0
+Iibias vdd ibias dc 10u
+Lbreak inn out 1e18
+Cinj inn nstep 1e-6
+Cload out vss 2e-12
+Vinp inp 0 dc 0.6 pwl(0 0.6 50n 0.6 50.1n 0.3 300n 0.3 300.1n 0.9 550n 0.9 550.1n 0.3 800n 0.3)
+Vstepn nstep 0 dc 0 pwl(0 0 50n 0 50.1n 0.3 300n 0.3 300.1n -0.3 550n -0.3 550.1n 0.3 800n 0.3)
+
+.control
+pre_osdi /Users/rwalters/share/pdk/ihp-sg13g2/libs.tech/ngspice/osdi/psp103.osdi
+pre_osdi /Users/rwalters/share/pdk/ihp-sg13g2/libs.tech/ngspice/osdi/psp103_nqs.osdi
+pre_osdi /Users/rwalters/share/pdk/ihp-sg13g2/libs.tech/ngspice/osdi/mosvar.osdi
+pre_osdi /Users/rwalters/share/pdk/ihp-sg13g2/libs.tech/ngspice/osdi/r3_cmc.osdi
+
+op
+echo "OP_VOUT $&v(out)"
+echo "OP_VD1 $&v(d1)"
+echo "OP_VD2 $&v(d2)"
+echo "OP_VTAIL $&v(tail)"
+echo "OP_VIBIAS $&v(ibias)"
+let ivdd_op = -i(vdd)
+echo "OP_IVDD $&ivdd_op"
+
+tran 1n 800n 0 0.05n
+let vinnmax = vecmax(v(inn))
+let vinnmin = vecmin(v(inn))
+let voutmax = vecmax(v(out))
+let voutmin = vecmin(v(out))
+echo "TR_VINN_MAX $&vinnmax"
+echo "TR_VINN_MIN $&vinnmin"
+echo "TR_VOUT_MAX $&voutmax"
+echo "TR_VOUT_MIN $&voutmin"
+wrdata /Users/rwalters/GitHub/sg13g2-opamp/.loom/worktrees/issue-12/sim/slew-rate/corners/20260918-210216-90844d2/mos_sf_27C_1.20V_tran.csv v(out)
+.endc
+.end
