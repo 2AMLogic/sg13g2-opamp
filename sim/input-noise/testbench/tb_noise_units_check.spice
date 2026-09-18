@@ -1,0 +1,53 @@
+* sg13g2-opamp -- ngspice `noise` UNITS CHECK (issue #13)
+*
+* Not a DUT measurement. This deck pins down, against a closed-form
+* reference with no PDK, no OSDI models and no device physics in it, the
+* two unit conventions every number in this experiment's records depends
+* on:
+*
+*   1. `inoise_spectrum` / `onoise_spectrum` are spectral densities in
+*      V/sqrt(Hz)  (NOT V^2/Hz).
+*   2. `inoise_total` / `onoise_total` are already-square-rooted RMS volts
+*      integrated over the swept band (NOT mean-square V^2).
+*
+* Reference circuit: a 1 kOhm resistor's own Johnson noise, amplified by an
+* ideal (noiseless) x100 VCVS. Rbig is a 1 TOhm shunt that keeps the node
+* defined without loading R1. At T = 26.85 C = 300.0 K,
+*
+*   e_n = sqrt(4 k T R) = sqrt(4 * 1.380649e-23 * 300.0 * 1e3)
+*       = 4.0704e-9 V/sqrt(Hz)
+*
+* so, with the x100 gain divided back out by ngspice's own input
+* referral, `inoise_spectrum` must read 4.0704e-9 at every frequency and
+* `onoise_spectrum` must read 100x that. Over the swept band 1 kHz-10 kHz
+* (white noise, so the integral is exact in closed form),
+*
+*   inoise_total = e_n * sqrt(10 kHz - 1 kHz) = 4.0704e-9 * sqrt(9000)
+*                = 3.8614e-7 V rms
+*
+* run_noise_sweep.sh asserts both readings against these closed-form
+* values (0.5% tolerance) before it simulates a single DUT point, and
+* refuses to write a record if either fails -- so an ngspice version whose
+* `noise` output used a different convention would fail the run loudly
+* instead of silently rescaling every recorded nV/sqrt(Hz) and uVrms
+* number by a square root.
+
+.options temp=26.85 tnom=26.85
+
+Vin in 0 dc 0 ac 1
+R1 in a 1k
+Rbig a 0 1e12
+E1 out 0 a 0 100
+
+.control
+noise v(out) Vin dec 1 1k 10k
+setplot noise1
+let sp_in = inoise_spectrum[0]
+let sp_out = onoise_spectrum[0]
+echo "UNITS_INOISE_SPECTRUM $&sp_in"
+echo "UNITS_ONOISE_SPECTRUM $&sp_out"
+setplot noise2
+let tot_in = inoise_total
+echo "UNITS_INOISE_TOTAL $&tot_in"
+.endc
+.end

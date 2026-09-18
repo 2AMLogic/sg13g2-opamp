@@ -47,3 +47,11 @@ rebuilding. Every experiment's `run_*.sh` preflights this before simulating.
   `open-loop-ac/`'s per-point `Av0`). **Systematic offset only** — no Monte
   Carlo and no mismatch deck; the statistical half of
   `spec/target-spec.md`'s offset row is a separate follow-on (issue #17).
+- [`input-noise/`](input-noise/) — input-referred voltage noise of the same
+  schematic in a unity-gain closed-loop configuration, over the same
+  45-point PVT grid and the same `CL` (issue #13): integrated
+  **100 Hz – 1 MHz** µVrms plus spot densities at 100 Hz / 1 kHz / 10 kHz /
+  100 kHz / 1 MHz, with a per-point noise-gain guard and a flicker/thermal
+  spectral split. This experiment also **chose** the band
+  `spec/target-spec.md`'s noise row is stated over — see its `README.md`
+  "Choosing the band".
