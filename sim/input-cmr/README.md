@@ -195,13 +195,19 @@ check's name to the corners log; 45/45 pass in the committed record):
 - **`sim/open-loop-ac/` join** — the centre op point (`Vcm = VDD/2`) of
   this bench's own sweep, joined per `point_id` against the AC bench's
   committed per-point operating point. `x_vibias_ac_delta_v` is 0.000 V
-  at every point — the bias network state is identical. `v(tail)`/`v(d1)`/`v(d2)`
-  differ by 2–16 mV across the grid, tracking the systematic offset
-  scale: the AC bench's servo holds `inn = out ≠ inp` (a vos-scale split
-  between the pair gates), while this bench pins `Vid = 0` exactly, so
-  the front-end sits at a slightly different (vos-scale) bias point.
-  These deltas are that difference, measured — the record's columns
-  exist so a reviewer can see its size, not as a defect.
+  at every point — the bias network state is identical. `v(tail)` and
+  `v(d1)` differ by 2–16 mV across the grid (8.1–16.0 mV and 1.9–13.8 mV
+  measured), tracking the systematic offset scale: the AC bench's servo
+  holds `inn = out ≠ inp` (a vos-scale split between the pair gates),
+  while this bench pins `Vid = 0` exactly, so the front-end sits at a
+  slightly different (vos-scale) bias point. `v(d2)` differs by far
+  more, 0.156–0.230 V: `d2` is the first-stage output node (the output
+  PMOS's gate, per `design/netlist/opamp_core.spice`), so its value is
+  set by the loop/load condition each bench imposes — servo-balanced in
+  the AC bench, railed through the output stage in this open-loop
+  bench — not by the pair-gate split. These deltas are measured and the
+  record's columns (per node) exist so a reviewer can see each one's
+  size for what that node is, not as a defect.
 - **`sim/output-swing/` join** — the closed-loop-buffer usable interval
   (`buffer_use_lo/hi/span`): a unity-gain buffer at input `Vcm` needs
   the output to reach `Vcm` too, so the usable interval is the
@@ -307,10 +313,19 @@ the tail's saturation requirement "≈ overdrive 0.155 V" vs the
 knee-criterion's 0.135 V at 27 °C TT — same order, with the knee
 criterion (an edge-of-triode statement) landing slightly inside the
 paper's constant-current-overdrive convention, exactly as expected for
-a PSP device. Chain-summing measured quantities reproduces the measured
-bounds: `Vcm_lo ≈ Vgs(M1,measured) + Vdsat5,knee` to within the fine
-step at every in-range point (the record's `vtail_lo_v` and `vgs1_hi_v`
-columns let any reviewer redo this by hand), and the hi bound's
+a PSP device. Chain-summing measured quantities is a first-order
+consistency check, not a fine-step reproduction: `Vgs(M1)` from the
+centre operating point plus `Vdsat5,knee` lands 2.5–35.2 mV above the
+measured lower bound across the in-range points (worst at the high
+rail, because the pair's `Vgs` is not actually constant across the
+sweep — it rises toward the hi compression edge, which is also why the
+record's `vgs1_hi_v` + `vdsat5_meas_v` chain runs 59–127 mV above
+`icmr_lo_v`). Only the at-the-crossing form — `Vcm_lo = Vgs(M1 at the
+bound) + Vdsat5`, with the `Vgs` taken at the bound itself — closes to
+the fine step, and that is these bounds' own definition, not an
+independent chain. The record's `vtail_lo_v` column lets any reviewer
+verify the crossing sample sits within one fine step (250 µV) of the
+measured knee, and the hi bound's
 `v(d1) − Vcm ≥ −Vth` form is the paper's `VDD − |VSG3| + Vth(M1)`
 chain algebra rearranged onto measured nodes.
 
