@@ -1,0 +1,124 @@
+* sg13g2-opamp -- PSRR bench, design/opamp_core.sch (issue #14)
+* Generated from
+* sim/cmrr-psrr/testbench/tb_psrr.spice.tmpl by
+* sim/cmrr-psrr/run_cmrr_psrr_sweep.sh -- do not edit a generated
+* netlist-snapshots/*.spice file directly, edit this template and re-run
+* the sweep.
+*
+* Point: corner=mos_ff temp_c=27 vdd_v=1.32
+* PDK: ihp-sg13g2 /Users/rwalters/share/pdk (see sim/pdk.json for the pinned release)
+* OSDI models: /Users/rwalters/share/pdk/ihp-sg13g2/libs.tech/ngspice/osdi (built by sim/tools/build-osdi.sh)
+* DUT netlist snapshot: /Users/rwalters/GitHub/sg13g2-opamp/.loom/worktrees/issue-14/sim/cmrr-psrr/netlist-snapshots/20260921-151815-707b34c/opamp_core.spice (frozen copy of
+*   design/netlist/opamp_core.spice alongside this generated testbench, so
+*   the exact DUT netlist this point ran against is reviewable later)
+*
+* ------------------------------------------------------------------ method
+* design/netlist/opamp_core.spice is a FLAT xschem netlist (its
+* "**.subckt"/"**.ends" lines are full-line SPICE comments, not an active
+* subcircuit wrapper -- verified directly against the generated file), so
+* .include'ing it makes its own node names (vdd, vss, inn, inp, out, ibias,
+* plus the internal d1/d2/tail nodes) live directly at this testbench's top
+* level. No "X..." instantiation is needed or used.
+*
+* DC bias / AC loop-break: EXACTLY the open-loop-ac bench's self-biased
+* topology (sim/open-loop-ac/testbench/tb_openloop_ac.spice.tmpl): an ideal
+* inductor Lbreak = 1e18 H from inn to out, inp held at Vcm. See that
+* template's header and sim/open-loop-ac/README.md "Choosing Lbreak" for
+* the full reasoning, reused verbatim here. Keeping this DC network
+* byte-equal to the open-loop bench's is load-bearing: the PSRR ratio this
+* experiment reports divides the SAME grid point's Av0 out of
+* sim/open-loop-ac/records/*.csv (never re-measured here), which is only
+* meaningful if both benches measured at the same DC operating point.
+*
+* Supply (VDD) AC injection: Vdd carries dc VDD plus ac 1 V magnitude, so
+* vdb(out) IS Avs(f) -- the supply-to-output gain -- in dB directly. The
+* signal input is AC-grounded: Vinp (inp to ground, dc VCM) has no "ac"
+* value, so in the .ac solve it contributes no perturbation and pins inp at
+* AC zero -- the standard supply-rejection measurement configuration
+* (input quiet, supply perturbed). inn's AC is ~zero by the same Lbreak
+* argument as the differential bench (Lbreak = open at AC, only the gate
+* remains). PSRR(f) = Av(f)/Avs(f) with Av(f) the open-loop differential
+* gain of the SAME grid point from sim/open-loop-ac/records/*.csv (per
+* issue #14's own wording); run_cmrr_psrr_sweep.sh computes
+* PSRR_db = Av0_db - Avs0_db, with Avs0 = Avs(10 mHz) read from the flat
+* low-frequency shelf (plateau guard re-verified per point by the
+* runner). db() is a magnitude, so PSRR here is the conventional
+* ratio-of-magnitudes Psrr+ number.
+*
+* Why this sweep starts at 10 mHz (one real finding, verified at the
+* nominal point during dev-time prototyping): this DUT's vdd->out
+* transfer carries a genuine zero near 1.5 Hz -- supply gain RISES ~4 dB
+* from its DC shelf (35.5 dB at TT/27C/1.20V) to an in-band shelf near
+* ~39.6 dB spanning roughly 100 Hz - 10 kHz, before the output pole
+* rolls it off -- so a sweep starting at 1 Hz would read the DC supply
+* gain 0.03 dB into the zero's skirt at best. Three checks establish the
+* zero belongs to the DUT's supply path, not this harness: (a) raising
+* Lbreak from 1e18 H to 1e21 H changes the response by <1e-4 dB at every
+* swept frequency -- a loop-break artifact would move with L; (b) the d2
+* and tail nodes' vdd responses carry the same low-frequency shape, so
+* the zero lives in the first stage's supply path, ahead of the second
+* stage; (c) a finite-difference DC sweep (vdd +-1 mV, vcm tracking
+* vdd/2) reads the fully-closed-loop DC limit, ~-3.8 dB, consistent with
+* the Lbreak-imposed f->0 suppression and clearly distinct from this
+* shelf. The in-band consequence (PSRR+ degrades by ~4 dB between DC and
+* the 100 Hz - 10 kHz shelf) is recorded per point in corners/*_psrr_ac.csv
+* and summarized in README.md -- the scalar PSRR number this experiment
+* reports is the DC shelf value, matching the classic-row convention that
+* CMRR/PSRR are DC figures.
+*
+* Two scope notes, both following decisions this block already documents:
+*   - ibias is an EXTERNAL ideal 10 uA current source (design/opamp_sizing.md
+*     "Bias scope"); its ac value is zero, so supply ripple does not ride
+*     into the bias reference. A part with an on-die bias generator would
+*     fold that generator's supply sensitivity into its PSRR; this block
+*     has no bias generator in scope, so this bench measures the amplifier
+*     core's supply rejection under an ideal reference -- the same scope
+*     the Iq rows draw (design/opamp_sizing.md "Iq reporting note").
+*   - vss is ground in this bench (Vss vss 0, single-supply part: the
+*     negative rail IS 0 V), so there is no distinct negative rail to
+*     perturb; PSRR+ (VDD rejection) is the only supply rejection this
+*     topology defines. Issue #14's own wording anticipated this ("and/or
+*     VSS if the design has a distinct negative rail" -- it does not).
+*
+* Per-point DC sanity check (op landed near mid-rail, no internal node
+* fully railed) is computed by run_cmrr_psrr_sweep.sh from this file's own
+* echoed OP_* lines below -- see this experiment's README.md "Per-point
+* sanity checks" for the exact pass/fail rule (same rule as
+* sim/open-loop-ac/, same necessary-not-sufficient caveat: this OSDI/PSP103
+* build exposes no queryable per-device operating-point parameters).
+
+.lib "/Users/rwalters/share/pdk/ihp-sg13g2/libs.tech/ngspice/models/cornerCAP.lib" cap_typ
+.include "/Users/rwalters/GitHub/sg13g2-opamp/.loom/worktrees/issue-14/sim/cmrr-psrr/netlist-snapshots/20260921-151815-707b34c/opamp_core.spice"
+
+.lib "/Users/rwalters/share/pdk/ihp-sg13g2/libs.tech/ngspice/models/cornerMOSlv.lib" mos_ff
+
+.options temp=27 tnom=27
+
+Vdd vdd 0 dc 1.32 ac 1
+Vss vss 0 dc 0
+Iibias vdd ibias dc 10u
+Vinp inp 0 dc 0.66
+Lbreak inn out 1e18
+Cload out vss 2e-12
+
+.control
+pre_osdi /Users/rwalters/share/pdk/ihp-sg13g2/libs.tech/ngspice/osdi/psp103.osdi
+pre_osdi /Users/rwalters/share/pdk/ihp-sg13g2/libs.tech/ngspice/osdi/psp103_nqs.osdi
+pre_osdi /Users/rwalters/share/pdk/ihp-sg13g2/libs.tech/ngspice/osdi/mosvar.osdi
+pre_osdi /Users/rwalters/share/pdk/ihp-sg13g2/libs.tech/ngspice/osdi/r3_cmc.osdi
+
+op
+echo "OP_VOUT $&v(out)"
+echo "OP_VD1 $&v(d1)"
+echo "OP_VD2 $&v(d2)"
+echo "OP_VTAIL $&v(tail)"
+echo "OP_VIBIAS $&v(ibias)"
+let ivdd_op = -i(vdd)
+echo "OP_IVDD $&ivdd_op"
+
+ac dec 20 10m 1g
+let vout_db = db(v(out))
+let vout_ph = cph(v(out)) * 180 / 3.14159265358979
+wrdata /Users/rwalters/GitHub/sg13g2-opamp/.loom/worktrees/issue-14/sim/cmrr-psrr/corners/20260921-151815-707b34c/mos_ff_27C_1.32V_psrr_ac.csv vout_db vout_ph
+.endc
+.end

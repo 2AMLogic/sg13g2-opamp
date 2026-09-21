@@ -69,3 +69,14 @@ rebuilding. Every experiment's `run_*.sh` preflights this before simulating.
   span, and the hard-clipped reach, with per-point cross-checks against
   the `open-loop-ac/` and `input-offset/` records. Source of
   `spec/target-spec.md`'s output-swing row.
+- [`cmrr-psrr/`](cmrr-psrr/) — common-mode and positive-supply rejection
+  of the same schematic, over the same 45-point PVT grid and the same
+  `CL` (issue #14): two harnesses (common-mode injection at both inputs vs
+  VDD supply injection) sharing `sim/open-loop-ac/`'s self-biased DC
+  topology, both swept 10 mHz – 1 GHz so the DC figure is read from a
+  machine-verified flat shelf, with per-point op-point cross-checks
+  against the joined open-loop record's `Av0`. Also **found** the ~1.5 Hz
+  zero in this DUT's supply path — see its `README.md` "The 10 mHz sweep
+  start and the ~1.5 Hz supply zero" — and measured PSRR+'s ~4 dB
+  in-band degradation across the 100 Hz – 10 kHz band. Source of
+  `spec/target-spec.md`'s CMRR and PSRR rows.
