@@ -198,13 +198,18 @@ rendered per-point netlists with their seeds under
   no PSRR mismatch deck was opened: the PSRR+ row's supply path is
   dominated by the direct output-PMOS path, and nothing here is evidence
   about it.
-- **Not a ratification.** The `spec/target-spec.md` CMRR row's
-  mismatch-inclusive figure updated from this record is tagged `[P]`
-  (measured, not re-ratified): the systematic bound stays the ratified
-  `[DR-2]` number, and DR-0002's residual (c) explicitly reserves the
-  superseding re-ratification of this term to a future two-key pass that
-  cites this record (tracked by a follow-up issue filed in the same PR
-  as this record).
+- **Not a ratification (at landing; since superseded by DR-0004).** When
+  this record landed, the `spec/target-spec.md` CMRR row's
+  mismatch-inclusive figure updated from it was tagged `[P]` (measured,
+  not re-ratified): the systematic bound stayed the ratified `[DR-2]`
+  number, per DR-0002's residual (c), which reserved the superseding
+  re-ratification of this term to a future two-key pass that cites this
+  record (tracked by the follow-up issue filed in the same PR as this
+  record). That pass has since run — issue #32 /
+  [`spec/decision-records/0004-cmrr-mismatch-inclusive-ratification.md`](../../spec/decision-records/0004-cmrr-mismatch-inclusive-ratification.md)
+  cites this record, and the row's mismatch-inclusive figure is now the
+  ratified `[DR-4]` bound (the systematic floor staying in-row as
+  context). This README's method and caveats are unchanged by that pass.
 - **Not input-CMR characterization** — every point and sample runs at
   one fixed `Vcm = VDD/2`, the fleet's bench convention (ICMR is its own
   issue, #21).

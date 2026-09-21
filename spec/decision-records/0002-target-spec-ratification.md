@@ -136,13 +136,21 @@ why it cannot yet be ratified (per issue #16's first acceptance criterion:
   component IS ratified (above); its statistical basis is not. A future
   ratification pass on the total-offset number cites #17's record and
   supersedes this half.
-- **(c) CMRR mismatch-inclusive component — outstanding**: the CMRR bound
-  above is the systematic, nominal-device floor; the mismatch-inclusive
-  CMRR term (typically the dominant real-part term) has no measured
-  evidence yet. Tracked by #26; a future re-ratification cites its record
-  and supersedes this systematic bound. A real part's CMRR is expected
-  worse than the ratified floor — the keys ratify the floor understanding
-  this, exactly as the offset row's systematic half was ratified.
+- **(c) CMRR mismatch-inclusive component — DISCHARGED by
+  [0004-cmrr-mismatch-inclusive-ratification.md](0004-cmrr-mismatch-inclusive-ratification.md)**
+  (amendment of this record by that pass, per the rule above): #26's record
+  (`sim/cmrr-mismatch/records/20260921-172304-65f5fb4.{csv,md}`) has since
+  landed, and 0004's two-key re-ratification cites it and supersedes this
+  systematic bound exactly as this register pre-registered. **Original
+  wording (at this record's own ratification)**: "the CMRR bound above is
+  the systematic, nominal-device floor; the mismatch-inclusive CMRR term
+  (typically the dominant real-part term) has no measured evidence yet.
+  Tracked by #26; a future re-ratification cites its record and supersedes
+  this systematic bound. A real part's CMRR is expected worse than the
+  ratified floor — the keys ratify the floor understanding this, exactly as
+  the offset row's systematic half was ratified." The superseded floor
+  stays in the CMRR row as context per the value-tag convention; the offset
+  row's sibling residual (b) remains open pending #17's own pass.
 - **(d) Loaded output swing**: the ratified swing bound is unloaded (no
   resistive load) at CL = 2 pF — an upper bound. A loaded-row decision is a
   separate decision record, never a silent amendment of this one.
