@@ -48,6 +48,14 @@ transfers from this PDK's own `sg13g2-bandgap` and `sg13g2-ldo` siblings, and
 the [gap-to-T1 tracker](https://github.com/2AMLogic/sg13g2-opamp/issues/3)
 for this block's current distance from a sim-validated design.
 
+**Where this block sits on the evidence ladder is graded, not asserted**:
+[`signoff/`](signoff/README.md) holds the `klt signoff --manifest` block
+manifest and the committed per-item T1 verdict it produces — every item
+`unmet` today, the honest machine-readable statement of the gap. That
+record — not this paragraph, and not a hand-maintained checkbox list — is
+the verdict of record for the tracker above, and CI re-grades it so a claim
+resting on an artifact that has since changed fails instead of rotting.
+
 ## License
 
 Apache-2.0.

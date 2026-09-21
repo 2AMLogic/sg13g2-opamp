@@ -1,0 +1,65 @@
+# T1 signoff re-grade (klt signoff --manifest)
+#
+# What this workflow is: this repo's graded position on the
+# design-evidence-tiers ladder is committed under signoff/ (block manifest +
+# append-only graded records). A hand-maintained list goes stale the moment
+# either the evidence or the upstream checklist moves; this re-grade makes
+# the drift fail a build instead.
+#
+# What it is deliberately not: this repo has no other CI, and the broader
+# harness/evidence-format validation bar tracked on gap-to-T1 item 10
+# (issue #3) is a separate, larger scope. This workflow gates only the
+# signoff register.
+#
+# Two halves, one job:
+#   - offline (before any install): manifest shape, pins vs. committed
+#     artifacts, record consistency -- stdlib-only, no klt, no network;
+#   - online: installs `klt` at the revision pinned in signoff/klt-pin.txt and
+#     re-grades the manifest, diffing against the committed verdict of
+#     record. Needs no PDK, no ngspice and no klayout install of its own
+#     (klayout ships a wheel, pulled in as a klt dependency).
+#
+# If the online half is ever unavailable (an upstream fetch failure, an
+# Actions outage), the offline half still runs in the same job and gates
+# every push and PR it can.
+
+name: signoff
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  signoff:
+    name: T1 signoff register (offline checks + klt re-grade)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+
+      - name: Offline checks (manifest, pins, record consistency)
+        run: python3 signoff/check_signoff.py
+
+      - name: Install klt at the pinned revision
+        # Pinned, not floating: the T1 item skeleton is parsed out of
+        # klayout-tools' own docs/design-evidence-tiers.md at run time, so a
+        # floating main would make the committed record disagree with a
+        # re-run for reasons unrelated to this block's evidence. Bumping the
+        # pin is a deliberate act -- see signoff/klt-pin.txt.
+        run: |
+          set -euo pipefail
+          pin="$(grep -v '^[[:space:]]*#' signoff/klt-pin.txt | grep -v '^[[:space:]]*$' | head -1)"
+          echo "klayout-tools @ ${pin}"
+          python3 -m pip install --upgrade pip
+          python3 -m pip install "klayout-tools @ git+https://github.com/2AMLogic/klayout-tools@${pin}"
+          klt version || true
+
+      - name: Re-grade the block manifest
+        # `klt signoff --manifest` exits 3 when the block is not yet T1,
+        # which is this block's current state and not an error --
+        # check_signoff.py knows that, and fails only on a real error or on
+        # any drift between the fresh grade and the committed record.
+        run: python3 signoff/check_signoff.py --run-klt

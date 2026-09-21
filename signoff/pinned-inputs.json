@@ -1,0 +1,26 @@
+{
+  "comment": [
+    "Which committed artifact each `content_hash` in block-manifest.json pins.",
+    "",
+    "Today the manifest cites nothing -- every T1 item is unmet with",
+    "`no_evidence`, the honest statement that no klt-gradable envelope exists",
+    "in this repo yet (see signoff/README.md) -- so this map is empty. The",
+    "first citation added to block-manifest.json must add its entry here in the",
+    "same PR: klt compares a manifest pin against the *cited envelope's own*",
+    "provenance.input.content_hash -- it never looks at the repo file the hash",
+    "is supposed to be the hash *of*. So a pin can go stale in two independent",
+    "ways, and only one of them is klt's business:",
+    "",
+    "  1. the cited envelope ran against a different revision than the pin",
+    "     (klt catches this: reason `stale_evidence`), and",
+    "  2. the pinned artifact itself changed in the repo since the pin was",
+    "     written, so the pin no longer describes current sources at all",
+    "     (klt cannot catch this -- it never reads the artifact).",
+    "",
+    "This file closes (2): signoff/check_signoff.py re-hashes every path below",
+    "and fails when it no longer equals the manifest's pin for that item. It is",
+    "stdlib-only and PDK-free, so it runs in the offline half of the CI",
+    "signoff job with no klt and no network -- see signoff/README.md."
+  ],
+  "inputs": {}
+}
