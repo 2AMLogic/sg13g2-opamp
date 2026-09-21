@@ -168,7 +168,7 @@ and the record carries the comparison columns:
   this is a strong convergence check, not an independent-physics one).
 - `peak_inc_gain_v_v` vs `sim/open-loop-ac/`'s `av0_db` (`av0_ratio`):
   **1.017–1.255** across the grid — the incremental DC gain sits within
-  ~3–25% of the AC bench's 1 Hz gain at the same point, the expected
+  ~2–26% of the AC bench's 1 Hz gain at the same point, the expected
   small bias-point/analysis difference.
 - `ivdd_center_a` vs `sim/open-loop-ac/`'s `ivdd_total_a` (`ivdd_ratio`):
   **1.0041–1.0098** — the mid-swing supply current matches the AC
