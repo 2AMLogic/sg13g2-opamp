@@ -1,0 +1,8 @@
+seed_determinism_selfcheck,PASS bit-identical
+negctrl_zero_spread,PASS (vos=0.015714074799999998 V at all 300 negctrl draws)
+negctrl_anchor,PASS (|draw - mos_tt_27C_1.20V vos_null_v=0.0157152476 V| = 1.1728e-06 V, gate 50e-6 V)
+negctrl_point,mos_tt_negctrl_27C_1.20V
+deterministic_record_joined,20260918-203858-90844d2
+total_draws,4801 (incl. detcheck duplicate)
+failed_draws_total,0
+failed_draw_points,0 (none)

@@ -1,0 +1,125 @@
+* sg13g2-opamp -- DC input-referred offset, Monte Carlo mismatch draw
+* (issue #17). One draw = one single-pass coarse null sweep using the SAME
+* open-loop method sim/input-offset/testbench/tb_offset_null.spice.tmpl
+* (issue #11) measures deterministically. Generated from this template by
+* sim/input-offset/run_offset_mc.sh -- do not edit a generated netlist
+* directly, edit this template and re-run the campaign. This first line is
+* the netlist title (ngspice treats line 1 as a title card, never as an
+* active statement -- see the seeding note below for why that matters).
+*
+* Point: mos_ff_mismatch_125C_1.20V (corner family mos_ff, temp 125 C,
+*        vdd 1.20 V, mode mismatch)
+* Draw: index 0 of N = 300, per-draw seed 20260921
+* PDK: ihp-sg13g2 /Users/rwalters/share/pdk (see sim/pdk.json for the pinned release)
+* OSDI models: /Users/rwalters/share/pdk/ihp-sg13g2/libs.tech/ngspice/osdi (built by sim/tools/build-osdi.sh)
+* DUT netlist: /Users/rwalters/GitHub/sg13g2-opamp/.loom/worktrees/issue-17/sim/input-offset/netlist-snapshots/mc-20260921-174056-0a509fb/opamp_core.spice (the committed frozen
+*   design/netlist/opamp_core.spice -- run_offset_mc.sh snapshots it once
+*   per campaign under netlist-snapshots/<record-id>/)
+*
+* --------------------------------------------------------------- seeding
+* THE SEED MECHANISM IS `setseed 20260921` FOLLOWED BY `reset` IN .control,
+* immediately before the dc analysis below. SG13G2's per-device mismatch is
+* expressed as instance-parameter agauss(...) expressions inside
+* sg13g2_moslv_mod_mismatch.lib's sg13_lv_nmos/sg13_lv_pmos subckts (w, l,
+* delvto, factuo draws) -- evaluated at circuit (re-)elaboration, not at
+* initial netlist parse -- so neither an .options-level seed nor a bare
+* .control setseed without a reset reaches the draws. `reset` re-reads the
+* deck and re-evaluates those expressions with the RNG state `setseed`
+* just installed. Verified empirically on this exact PDK + ngspice-46 +
+* OSDI build (the campaign's in-campaign self-check re-verifies it every
+* run): same seed -> byte-identical sweep across separate ngspice
+* invocations; different seed -> a genuinely new draw of every device
+* instance; PLAIN (non-mismatch) section -> byte-identical output for ANY
+* two seeds, which is exactly the negative control's zero-spread property.
+*
+* Two placement pitfalls this design deliberately avoids, for the record:
+* (a) ngspice treats a netlist's FIRST line as a title card -- an
+*     `.options rndseed=...` placed there is never an active statement at
+*     all (it silently becomes the circuit's name);
+* (b) sg13g2-bandgap's sim/closed-loop-vref-mc verified a netlist-level
+*     `.options rndseed` placement for THAT campaign's .param-level
+*     agauss expressions (HBT `qarea='agauss(...)'`, evaluated at parse
+*     time). That finding does not transfer to THIS deck's
+*     instance-parameter draws -- the two evaluation stages use different
+*     seeding paths, and only setseed+reset drives the instance-level one.
+*
+* Each draw is a SEPARATE ngspice invocation rendered with its own
+* draw_seed = campaign base seed + draw index (both recorded, per point,
+* in records/<record-id>-draws.csv and the digest records/<record-id>.csv).
+*
+* -------------------------------------------------------- method (per draw)
+* Identical to issue #11's PRIMARY method, coarse pass only: sweep
+* Vid = V(inp) - V(inn) from -0.1 V to 0.1 V at
+* 500e-6 V with the input common mode pinned at Vcm = 0.6 V,
+* and take the single Vout = Vcm crossing as this draw's Vos. That
+* record's committed evidence (records/20260918-203858-90844d2.csv,
+* vos_coarse_fine_delta_v column) shows the coarse pass already lands
+* within 2.4 uV of the fine-pass null at every one of its 45 points --
+* three orders of magnitude below the mV-scale mismatch term this
+* campaign measures -- so a per-draw fine re-sweep would buy no
+* statistical accuracy for double the runtime and is deliberately
+* omitted (a stated, justified deviation from the deterministic bench's
+* two-pass shape, anchored by that committed delta-evidence column).
+*
+* Per-draw sanity rule, enforced by run_offset_mc.sh when parsing this
+* draw's sweep: the Vout = Vcm crossing must be EXACTLY one and must not
+* sit on the window edge. A draw that violates it is recorded status=FAIL
+* and excluded from its point's statistics, never silently dropped; a
+* point whose n_pass < n_draws carries status=FAIL in the digest.
+*
+* ------------------------------------------------------ what is sampled
+* mos_ff_mismatch selects cornerMOSlv.lib's `<corner>_mismatch` section:
+* the SAME deterministic process-corner parameters as the plain `<corner>`
+* section (combined with, not instead of, process corners), PLUS
+* per-instance zero-mean mismatch draws on delvto/factuo/w/l (area-scaled
+* by 1/sqrt(m*l*w*1e12), one-sigma values from sg13g2_moslv_mismatch.lib:
+* nmos delvto 3.9 mV, pmos delvto 2.2 mV, dw 4 nm, dl 2 nm, factuo
+* 0.5 % / 0.33 %). Every transistor instance in the DUT draws
+* independently -- input pair, mirrors, output stage, and bias MOS alike
+* (mm_ok defaults to 1 on all of them).
+*
+* The NEGATIVE CONTROL renders this same template with the PLAIN
+* `<corner>` section and the identical seed sequence: that deck contains
+* no draw expressions at all, so its output is invariant to the seed --
+* run_offset_mc.sh hard-gates on exactly-zero spread across all N negctrl
+* draws and on agreement with the committed deterministic record (see
+* that script's NEGATIVE CONTROL section for the figures).
+*
+* ibias, CL and the DUT environment are identical to issue #11's bench so
+* the two experiments bias the same DUT the same way (CL has no effect on
+* a DC analysis and carries no mismatch draws in either mode).
+*
+* RECORDED VECTORS (v(out)): v(out) alone -- the S-curve
+* needed to locate and verify the null. Keeping one short vector per draw
+* is what keeps a 16-point x N=300 campaign's scratch footprint out of
+* the committed evidence tree; only draw 0 per point is committed (see
+* README.md "Evidence volume").
+
+.lib "/Users/rwalters/share/pdk/ihp-sg13g2/libs.tech/ngspice/models/cornerCAP.lib" cap_typ
+.include "/Users/rwalters/GitHub/sg13g2-opamp/.loom/worktrees/issue-17/sim/input-offset/netlist-snapshots/mc-20260921-174056-0a509fb/opamp_core.spice"
+
+.lib "/Users/rwalters/share/pdk/ihp-sg13g2/libs.tech/ngspice/models/cornerMOSlv.lib" mos_ff_mismatch
+
+.options temp=125 tnom=27
+
+Vdd vdd 0 dc 1.20
+Vss vss 0 dc 0
+Iibias vdd ibias dc 10u
+Vcm cm 0 dc 0.6
+Vid id 0 dc 0
+Binp inp 0 v = v(cm) + v(id)/2
+Binn inn 0 v = v(cm) - v(id)/2
+Cload out vss 2e-12
+
+.control
+pre_osdi /Users/rwalters/share/pdk/ihp-sg13g2/libs.tech/ngspice/osdi/psp103.osdi
+pre_osdi /Users/rwalters/share/pdk/ihp-sg13g2/libs.tech/ngspice/osdi/psp103_nqs.osdi
+pre_osdi /Users/rwalters/share/pdk/ihp-sg13g2/libs.tech/ngspice/osdi/mosvar.osdi
+pre_osdi /Users/rwalters/share/pdk/ihp-sg13g2/libs.tech/ngspice/osdi/r3_cmc.osdi
+
+setseed 20260921
+reset
+dc Vid -0.1 0.1 500e-6
+wrdata /var/folders/0h/l9gwswj97wb82mh27zyw305r0000gn/T/sg13g2-opamp-offset-mc.ahT4AF/sweeps/mos_ff_mismatch_125C_1.20V_0.csv v(out)
+.endc
+.end
