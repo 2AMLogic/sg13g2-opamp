@@ -1,0 +1,5 @@
+op_pass_count,45 of 45, op_sane failures: 0 (none)
+sim_fail_count,0 (none)
+plateau_guard_failures (>0.05 dB),1 (mos_ss_-40C_1.08V)
+psrr_xcheck_failures (>1e-3 V),0 (none)
+ol_vout_xcheck_failures (>1e-3 V),0 (none)
