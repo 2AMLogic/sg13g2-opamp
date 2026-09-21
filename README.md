@@ -33,13 +33,17 @@ deliberately the plain-CMOS twin of the gf180/sky130 repos, so the
 three-way comparison stays honest. An HBT-input variant is a stretch row
 that only a decision record can open.
 
-## Target specification (DRAFT — engineering to ratify)
+## Target specification (RATIFIED — partial, via the two-key mechanism)
 
-See [`spec/target-spec.md`](spec/target-spec.md) for the full DRAFT table:
-DC gain, GBW and phase margin into a stated capacitive load, slew rate,
-input-referred noise, offset sigma (basis stated), CMRR, PSRR, swing,
-supply/power at 1.2 V. Rows filled only from committed benches, PVT corners
-recorded. See also [`spec/porting-plan.md`](spec/porting-plan.md) for what
+See [`spec/target-spec.md`](spec/target-spec.md) for the full ratified
+table: DC gain, GBW and phase margin into a stated capacitive load, slew
+rate, input-referred noise, offset sigma (basis stated), CMRR, PSRR,
+swing, supply/power at 1.2 V. Rows filled only from committed benches,
+PVT corners recorded; the measured rows are ratified by
+[`spec/decision-records/0002-target-spec-ratification.md`](spec/decision-records/0002-target-spec-ratification.md)
+(one bound per row, `[DR-2]` tags), with the residual rows —
+`[TBD-12]` area, the offset row's Monte Carlo basis (#17) and the CMRR
+row's mismatch term (#26) — explicitly still open. See also [`spec/porting-plan.md`](spec/porting-plan.md) for what
 transfers from this PDK's own `sg13g2-bandgap` and `sg13g2-ldo` siblings, and
 the [gap-to-T1 tracker](https://github.com/2AMLogic/sg13g2-opamp/issues/3)
 for this block's current distance from a sim-validated design.
