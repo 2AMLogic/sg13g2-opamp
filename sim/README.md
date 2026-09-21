@@ -79,4 +79,18 @@ rebuilding. Every experiment's `run_*.sh` preflights this before simulating.
   zero in this DUT's supply path — see its `README.md` "The 10 mHz sweep
   start and the ~1.5 Hz supply zero" — and measured PSRR+'s ~4 dB
   in-band degradation across the 100 Hz – 10 kHz band. Source of
-  `spec/target-spec.md`'s CMRR and PSRR rows.
+  `spec/target-spec.md`'s CMRR and PSRR rows (the CMRR row's ratified
+  systematic floor).
+- [`cmrr-mismatch/`](cmrr-mismatch/) — mismatch Monte Carlo CMRR of the
+  same schematic, over the same 45-point grid (issue #26, companion to
+  #17): the `cmrr-psrr/` CMRR harness re-run with the PDK's own
+  per-corner mismatch decks (`sg13g2_moslv_mod_mismatch.lib`'s
+  per-instance `agauss()` wrappers), 300 independently drawn samples per
+  point joined to the same per-point `Av0`, with seed-deterministic
+  reproduction, a per-point zero-mismatch negative control asserted
+  against the committed systematic record, and per-sample DC/plateau
+  sanity. Quotes the **+3σ-of-Acm** part per point — see its `README.md`
+  "Choosing the 3σ domain" for why the bound is computed in the linear
+  domain. Source of `spec/target-spec.md`'s CMRR row's
+  mismatch-inclusive evidence (DR-0002 residual (c), not yet
+  re-ratified).

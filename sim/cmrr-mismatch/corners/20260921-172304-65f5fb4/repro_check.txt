@@ -1,0 +1,6 @@
+nominal_point: mos_tt_27C_1.20V
+grid_seed: 260004
+alt_seed: 990000
+mc_n_effective: 300
+same_seed_rerun: byte-identical to mos_tt_27C_1.20V_mc_samples.txt (PASS)
+alt_seed_rerun: different draw sequence (PASS)

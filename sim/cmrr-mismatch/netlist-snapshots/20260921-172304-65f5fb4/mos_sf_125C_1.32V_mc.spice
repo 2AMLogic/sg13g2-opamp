@@ -1,0 +1,135 @@
+* sg13g2-opamp -- mismatch Monte Carlo CMRR bench, design/opamp_core.sch
+* (issue #26; companion to sim/cmrr-psrr/, issue #14)
+* Generated from
+* sim/cmrr-mismatch/testbench/tb_cmrr_mc.spice.tmpl by
+* sim/cmrr-mismatch/run_cmrr_mismatch_mc.sh -- do not edit a generated
+* netlist-snapshots/*.spice file directly, edit this template and re-run
+* the sweep.
+*
+* Point: corner=mos_sf_mismatch temp_c=125 vdd_v=1.32
+*        seed=260035 mc_n=300
+* PDK: ihp-sg13g2 /Users/rwalters/share/pdk (see sim/pdk.json for the pinned release)
+* OSDI models: /Users/rwalters/share/pdk/ihp-sg13g2/libs.tech/ngspice/osdi (built by sim/tools/build-osdi.sh)
+* DUT netlist snapshot: /Users/rwalters/GitHub/sg13g2-opamp/.loom/worktrees/issue-26/sim/cmrr-mismatch/netlist-snapshots/20260921-172304-65f5fb4/opamp_core.spice (frozen copy of
+*   design/netlist/opamp_core.spice alongside this generated testbench, so
+*   the exact DUT netlist this point ran against is reviewable later)
+* Per-sample output (append): /Users/rwalters/GitHub/sg13g2-opamp/.loom/worktrees/issue-26/sim/cmrr-mismatch/corners/20260921-172304-65f5fb4/mos_sf_125C_1.32V_mc_samples.txt
+*
+* ------------------------------------------------------------------ method
+* The circuit is EXACTLY sim/cmrr-psrr/testbench/tb_cmrr.spice.tmpl's CMRR
+* harness (issue #14's committed bench) -- same flat xschem netlist, same
+* self-biased DC network (Lbreak = 1e18 H from inn to out; inp held at
+* Vcm = VDD/2 through Vinp referenced to the cmpert perturbation node; inn
+* AC-coupled to cmpert through Ccm = 1 F; external ideal ibias = 10 uA).
+* See that template's header for the loop-break and Ccm reasoning, reused
+* verbatim here. What differs is ONLY the model library section and the
+* Monte Carlo loop:
+*
+*   - .lib cornerMOSlv.lib mos_sf_mismatch -- the runner resolves this
+*     to <corner>_mismatch for the mismatch runs (the PDK's per-corner
+*     mismatch sections: identical corner .params, plus
+*     sg13g2_moslv_mismatch.lib's mismatch sigmas --
+*     sg13_lv_{n,p}mos_{delvto,factuo}_mm = 0.0039/0.005 (nmos) and
+*     0.0022/0.0033 (pmos), dw/dl_mm = 4e-9/2e-9 -- consumed by
+*     sg13g2_moslv_mod_mismatch.lib's agauss() wrappers on w, l, delvto
+*     and factuo, Pelgrom-style scaled by 1/sqrt(m*l*w)), or to the PLAIN
+*     <corner> section for the negative-control runs (the exact
+*     configuration sim/cmrr-psrr/ ran -- no agauss() in the wrapper at
+*     all, so every "sample" is the nominal device and the loop must
+*     reproduce #25's committed per-point record bit-for-bit).
+*   - setseed 260035 once per point, then a dowhile loop of
+*     reset / op / ac: each `reset` re-parses the netlist and re-evaluates
+*     every agauss() expression, so each sample of the loop is a fresh
+*     independent per-instance mismatch draw for all eight MOSFETs
+*     simultaneously (input pair M1/M2, mirror M3/M4, tail M5, bias Mbias,
+*     output M6/M7 -- correlated only through the PDK's own sigma
+*     definitions). setseed makes the whole sequence deterministic: the
+*     same (section, temp, vdd, seed, N) tuple reproduces the same sample
+*     sequence bit-for-bit (verified in dev -- same seed twice is
+*     identical, a different seed changes every draw). The seed formula
+*     per grid point is documented in run_cmrr_mismatch_mc.sh and the
+*     experiment README.
+*
+* CMRR definition (unchanged from #14/#26's own wording): each sample's
+* CMRR = the SAME grid point's Av0 out of sim/open-loop-ac/records/*.csv
+* (joined, not re-measured) minus this sample's Acm, where Acm is the
+* common-mode gain measured here (perturbation node cmpert, dc 0 ac 1 V,
+* in phase on both inputs). Keeping the numerator fixed to the committed
+* systematic Av0 is a deliberate issue-#26 choice: the mismatch-inclusive
+* figure stays directly comparable to the ratified systematic floor
+* (sim/cmrr-psrr/ records), the residual between the two being purely the
+* mismatch-induced change in Acm. Per-sample variation of the drawn
+* part's own differential gain is therefore NOT folded into this number;
+* see sim/cmrr-mismatch/README.md "What this bench does not claim".
+*
+* Per-sample AC points: `ac dec 1 10m 1k` sweeps exactly
+* {10 mHz, 0.1 Hz, 1 Hz, 10 Hz, 100 Hz, 1 kHz} -- the 10 mHz shelf read
+* (Acm0, same read convention as #14), the 0.1 Hz value (the plateau
+* guard partner, same 10x-lower rule as #14's *_plateau_delta_db), and
+* 1 kHz (the in-band figure #14 also reports). The full 10 mHz - 1 GHz
+* per-point spectra are NOT re-swept per sample: #14's committed spectra
+* already establish the shelf shape for the systematic case, and the
+* loop-break corner frequency that sets the shelf is not a function of
+* the drawn device parameters; every sample's 10 mHz-vs-0.1 Hz delta is
+* still recorded and guarded (0.05 dB, #14's tolerance) so a flatness
+* break would still be caught.
+*
+* Per-sample DC check data: the OP line below carries the same DC nodes
+* #14 echoes (vout, d1, d2, tail, ibias, ivdd); run_cmrr_mismatch_mc.sh
+* applies #14's per-point DC sanity rule per sample (output within 15% of
+* VDD of mid-rail, no internal node within 2% of a rail) instead of once
+* per point, and samples that fail it are excluded from the statistics
+* and counted (see the runner's op_pass/excluded columns and README.md
+* "Per-sample sanity checks").
+*
+* ibias: a single external ideal current-source bias pin, per
+* design/opamp_sizing.md "Bias scope" -- identical to #14's harness (the
+* same scope decision the Iq rows make).
+*
+* Output mechanism: `echo ... >> /Users/rwalters/GitHub/sg13g2-opamp/.loom/worktrees/issue-26/sim/cmrr-mismatch/corners/20260921-172304-65f5fb4/mos_sf_125C_1.32V_mc_samples.txt` appends one tagged line per
+* phase per sample (OP for the operating point, AC for the shelf/guard/1k
+* values). The two-line-per-sample split is deliberate: after `ac` the
+* current plot has switched (the AC plot), and vectors let-cached before
+* it do not resolve in the same echo line as post-AC ones -- two
+* -separate echoes, each in its own analysis' current plot, is the
+* boring, verifiable alternative. run_cmrr_mismatch_mc.sh merges OP/AC
+* pairs by sample index.
+
+.lib "/Users/rwalters/share/pdk/ihp-sg13g2/libs.tech/ngspice/models/cornerCAP.lib" cap_typ
+.include "/Users/rwalters/GitHub/sg13g2-opamp/.loom/worktrees/issue-26/sim/cmrr-mismatch/netlist-snapshots/20260921-172304-65f5fb4/opamp_core.spice"
+
+.lib "/Users/rwalters/share/pdk/ihp-sg13g2/libs.tech/ngspice/models/cornerMOSlv.lib" mos_sf_mismatch
+
+.options temp=125 tnom=27
+
+Vdd vdd 0 dc 1.32
+Vss vss 0 dc 0
+Iibias vdd ibias dc 10u
+Vpert cmpert 0 dc 0 ac 1
+Vinp inp cmpert dc 0.66
+Ccm inn cmpert 1
+Lbreak inn out 1e18
+Cload out vss 2e-12
+
+.control
+pre_osdi /Users/rwalters/share/pdk/ihp-sg13g2/libs.tech/ngspice/osdi/psp103.osdi
+pre_osdi /Users/rwalters/share/pdk/ihp-sg13g2/libs.tech/ngspice/osdi/psp103_nqs.osdi
+pre_osdi /Users/rwalters/share/pdk/ihp-sg13g2/libs.tech/ngspice/osdi/mosvar.osdi
+pre_osdi /Users/rwalters/share/pdk/ihp-sg13g2/libs.tech/ngspice/osdi/r3_cmc.osdi
+
+setseed 260035
+let mci = 0
+dowhile mci < 300
+  reset
+  op
+  let ivdd_op = -i(vdd)
+  echo "OP $&mci $&v(out) $&v(d1) $&v(d2) $&v(tail) $&v(ibias) $&ivdd_op" >> /Users/rwalters/GitHub/sg13g2-opamp/.loom/worktrees/issue-26/sim/cmrr-mismatch/corners/20260921-172304-65f5fb4/mos_sf_125C_1.32V_mc_samples.txt
+  ac dec 1 10m 1k
+  let acm10m = db(v(out))[0]
+  let acm01 = db(v(out))[1]
+  let acm1k = db(v(out))[5]
+  echo "AC $&mci $&acm10m $&acm01 $&acm1k" >> /Users/rwalters/GitHub/sg13g2-opamp/.loom/worktrees/issue-26/sim/cmrr-mismatch/corners/20260921-172304-65f5fb4/mos_sf_125C_1.32V_mc_samples.txt
+  let mci = mci + 1
+end
+.endc
+.end

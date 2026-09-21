@@ -1,0 +1,12 @@
+pilot_points: 4 mos_tt_27C_1.20V (seed 260004), 42 mos_fs_125C_1.08V (seed 260042)
+pilot_n: 300
+pilot_acm_sigma_max_linear: 0.280544
+mc_target_sigma_re: 0.05
+mc_n_effective: 300
+mc_n_floor: 300
+ngspice: ngspice-46
+ac_record: 20260910-221601-22feaba
+cmrr_record: 20260921-151815-707b34c
+seed_base: 260000
+seed_formula: seed = MC_SEED_BASE + grid_index (corner-major, 0-based)
+mismatch_section_formula: corner + '_mismatch' (cornerMOSlv.lib per-corner sections)

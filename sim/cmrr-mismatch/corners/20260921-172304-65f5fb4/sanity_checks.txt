@@ -1,0 +1,10 @@
+points,45
+mc_n_per_point,300
+pilot_acm_sigma_max_linear,0.280544
+sim_fail_count,0
+negctl_fail_count,0
+repro,pass
+negctl_tolerance_db,5e-3
+negctl_tolerance_v,5e-4
+plateau_tolerance_db,0.05
+op_rule,midrail 0.15*VDD, inner nodes 0.02*VDD rail margin
