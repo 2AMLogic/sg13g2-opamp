@@ -99,5 +99,7 @@ rebuilding. Every experiment's `run_*.sh` preflights this before simulating.
   sanity. Quotes the **+3σ-of-Acm** part per point — see its `README.md`
   "Choosing the 3σ domain" for why the bound is computed in the linear
   domain. Source of `spec/target-spec.md`'s CMRR row's
-  mismatch-inclusive evidence (DR-0002 residual (c), not yet
-  re-ratified).
+  mismatch-inclusive evidence — the record the DR-0002 residual-(c)
+  re-ratification pass cites: issue #32's
+  [`spec/decision-records/0004-cmrr-mismatch-inclusive-ratification.md`](../spec/decision-records/0004-cmrr-mismatch-inclusive-ratification.md),
+  binding the row's `[DR-4]` mismatch-inclusive bound.
