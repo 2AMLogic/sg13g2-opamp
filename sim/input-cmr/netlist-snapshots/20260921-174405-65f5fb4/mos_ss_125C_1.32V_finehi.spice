@@ -1,0 +1,151 @@
+* sg13g2-opamp -- input common-mode range (ICMR) bench, design/opamp_core.sch (issue #21)
+* Generated from
+* sim/input-cmr/testbench/tb_cmr.spice.tmpl by
+* sim/input-cmr/run_cmr_sweep.sh -- do not edit a generated
+* netlist-snapshots/*.spice file directly, edit this template and re-run
+* the sweep.
+*
+* Point: corner=mos_ss temp_c=125 vdd_v=1.32 pass=fine-hi
+* Sweep: Vcm from 1.10063604 V to 1.12463604 V, step 250e-6 V
+* PDK: ihp-sg13g2 /Users/rwalters/share/pdk (see sim/pdk.json for the pinned release)
+* OSDI models: /Users/rwalters/share/pdk/ihp-sg13g2/libs.tech/ngspice/osdi (built by sim/tools/build-osdi.sh)
+* DUT netlist snapshot: /Users/rwalters/GitHub/sg13g2-opamp/.loom/worktrees/issue-21/sim/input-cmr/netlist-snapshots/20260921-174405-65f5fb4/opamp_core.spice (frozen copy of
+*   design/netlist/opamp_core.spice alongside this generated testbench, so
+*   the exact DUT netlist this point ran against is reviewable later)
+*
+* ------------------------------------------------------------------ method
+* design/netlist/opamp_core.spice is a FLAT xschem netlist (its
+* "**.subckt"/"**.ends" lines are full-line SPICE comments, not an active
+* subcircuit wrapper), so .include'ing it makes its own node names (vdd,
+* vss, inn, inp, out, ibias, plus the internal d1/d2/tail nodes) live
+* directly at this testbench's top level -- same convention as
+* sim/open-loop-ac/, sim/slew-rate/ and sim/output-swing/. No "X..."
+* instantiation of the core is needed or used.
+*
+* WHAT IS MEASURED. The input common-mode range (ICMR) of the DR-1 core is
+* defined here, operationally, from the input stage's own DC state: sweep
+* the input common mode Vcm with the differential input held EXACTLY at
+* zero (Vid = V(inp) - V(inn) = 0) and record the input stage's internal
+* operating point per sample -- v(tail) (= Vds of the NMOS tail device
+* M5, whose source sits at VSS; also the pair's common source node),
+* v(d1)/v(d2) (= Vds + v(tail) of the input pair devices M1/M2),
+* v(ibias) (= Vgs of M5, via the diode-connected Mbias it mirrors), and
+* the total Vdd current -- then report, per corner, the maximal Vcm
+* interval around VDD/2 at which the input stage provably still holds
+* every input-stage-relevant device in saturation:
+*
+*   lower bound: the lowest swept Vcm at which M5 still has
+*     Vds5 = v(tail) >= Vdsat5, with Vdsat5 MEASURED (not assumed) by the
+*     sibling replica probe tb_cmr_mech.spice.tmpl at this same grid
+*     point -- same device (sg13_lv_nmos w=2.2u l=0.52u), same corner,
+*     same temperature, and the same gate bias (Vgs5 = v(ibias), which
+*     the replica reproduces exactly: the diode-connected Mbias carrying
+*     the same external 10 uA settles an identical NMOS to an identical
+*     Vgs), read at the knee of the replica Id5(Vds) curve: the first
+*     Vds whose incremental slope has fallen to 10% of the curve's
+*     maximum triode slope (README.md "The saturation-edge probes"
+*     explains why a knee rule is right for this 0.52 um device);
+*   upper bound: the highest swept Vcm at which the input pair
+*     still satisfies the saturation condition Vds >= Vgs - Vth, with
+*     Vth MEASURED by the replica probe at the pair's own body bias AT
+*     the bound, per this repo's gm/ID constant-current convention
+*     (two-round fixed-point: round 1 probes the bias at the centre
+*     operating point, the bound it predicts is re-probed in round 2,
+*     and the recorded bound is the fixed-point result -- the runner logs
+*     the round-to-round shift, README.md "The pair-saturation fixed
+*     point"). On DUT observables the condition rearranges to
+*     v(d1) - Vcm >= -Vth, which is the crossing the runner resolves.
+*
+* WHY OPEN-LOOP WITH Vid PINNED AT ZERO, NOT A CLOSED-LOOP BUFFER SWEEP.
+* A unity-gain buffer (out fed back to inn, ramp the input rail-to-rail)
+* masquerades as the obvious ICMR bench, and it cannot locate the input
+* stage's saturation edge: a buffer's DC incremental gain dVout/dVcm
+* stays within ~1.3% of unity while the open-loop DC gain Av is anywhere
+* above ~1, and only collapses to 1/2 (a -6 dB "stops tracking" event)
+* when Av itself has already fallen to ~1 V/V -- i.e. ~38 dB BELOW this
+* design's measured worst-case Av0 (37.8 dB, sim/open-loop-ac/). By the
+* time a buffer visibly stops tracking, the input stage has long been
+* fully degenerate; the -6 dB buffer-tracking criterion would report a
+* range set by wherever ~+0 dB of open-loop gain happens to survive,
+* not by the input stage. The same argument, in the other direction, is
+* exactly why sim/output-swing/ chose an open-loop differential sweep
+* over a buffer sweep for the output stage (its README.md "Open-loop
+* transfer curve, not a closed-loop buffer sweep"). With Vid at exactly
+* zero, the input stage's DC bias is well-posed by symmetry: the pair
+* branches are mirror-balanced (d1/d2 held by the M3/M4 mirror), so the
+* input-stage state per Vcm sample is a direct function of the common
+* mode alone. The output DOES rail in this configuration (there is no
+* feedback) -- that is expected, harmless to the input-stage state, and
+* recorded in the committed scan CSVs as supporting evidence (the
+* front-end starvation at the lower bound is independently visible in
+* the per-sample total Vdd current), README.md "What was actually
+* measured".
+*
+* WHY NOT DEVICE QUERY PARAMETERS. This tree's OSDI/PSP103 build exposes
+* no OP-info interface (@m.x..[vdsat]-style model op-point queries fail
+* with "no such device or model name"; sim/gm-id-characterization/README
+* "Why finite-difference DC/AC, not model op-point queries" documents
+* the same wall), so every saturation edge below is a measured device
+* I-V curve from the same PDK's own model, per the fleet's established
+* finite-difference discipline -- never an assumed textbook threshold.
+*
+* ibias: a single external ideal 10 uA current source sunk from vdd
+* through the ibias node into the DUT's own diode-connected Mbias, per
+* design/opamp_sizing.md "Bias scope" -- identical to sim/open-loop-ac/,
+* sim/slew-rate/ and sim/output-swing/'s treatment, so every bench in
+* this tree biases the same DUT the same way.
+*
+* Cload is present (CL = 2e-12 F [DR-1]) purely so this bench's DUT
+* environment matches the fleet's; it has no effect on a DC analysis.
+* No resistive load is attached (same convention as sim/output-swing/).
+*
+* The .control block first solves the operating point at the source's
+* static value Vcm = VDD/2 (echoed as OP_* lines -- the same centre
+* operating point every other bench in this tree reports at this grid
+* point, machine-joined by run_cmr_sweep.sh against
+* sim/open-loop-ac/ and sim/input-offset/'s committed records), then
+* runs the DC sweep that produces this pass's committed scan curve.
+* run_cmr_sweep.sh renders this template three times per grid point
+* (a coarse locate pass over the full supply span, then a fine pass
+* around each bound), mirroring sim/output-swing/'s coarse-then-fine
+* convention.
+
+* vin 0: the pin tie. A 0 V source holds inn exactly at inp, so both
+* input pins sit at the swept Vcm with Vid identically zero and the
+* source doubles as evidence (i(vin)=0 within solver tolerance).
+.lib "/Users/rwalters/share/pdk/ihp-sg13g2/libs.tech/ngspice/models/cornerCAP.lib" cap_typ
+.include "/Users/rwalters/GitHub/sg13g2-opamp/.loom/worktrees/issue-21/sim/input-cmr/netlist-snapshots/20260921-174405-65f5fb4/opamp_core.spice"
+
+.lib "/Users/rwalters/share/pdk/ihp-sg13g2/libs.tech/ngspice/models/cornerMOSlv.lib" mos_ss
+
+.options temp=125 tnom=27
+
+Vdd vdd 0 dc 1.32
+Vss vss 0 dc 0
+Iibias vdd ibias dc 10u
+Vcsw inp 0 dc 0.66
+Vin inn inp dc 0
+Cload out vss 2e-12
+
+.control
+pre_osdi /Users/rwalters/share/pdk/ihp-sg13g2/libs.tech/ngspice/osdi/psp103.osdi
+pre_osdi /Users/rwalters/share/pdk/ihp-sg13g2/libs.tech/ngspice/osdi/psp103_nqs.osdi
+pre_osdi /Users/rwalters/share/pdk/ihp-sg13g2/libs.tech/ngspice/osdi/mosvar.osdi
+pre_osdi /Users/rwalters/share/pdk/ihp-sg13g2/libs.tech/ngspice/osdi/r3_cmc.osdi
+
+* --- centre operating point (Vcm = VDD/2), for the record joins -------
+op
+echo "OP_VOUT $&v(out)"
+echo "OP_TAIL $&v(tail)"
+echo "OP_VD1 $&v(d1)"
+echo "OP_VD2 $&v(d2)"
+echo "OP_VIBIAS $&v(ibias)"
+let ivdd_op = -i(vdd)
+echo "OP_IVDD $&ivdd_op"
+
+* --- this pass's Vcm sweep --------------------------------------------
+dc Vcsw 1.10063604 1.12463604 250e-6
+let ivdd_s = -i(vdd)
+wrdata /Users/rwalters/GitHub/sg13g2-opamp/.loom/worktrees/issue-21/sim/input-cmr/corners/20260921-174405-65f5fb4/mos_ss_125C_1.32V_finehi.csv v(out) v(tail) v(d1) v(d2) v(ibias) ivdd_s
+.endc
+.end

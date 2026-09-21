@@ -1,0 +1,105 @@
+* sg13g2-opamp -- ICMR bench saturation-edge replica probe (issue #21)
+* Generated from sim/input-cmr/testbench/tb_cmr_mech.spice.tmpl by
+* sim/input-cmr/run_cmr_sweep.sh -- do not edit a generated
+* netlist-snapshots/*.spice file directly, edit this template and re-run
+* the sweep.
+*
+* Probe: pair-bias round 1 (centre)
+* Point: corner=mos_ff temp_c=27 vdd_v=1.32
+* Pair-replica body bias (its source node): 0.272444541 V
+* Pair-replica drain held at 0.8724445409999999 V (source + 0.6, the gm/ID
+* bench's own characterisation Vds, capped just under VDD)
+* PDK: ihp-sg13g2 /Users/rwalters/share/pdk (see sim/pdk.json for the pinned release)
+* OSDI models: /Users/rwalters/share/pdk/ihp-sg13g2/libs.tech/ngspice/osdi (built by sim/tools/build-osdi.sh)
+*
+* ------------------------------------------------------------------ method
+* MEASURING the input stage's saturation requirements, not assuming them.
+* This tree's OSDI/PSP103 build exposes no OP-info interface
+* (sim/gm-id-characterization/README.md "Why finite-difference DC/AC,
+* not model op-point queries"), so both bound-setting devices get their
+* own replica probe in this same PDK, corner and temperature, at the
+* DUT's own operating bias. The two devices need DIFFERENT probes because
+* their physics differs (README.md "The saturation-edge probes" has the
+* full rationale):
+*
+*   1. Tail device (M5, sg13_lv_nmos w=2.2u l=0.52u). Its L = 0.52 um
+*      curve has a genuine saturation knee, so the knee rule applies:
+*      sweep Id5(Vds) with Vds 0..VDD and read Vdsat5 at the first Vds
+*      whose incremental slope dId/dVds has fallen to 10% of the curve's
+*      maximum (triodeRon) slope -- the shipped SLOPE_FRAC value
+*      run_cmr_sweep.sh applies. Bias fidelity: in the DUT, M5's gate is
+*      the ibias node -- a diode-connected Mbias of the same size sinking
+*      the external 10 uA -- so M5's Vgs is exactly the diode voltage
+*      v(ibias), independent of Vcm. This probe reproduces that bias
+*      EXACTLY with its own diode-connected replica (XMbiasr, same
+*      geometry, same 10 uA): node rbx settles at the same Vgs the DUT's
+*      ibias node shows (run_cmr_sweep.sh machine-checks the two and
+*      fails the point on disagreement), and the tail replica XM5r
+*      mirrors it with source=bulk=VSS exactly as in the DUT (Vsb=0).
+*
+*   2. Input-pair device (M1/M2, sg13_lv_nmos w=3.2u l=0.13u; one
+*      geometry, one replica serves both). At L = 0.13 um the same knee
+*      rule is undefined -- DIBL keeps a large slope component long past
+*      the physical edge, so no slope fraction ever crosses -- so the
+*      pair's requirement is read from the saturation CONDITION itself,
+*      Vds >= Vgs - Vth, with Vth measured per this repo's own gm/ID
+*      convention (sim/gm-id-characterization: constant-current
+*      threshold, Id = 100 nA * W/L, log-Id linear interpolation).
+*      Body effect included by construction: the replica's source node
+*      is held at the DUT's own v(tail) at the probed point (so Vsb is
+*      the real one, not a Vsb=0 table value), bulk at VSS, drain held
+*      at source + 0.6 V (capped under VDD) per the gm/ID bench's
+*      characterisation Vds, and the gate is swept so
+*      run_cmr_sweep.sh can log-interpolate the Vth(CC) crossing.
+*      Because Vth(Vsb) is body-bias dependent and the relevant Vsb is
+*      the tail voltage AT the bound, the probe runs twice per grid
+*      point (round 1 at the centre bias, round 2 at the bound round 1
+*      predicts) -- README.md "The pair-saturation fixed point".
+*
+* No DUT netlist is included here: the probes are standalone replicas of
+* two devices the FLAT DUT instantiates. The replica geometries below
+* must be kept in lockstep with design/netlist/opamp_core.spice's
+* XM1/XM2 (w=3.2u l=0.13u), XM5 (w=2.2u l=0.52u) and Mbias (w=2.2u
+* l=0.52u); run_cmr_sweep.sh greps the frozen DUT snapshot and fails if
+* they drift.
+
+.lib "/Users/rwalters/share/pdk/ihp-sg13g2/libs.tech/ngspice/models/cornerMOSlv.lib" mos_ff
+
+.options temp=27 tnom=27
+
+* Diode replica reproducing the DUT's ibias node voltage (Vgs5).
+Irbias 0 rbx dc 10u
+XMbiasr rbx rbx 0 0 sg13_lv_nmos w=2.2u l=0.52u ng=1 m=1
+* Tail-device replica (M5): gate on the reproduced bias, source=bulk=VSS.
+Vd5r p5 0 dc 0
+XM5r p5 rbx 0 0 sg13_lv_nmos w=2.2u l=0.52u ng=1 m=1
+* Pair-device replica (M1/M2 geometry) at the probed body bias.
+Vps psn 0 dc 0.272444541
+Vdp pdn 0 dc 0.8724445409999999
+Vgpv gpv 0 dc 0
+XMpairr pdn gpv psn 0 sg13_lv_nmos w=3.2u l=0.13u ng=1 m=1
+
+.control
+pre_osdi /Users/rwalters/share/pdk/ihp-sg13g2/libs.tech/ngspice/osdi/psp103.osdi
+pre_osdi /Users/rwalters/share/pdk/ihp-sg13g2/libs.tech/ngspice/osdi/psp103_nqs.osdi
+pre_osdi /Users/rwalters/share/pdk/ihp-sg13g2/libs.tech/ngspice/osdi/mosvar.osdi
+pre_osdi /Users/rwalters/share/pdk/ihp-sg13g2/libs.tech/ngspice/osdi/r3_cmc.osdi
+
+op
+echo "PROBE_VIBIAS_REPL $&v(rbx)"
+echo "PROBE_VTAIL_REPL $&v(psn)"
+
+* Id5(Vds) for the tail replica: Vds = v(p5), swept 0..VDD.
+dc Vd5r 0 1.32 2.5e-3
+let id5 = -i(Vd5r)
+wrdata /Users/rwalters/GitHub/sg13g2-opamp/.loom/worktrees/issue-21/sim/input-cmr/corners/20260921-174405-65f5fb4/mos_ff_27C_1.32V_mech_m5.csv v(p5) id5
+
+* Idpair(Vgs) for the pair replica at the probed Vsb: the gate node is
+* swept (Vgs = v(gpv) - v(psn); v(psn) is a solved constant here), the
+* drain is held at its fixed probe level. The driver log-interpolates
+* the constant-current threshold crossing on this curve.
+dc Vgpv 0.322444541 1.022444541 5e-3
+let idpair = -i(Vdp)
+wrdata /Users/rwalters/GitHub/sg13g2-opamp/.loom/worktrees/issue-21/sim/input-cmr/corners/20260921-174405-65f5fb4/mos_ff_27C_1.32V_mech_p_centre.csv v(gpv) idpair
+.endc
+.end
