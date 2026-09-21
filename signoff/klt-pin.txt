@@ -1,0 +1,15 @@
+# The klayout-tools revision `klt signoff --manifest` is graded with here.
+#
+# Pinned, not floating, for one reason: the T1 item skeleton is parsed out of
+# klayout-tools' own docs/design-evidence-tiers.md at run time, so the *number
+# and content of the items* moves when that repo moves (the checklist grew an
+# eleventh item, power delivery (structural), on 2026-09-17 --
+# 2AMLogic/klayout-tools#2025). A floating `main` would make the committed
+# report under signoff/reports/ disagree with a re-run for reasons that have
+# nothing to do with this block's evidence, and signoff/check_signoff.py
+# --run-klt compares exactly those two things.
+#
+# Bumping this pin is a deliberate act: bump the rev, re-run
+# signoff/regenerate.sh, commit the new report, and state in the PR what moved
+# in the checklist. One non-comment line: a full 40-hex git sha.
+b15edf5e3a2e56467a3406c98a2555eb1a5ae45c
