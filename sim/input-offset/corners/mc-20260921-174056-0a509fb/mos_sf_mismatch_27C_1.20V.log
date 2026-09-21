@@ -1,0 +1,18 @@
+Warning: m=xx on .subckt line will override multiplier m hierarchy!
+
+
+Note: Compatibility modes selected: hs a
+
+
+Circuit: * sg13g2-opamp -- dc input-referred offset, monte carlo mismatch draw
+
+Reset re-loads circuit * sg13g2-opamp -- dc input-referred offset, monte carlo mismatch draw
+
+Circuit: * sg13g2-opamp -- dc input-referred offset, monte carlo mismatch draw
+
+Doing analysis at TEMP = 27.000000 and TNOM = 27.000000
+
+Using SPARSE 1.3 as Direct Linear Solver
+ Reference value : -1.00000e-01
+No. of Data Rows : 401
+Note: Simulation executed from .control section 

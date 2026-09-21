@@ -44,9 +44,16 @@ rebuilding. Every experiment's `run_*.sh` preflights this before simulating.
   input-referred offset of `design/opamp_core.sch` on that same 45-point PVT
   grid (issue #11), measured two independent ways (open-loop differential
   null sweep, plus a closed-loop DC error referred back through
-  `open-loop-ac/`'s per-point `Av0`). **Systematic offset only** — no Monte
-  Carlo and no mismatch deck; the statistical half of
-  `spec/target-spec.md`'s offset row is a separate follow-on (issue #17).
+  `open-loop-ac/`'s per-point `Av0`) — that sweep is the directory's
+  **systematic** evidence. Its **statistical (mismatch) complement** — the
+  `3σ`, MC N≥300 "combined with, not instead of, process corners" basis
+  `spec/target-spec.md`'s offset row commits to — is the same directory's
+  Monte Carlo campaign, `run_offset_mc.sh` (issue #17): seeded, per-draw
+  sampling of every `cornerMOSlv.lib` `<corner>_mismatch` section across
+  the five corners x `{-40, 27, 125} °C` at the fixed 1.20 V supply, with
+  a zero-spread negative control, an in-campaign seed-determinism
+  self-check, and a systematic-value join against the deterministic
+  record.
 - [`slew-rate/`](slew-rate/) — rising/falling large-signal slew rate into
   `CL = 2 pF` [DR-1] at a fixed input common mode `VDD/2`, over the same
   45-point PVT grid (issue #12). Source of `spec/target-spec.md`'s
