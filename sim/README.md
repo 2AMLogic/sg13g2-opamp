@@ -59,3 +59,13 @@ rebuilding. Every experiment's `run_*.sh` preflights this before simulating.
   spectral split. This experiment also **chose** the band
   `spec/target-spec.md`'s noise row is stated over — see its `README.md`
   "Choosing the band".
+- [`output-swing/`](output-swing/) — DC output swing of the same
+  schematic into `CL = 2 pF` [DR-1] (no resistive load — an upper
+  bound), from the open-loop differential DC transfer curve with the
+  input common mode pinned at `VDD/2`, read at the **−6 dB
+  incremental-gain** criterion, over the same 45-point PVT grid
+  (issue #15). Reports headroom from VDD and VSS per point (the
+  comparable-across-supplies form the spec row requires), the tracking
+  span, and the hard-clipped reach, with per-point cross-checks against
+  the `open-loop-ac/` and `input-offset/` records. Source of
+  `spec/target-spec.md`'s output-swing row.
