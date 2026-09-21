@@ -295,6 +295,25 @@ own unloaded `≈68 dB` illustrative estimate — if `sim/open-loop-ac/`'s
 finding belongs in this record plus a superseding decision record, per
 DR-1's own "Consequences" section, not a silent topology change here).
 
+### Noise: scoped out here, decided since (issue #19)
+
+The "no noise bench" scoping above had a measured consequence:
+`sim/input-noise/` (issue #13, merged after this pass) found the spectrum
+`1/f`-dominated across the whole `100 Hz – 1 MHz` band — flicker corner
+`1.15 – 1.82 MHz`, above the band top, `91.4 – 94.0 %` of in-band
+mean-square noise — as the direct consequence of this pass's
+`f_T`-motivated minimum-length input pair (`W/L = 3.2 µm / 0.13 µm`,
+`0.416 µm²` per device, the M1/M2 rows above). Whether to re-size the pair
+for that was issue #19's question, and it is now decided: **re-size
+declined; the committed sizing stands**. The quantified trade (matched-`gm/Id`
+lengthening at fixed current: `1.83×` area moves the corner only *to* the
+band top; `8 – 20×` area buys `≈ 2.3 – 2.9×` integrated noise against a
+`≈ 3.8×` thermal asymptote, at the cost of regenerating every measured
+row's evidence and a two-key re-ratification), the acceptance rationale, and
+the re-open trigger are in
+[`spec/decision-records/0003-input-pair-flicker-noise.md`](../spec/decision-records/0003-input-pair-flicker-noise.md).
+The device table above is unchanged by that decision.
+
 ## Follow-up candidates (not performed here)
 
 - Replace `M7`'s length family with a dedicated `L = 1.04 um` bias branch

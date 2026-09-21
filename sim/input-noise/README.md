@@ -274,6 +274,14 @@ this bench's to make** — it is filed separately
 ([issue #19](https://github.com/2AMLogic/sg13g2-opamp/issues/19)) rather
 than acted on here.
 
+**Update (2026-09-21): that decision is now made.** Issue #19 is closed by
+[`spec/decision-records/0003-input-pair-flicker-noise.md`](../../spec/decision-records/0003-input-pair-flicker-noise.md):
+re-size **declined** — the committed minimum-length input pair stands, and
+the flicker dominance recorded here is an examined, accepted property of
+the design (the record cites exactly this section and the record CSV below
+for its numbers). The measured rows in this record therefore keep
+describing the committed DUT; nothing in `records/` needs re-running.
+
 ## What this bench does not claim
 
 - **Not a ratified spec value.** The `spec/target-spec.md` noise row
