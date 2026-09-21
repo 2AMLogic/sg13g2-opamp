@@ -1,9 +1,12 @@
 # 0001: Two-stage topology (input-pair polarity, output stage, cascode) and CL target
 
-- **Status**: proposed (input to a future spec-ratification issue; this
-  repo has no ratified spec yet — `spec/target-spec.md` itself is still
-  DRAFT — matching `sg13g2-bandgap`'s own DR-0001, which is also "proposed"
-  pending a future ratification pass, not "ratified")
+- **Status**: ratified — carried into force by the two-key (EE + market)
+  ratification of `spec/target-spec.md` recorded in
+  [0002-target-spec-ratification.md](0002-target-spec-ratification.md);
+  previously `proposed`, waiting on exactly that future spec-ratification
+  pass. The `[DR-1]` corner-grid and CL rows in `spec/target-spec.md` §1,
+  and the topology this record decides, now bind with the table's
+  `[DR-2]` rows.
 - **Date**: 2026-09-09
 - **Decided by**: Builder agent, issue #6
 - **Related**: #5 (gm/ID device-characterization study this record cites),
