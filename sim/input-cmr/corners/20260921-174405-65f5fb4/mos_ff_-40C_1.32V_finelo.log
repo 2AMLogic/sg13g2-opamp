@@ -1,0 +1,25 @@
+Warning: m=xx on .subckt line will override multiplier m hierarchy!
+
+
+Note: Compatibility modes selected: hs a
+
+
+Circuit: * sg13g2-opamp -- input common-mode range (icmr) bench, design/opamp_core.sch (issue #21)
+
+Doing analysis at TEMP = -40.000000 and TNOM = 27.000000
+
+Using SPARSE 1.3 as Direct Linear Solver
+
+No. of Data Rows : 1
+OP_VOUT 0.0157917
+OP_TAIL 0.234196
+OP_VD1 0.780362
+OP_VD2 0.780371
+OP_VIBIAS 0.368739
+OP_IVDD 3.72349E-05
+Doing analysis at TEMP = -40.000000 and TNOM = 27.000000
+
+Using SPARSE 1.3 as Direct Linear Solver
+ Reference value :  5.18972e-01
+No. of Data Rows : 97
+Note: Simulation executed from .control section 
