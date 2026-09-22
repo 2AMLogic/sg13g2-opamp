@@ -284,9 +284,14 @@ describing the committed DUT; nothing in `records/` needs re-running.
 
 ## What this bench does not claim
 
-- **Not a ratified spec value.** The `spec/target-spec.md` noise row
-  updated from this record is tagged `[P]` (proposal), per that file's
-  value-tag legend and `Status: DRAFT`.
+- **Not ratified by this bench.** The `spec/target-spec.md` noise row
+  updated from this record was tagged `[P]` (proposal) until the
+  DR-0002 two-key ratification (issue #16, PR #27, `65f5fb4`); it now
+  carries the ratified `[DR-2]` bound ≤ 108.9 µVrms worst-case
+  (100 Hz – 1 MHz) under the spec header `Status: RATIFIED (partial)`.
+  The ratification instrument is DR-0002, not this record; the
+  flicker property the bound rests on is examined in
+  `spec/decision-records/0003-input-pair-flicker-noise.md`.
 - **Not a per-device noise attribution** — see "Per-point sanity checks"
   above for why the per-device breakdown is unavailable in this
   OSDI/PSP103 build.
