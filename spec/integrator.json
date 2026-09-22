@@ -1,0 +1,80 @@
+{
+  "schema": "2am-integrator-view/1",
+  "block": "sg13g2-opamp",
+  "description": "What a full-chip integrator takes from this block: top cell, ports, artifact paths, measured area, maturity rung. Published as structured data at this fixed path (spec/integrator.json), not README prose. Companion to spec/consumers.md (requirement-row verdicts per consumer) and spec/target-spec.md (the ratified rows).",
+  "pdk": "IHP SG13G2 (https://github.com/IHP-GmbH/IHP-Open-PDK)",
+  "variant": {
+    "flavor": "1.2 V LV core devices (sg13_lv_nmos / sg13_lv_pmos, PSP 103.6)",
+    "supply_v": { "min": 1.08, "typ": 1.20, "max": 1.32, "tag": "DR-2" },
+    "hv_3v3_flavor": "not opened - requires its own decision record (target-spec.md section 1 Scope)"
+  },
+  "top_cell": "opamp_core",
+  "ports": [
+    { "name": "vdd",   "symbol_dir": "inout", "role": "power (1.2 V LV rail)" },
+    { "name": "vss",   "symbol_dir": "inout", "role": "ground" },
+    { "name": "inn",   "symbol_dir": "inout", "role": "inverting input" },
+    { "name": "inp",   "symbol_dir": "inout", "role": "non-inverting input" },
+    { "name": "out",   "symbol_dir": "inout", "role": "output" },
+    { "name": "ibias", "symbol_dir": "inout", "role": "external 10 uA bias reference input (mirrors 1:1 into the tail; on-die bias generator out of scope per design/opamp_sizing.md 'Bias scope')" }
+  ],
+  "ports_note": "Port list verified against design/opamp_core.sch and design/opamp_core.sym (pinnumber order vdd vss inn inp out ibias) @ 9d49d96.",
+  "load": { "capacitance_pf": 2.0, "tag": "DR-1", "resistive": "no resistive load characterized (output-swing row is an upper bound; a loaded-row decision is separate)" },
+  "spec_rows_ratified": {
+    "dc_gain_db_worst_min": 37.8,
+    "gbw_mhz_worst_min_into_2pf": 4.74,
+    "phase_margin_deg_worst_min": 60,
+    "slew_v_per_us_worst_min": 7.51,
+    "input_noise_uv_rms_worst_max_100Hz_1MHz": 108.9,
+    "offset_systematic_mv_worst_max": 21.9,
+    "cmrr_db_worst_min_mismatch_inclusive": 26.68,
+    "psrr_db_worst_min_dc_shelf": 1.87,
+    "output_swing_span_v_worst_min": 0.571,
+    "iq_ua_worst_max_total_incl_ibias": 119.7,
+    "source": "spec/target-spec.md section 2 ([DR-2]; CMRR mismatch-inclusive bound [DR-4])"
+  },
+  "spec_rows_not_ratified": {
+    "offset_mismatch_3sigma_mv": { "range": "26.4-27.4", "status": "measured [P], not yet re-ratified; worst single-PVT total |systematic| + 3sigma = 46.7 mV" },
+    "input_common_mode_range_v": { "worst_span_envelope": [0.6158, 0.8690], "status": "measured [P], not yet ratified" },
+    "area": { "status": "TBD-12 - not ratifiable yet, no layout" }
+  },
+  "artifacts": {
+    "schematic": "design/opamp_core.sch",
+    "symbol": "design/opamp_core.sym",
+    "sizing_derivation": "design/opamp_sizing.md",
+    "netlist": "design/netlist/opamp_core.spice",
+    "netlist_note": "committed ngspice netlist (top-level, 9 devices: M1-M7, Mbias, Cc; .subckt wrapper line commented)",
+    "gds": null,
+    "gds_note": "not yet available - no layout, see https://github.com/2AMLogic/sg13g2-opamp/issues/29",
+    "simulation_evidence": "sim/ (append-only PVT records; see target-spec.md section 4 Sources for the per-row record map)"
+  },
+  "area_mm2": null,
+  "area_note": "TBD - no layout (target-spec.md row TBD-12; issue #29). Stated honestly rather than guessed.",
+  "maturity": {
+    "framework": "klayout-tools design-evidence-tiers (docs/design-evidence-tiers.md)",
+    "tier": null,
+    "t1_items_total": 11,
+    "t1_items_met": 0,
+    "statement": "T1 ('sim-validated') rung: 0 of 11 checklist items met per the newest klt signoff record; not a hand-guessed tier.",
+    "source_record": "signoff/reports/20260921-171207-f990fd5.signoff.json (tracked by issue #3)"
+  },
+  "consumers": [
+    {
+      "repo": "2AMLogic/sg13g2-bandgap",
+      "edge": "consumes: [sg13g2-opamp] (2am/repos.yml @ 79b7cc6)",
+      "status": "in-tree amplifier is a different block (single-stage folded OTA, all HV 3.3 V devices, fixed ~0.7-0.8 V one-VBE common mode) - recorded 'not the same block', not a drop-in; see spec/consumers.md"
+    },
+    {
+      "repo": "2AMLogic/sg13g2-ldo",
+      "edge": "consumes: [sg13g2-opamp, sg13g2-bandgap] (2am/repos.yml @ 79b7cc6, inline comment: 'error amp is an ideal placeholder today - the opamp canary is its real one')",
+      "status": "error amp is an ideal VCVS placeholder; spec/porting-plan.md section 2.2 discrepancy filed on the consumer as sg13g2-ldo#50; see spec/consumers.md"
+    }
+  ],
+  "provenance": {
+    "read_date": "2026-09-22",
+    "repos_yml_commit": "2AMLogic/2am @ 79b7cc6",
+    "sg13g2_bandgap_commit": "2AMLogic/sg13g2-bandgap @ 463c1af",
+    "sg13g2_ldo_commit": "2AMLogic/sg13g2-ldo @ 4fbfa18",
+    "this_repo_commit": "2AMLogic/sg13g2-opamp @ 9d49d96",
+    "signoff_record": "signoff/reports/20260921-171207-f990fd5.signoff.json"
+  }
+}

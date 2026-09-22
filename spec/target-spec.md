@@ -181,6 +181,12 @@ residual (c) exactly as pre-registered.
 
 ## 4. Sources
 
+- [`consumers.md`](consumers.md) — the Consumers section (2am cross-cutting
+  rule 9): every repo declaring `consumes: sg13g2-opamp` in `2am/repos.yml`,
+  the requirement rows each imposes, and per-row meets / does-not-meet /
+  unknown verdicts against this table, plus the machine-readable
+  integrator view ([`integrator.json`](integrator.json)) — additive
+  consumer-facing documentation; no ratified row above changes.
 - [`decision-records/0001-topology-and-cl.md`](decision-records/0001-topology-and-cl.md) —
   the `[DR-1]`-tagged corner-grid and CL rows in §1 above; the topology
   decision (input-pair polarity, output-stage class, cascode-or-not) that
