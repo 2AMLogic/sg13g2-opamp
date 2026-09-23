@@ -5,6 +5,8 @@ A two-stage Miller-compensated operational amplifier on IHP SG13G2 on
 [klayout-tools](https://github.com/2AMLogic/klayout-tools) and the
 open-source xschem + ngspice flow.
 
+![fleet burndown](https://raw.githubusercontent.com/2AMLogic/2am/main/fleet-metrics/charts/sg13g2-opamp.svg)
+
 **Status: just opened.** Nothing is designed yet. The first work is
 the device-characterization study — gm/ID curves for the PDK's core CMOS devices, committed as the sizing basis every later claim leans on.
 
