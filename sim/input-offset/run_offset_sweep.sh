@@ -54,10 +54,7 @@ sg13g2_preflight_require_netlist
 # (sim/open-loop-ac/records/*.csv's Av0 column, same corner)"). Default to
 # the newest committed record there; override with AC_RECORD_CSV=<path>.
 if [[ -z "${AC_RECORD_CSV:-}" ]]; then
-  AC_RECORD_CSV=""
-  while IFS= read -r _f; do AC_RECORD_CSV="${_f}"; done < <(
-    find "${SIM_DIR}/open-loop-ac/records" -maxdepth 1 -name '*.csv' 2>/dev/null | sort
-  )
+  AC_RECORD_CSV="$(sg13g2_latest_record_csv "${SIM_DIR}/open-loop-ac/records")"
 fi
 if [[ -z "${AC_RECORD_CSV}" || ! -s "${AC_RECORD_CSV}" ]]; then
   echo "run_offset_sweep.sh: no sim/open-loop-ac/records/*.csv found -- the closed-loop" >&2
@@ -239,11 +236,7 @@ PYEOF
         continue
       fi
 
-      # Column looked up by HEADER NAME, not by a hardcoded index, so this
-      # keeps working if sim/open-loop-ac/ ever adds a column.
-      av0_db_ac="$(awk -F, -v pid="${point_id}" '
-        NR==1 { for (i = 1; i <= NF; i++) if ($i == "av0_db") col = i; next }
-        col && $1 == pid { print $col }' "${AC_RECORD_CSV}")"
+      av0_db_ac="$(sg13g2_csv_lookup "${AC_RECORD_CSV}" av0_db "${point_id}")"
       [[ -n "${av0_db_ac}" ]] || av0_db_ac="nan"
 
       # --- per-point post-processing ------------------------------------

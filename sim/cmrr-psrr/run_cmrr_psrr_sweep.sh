@@ -67,10 +67,7 @@ sg13g2_preflight_require_netlist
 # Default to the newest committed record there; override with
 # AC_RECORD_CSV=<path>.
 if [[ -z "${AC_RECORD_CSV:-}" ]]; then
-  AC_RECORD_CSV=""
-  while IFS= read -r _f; do AC_RECORD_CSV="${_f}"; done < <(
-    find "${SIM_DIR}/open-loop-ac/records" -maxdepth 1 -name '*.csv' 2>/dev/null | sort
-  )
+  AC_RECORD_CSV="$(sg13g2_latest_record_csv "${SIM_DIR}/open-loop-ac/records")"
 fi
 if [[ -z "${AC_RECORD_CSV}" || ! -s "${AC_RECORD_CSV}" ]]; then
   echo "run_cmrr_psrr_sweep.sh: no sim/open-loop-ac/records/*.csv found -- this experiment's" >&2
