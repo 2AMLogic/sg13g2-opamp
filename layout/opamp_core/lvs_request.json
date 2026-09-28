@@ -1,0 +1,12 @@
+{
+  "schema": "klt.lvs.request/1",
+  "engine": "klayout",
+  "layout": {
+    "file": "opamp_core.gds",
+    "deck": "sg13g2",
+    "top": "opamp_core"
+  },
+  "reference": {
+    "netlist": "opamp_core.lvs_reference.spice"
+  }
+}

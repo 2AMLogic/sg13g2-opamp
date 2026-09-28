@@ -6,9 +6,12 @@ proves the scaffold.
 
 - **`opamp_core/`** — all nine instances of
   `design/netlist/opamp_core.spice`, placed, wired and labelled, with a
-  committed `klt drc --deck sg13g2` report. This is what `signoff/` cites for
-  T1 items 2 and 3. Read ["The op-amp layout"](#the-op-amp-layout-opamp_core)
-  below before reading anything into that.
+  committed `klt drc --deck sg13g2` report and, since #57, a committed
+  `klt lvs` request/report pair (verdict: `match`) plus the expanded
+  plain-element reference netlist it compares against. This is what
+  `signoff/` cites for T1 items 2, 3 and 4. Read
+  ["The op-amp layout"](#the-op-amp-layout-opamp_core) below before reading
+  anything into that.
 - **`builder.py` / `devices.py` / `sg13g2_layers.py`** — the machinery:
   a cited SG13G2 layer table, a `klayout.db` builder with routing / via / tap
   primitives, and `klt gen` wrappers for the three device flavours the
@@ -17,8 +20,8 @@ proves the scaffold.
   deliberately *not* wired into the topology, as proof the scaffold draws
   legal geometry. It is scaffolding proof only, and nothing under `signoff/`
   cites it.
-- **What still does not exist**: no LVS, no parasitic extraction, no
-  post-layout sim, no supply/ERC spec
+- **What still does not exist**: no parasitic extraction, no post-layout
+  sim, no supply/ERC spec
   ([#29](https://github.com/2AMLogic/sg13g2-opamp/issues/29)), no pad ring.
 
 ## Files
@@ -36,6 +39,10 @@ The structure mirrors `2AMLogic/sg13g2-bandgap`'s: shared drawing modules at
 | `opamp_core/generate.py` | Places and routes the block, cross-checks itself against the netlist file, re-extracts the drawn connectivity, writes the GDS and runs DRC. Also `--check`, `--devices` and `--negative-control`. |
 | `opamp_core/opamp_core.gds` | **The committed layout.** |
 | `opamp_core/drc_report.json` | Its committed `klt drc --deck sg13g2 --format json` report. |
+| `opamp_core/lvs_reference.py` | Emits `opamp_core.lvs_reference.spice`, the plain-element LVS reference: the schematic's nine instances expanded to the 38 drawn units (matched-array unit/dummy columns, folded fingers), sourced from `generate.py`'s own tables. Also `--check` and `--negative-control`. |
+| `opamp_core/lvs_request.json` | The committed `klt lvs` request: layout = the committed GDS under the curated `sg13g2` deck, reference = the expanded plain-element netlist. Paths inside resolve relative to this file's own directory. |
+| `opamp_core/lvs_report.json` | The committed `klt lvs --format json` verdict (see ["The LVS verdict"](#the-lvs-verdict-opamp_corelvs_reportjson)). |
+| `opamp_core/run_lvs.sh` | Regenerates `lvs_report.json` from the committed request, verdict intact whatever it is. |
 | `scaffold_smoke/generate.py` | The smoke fixture: draws every device shape the netlist asks for plus one of each routing/tap/via primitive, writes the GDS, runs DRC, writes the report. Also `--check` and `--negative-control`. |
 | `scaffold_smoke/sg13g2_opamp_scaffold_smoke.gds` | The committed smoke stream. |
 | `scaffold_smoke/drc_report.json` | Its committed `klt drc --deck sg13g2 --format json` report. |
@@ -58,6 +65,20 @@ python3 layout/opamp_core/generate.py --devices
 # notices (and that `klt drc` does not). Writes nothing to the repo.
 python3 layout/opamp_core/generate.py --negative-control
 
+# Regenerate the LVS reference netlist (after a netlist/generator change)
+# and re-run the committed LVS compare. Also `--check` (byte-diff only) and
+# `--negative-control` (perturb the reference, assert the compare fails).
+python3 layout/opamp_core/lvs_reference.py
+bash layout/opamp_core/run_lvs.sh
+python3 layout/opamp_core/lvs_reference.py --check
+python3 layout/opamp_core/lvs_reference.py --negative-control
+
+# Verify a committed LVS report still matches its recorded inputs (re-hash
+# only, no compare re-run). NOTE: --check resolves the report's echoed
+# relative paths against the *current working directory*, not the report's
+# own directory (unlike the request form) -- run it from layout/opamp_core/.
+cd layout/opamp_core && klt lvs --check lvs_report.json; cd ../..
+
 # The scaffold's own smoke fixture, same four verbs minus --devices.
 python3 layout/scaffold_smoke/generate.py [--check|--negative-control]
 ```
@@ -66,7 +87,7 @@ python3 layout/scaffold_smoke/generate.py [--check|--negative-control]
 
 | Thing | Value |
 |---|---|
-| `klt` (for `opamp_core/`) | `0.6.0+gd574697ed72c` — read back from `opamp_core/drc_report.json`'s own `provenance.klt_version` rather than transcribed, so this row cannot drift from the committed bytes it describes. |
+| `klt` (for `opamp_core/`) | `0.6.0` — read back from `opamp_core/drc_report.json`'s own `provenance.klt_version` rather than transcribed, so this row cannot drift from the committed bytes it describes. (The prior stream's report recorded `0.6.0+gd574697ed72c`; the #57 regeneration's report records the plain `0.6.0` this install reports. The LVS report records the same value.) |
 | `klt` (for `scaffold_smoke/`) | `0.6.0+g9c11986ad447` — the revision that stream was first written with ([#44](https://github.com/2AMLogic/sg13g2-opamp/issues/44)). It still regenerates **byte-for-byte** at `gd574697ed72c` (`scaffold_smoke/generate.py --check` passes), so the two revisions draw identical geometry for this repo's shapes; the older value is kept because it is the one the committed bytes were actually produced with. |
 | Curated `sg13g2` deck | `sha256:894326a4e37fb24fef2f7ffc6ae1da55a0e262b0f0bc1c09adc4862909278fda`, 43 rules, `released: yes` (`klt deck hash --deck sg13g2`) — unchanged across both `klt` revisions above |
 | KLayout inside `klt` | `0.30.12`, which the report flags as `provenance.klayout_version_mismatch: true` — that `klt` build was tested against `klayout==0.30.10`. Per `klt`'s own warning the *verdict* is unaffected; report counts could in principle differ on the tested engine. |
@@ -301,11 +322,17 @@ dominant pole and the compensation with it.
 ## Ports and labels
 
 All six declared ports (`vdd vss inn inp out ibias`) are labelled in the
-stream. Each label is written **twice**: on `TEXT` (63/0) — the documentation
-layer `Builder.label()` defaults to, the one this README names, and the one
-`coverage.layers_in_stream_without_rules` reports below — and again on
-`Metal3` (30/0), the port's own conductor, where an LVS run looks for a net
-name. Nothing in this repo reads the second one yet; `klt lvs` is T1 item 4.
+stream. Each label is written **three times**: on `TEXT` (63/0) — the
+documentation layer `Builder.label()` defaults to, and the one
+`coverage.layers_in_stream_without_rules` reports below — again on
+`Metal3` (30/0), the port's own conductor, kept for visual convention; and
+since #57 on `Metal3.text` (30/25), the entry of the curated deck's
+`EXTRACTION_DECK.metal_labels` for this routing level and therefore the one
+label `klt lvs` actually reads to name the extracted net. Before the third
+label existed, every port net extracted anonymously and the LVS net
+correspondence had no names to pair (the measured baseline in #57). All
+three texts sit on the same point of the same drawn conductor, so they
+cannot disagree.
 
 ## The connectivity claim, and why it is not LVS
 
@@ -328,7 +355,7 @@ an open. So the generator checks connectivity itself, in two steps:
 On the committed stream: **9 nets, 93 terminals, no open, no short, nothing
 floating.**
 
-**This is not LVS.** No device is *recognised* from the geometry, so nothing
+**This self-check is not LVS.** No device is *recognised* from the geometry, so nothing
 confirms that a drawn stack is the transistor its model card names;
 extraction stops at `Metal1`, so each device's own contact-to-diffusion
 connection is taken on `klt gen`'s word — and for the same reason the
@@ -337,7 +364,9 @@ extraction layer set (`_CONDUCTORS`/`_CUTS` in `opamp_core/generate.py`) omits
 taken on `klt gen`'s word too: the `d2` probe lands on `TopMetal1`, and a
 missing `Vmim` would be as invisible to this check as a missing
 contact-to-diffusion stack is. No parasitics are computed.
-`klt lvs` (T1 item 4) and `klt extract --parasitics` (item 7) remain unrun.
+The device-recognition compare itself is `klt lvs`, run since #57 with a
+committed verdict — see ["The LVS verdict"](#the-lvs-verdict-opamp_corelvs_reportjson).
+`klt extract --parasitics` (item 7) remains unrun.
 
 ### The connectivity check has been shown to fail
 
@@ -376,21 +405,23 @@ claim, so the holes are disclosed here, quoted verbatim from the report's own
 the deck has **no rule of any kind** for:
 
 ```
-["31/0", "36/0", "63/0", "129/0", "189/0"]
+["7/0", "14/0", "30/25", "31/0", "36/0", "63/0", "129/0", "189/0"]
 ```
 
-i.e. `NWell` (31/0), `MIM` (36/0), `TEXT` (63/0), `Vmim` (129/0),
-`prBoundary` (189/0). Read plainly: **the clean verdict says nothing about the
-two n-wells that hold the PMOS groups, nor about their separation, and nothing
-about the Miller capacitor's plate** — two of the things a reviewer would most
+i.e. `nSD` (7/0), `pSD` (14/0), `Metal3.text` (30/25), `NWell` (31/0), `MIM`
+(36/0), `TEXT` (63/0), `Vmim` (129/0), `prBoundary` (189/0). Read plainly:
+**the clean verdict says nothing about the two n-wells that hold the PMOS
+groups, nor about their separation, nothing about the Miller capacitor's
+plate, and nothing about the tap-implant bands drawn over the guard rings**
+— several of the things a reviewer would most
 want checked about this block. (The merged 31/0 in the committed stream is two
 disjoint polygons — the mirror's, (0, 22)–(12.6, 25.88), and the gain device's,
 (21, 21)–(41.38, 28.65), 8.4 µm apart — so both the wells themselves and the
 gap between them are entirely unchecked; that is IHP `NW.*` territory, which
-the curated deck does not carry.) `TEXT` and `prBoundary` are documentation
-layers and legitimately carry no rules. (The implant layers `nSD` 7/0 and `pSD` 14/0 are
-absent from this list only because `klt gen mos_array` does not draw them at
-all, which is its own gap — see below.)
+the curated deck does not carry.) `TEXT`, `Metal3.text` and `prBoundary` are
+documentation/text layers and legitimately carry no rules; the implant layers
+are drawn (over the guard rings, since #57) and carry no rule in this deck —
+IHP's own `nSD`/`pSD` rules are unchecked here, same as its `NW.*`.
 
 **`coverage.rules_skipped`** — 6 of the deck's 43 rules had no applicable
 geometry in this stream (every one with `reason: "no_applicable_geometry"`):
@@ -408,16 +439,88 @@ because the deck lacks them.
 
 ### `klt gen mos_array` draws no source/drain implants
 
-Neither `nSD` (7/0) nor `pSD` (14/0) appears anywhere in the committed
-stream: the generator draws `Activ`, `GatPoly`, `Cont`, `Metal1` and (for a
-pfet) `NWell`, and no implant mask. The curated deck carries no implant rule,
-so `klt drc --deck sg13g2` is silent about it, and IHP's own device
-recognition derives `sg13_lv_nmos`/`sg13_lv_pmos` from `Activ ∧ GatPoly ∧
-¬NWell` rather than from the implant — so this stream is not obviously
-un-extractable. It is, however, not a manufacturable mask set, and **no claim
-is made here that it is**. This is a tool gap, filed generically upstream per
-this repo's friction protocol:
+`mos_array`'s unit devices are drawn without any implant mask: the
+generator draws `Activ`, `GatPoly`, `Cont`, `Metal1` and (for a pfet)
+`NWell`, and no `nSD`/`pSD` over the source/drain diffusion itself. The
+curated deck carries no implant rule, so `klt drc --deck sg13g2` is silent
+about it, and both klt's and IHP's own device recognition derive
+`sg13_lv_nmos`/`sg13_lv_pmos` from `Activ ∧ GatPoly ∧ ¬NWell` rather than
+from the implant — so the stream extracts correctly. It is, however, not a
+manufacturable mask set as `klt gen` emits it, and **no claim is made here
+that it is**. This is a tool gap, filed generically upstream per this
+repo's friction protocol:
 [`2AMLogic/klayout-tools#2580`](https://github.com/2AMLogic/klayout-tools/issues/2580).
+
+Since #57 the committed stream *does* carry both implant layers — but only
+over the five guard rings (`generate.overlay_tap_implants`), where they are
+the tap-derivation marks the deck's extraction needs, not over any device's
+own source/drain. A related, distinct tool gap was filed for the rings
+themselves: `mos_array`'s `add_guard_ring` ring is bare `Activ` on sg13g2,
+so the deck's implant-derived tie recognition cannot see it until the
+caller overlays the implant by hand — see the filing linked from #57's PR
+description.
+
+## The LVS verdict (`opamp_core/lvs_report.json`)
+
+**`status: match`** — `mismatch_count: 0`, `error_count: 0`,
+`category_counts: {}` (not even a warning-severity entry survives: no
+tolerated parameter differences, no placeholder values, no exclusions).
+Counts, quoted from the report: nets 9 vs 9 (9 matched), devices 38 vs 38
+(38 matched), pins 6 vs 0 (6 matched — the reference is a flat plain-element
+netlist, so its side declares no pins; the layout's six port labels all
+paired).
+
+- **`body_verification.status: "verified"`** — every MOS body terminal in
+  the layout resolved to a real drawn/derived net, i.e. the #57 baseline's
+  `device.body_unverified` pair (19 NMOS bodies on the deck-synthesized
+  `vsubs` global, 18 PMOS bodies on anonymous well nets) is gone. What
+  closed it: `pSD` substrate-tie implants over the three NMOS arrays' guard
+  rings (bodies now resolve to the `vss` rail each ring is strapped to) and
+  `nSD` well-tie implants over the two PMOS arrays' rings inside their
+  wells (bodies resolve to `vdd`). The two containment properties the
+  derivation rests on (NMOS rings outside every `NWell`, PMOS rings inside
+  their own) are asserted at generation time, not assumed.
+- **`net_correspondence`** — 9 entries, one per net, no gaps: the six ports
+  (`vdd`, `vss`, `inn`, `inp`, `out`, `ibias`, all `pin: true`) plus
+  `tail`, `d1`, `d2` (internal, anonymous on the layout side — topology
+  pairs them, which is all the compare requires).
+- **`power_connectivity.status: "unchecked"`**, with the report's own
+  reason: the reference is plain-element SPICE whose power pins already
+  take part in the ordinary compare, so the gate-level-verilog-only power
+  check does not apply. It is a "does not apply", not an unverified
+  miswire.
+- **What the reference is**: `opamp_core.lvs_reference.spice`
+  (`lvs_reference.py` output) — the schematic's nine instances expanded to
+  the 38 drawn units, because the layout draws interdigitated arrays and
+  folded fingers while the schematic lumps, and `options.combine_devices`
+  cannot close that gap on this block (KLayout `combine_devices()` internal
+  error on the matched-vs-dummy partial-match groups, klayout-tools #1185 —
+  #57's measured finding 3). The expansion mirrors klt's own `nf` finger
+  expansion (`netlist_normalize._expand_mos_fingers`); the Miller cap
+  carries a real `C` derived from the PDK's own `cmim` model coefficients
+  applied to the schematic's plate geometry (not the `0` placeholder the
+  subckt-call converter emits — #57's finding 1). The expansion is sourced
+  from `generate.py`'s tables, which `verify_against_netlist()` pins to
+  `design/netlist/opamp_core.spice` — the schematic itself is read-only.
+- **Provenance**: produced with `klt 0.6.0` / KLayout `0.30.12` under the
+  curated `sg13g2` deck
+  (`sha256:894326a4…`, `released: true`); the report records
+  `provenance.klayout_version_mismatch: true` (that `klt` build was tested
+  against `klayout==0.30.10`) — same disclosure as the DRC report's row in
+  the revisions table above. The report pins its layout input at
+  `sha256:07fcb216…` — the committed `opamp_core.gds` — which is what
+  `klt lvs --check lvs_report.json` (run from `layout/opamp_core/`) re-hashes,
+  and what `signoff/` pins for items 2, 3 **and now 4**.
+- **Shown to fail**: `python3 layout/opamp_core/lvs_reference.py
+  --negative-control` perturbs one net in a scratch copy of the reference
+  and asserts the compare flips to `mismatch` with real unmatched devices —
+  an LVS whose reference cannot fail proves nothing.
+- **What this is still not**: a foundry signoff claim. The compare runs
+  klayout-tools' own curated deck and engine, not IHP's signoff LVS setup,
+  and it extracts zero parasitics (item 7 remains unrun). "Match" here
+  means exactly: drawn geometry and drawn connectivity are equivalent to
+  the expanded reference of the committed schematic netlist, under the
+  curated deck's recognition rules.
 
 ## The old smoke fixture's coverage (`scaffold_smoke/drc_report.json`)
 
