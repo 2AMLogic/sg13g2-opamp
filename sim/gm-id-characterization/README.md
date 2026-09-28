@@ -328,13 +328,17 @@ the ~20%.
   This mostly does not bite, because that is deep in the region where
   `gm/gds` is falling and no sizing pass biases a gain device there.
 - **The envelope is a solver-tolerance property, not a platform
-  property**, and it is removable at no runtime cost. Adding `reltol` to
-  the committed templates is deliberately *not* done by this note: per
-  `CLAUDE.md`'s three-foundry-twin rule these benches are kept
-  structurally identical to `gf180-opamp`'s and `sky130-opamp`'s, so a
-  solver-tolerance change is a decision for all three — and plausibly for
-  more benches than this one. Tracked as issue #68 rather than made
-  unilaterally here.
+  property**. Adding `reltol` to the committed templates was considered
+  and **rejected on measurement** by
+  [`spec/decision-records/0005-ngspice-reltol-policy.md`](../../spec/decision-records/0005-ngspice-reltol-policy.md)
+  (DR-0005, deciding issue #68): a tree-wide tightened `reltol` breaks
+  other benches in this tree's fleet (input-cmr at every value down to
+  `1e-5`, slew-rate at `1e-9`) while no tighter value both closes this
+  envelope at print precision and keeps them clean — so this envelope
+  section is the standing answer, and this reading rule is how `gds` /
+  `gm_gds` above `~+0.45 V` overdrive is consumed. Per `CLAUDE.md`'s
+  three-foundry-twin rule the same convention statement is recorded in
+  `gf180-opamp` and `sky130-opamp`.
 
 ## Observed sub-peak gm/ID roll-off in deep subthreshold
 
