@@ -7,9 +7,11 @@
 # can run a single corner. Exports NGSPICE_VERSION for the caller, exactly as
 # each script did on its own before this file existed, plus
 # SG13G2_MOS_CORNERS, the PDK's MOS process-corner set every harness sweeps
-# (see its own header below). A companion function,
-# sg13g2_preflight_require_netlist, covers the DUT_NETLIST_SRC guard most
-# (not all) callers also need -- see its own header below.
+# (see its own header below). Two companion functions cover the remaining
+# per-caller preamble: sg13g2_preflight_require_netlist (the DUT_NETLIST_SRC
+# guard most -- not all -- callers need) and sg13g2_preflight_record_paths
+# (the record-id and output-path block all ten callers need) -- see their own
+# headers below.
 #
 # Callers MUST compute SCRIPT_DIR/SIM_DIR/REPO_ROOT themselves BEFORE
 # sourcing this file, mirroring sim/env.sh's own convention:
@@ -94,4 +96,77 @@ sg13g2_preflight_require_netlist() {
     fi
     exit 3
   fi
+}
+
+# sg13g2_preflight_record_paths [--prefix <p>] [--resumable]
+#   Mint this run's record id and derive the append-only output paths every
+#   sim/*/run_*.sh harness writes into, then create the three output
+#   directories. Sets, for the caller to use afterward:
+#
+#     REPO_GIT_SHA    short HEAD of this repo, or "unknown" outside a checkout
+#     RECORD_ID       <prefix>YYYYmmdd-HHMMSS-<REPO_GIT_SHA> (UTC)
+#     EXPERIMENT_DIR  the calling harness's own directory (= SCRIPT_DIR)
+#     SNAPSHOTS_OUT   ${EXPERIMENT_DIR}/netlist-snapshots/${RECORD_ID}
+#     CORNERS_OUT     ${EXPERIMENT_DIR}/corners/${RECORD_ID}
+#     RECORDS_DIR     ${EXPERIMENT_DIR}/records
+#     CSV_OUT         ${RECORDS_DIR}/${RECORD_ID}.csv
+#     MD_OUT          ${RECORDS_DIR}/${RECORD_ID}.md
+#
+#   Callers needing a further record-id-derived path (run_offset_mc.sh's
+#   DRAWS_CSV) derive it locally from RECORDS_DIR/RECORD_ID after this call
+#   rather than growing this function a knob per bench.
+#
+#   Two of the ten callers vary the RECORD_ID line, and both variants are
+#   load-bearing rather than incidental:
+#
+#   --prefix <p>  prepend <p> to the minted id. run_offset_mc.sh passes
+#                 "mc-" so its Monte Carlo records sort and read distinctly
+#                 from the deterministic sweep's records in the same
+#                 experiment directory.
+#   --resumable   honor a RECORD_ID already set in the environment instead
+#                 of minting a new one. run_cmrr_mismatch_mc.sh's resume
+#                 feature (see its own header) replays the same RECORD_ID to
+#                 continue a killed campaign; without this flag the resumed
+#                 run would mint a fresh id and restart from zero. The
+#                 minting expression stays inside the ${RECORD_ID:-...}
+#                 default so `date` is not even evaluated on a resumed run,
+#                 exactly as that script did before this extraction.
+# shellcheck disable=SC2034  # CSV_OUT/MD_OUT are consumed by callers after this returns
+sg13g2_preflight_record_paths() {
+  local prefix="" resumable=0
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --prefix)
+        if [[ $# -lt 2 ]]; then
+          echo "${_sg13g2_preflight_self}: sg13g2_preflight_record_paths: --prefix needs a value" >&2
+          exit 3
+        fi
+        prefix="$2"
+        shift 2
+        ;;
+      --resumable)
+        resumable=1
+        shift
+        ;;
+      *)
+        echo "${_sg13g2_preflight_self}: sg13g2_preflight_record_paths: unknown argument '$1'" >&2
+        exit 3
+        ;;
+    esac
+  done
+
+  REPO_GIT_SHA="$(cd "${REPO_ROOT}" && git rev-parse --short HEAD 2>/dev/null || echo unknown)"
+  if [[ "${resumable}" -eq 1 ]]; then
+    RECORD_ID="${RECORD_ID:-${prefix}$(date -u +%Y%m%d-%H%M%S)-${REPO_GIT_SHA}}"
+  else
+    RECORD_ID="${prefix}$(date -u +%Y%m%d-%H%M%S)-${REPO_GIT_SHA}"
+  fi
+
+  EXPERIMENT_DIR="${SCRIPT_DIR}"
+  SNAPSHOTS_OUT="${EXPERIMENT_DIR}/netlist-snapshots/${RECORD_ID}"
+  CORNERS_OUT="${EXPERIMENT_DIR}/corners/${RECORD_ID}"
+  RECORDS_DIR="${EXPERIMENT_DIR}/records"
+  CSV_OUT="${RECORDS_DIR}/${RECORD_ID}.csv"
+  MD_OUT="${RECORDS_DIR}/${RECORD_ID}.md"
+  mkdir -p "${SNAPSHOTS_OUT}" "${CORNERS_OUT}" "${RECORDS_DIR}"
 }
