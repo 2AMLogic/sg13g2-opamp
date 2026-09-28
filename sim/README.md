@@ -49,6 +49,20 @@ column joins assume both sides ran at this default. A future proposal to
 pin a tolerance must re-run DR-0005's screen and clear its zero-broken
 gate first.
 
+DR-0005 screened that convention against one ngspice build — the one pinned
+as `osdi_toolchain.ngspice_actually_used` in [`pdk.json`](pdk.json) — and
+notes that a future ngspice release changing its own solver defaults would
+warrant re-running the screen. **That pin is now enforced as a warning** in
+[`preflight.sh`](preflight.sh) (the file every experiment's `run_*.sh`
+sources): it compares the live `ngspice -v` against the pin and, on mismatch
+only, prints a stderr banner naming both versions and the re-run obligation.
+It is deliberately **not** a hard failure — the obligation is to re-run the
+screen, not to stop the fleet, so an ngspice upgrade still lets every bench
+run, it just says so loudly. A matching version prints nothing. Records
+minted while that banner is showing carry an unscreened solver: treat a join
+between them and committed evidence as mixed-environment until the screen is
+re-run and the pin bumped by a decision record.
+
 ## Experiments
 
 - [`gm-id-characterization/`](gm-id-characterization/) — gm/ID, gm/gds, Cgg

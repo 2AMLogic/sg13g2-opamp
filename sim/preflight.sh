@@ -4,7 +4,9 @@
 # sim/env.sh, then verifies a resolvable PDK install, built OSDI device
 # models, and ngspice on PATH -- the same guard clauses (no resolvable PDK,
 # missing OSDI build, missing ngspice) every harness in sim/ needs before it
-# can run a single corner. Exports NGSPICE_VERSION for the caller, exactly as
+# can run a single corner, plus one WARN-ONLY check (never an exit): the live
+# ngspice against sim/pdk.json's pin, per DR-0005 -- see its own block below.
+# Exports NGSPICE_VERSION for the caller, exactly as
 # each script did on its own before this file existed, plus
 # SG13G2_MOS_CORNERS, the PDK's MOS process-corner set every harness sweeps,
 # and SG13G2_NGSPICE_ERR_RE, the broken-simulation log signature every harness
@@ -58,8 +60,55 @@ if ! "${SIM_DIR}/tools/build-osdi.sh" --check >/dev/null 2>&1; then
 fi
 
 command -v ngspice >/dev/null 2>&1 || { echo "${_sg13g2_preflight_self}: ngspice not on PATH." >&2; exit 3; }
-# shellcheck disable=SC2034  # consumed by callers after they source this file
 NGSPICE_VERSION="$(ngspice -v 2>&1 | sed -n '2p' | sed -E 's/^\*\* *//; s/ *:.*$//')"
+
+# Pinned-ngspice trip-wire -- WARNS, never fails (issue #74).
+#
+#   sim/pdk.json's osdi_toolchain.ngspice_actually_used is the ngspice build
+#   every committed record in this tree was produced with, and the build
+#   DR-0005 (spec/decision-records/0005-ngspice-reltol-policy.md) ran its
+#   solver-tolerance screen against. That record's own follow-through notes
+#   that "a future ngspice release changing its own defaults would warrant
+#   re-running this screen" -- an obligation nothing enforced before this
+#   check, so a host ngspice upgrade was silently baked into new records.
+#
+#   The pin is read by sed, NOT by a JSON parser: nothing in sim/
+#   requires jq today and this check must not be the reason it starts to.
+#   ngspice_actually_used is the only occurrence of that key in the file, so
+#   a single-key extraction is unambiguous. Keeping the pin in its existing
+#   nested home (rather than duplicating it into a top-level key) means
+#   there is exactly one value to bump, so the check can never disagree with
+#   the fact sheet it reads.
+#
+#   DELIBERATELY NOT an `exit 3` like the three guards above. DR-0005's
+#   obligation is "re-run the screen", not "stop the fleet": every harness in
+#   sim/ sources this file, so a hard failure here would strand the whole
+#   tree on the next ngspice upgrade. Both sides are compared in the
+#   NORMALIZED form (the `ngspice -v` line-2 shape above), and an
+#   unreadable value on either side falls into the mismatch branch with a
+#   self-describing placeholder -- an unparseable version warns rather than
+#   silently matching.
+_sg13g2_ngspice_pin="$(sed -n 's/.*"ngspice_actually_used"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "${SIM_DIR}/pdk.json" 2>/dev/null | head -n 1)"
+_sg13g2_ngspice_live="${NGSPICE_VERSION}"
+[[ -n "${_sg13g2_ngspice_live}" ]] || _sg13g2_ngspice_live="(unreadable -- 'ngspice -v' line 2 did not match the expected '** ngspice-NN : ...' shape)"
+[[ -n "${_sg13g2_ngspice_pin}" ]] || _sg13g2_ngspice_pin="(unreadable -- no \"ngspice_actually_used\" string in ${SIM_DIR}/pdk.json)"
+
+if [[ "${_sg13g2_ngspice_live}" != "${_sg13g2_ngspice_pin}" ]]; then
+  cat >&2 <<BANNER
+${_sg13g2_preflight_self}: WARNING: ngspice does not match sim/pdk.json's pin.
+${_sg13g2_preflight_self}:   pinned (sim/pdk.json, osdi_toolchain.ngspice_actually_used): ${_sg13g2_ngspice_pin}
+${_sg13g2_preflight_self}:   live   (ngspice -v, normalized):                             ${_sg13g2_ngspice_live}
+${_sg13g2_preflight_self}: DR-0005 (spec/decision-records/0005-ngspice-reltol-policy.md) measured this
+${_sg13g2_preflight_self}: tree's solver-tolerance convention against the pinned build, and notes that
+${_sg13g2_preflight_self}: "a future ngspice release changing its own defaults would warrant re-running
+${_sg13g2_preflight_self}: this screen". Until that screen is re-run, a record minted by this run carries
+${_sg13g2_preflight_self}: an unscreened solver, and joining it against committed evidence is a
+${_sg13g2_preflight_self}: mixed-environment join rather than the like-for-like one DR-0005 licenses.
+${_sg13g2_preflight_self}: WARNING ONLY -- this run continues and this check never changes an exit
+${_sg13g2_preflight_self}: status. Either restore the pinned build, or re-run DR-0005's screen and bump
+${_sg13g2_preflight_self}: the pin in sim/pdk.json with a decision record.
+BANNER
+fi
 
 # SG13G2_NGSPICE_ERR_RE
 #   The "this point's simulation is broken" log signature every sim/*/run_*.sh

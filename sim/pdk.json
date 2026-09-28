@@ -1,5 +1,5 @@
 {
-  "_comment": "Pinned SG13G2 PDK revision this sim/ tree's committed evidence records were generated against. Every record under sim/*/records/*.md must trace to this file (or a later commit that bumps it) -- see sim/README.md 'PDK pin' section. Not consumed by tooling; kept as a plain, greppable fact sheet. Follows sg13g2-bandgap/sim/pdk.json's shape (same PDK, same pinned release).",
+  "_comment": "Pinned SG13G2 PDK revision this sim/ tree's committed evidence records were generated against. Every record under sim/*/records/*.md must trace to this file (or a later commit that bumps it) -- see sim/README.md 'PDK pin' section. Mostly a plain, greppable fact sheet, with ONE consumed field: sim/preflight.sh reads osdi_toolchain.ngspice_actually_used out of this file (by sed, not by a JSON parser -- nothing in sim/ requires jq) and warns on stderr, never fails, when the live ngspice differs, per DR-0005's re-run-the-screen obligation. Keep that value a bare 'ngspice-NN' string in the same normalized form as 'ngspice -v' line 2, and keep the key name unique in this file. Follows sg13g2-bandgap/sim/pdk.json's shape (same PDK, same pinned release).",
   "source": "IHP-GmbH/IHP-Open-PDK",
   "fetch_method": "klayout-tools scripts/fetch-ihp-sg13g2.sh (2AMLogic/klayout-tools)",
   "release_tag": "v0.3.0",
@@ -12,7 +12,7 @@
     "checked": "2026-09-08"
   },
   "osdi_toolchain": {
-    "_comment": "Provenance of the OSDI (Verilog-A compact model) binaries every MOS-instantiating testbench in this tree loads. sim/tools/build-osdi.sh is the executable source of truth (copied structurally from sg13g2-bandgap/sim/tools/build-osdi.sh, adjusted only for this repo's cache directory name); this block restates its pins as a greppable fact sheet.",
+    "_comment": "Provenance of the OSDI (Verilog-A compact model) binaries every MOS-instantiating testbench in this tree loads. sim/tools/build-osdi.sh is the executable source of truth (copied structurally from sg13g2-bandgap/sim/tools/build-osdi.sh, adjusted only for this repo's cache directory name); this block restates its pins as a greppable fact sheet -- except ngspice_actually_used, which sim/preflight.sh reads as the warn-only ngspice pin (see this file's top-level _comment).",
     "approach": "source-compile the PDK's own Verilog-A models with a checksum-pinned prebuilt OpenVAF-Reloaded compiler",
     "build_script": "sim/tools/build-osdi.sh",
     "compiler_repo": "OpenVAF/OpenVAF-Reloaded",
