@@ -332,8 +332,9 @@ the ~20%.
   the committed templates is deliberately *not* done by this note: per
   `CLAUDE.md`'s three-foundry-twin rule these benches are kept
   structurally identical to `gf180-opamp`'s and `sky130-opamp`'s, so a
-  solver-tolerance change is a decision for all three, tracked separately
-  rather than made unilaterally here.
+  solver-tolerance change is a decision for all three — and plausibly for
+  more benches than this one. Tracked as issue #68 rather than made
+  unilaterally here.
 
 ## Observed sub-peak gm/ID roll-off in deep subthreshold
 
