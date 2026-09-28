@@ -99,18 +99,6 @@ class Placed:
         default_factory=dict
     )
 
-    @property
-    def width_um(self) -> float:
-        return self.x1 - self.x0
-
-    @property
-    def height_um(self) -> float:
-        return self.y1 - self.y0
-
-    @property
-    def center(self) -> tuple[float, float]:
-        return ((self.x0 + self.x1) / 2.0, (self.y0 + self.y1) / 2.0)
-
 
 class Builder:
     """One ``kdb.Layout`` plus a top cell, with micron-valued drawing helpers."""
