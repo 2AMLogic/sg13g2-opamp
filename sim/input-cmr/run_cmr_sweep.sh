@@ -133,6 +133,7 @@ fi
 CORNERS=("${SG13G2_MOS_CORNERS[@]}")
 TEMPS=(-40 27 125)
 VDDS=(1.08 1.20 1.32)
+# shellcheck disable=SC2034  # consumed by sg13g2_render_netlist (sim/preflight.sh) after this point
 CL_F="2e-12"
 
 # Coarse pass: the full usable supply span (VDD approached within 50 mV on
@@ -168,23 +169,6 @@ echo "point_id,corner,temp_c,vdd_v,vcm_v,op_pass,icmr_lo_v,icmr_hi_v,icmr_span_v
 total=0
 sim_fail_points=()
 op_fail_points=()
-
-render() {
-  # render <template> <out> <corner> <temp> <vdd> <extra sed args...>
-  local tmpl="$1" out="$2" corner="$3" temp="$4" vdd="$5"
-  shift 5
-  sed \
-    -e "s|@@PDK_ROOT@@|${PDK_ROOT}|g" \
-    -e "s|@@PDK@@|${PDK}|g" \
-    -e "s|@@OSDI_DIR@@|${OSDI_DIR}|g" \
-    -e "s|@@MOS_SECTION@@|${corner}|g" \
-    -e "s|@@TEMP_C@@|${temp}|g" \
-    -e "s|@@VDD_V@@|${vdd}|g" \
-    -e "s|@@CL_F@@|${CL_F}|g" \
-    -e "s|@@DUT_NETLIST@@|${DUT_NETLIST_SNAPSHOT}|g" \
-    "$@" \
-    "${tmpl}" > "${out}"
-}
 
 sim_broken() {
   # sim_broken <rc> <log> <required-output-file> -- sim/preflight.sh's
@@ -281,7 +265,7 @@ run_probe() {
   gate_lo="$(python3 -c "print(${src} + 0.05)")"
   gate_hi="$(python3 -c "print(${src} + 0.75)")"
   drn="$(python3 -c "print(min(${src} + 0.6, ${vdd} - 0.02))")"
-  render "${EXPERIMENT_DIR}/testbench/tb_cmr_mech.spice.tmpl" "${net}" \
+  sg13g2_render_netlist "${EXPERIMENT_DIR}/testbench/tb_cmr_mech.spice.tmpl" "${net}" \
     "${corner}" "${temp}" "${vdd}" \
     -e "s|@@PROBE_LABEL@@|${label}|g" \
     -e "s|@@PAIR_SRC_V@@|${src}|g" \
@@ -327,7 +311,7 @@ for corner in "${CORNERS[@]}"; do
       mech3_log="${CORNERS_OUT}/${point_id}_mech3.log"
 
       # --- pass 1: coarse full-span sweep --------------------------------
-      render "${EXPERIMENT_DIR}/testbench/tb_cmr.spice.tmpl" "${coarse_net}" \
+      sg13g2_render_netlist "${EXPERIMENT_DIR}/testbench/tb_cmr.spice.tmpl" "${coarse_net}" \
         "${corner}" "${temp}" "${vdd}" \
         -e "s|@@PASS_LABEL@@|coarse|g" \
         -e "s|@@VCM_V@@|${vcm}|g" \
@@ -514,7 +498,7 @@ PYEOF
       # --- pass 3: fine sweep at each bound -------------------------------
       finelo_start="$(python3 -c "print(${lo_prelim} - ${FINE_HALFSPAN})")"
       finelo_stop="$(python3 -c "print(${lo_prelim} + ${FINE_HALFSPAN})")"
-      render "${EXPERIMENT_DIR}/testbench/tb_cmr.spice.tmpl" "${finelo_net}" \
+      sg13g2_render_netlist "${EXPERIMENT_DIR}/testbench/tb_cmr.spice.tmpl" "${finelo_net}" \
         "${corner}" "${temp}" "${vdd}" \
         -e "s|@@PASS_LABEL@@|fine-lo|g" \
         -e "s|@@VCM_V@@|${vcm}|g" \
@@ -533,7 +517,7 @@ PYEOF
 
       finehi_start="$(python3 -c "print(${hi_prelim2} - ${FINE_HALFSPAN})")"
       finehi_stop="$(python3 -c "print(${hi_prelim2} + ${FINE_HALFSPAN})")"
-      render "${EXPERIMENT_DIR}/testbench/tb_cmr.spice.tmpl" "${finehi_net}" \
+      sg13g2_render_netlist "${EXPERIMENT_DIR}/testbench/tb_cmr.spice.tmpl" "${finehi_net}" \
         "${corner}" "${temp}" "${vdd}" \
         -e "s|@@PASS_LABEL@@|fine-hi|g" \
         -e "s|@@VCM_V@@|${vcm}|g" \
