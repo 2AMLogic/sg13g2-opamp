@@ -58,8 +58,11 @@ circuit-level `.options temp=@@TEMP_C@@ tnom=27` templates as the curator's
 gotcha note requires — 14 of 14 templates patched per configuration,
 confirmed by grepping the **rendered netlist snapshots**, not the
 templates: 40/40 gm/ID snapshots and 45/45, 90/90, 135/135, 165/165 or
-270/270 snapshots per circuit bench carry the injected `reltol`, and the
-default-run snapshots carry none). Nothing under any experiment's
+270/270 templated snapshots per circuit bench carry the injected `reltol`,
+the default-run snapshots carry none, and each circuit bench's one
+remaining snapshot without it is the committed non-templated
+`design/netlist/opamp_core.spice` include, which has no `.options` line to
+patch). Nothing under any experiment's
 committed `records/` was touched: per that README's own evidence rule, a
 tightened-tolerance run is a diagnostic and is reported here, not
 committed as evidence. Harness dependency order matters and was followed
@@ -109,7 +112,7 @@ required-output legs):
 | Tolerance | gm/ID (40 pts) | open-loop-ac | input-noise | cmrr-psrr | output-swing | input-offset (det.) | slew-rate | input-cmr |
 |---|---|---|---|---|---|---|---|---|
 | `1e-3` (default) | **0** | **0** | **0** | **0** | **0** | **0** | **0** | **0** |
-| `1e-5` | — | — | — | — | — | — | — | **6** (39/45 pass; ~25 min wall vs ~2 min default) |
+| `1e-5` | — | — | — | — | — | — | — | **6** (39/45 pass; 31m51s wall vs 3m16s at default, ~10x) |
 | `1e-6` | 0 | — | — | — | — | — | 0 | **16** (29/45 pass) |
 | `1e-7` | 0 | — | — | — | — | — | 0 | **21** (24/45 pass) |
 | `1e-9` | 0 | 0 | 0 | 0 | 0 | 0 | **39** (6/45 pass) | **21** (24/45 pass) |
@@ -123,7 +126,7 @@ the detector catches both:
   breakage is monotone in tolerance (6 → 16 → 21 → 21 from `1e-5` to
   `1e-9`) and concentrated at the rail/temperature edges (e.g.
   `mos_ss_-40C_*`, `mos_ff_27C_1.32V`). At `1e-5` the same bench also
-  costs ~12x wall time.
+  costs input-cmr ~10x wall time (31m51s vs 3m16s at default; its output-swing prerequisite slows similarly, 12m22s vs 77s — measured 2026-09-28, this host).
 - **slew-rate**: TRAN "Timestep too small" collapse at `1e-9` (timestep
   driven to `6.25e-23`, "tran simulation(s) aborted", ngspice rc=1 — 39 of
   45 points). Clean at `1e-7` and `1e-6`.
@@ -177,7 +180,7 @@ its gate:
    envelope).
 2. **Closure at print precision on the gm/ID grid, cross-host** — met only
    at `1e-9`, which fails (1).
-3. **No runtime regression** — `1e-5` already costs input-cmr ~12x wall.
+3. **No runtime regression** — `1e-5` already costs input-cmr ~10x wall (31m51s vs 3m16s).
 
 What a future record diff is entitled to assume, per this record: every
 committed record in this tree was produced at ngspice's default tolerance
@@ -201,7 +204,7 @@ joins assume both sides ran at the same (default) tolerance.
   (16/45 at `1e-6`, 21/45 at `1e-7`).
 - **Pin `reltol=1e-5` (where only 6 input-cmr points break)** — rejected:
   a convention that breaks any points fails the gate; it improves the
-  envelope bound to ~`1.7e-02` (barely), and costs input-cmr ~12x wall.
+  envelope bound to ~`1.7e-02` (barely), and costs input-cmr ~10x wall (31m51s vs 3m16s).
 - **Tighten only the two gm/ID templates (bench-local pinning)** —
   rejected: the convention must be uniform across the tree (and across the
   three twin repos) for record diffs to stay interpretable; a per-bench

@@ -36,7 +36,7 @@ deck under `sim/`, and none may be added — decided in
 (DR-0005), which measured all eight deterministic benches at default vs
 tightened tolerance on one host and rejected tightening on convergence
 evidence (a tree-wide `reltol=1e-9` breaks input-cmr 21/45 and slew-rate
-39/45; even `1e-5` breaks input-cmr 6/45 at ~12x wall cost). The one
+39/45; even `1e-5` breaks input-cmr 6/45 at ~10x wall cost — 31m51s vs 3m16s, DR-0005). The one
 known tolerance-sensitivity — the gm/ID bench's finite-difference `gds` /
 `gm_gds` columns above `~+0.45 V` overdrive, ~20 % cross-host — stays
 documented in that bench's README ("Cross-host reproducibility envelope"),
