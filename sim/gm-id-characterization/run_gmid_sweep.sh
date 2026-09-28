@@ -54,7 +54,7 @@ mkdir -p "${SNAPSHOTS_OUT}" "${CORNERS_OUT}" "${RECORDS_DIR}"
 # --- Sweep grid --------------------------------------------------------
 # Corner grid: cornerMOSlv.lib's five process sections (verified present,
 # see README.md) -- the grid spec/target-spec.md [TBD-1] guessed at.
-CORNERS=(mos_tt mos_ss mos_ff mos_sf mos_fs)
+CORNERS=("${SG13G2_MOS_CORNERS[@]}")
 # Lengths: SG13G2's 1.2V (LV) NFET/PFET minimum GatPoly width is 0.13um
 # (libs.doc/doc/SG13G2_os_layout_rules.pdf, rules Gat.a1/Gat.a2 -- both
 # 0.13um), then 2x/4x/8x multiples, per the issue's "minimum length to a few

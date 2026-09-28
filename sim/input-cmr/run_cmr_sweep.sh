@@ -154,7 +154,7 @@ fi
 # supply grid from spec/target-spec.md Sec 1. Identical 45-point grid to
 # sim/open-loop-ac/ and every sibling bench, by construction -- the
 # benches' records are joined point-by-point on point_id.
-CORNERS=(mos_tt mos_ss mos_ff mos_sf mos_fs)
+CORNERS=("${SG13G2_MOS_CORNERS[@]}")
 TEMPS=(-40 27 125)
 VDDS=(1.08 1.20 1.32)
 CL_F="2e-12"
