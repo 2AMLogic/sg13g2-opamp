@@ -44,8 +44,15 @@ OPENVAF_BASE_URL="https://github.com/${OPENVAF_REPO}/releases/download/${OPENVAF
 
 # asset name -> sha256, as published by GitHub's release API for ${OPENVAF_TAG}
 # (`gh api repos/OpenVAF/OpenVAF-Reloaded/releases --jq '.[0].assets[]|{name,digest}'`,
-# re-checked 2026-08-21). Only the macos-aarch64 entry has been executed and
-# used to produce evidence in this repo so far -- see sim/README.md.
+# re-checked 2026-08-21). Two of the three entries have now been executed and
+# used to produce committed evidence: macos-aarch64 (every record up to and
+# including 2026-09-09) and linux-x86_64 (issue #65's second-host gm/ID
+# record). macos-x86_64 remains unexercised. The two exercised builds were
+# cross-checked against each other on an identical sweep grid and agree to
+# better than 4e-07 on every column once the DC solve is converged tightly --
+# see sim/gm-id-characterization/README.md "Cross-host reproducibility
+# envelope" for the measurement and for the ngspice-default-`reltol` effect
+# that dominates a same-grid cross-host diff at the default tolerance.
 OPENVAF_ASSET_macos_aarch64="openvaf-r-${OPENVAF_TAG}-macos-aarch64.tar.gz"
 OPENVAF_SHA_macos_aarch64="b59a6d7ffba0cdc2e3d3d27edb62d686cde72e7fbe9931f7bed6a4538c15e85e"
 OPENVAF_ASSET_macos_x86_64="openvaf-r-${OPENVAF_TAG}-macos-x86_64.tar.gz"

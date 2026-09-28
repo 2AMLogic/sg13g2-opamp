@@ -1,0 +1,10 @@
+PASS gm/ID monotonically decreasing vs overdrive from its observed peak (index 8/55, peak=29.536): device=nmos length=0.13u corner=mos_tt (violations=0/47)
+PASS gm/ID monotonically decreasing vs overdrive from its observed peak (index 3/55, peak=32.163): device=nmos length=0.26u corner=mos_tt (violations=0/52)
+PASS gm/ID monotonically decreasing vs overdrive from its observed peak (index 1/55, peak=33.306): device=nmos length=0.52u corner=mos_tt (violations=0/54)
+PASS gm/ID monotonically decreasing vs overdrive from its observed peak (index 1/55, peak=33.743): device=nmos length=1.04u corner=mos_tt (violations=0/54)
+PASS gm/ID monotonically decreasing vs overdrive from its observed peak (index 10/55, peak=28.209): device=pmos length=0.13u corner=mos_tt (violations=0/45)
+PASS gm/ID monotonically decreasing vs overdrive from its observed peak (index 8/55, peak=31.419): device=pmos length=0.26u corner=mos_tt (violations=0/47)
+PASS gm/ID monotonically decreasing vs overdrive from its observed peak (index 7/55, peak=33.017): device=pmos length=0.52u corner=mos_tt (violations=0/48)
+PASS gm/ID monotonically decreasing vs overdrive from its observed peak (index 7/55, peak=33.729): device=pmos length=1.04u corner=mos_tt (violations=0/48)
+PASS fT falls off with increasing length near overdrive~0.3V: device=nmos lengths=['0.13u', '0.26u', '0.52u', '1.04u'] fT=['4.138e+10', '1.759e+10', '5.723e+09', '1.682e+09']
+PASS fT falls off with increasing length near overdrive~0.3V: device=pmos lengths=['0.13u', '0.26u', '0.52u', '1.04u'] fT=['2.269e+10', '5.645e+09', '1.601e+09', '4.233e+08']

@@ -180,6 +180,162 @@ not rediscover them the hard way.
    point, not substitutes — a non-convergent point can still write 56
    plausible-looking rows.
 
+## Cross-host reproducibility envelope
+
+Re-running this grid unchanged on a second host does **not** reproduce the
+committed record to the CSV's own print precision (issue #65). This section
+states the observed envelope so a future agent diffing a new gm/ID record
+against a committed one can tell an environment difference from a
+regression, and so a citing decision knows the tolerance it is entitled to
+assume.
+
+**The two records compared**, same harness, same pinned PDK (v0.3.0), same
+`ngspice-46`, same 2240-row grid, both 40/40 PASS with completeness OK and
+sanity PASS, `(device, length, corner, Vgs)` keys aligned exactly:
+
+| Record | Host | OSDI build |
+|---|---|---|
+| `records/20260909-063633-b402592.csv` | macOS / aarch64 | `openvaf-r-v24.0.1mob-macos-aarch64` |
+| `records/20260928-161200-a6fa678.csv` | Linux / x86_64 | `openvaf-r-v24.0.1mob-linux-x86_64` |
+
+(The Linux record carries no `_gm_id_vs_overdrive.png` / `_ft_vs_length.png`
+— `matplotlib` was not installed on that host, which the driver skips
+without failing the sweep. The CSV table, the raw per-point logs and the
+netlist snapshots are complete.)
+
+### The envelope, column by column
+
+Max relative delta over all 2240 rows, `|a-b| / max(|a|,|b|)`:
+
+| Column | Differing rows | Max rel. delta | p90 |
+|---|---|---|---|
+| `cgg_f`, `vth_v`, `overdrive_v` | 0 / 2240 | 0 (bit-identical) | 0 |
+| `ids_a` | 416 | `9.87e-04` | `3.0e-04` |
+| `gm_s`, `gm_id_per_v`, `ft_hz` | 478 | `7.14e-03` | — |
+| `gds_s` | 427 | `1.98e-01` | `3.9e-03` |
+| `gm_gds` | 482 | `2.04e-01` | `5.4e-03` |
+
+The headline `2.04e-01` is a single point (`pmos`, `1.04u`, `mos_tt`,
+`Vgs = 0.87 V`: `gm/gds` `36.923` vs `29.405`). It is not representative:
+only **12 of 2240** rows move by more than 5%, and only **83** by more than
+1%.
+
+### Where the spread lives: strong inversion, not deep subthreshold
+
+The obvious hypothesis — that `gm_gds = gm/gds` is ill-conditioned in the
+deep-subthreshold tail where `gds` approaches zero — is **wrong for this
+data**. Bucketed by Vth-referenced overdrive:
+
+| Overdrive (V) | Rows | Differing | Max rel. `gm_gds` |
+|---|---|---|---|
+| `< +0.00` (subthreshold) | 541 | 2 | `3.6e-07` |
+| `[+0.00, +0.30)` | 600 | 0 | 0 |
+| `[+0.30, +0.40)` | 200 | 0 | 0 |
+| `[+0.40, +0.50)` | 200 | 22 | `1.01e-01` |
+| `[+0.50, +0.60)` | 200 | 142 | `2.04e-01` |
+| `>= +0.60` | 499 | 316 | `1.34e-01` |
+
+Every row whose `gm_gds` moves by more than 1% sits at overdrive
+`>= +0.47 V`. Nothing at all moves below `+0.30 V` overdrive — i.e. the
+entire weak-inversion-to-moderate-inversion range a gm/ID sizing pass
+actually works in is bit-identical across the two hosts.
+
+### Why: a finite-difference amplifying a sub-`reltol` Id difference
+
+Two facts compose.
+
+1. **The derived columns amplify by very different factors.** Each
+   quantity's *fractional DC signal* — how much of `Id` the finite
+   difference actually has to work with — differs by two decades:
+
+   - `Cgg` needs no differencing at all (one AC phasor read) — and is
+     **bit-identical** on every one of the 2240 rows.
+   - `gm = d(Id)/d(Vgs)` over `dVgs = 0.02 V`: `gm*0.02/Id` spans
+     `2.8e-02 … 6.9e-01` (median `0.14`), so amplification `1/f` tops out
+     near **35x**.
+   - `gds = (Id(0.62) - Id(0.58)) / 0.04`: `gds*0.04/Id` falls to
+     `5.8e-04` (median `1.2e-02`), so amplification tops out near
+     **1700x**. In the high-overdrive long-channel region the whole `gds`
+     measurement is a ~0.4% change in `Id` — a near-total cancellation.
+
+   Referring each column's observed delta back *through* its own
+   amplification factor collapses all of them onto the same underlying
+   number: `9.87e-04` via `ids`, `5.33e-04` via `gm`, `9.42e-04` via
+   `gds`. One shared, sub-`1e-3` discrepancy in the `Id` solve explains
+   every column.
+
+2. **`1e-3` is exactly ngspice's default `reltol`.** Neither template sets
+   `.options reltol`, and the PDK's own `.spiceinit`
+   (`libs.tech/ngspice/.spiceinit`) does not override it, so the DC solve
+   is converged only to `reltol = 1e-3` / `abstol = 1e-12`. The last three
+   decades of each `Id` iterate are simply not constrained by the
+   convergence test; which side of the tolerance band the Newton iteration
+   stops on can differ between two builds, and the `gds` cancellation then
+   blows that up by ~1000x.
+
+**Demonstrated, not inferred.** Re-running the *whole* grid on the Linux
+host with `reltol=1e-9` added to the two templates (nothing else changed,
+same host, same `psp103.osdi`) reproduces the committed macOS record on
+**2238 of 2240 rows**; the two that differ do so by `3.7e-07` — the CSV's
+own 7-significant-figure print precision. That run also passes 40/40 with
+no broken-simulation banner in any log, and costs nothing measurable
+(4.4 s vs 4.6 s for the full 40-point grid).
+
+```bash
+# Reproduce the diagnostic (scratch copy -- see "not committed" below):
+cp -r sim /tmp/tightexp/ && rm -rf /tmp/tightexp/sim/*/{records,corners,netlist-snapshots}
+sed -i 's/^\.options temp=27 tnom=27$/.options temp=27 tnom=27 reltol=1e-9/' \
+  /tmp/tightexp/sim/gm-id-characterization/testbench/tb_gmid_{nmos,pmos}.spice.tmpl
+(cd /tmp/tightexp && ./sim/gm-id-characterization/run_gmid_sweep.sh)
+```
+
+That tightened run is deliberately **not** committed under `records/`: it
+was not produced by the harness as committed, so it is a diagnostic, not
+evidence.
+
+### What this rules out: the per-platform OSDI compiler
+
+`sim/pdk.json`'s `osdi_toolchain` block pins *three different*
+OpenVAF-Reloaded `v24.0.1mob` release assets (`macos-aarch64`,
+`macos-x86_64`, `linux-x86_64`), so the two records above were produced by
+two independently compiled `psp103.osdi` binaries, not by one binary under
+two operating systems. That made "different compiler output" the leading
+suspect — but the tightened re-run above settles it the other way: those
+two binaries agree on the *converged* solution to better than `4e-07` on
+every column. The residual two-row, `3.7e-07` disagreement that survives at
+`reltol=1e-9` (both `pmos` / `0.13u` / `mos_ss`, at `Vgs = 0.07 V` and
+`0.11 V`, where `gds` is `~1e-10`) is the genuine cross-platform
+floating-point floor, and it is more than five decades below the spread
+this section is about. The compiler
+platform is real provenance — the record header now records it, see
+`run_gmid_sweep.sh`'s `**OSDI models**` line — but it is not the source of
+the ~20%.
+
+### What a reader should assume
+
+- **Diffing a new record against a committed one.** Treat a delta up to
+  `~1e-3` on `ids_a`, `~1e-2` on `gm_s` / `gm_id_per_v` / `ft_hz`, and up
+  to `~20%` on `gds_s` / `gm_gds` **at overdrive above `+0.45 V`** as an
+  environment difference, not a regression. Conversely: *any* movement in
+  `cgg_f`, `vth_v` or `overdrive_v`, or any movement at all below
+  `+0.30 V` overdrive, is outside this envelope and should be investigated
+  as a real change.
+- **Citing a number.** `gm/Id`, `fT` and `Id` across the whole
+  sizing-relevant bias range reproduce bit-identically host to host — cite
+  them without carrying a reproducibility tolerance. `gds` and `gm/gds`
+  above `~+0.45 V` overdrive are the exception: quote them to no better
+  than the ~20% above, or re-derive them from a tightened-tolerance run.
+  This mostly does not bite, because that is deep in the region where
+  `gm/gds` is falling and no sizing pass biases a gain device there.
+- **The envelope is a solver-tolerance property, not a platform
+  property**, and it is removable at no runtime cost. Adding `reltol` to
+  the committed templates is deliberately *not* done by this note: per
+  `CLAUDE.md`'s three-foundry-twin rule these benches are kept
+  structurally identical to `gf180-opamp`'s and `sky130-opamp`'s, so a
+  solver-tolerance change is a decision for all three — and plausibly for
+  more benches than this one. Tracked as issue #68 rather than made
+  unilaterally here.
+
 ## Observed sub-peak gm/ID roll-off in deep subthreshold
 
 The raw gm/ID-vs-overdrive curves (see
