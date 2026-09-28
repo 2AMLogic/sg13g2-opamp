@@ -5,12 +5,17 @@
     "2": {
       "file": "layout/opamp_core/drc_report.json",
       "kind": "drc",
-      "content_hash": "sha256:2c5829ed6a664ca7904b0012cac09c8a832e11b1cc0d2279f0c7b680e38cf4c9"
+      "content_hash": "sha256:07fcb21698709178395cb2f04ba998c3752efb6eff24aace7626d9ffc10e553e"
     },
     "3": {
       "file": "layout/opamp_core/drc_report.json",
       "kind": "drc",
-      "content_hash": "sha256:2c5829ed6a664ca7904b0012cac09c8a832e11b1cc0d2279f0c7b680e38cf4c9"
+      "content_hash": "sha256:07fcb21698709178395cb2f04ba998c3752efb6eff24aace7626d9ffc10e553e"
+    },
+    "4": {
+      "file": "layout/opamp_core/lvs_report.json",
+      "kind": "lvs",
+      "content_hash": "sha256:07fcb21698709178395cb2f04ba998c3752efb6eff24aace7626d9ffc10e553e"
     }
   }
 }

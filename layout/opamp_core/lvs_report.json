@@ -1,0 +1,150 @@
+{
+  "schema_version": 1,
+  "engine": "klayout",
+  "layout": "opamp_core.gds",
+  "reference": "opamp_core.lvs_reference.spice",
+  "top": "opamp_core",
+  "reference_top": ".TOP",
+  "parameter_tolerance": null,
+  "options": {
+    "combine_devices": false,
+    "combine_devices_per_circuit": null,
+    "flatten_layout": false,
+    "flatten_reference": false,
+    "netgen_setup": null,
+    "parameter_tolerance": null,
+    "compare_parameters": null,
+    "power_connectivity": null,
+    "supply_nets": [
+      "GND",
+      "VCC",
+      "VDD",
+      "VGND",
+      "VPWR",
+      "VSS"
+    ]
+  },
+  "hints_applied": null,
+  "status": "match",
+  "power_connectivity": {
+    "status": "unchecked",
+    "reason": "reference.form is 'plain-element', whose reference netlist carries its own power/ground pins and nets -- they take part in the ordinary compare, so this check (which exists to cover the signal-only 'gate-level-verilog' form) does not apply",
+    "power_pins": [],
+    "power_pins_derivation": null,
+    "instance_count": 0,
+    "expected_nets": null,
+    "unchecked_expected_pins": [],
+    "findings": [],
+    "finding_count": 0
+  },
+  "body_verification": {
+    "status": "verified",
+    "reason": null,
+    "device_classes": [],
+    "device_count": 0,
+    "findings": [],
+    "finding_count": 0
+  },
+  "mismatch_count": 0,
+  "error_count": 0,
+  "category_counts": {},
+  "category_error_counts": {},
+  "counts": {
+    "nets": {
+      "layout": 9,
+      "reference": 9,
+      "matched": 9
+    },
+    "devices": {
+      "layout": 38,
+      "reference": 38,
+      "matched": 38
+    },
+    "pins": {
+      "layout": 6,
+      "reference": 0,
+      "matched": 6
+    }
+  },
+  "device_classes": [
+    "nfet",
+    "pfet",
+    "cap_cmim",
+    "rfcmim",
+    "cap_cmomi",
+    "cap_cmomf",
+    "resistor",
+    "dantenna",
+    "dpantenna"
+  ],
+  "environment": {
+    "engine": "klayout",
+    "engine_version": "0.30.12",
+    "layout_sha256": "07fcb21698709178395cb2f04ba998c3752efb6eff24aace7626d9ffc10e553e",
+    "reference_sha256": "f9eb857cf8dd9593dc9a364ceb702f97dc144e0346c168a6e385e3e6c71aaac8",
+    "extracted_netlist": null
+  },
+  "provenance": {
+    "klt_version": "0.6.0",
+    "klayout_version": "0.30.12",
+    "pdk": null,
+    "deck": {
+      "name": "sg13g2",
+      "content_hash": "sha256:894326a4e37fb24fef2f7ffc6ae1da55a0e262b0f0bc1c09adc4862909278fda",
+      "released": true
+    },
+    "input": {
+      "content_hash": "sha256:07fcb21698709178395cb2f04ba998c3752efb6eff24aace7626d9ffc10e553e",
+      "role": "layout"
+    },
+    "klayout_version_mismatch": true
+  },
+  "mismatches": [],
+  "net_correspondence": [
+    {
+      "layout": "\\$5",
+      "reference": "D1",
+      "pin": false
+    },
+    {
+      "layout": "\\$6",
+      "reference": "D2",
+      "pin": false
+    },
+    {
+      "layout": "ibias",
+      "reference": "IBIAS",
+      "pin": true
+    },
+    {
+      "layout": "inn",
+      "reference": "INN",
+      "pin": true
+    },
+    {
+      "layout": "inp",
+      "reference": "INP",
+      "pin": true
+    },
+    {
+      "layout": "out",
+      "reference": "OUT",
+      "pin": true
+    },
+    {
+      "layout": "\\$3",
+      "reference": "TAIL",
+      "pin": false
+    },
+    {
+      "layout": "vdd",
+      "reference": "VDD",
+      "pin": true
+    },
+    {
+      "layout": "vss",
+      "reference": "VSS",
+      "pin": true
+    }
+  ]
+}

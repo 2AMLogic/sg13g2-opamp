@@ -13,13 +13,16 @@ committed GDS with documented provenance -- see "Determinism" in
 ``layout/README.md``: CI verifies the committed hash, not a fresh ``--check``
 regeneration, so this block claims item 2's documented-provenance
 alternative rather than a CI-enforced "reproducibly generated" one; see
-`#50 <https://github.com/2AMLogic/sg13g2-opamp/issues/50>`_) and item 3 (a
-committed DRC report with its coverage disclosed). It is **not** LVS: nothing
-here compares the drawn connectivity against the SPICE netlist with an LVS
-engine, and no parasitics are extracted. See ``layout/README.md`` for the full
-scope and the
-coverage disclosure, and note in particular that ``klt drc --deck sg13g2``
-runs klayout-tools' own curated 43-rule starter deck, **not** IHP's foundry
+`#50 <https://github.com/2AMLogic/sg13g2-opamp/issues/50>`_), item 3 (a
+committed DRC report with its coverage disclosed), and -- since T1 item 4
+(#57) -- the layout half of LVS: the substrate/well-tap implants and the
+net-naming pin labels that ``klt lvs`` needs to compare this stream against
+``design/netlist/opamp_core.spice``. The compare itself, its committed
+request/report, and the expanded reference netlist it runs against live
+beside this file (``lvs_request.json`` / ``lvs_report.json`` /
+``lvs_reference.py``); see ``layout/README.md`` for the recorded verdict.
+Note ``klt drc --deck sg13g2`` and the LVS deck both remain
+klayout-tools' own curated 43-rule starter deck, **not** IHP's foundry
 signoff deck.
 
 The connectivity claims this file makes are machine-checked here rather than
@@ -42,8 +45,12 @@ asserted, in two steps that are only worth something together:
 
 Together they catch an open, a short, an untied dummy and a drifted netlist
 -- none of which DRC can see. They are still **not LVS**: no device is
-*recognised* from the geometry, extraction stops at ``Metal1``, and no
-parasitics are computed. ``klt lvs`` is T1 item 4 and out of scope here.
+*recognised* from the geometry here, extraction stops at ``Metal1``, and no
+parasitics are computed. Device recognition, body-tie verification and the
+netlist compare are ``klt lvs`` -- T1 item 4, #57 -- whose committed
+request/report/reference live beside this file and whose tap-implant and
+net-naming geometry this generator now draws (see
+:func:`overlay_tap_implants` and :meth:`Router.pin`).
 
 Usage (from the repo root)::
 
@@ -78,17 +85,23 @@ import devices
 import floorplan as fp
 from builder import DBU_UM, Builder, Placed
 from sg13g2_layers import (
+    L_ACTIV,
     L_METAL1,
     L_METAL2,
     L_METAL3,
+    L_METAL3_TEXT,
     L_METAL4,
     L_METAL5,
+    L_NSD,
+    L_NWELL,
+    L_PSD,
     L_TOPMETAL1,
     L_TOPVIA1,
     L_VIA1,
     L_VIA2,
     L_VIA3,
     L_VIA4,
+    Layer,
     verify_deck_minima,
 )
 
@@ -575,13 +588,18 @@ class Router:
     def pin(self, net: str, x: float, track: str) -> None:
         """A labelled Metal3 pad on ``track``: the block's port for ``net``.
 
-        The label is drawn twice, on purpose: once on ``TEXT`` (63/0), the
+        The label is drawn three times, on purpose, each on a layer a
+        different reader looks at: once on ``TEXT`` (63/0), the
         documentation layer ``builder.Builder.label`` defaults to and the one
-        ``layout/README.md`` names, and once on ``Metal3`` itself, where an
-        LVS run would look for a net name. Nothing in *this* repo reads the
-        second one yet -- ``klt lvs`` is T1 item 4 and out of scope here --
-        but a text on the port's own conductor costs nothing and is what
-        makes the stream usable when it does.
+        ``layout/README.md`` names; once on ``Metal3`` (30/0) itself, kept
+        for visual convention; and once on ``Metal3.text`` (30/25) -- the
+        entry of the curated deck's ``EXTRACTION_DECK.metal_labels`` for
+        this routing level, and therefore the one label ``klt lvs``
+        actually reads to name the extracted net. Without the third label
+        the port's net extracts anonymously and the LVS net correspondence
+        for ``vdd``/``vss``/``inn``/``inp``/``out``/``ibias`` is nameless
+        (T1 item 4, #57). All three texts sit on the same point of the same
+        drawn conductor, so they cannot disagree.
         """
         size = max(fp.PIN_PAD_UM, fp.track_width_um(track))
         half = size / 2.0
@@ -589,6 +607,7 @@ class Router:
         self.b.box(L_METAL3, x - half, y - half, x + half, y + half)
         self.b.label(net, x, y)
         self.b.label(net, x, y, layer=L_METAL3)
+        self.b.label(net, x, y, layer=L_METAL3_TEXT)
         self.expect(net, L_METAL3, x, y)
 
 
@@ -639,6 +658,126 @@ def place_all(
         x, y = fp.PLACE_UM[name]
         placed[name] = PlacedDevice(name, dev, b.place_stream(dev.gds_path, name, x, y))
     return placed
+
+
+# --------------------------------------------------------------------------- #
+# Tap implants (T1 item 4, #57): make the guard rings LVS-recognisable ties.
+# --------------------------------------------------------------------------- #
+#: Which arrays get which implant. ``klt gen mos_array``'s sg13g2
+#: ``add_guard_ring`` draws its ring as bare ``Activ`` -- DRC-legal, but the
+#: curated deck declares no distinct tap mask, so it *derives* a tie region
+#: from the opposite-doping implant instead (``EXTRACTION_DECK.tap_pplus``
+#: pSD/14,0 outside every NWell is a substrate tie; ``tap_nplus`` nSD/7,0
+#: inside an NWell is a well tie). A bare-Activ ring is therefore invisible
+#: to extraction: every NMOS body fell back to the deck-synthesized ``vsubs``
+#: global and every PMOS body to an anonymous well net, with ``matched=0``
+#: on both axes (the measured baseline in #57). Overlaying the implant on
+#: the ring -- which ``route_pair``/``build`` already contact and strap to
+#: the body rail -- turns each existing ring into a recognised tie whose
+#: net is the rail it was always wired to. Filed generically against
+#: klayout-tools per CLAUDE.md's friction protocol (the generator, not this
+#: design, should draw the implant): see #57's PR description for the filing.
+TAP_IMPLANT: dict[str, Layer] = {
+    "tail_pair": L_PSD,
+    "input_pair": L_PSD,
+    "out_tail": L_PSD,
+    "mirror": L_NSD,
+    "gain": L_NSD,
+}
+
+
+def _guard_ring_polygon(dev: PlacedDevice) -> kdb.Polygon:
+    """The array's guard ring, as a polygon in **assembly** coordinates.
+
+    The ring is the one merged-``Activ`` polygon of the generated stream
+    that spans the cell's whole ``Activ`` bounding box -- a closed loop
+    around every unit device, by construction of ``mos_array``'s
+    ``add_guard_ring``. Reading it back from the generated stream (rather
+    than re-deriving it from ``mos_array``'s internals) keeps this overlay
+    honest about what was actually placed: if a future ``klt`` stops
+    drawing a ring, the selection below finds nothing and fails loudly
+    instead of implanting a phantom.
+    """
+    layout = kdb.Layout()
+    layout.read(str(dev.generated.gds_path))
+    activ = kdb.Region(
+        kdb.RecursiveShapeIterator(layout, layout.top_cell(), layout.layer(*L_ACTIV))
+    ).merged()
+    bbox = activ.bbox()
+    rings = [p for p in activ.each() if p.bbox() == bbox]
+    if len(rings) != 1:
+        raise AssertionError(
+            f"{dev.name}: expected exactly one Activ polygon spanning the cell "
+            f"bbox (the guard ring); found {len(rings)}. `klt gen mos_array`'s "
+            "add_guard_ring output changed shape -- the tap-implant overlay "
+            "must be re-derived against it."
+        )
+    report_bbox = dev.generated.report["bbox_um"]
+    dx = dev.placed.x0 - report_bbox["x0"]
+    dy = dev.placed.y0 - report_bbox["y0"]
+    return rings[0].transformed(
+        kdb.Trans(int(round(dx / DBU_UM)), int(round(dy / DBU_UM)))
+    )
+
+
+def overlay_tap_implants(
+    b: Builder, placed: dict[str, PlacedDevice]
+) -> list[dict[str, object]]:
+    """Draw the substrate/well-tie implant over each array's guard ring.
+
+    For each MOS array in :data:`TAP_IMPLANT`, the already-contacted,
+    already-strapped guard ring is overlaid with its doping implant --
+    ``pSD`` for the NMOS arrays (a substrate tie: the NMOS body terminal
+    resolves to the ring's own ``vss`` rail instead of the deck-synthesized
+    ``vsubs`` global) and ``nSD`` for the PMOS arrays (a well tie: each
+    PMOS body resolves to its own well's ``vdd`` rail). This is what moves
+    ``klt lvs``'s ``body_verification`` from ``unverified`` to ``verified``
+    -- the layout now *draws* the tie the netlist's bulk connections claim.
+
+    Two containment properties are asserted, not assumed, because the whole
+    derivation rests on them: an NMOS ring must lie outside every ``NWell``
+    (pSD inside a well is not a substrate tie), and a PMOS ring must lie
+    inside its own well (nSD outside a well is not a well tie). A floorplan
+    edit that moves a PMOS's well over an NMOS ring fails here rather than
+    silently degrading every NMOS body back to ``vsubs``.
+
+    Returns one provenance entry per overlay (cell, implant layer, ring
+    area) for the generator's printed summary.
+    """
+    nwell = kdb.Region(
+        kdb.RecursiveShapeIterator(b.layout, b.cell, b.layout.layer(*L_NWELL))
+    ).merged()
+    provenance: list[dict[str, object]] = []
+    for name, implant in sorted(TAP_IMPLANT.items()):
+        ring = _guard_ring_polygon(placed[name])
+        ring_region = kdb.Region(ring)
+        if implant is L_PSD:
+            stray = ring_region & nwell
+            if not stray.is_empty():
+                raise AssertionError(
+                    f"{name}: guard ring overlaps NWell geometry "
+                    f"({stray.area() * DBU_UM * DBU_UM:.2f} um^2) -- a pSD "
+                    "substrate tie must sit outside every well; the floorplan "
+                    "moved a well over this ring"
+                )
+        else:
+            outside = ring_region - nwell
+            if not outside.is_empty():
+                raise AssertionError(
+                    f"{name}: guard ring is not fully inside its NWell "
+                    f"({outside.area() * DBU_UM * DBU_UM:.2f} um^2 outside) -- "
+                    "an nSD well tie must sit inside the well it ties; the "
+                    "generator's well enclosure changed"
+                )
+        b.polygon(implant, ring)
+        provenance.append(
+            {
+                "cell": name,
+                "implant": "pSD" if implant is L_PSD else "nSD",
+                "ring_area_um2": ring.area() * DBU_UM * DBU_UM,
+            }
+        )
+    return provenance
 
 
 def assert_common_centroid(
@@ -737,6 +876,7 @@ def build(
     r = Router(b)
     generated = generate_devices(scratch, klt=klt)
     placed = place_all(b, generated)
+    tap_implants = overlay_tap_implants(b, placed)
 
     tp, ip, mr = placed["tail_pair"], placed["input_pair"], placed["mirror"]
     xm7, xm6, cap = placed["out_tail"], placed["gain"], placed["miller_cap"]
@@ -896,6 +1036,14 @@ def build(
     summary = {
         "bbox_um": [round(v, 4) for v in b.bbox_um()],
         "mim_c_patch_um": mim_patch,
+        "tap_implants": [
+            {
+                "cell": entry["cell"],
+                "implant": entry["implant"],
+                "ring_area_um2": round(entry["ring_area_um2"], 4),  # type: ignore[arg-type]
+            }
+            for entry in tap_implants
+        ],
     }
     return b, r, summary, provenance
 
@@ -1187,6 +1335,11 @@ def main(argv: list[str] | None = None) -> int:
         print(f"wrote {gds_out}  bbox_um={summary['bbox_um']}")
         for entry in provenance:
             print(f"  {entry['cell']:<12} {entry['device']:<14} {entry['params']}")
+        for entry in summary["tap_implants"]:
+            print(
+                f"  tap implant  {entry['cell']:<12} {entry['implant']}"
+                f" over {entry['ring_area_um2']} um^2 of guard ring"
+            )
         if summary["mim_c_patch_um"] is not None:
             print(f"  MIM.c patched: {summary['mim_c_patch_um']}")
 

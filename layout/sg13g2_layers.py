@@ -116,6 +116,19 @@ L_VMIM: Layer = (129, 0)  # sg13g2.lyp 'Vmim.drawing'; deck cap_cmim.top_plate_v
 L_TEXT: Layer = (63, 0)  # sg13g2.lyp 'TEXT.drawing'; not in curated deck
 L_PRBOUNDARY: Layer = (189, 0)  # sg13g2.lyp 'prBoundary.drawing'; not in deck
 
+# --------------------------------------------------------------------------- #
+# Net-naming text layers: the ``metal_labels`` entries of the curated deck's
+# ``EXTRACTION_DECK`` -- the layers ``klt extract``/``klt lvs`` actually read
+# to give an extracted net a name (a label anywhere on a metal net, on this
+# layer, names that net). Transcribed from ``decks/sg13g2.py``'s
+# ``metal_labels = ((8, 25), (10, 25), (30, 25), (50, 25), (67, 25),
+# (126, 25), (134, 25))``. A label on the *drawing* layer (e.g. Metal3 30/0)
+# or on ``TEXT`` 63/0 names nothing -- extraction ignores both -- which is
+# why the port pins carry a third label on the routing layer's text purpose
+# (see ``generate.Router.pin``).
+# --------------------------------------------------------------------------- #
+L_METAL3_TEXT: Layer = (30, 25)  # sg13g2.lyp 'Metal3.text'; deck metal_labels[2]
+
 #: Names attached to each layer index in written streams, so ``klt layers``
 #: and a KLayout session both show human-readable names without needing the
 #: PDK's ``.lyp`` loaded.
@@ -142,6 +155,7 @@ LAYER_NAMES: dict[Layer, str] = {
     L_MIM: "MIM",
     L_VMIM: "Vmim",
     L_TEXT: "TEXT",
+    L_METAL3_TEXT: "Metal3.text",
     L_PRBOUNDARY: "prBoundary",
 }
 

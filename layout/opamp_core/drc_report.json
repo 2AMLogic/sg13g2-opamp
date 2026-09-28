@@ -46,6 +46,9 @@
       "126/0"
     ],
     "layers_in_stream_without_rules": [
+      "7/0",
+      "14/0",
+      "30/25",
       "31/0",
       "36/0",
       "63/0",
@@ -191,7 +194,7 @@
     "nothing_checked_reasons": []
   },
   "provenance": {
-    "klt_version": "0.6.0+gd574697ed72c",
+    "klt_version": "0.6.0",
     "klayout_version": "0.30.12",
     "pdk": null,
     "deck": {
@@ -200,7 +203,7 @@
       "released": true
     },
     "input": {
-      "content_hash": "sha256:2c5829ed6a664ca7904b0012cac09c8a832e11b1cc0d2279f0c7b680e38cf4c9",
+      "content_hash": "sha256:07fcb21698709178395cb2f04ba998c3752efb6eff24aace7626d9ffc10e553e",
       "role": "layout"
     },
     "klayout_version_mismatch": true

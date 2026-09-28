@@ -164,6 +164,16 @@ class Builder:
             )
         )
 
+    def polygon(self, layer: Layer, poly: kdb.Polygon) -> None:
+        """Arbitrary polygon on ``layer``, in **database units** as-is.
+
+        For assembly-level overlays derived from a placed stream's own
+        geometry (e.g. the tap-implant bands this block draws over the
+        generated guard rings): the caller computes the polygon in KLayout's
+        own coordinate system, so no micron conversion happens here.
+        """
+        self.cell.shapes(self._layer_index(layer)).insert(poly)
+
     def label(self, text: str, x: float, y: float, layer: Layer = L_TEXT) -> None:
         """Documentation text on ``layer`` (``TEXT`` 63/0 by default).
 
