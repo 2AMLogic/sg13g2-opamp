@@ -1,0 +1,208 @@
+{
+  "schema_version": 2,
+  "file": "layout/opamp_core/opamp_core.gds",
+  "deck": "sg13g2",
+  "dbu_um": 0.001,
+  "status": "clean",
+  "violation_count": 0,
+  "rule_counts": {},
+  "metrics": {
+    "drc__error__count": 0
+  },
+  "violations": [],
+  "coverage": {
+    "deck_layers": [
+      "1/0",
+      "5/0",
+      "6/0",
+      "8/0",
+      "10/0",
+      "19/0",
+      "29/0",
+      "30/0",
+      "49/0",
+      "50/0",
+      "66/0",
+      "67/0",
+      "125/0",
+      "126/0",
+      "133/0",
+      "134/0"
+    ],
+    "layers_checked": [
+      "1/0",
+      "5/0",
+      "6/0",
+      "8/0",
+      "10/0",
+      "19/0",
+      "29/0",
+      "30/0",
+      "49/0",
+      "50/0",
+      "66/0",
+      "67/0",
+      "125/0",
+      "126/0"
+    ],
+    "layers_in_stream_without_rules": [
+      "31/0",
+      "36/0",
+      "63/0",
+      "129/0",
+      "189/0"
+    ],
+    "rules_checked": [
+      "activ.enclosing.cont.1",
+      "activ.space.1",
+      "activ.width.1",
+      "cont.space.1",
+      "cont.width.1",
+      "gatpoly.enclosing.cont.1",
+      "gatpoly.separation.activ.1",
+      "gatpoly.space.1",
+      "gatpoly.width.1",
+      "metal1.enclosing.via1.1",
+      "metal1.space.1",
+      "metal1.width.1",
+      "metal2.enclosing.via2.1",
+      "metal2.space.1",
+      "metal2.width.1",
+      "metal3.enclosing.via3.1",
+      "metal3.space.1",
+      "metal3.width.1",
+      "metal4.enclosing.via4.1",
+      "metal4.space.1",
+      "metal4.width.1",
+      "metal5.enclosing.topvia1.1",
+      "metal5.space.1",
+      "metal5.width.1",
+      "topmetal1.enclosing.topvia1.1",
+      "topmetal1.space.1",
+      "topmetal1.width.1",
+      "topvia1.space.1",
+      "topvia1.width.1",
+      "via1.space.1",
+      "via1.width.1",
+      "via2.space.1",
+      "via2.width.1",
+      "via3.space.1",
+      "via3.width.1",
+      "via4.space.1",
+      "via4.width.1"
+    ],
+    "rules_skipped": [
+      "topmetal1.enclosing.topvia2.1",
+      "topmetal2.enclosing.topvia2.1",
+      "topmetal2.space.1",
+      "topmetal2.width.1",
+      "topvia2.space.1",
+      "topvia2.width.1"
+    ],
+    "voltage_domain_warnings": [],
+    "deck_scope": [
+      "Act",
+      "Cnt",
+      "Gat",
+      "M1",
+      "M2",
+      "M3",
+      "M4",
+      "M5",
+      "TM1",
+      "TM2",
+      "TV1",
+      "TV2",
+      "V1",
+      "V2",
+      "V3",
+      "V4"
+    ],
+    "schema_version": 1,
+    "known": true,
+    "checked": [
+      "activ.enclosing.cont.1",
+      "activ.space.1",
+      "activ.width.1",
+      "cont.space.1",
+      "cont.width.1",
+      "gatpoly.enclosing.cont.1",
+      "gatpoly.separation.activ.1",
+      "gatpoly.space.1",
+      "gatpoly.width.1",
+      "metal1.enclosing.via1.1",
+      "metal1.space.1",
+      "metal1.width.1",
+      "metal2.enclosing.via2.1",
+      "metal2.space.1",
+      "metal2.width.1",
+      "metal3.enclosing.via3.1",
+      "metal3.space.1",
+      "metal3.width.1",
+      "metal4.enclosing.via4.1",
+      "metal4.space.1",
+      "metal4.width.1",
+      "metal5.enclosing.topvia1.1",
+      "metal5.space.1",
+      "metal5.width.1",
+      "topmetal1.enclosing.topvia1.1",
+      "topmetal1.space.1",
+      "topmetal1.width.1",
+      "topvia1.space.1",
+      "topvia1.width.1",
+      "via1.space.1",
+      "via1.width.1",
+      "via2.space.1",
+      "via2.width.1",
+      "via3.space.1",
+      "via3.width.1",
+      "via4.space.1",
+      "via4.width.1"
+    ],
+    "skipped": [],
+    "inapplicable": [
+      {
+        "id": "topmetal1.enclosing.topvia2.1",
+        "reason": "no_applicable_geometry"
+      },
+      {
+        "id": "topmetal2.enclosing.topvia2.1",
+        "reason": "no_applicable_geometry"
+      },
+      {
+        "id": "topmetal2.space.1",
+        "reason": "no_applicable_geometry"
+      },
+      {
+        "id": "topmetal2.width.1",
+        "reason": "no_applicable_geometry"
+      },
+      {
+        "id": "topvia2.space.1",
+        "reason": "no_applicable_geometry"
+      },
+      {
+        "id": "topvia2.width.1",
+        "reason": "no_applicable_geometry"
+      }
+    ],
+    "unknown": [],
+    "nothing_checked": false,
+    "nothing_checked_reasons": []
+  },
+  "provenance": {
+    "klt_version": "0.6.0+gd574697ed72c",
+    "klayout_version": "0.30.12",
+    "pdk": null,
+    "deck": {
+      "name": "sg13g2",
+      "content_hash": "sha256:894326a4e37fb24fef2f7ffc6ae1da55a0e262b0f0bc1c09adc4862909278fda",
+      "released": true
+    },
+    "input": {
+      "content_hash": "sha256:2c5829ed6a664ca7904b0012cac09c8a832e11b1cc0d2279f0c7b680e38cf4c9",
+      "role": "layout"
+    },
+    "klayout_version_mismatch": true
+  }
+}

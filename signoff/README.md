@@ -54,35 +54,67 @@ A clean DRC, or any pre-layout corner sweep — however thorough — renders
 
 ## What the manifest cites, and what it deliberately does not
 
-**Today the manifest cites nothing, and every T1 item renders `unmet` with
-reason `no_evidence`.** That is the honest graded result, not a placeholder:
-an accurate machine-readable statement that no `klt`-gradable envelope exists
-in this repository yet. This block is early — it has a schematic, a
-regenerated netlist and seven committed bench suites under `sim/`, but no
-layout, no DRC/LVS chain, no post-layout run and no Monte Carlo campaign — and
-the graded record says exactly that, on the record, where a hand-maintained
-list would already be arguing with itself. As evidence lands in a gradable
-shape, items gain citations and rows flip `unmet` → `met` mechanically.
+**The manifest cites two items: 2 (Layout) and 3 (DRC clean).** Both cite the
+same envelope — `layout/opamp_core/drc_report.json`, the `klt drc --deck
+sg13g2` run over the committed `layout/opamp_core/opamp_core.gds` — and both
+pin the same hash, because a DRC envelope records the sha256 of the stream it
+ran on. Everything else still renders `unmet` with reason `no_evidence`,
+which remains the honest graded result rather than a placeholder.
 
-**Items 1, 2, 9 and 10 are uncited on purpose.** They have no `klt` verb
-behind them, so the grader scores them on "some passing envelope was cited at
-all", never on topical relevance — citing a passing envelope for "Repo
-hygiene" would render `MET` and the tool would have no basis to object. This
+**Why a `drc` envelope is a legitimate citation for item 2, and not
+borrowed-green.** Item 2 has no `klt` verb of its own, so the grader scores it
+on "some passing envelope was cited at all", never on topical relevance — a
+passing envelope for anything would render `met` and the tool would have no
+basis to object. That is exactly why the citation has to earn its place by
+argument, here:
+
+- The envelope's `provenance.input.content_hash` **is** the committed GDS's
+  own sha256. The envelope does not merely pass; it names the artifact item 2
+  is about, by content.
+- `pinned-inputs.json` maps that pin to `layout/opamp_core/opamp_core.gds`
+  and `check_signoff.py` re-hashes the file offline, so the chain "the record
+  says `met`" → "because this envelope passed" → "on exactly the stream
+  committed in this repo" is closed on both ends and fails CI if either end
+  moves.
+- The half item 2 asks for that no envelope can carry — "reproducibly
+  generated or with documented provenance" — is met by
+  `layout/opamp_core/generate.py` plus its `--check` mode, which regenerates
+  into a temp directory and fails on any byte difference, and by
+  `layout/README.md`'s revision table.
+
+**Item 3's coverage disclosure is in `layout/README.md`**, quoted verbatim
+from the cited report's own `coverage` block: `deck_scope` (16 rule
+families), `layers_in_stream_without_rules` (`31/0`, `36/0`, `63/0`, `129/0`,
+`189/0` — the n-well and the MIM plate among them) and `rules_skipped` (6 of
+43, all `no_applicable_geometry`). `klt signoff` reports those three fields
+but does not grade them, so a `met` verdict on item 3 is **not** evidence the
+gaps were disclosed; read the disclosure, not the verdict. And the deck
+itself is klayout-tools' own curated 43-rule starter deck, **not IHP's
+foundry signoff deck** — see `layout/README.md` → "Curated deck vs. IHP's
+foundry deck".
+
+**Items 1, 9 and 10 are uncited on purpose**, for the reason item 2 had to
+argue its way past: they have no `klt` verb behind them and no envelope names
+the artifact they are about, so any citation would be borrowed-green. This
 repo already owns artifacts those items describe (schematic + regenerated
-netlist under `design/`; seven manifest-driven bench suites under `sim/`
-with documented cold-start invocations and a pinned PDK revision; a README
-and Apache-2.0 license; and, as of this change, CI), but asserting them
-through an unrelated citation would make the record say something no check
-verified. `klayout-tools/docs/cli/signoff.md` recommends exactly this
-default — leave the four visibly `unmet` rather than borrowed-green.
+netlist under `design/`; seven manifest-driven bench suites under `sim/` with
+documented cold-start invocations and a pinned PDK revision; a README and
+Apache-2.0 license; CI), but asserting them through an unrelated citation
+would make the record say something no check verified.
+`klayout-tools/docs/cli/signoff.md` recommends exactly this default — leave
+them visibly `unmet` rather than borrowed-green.
 
-**Items 3, 4, 7 and 11 are uncited because there is no layout.** `layout/`
-still holds a placeholder README: no GDS/OASIS exists, so no `klt drc`, `klt
-lvs`, `klt pex` or `klt erc` report can exist either. The whole
-items-2-through-4-and-7-and-11 chain is sequenced behind the layout work
-(tracker [#3](https://github.com/2AMLogic/sg13g2-opamp/issues/3), "What
-stands between here and T1" step 3); item 11's specifics are tracked in
-[#29](https://github.com/2AMLogic/sg13g2-opamp/issues/29).
+**Items 4, 7 and 11 are uncited because the checks have not been run.** The
+layout now exists, so the blocker that held them is gone, but `klt lvs`
+(item 4), `klt extract --parasitics` + post-layout re-simulation (item 7) and
+an ERC/supply spec (item 11,
+[#29](https://github.com/2AMLogic/sg13g2-opamp/issues/29)) are each their own
+piece of work and none has been done. The layout generator does run a
+connectivity **self-check** — it re-extracts the drawn metal and asserts the
+nine nets are wired as `design/netlist/opamp_core.spice` says, with no open,
+no short and nothing floating — but that is not LVS (no device recognition,
+extraction stops at Metal1) and is deliberately **not** cited as item 4.
+Tracker: [#3](https://github.com/2AMLogic/sg13g2-opamp/issues/3).
 
 **Items 5 and 6 are uncited because this repo's evidence is not in a
 gradable shape.** `spec/target-spec.md` is partially ratified (decision
@@ -105,15 +137,28 @@ conditions with the evidence record behind each verdict. When one does, the
 correct citation is the opt-in `generic` envelope wrapper (`"kind":
 "generic"`), the evidence kind only item 8 accepts.
 
-## Disclosures that would travel with a claim — none today
+## Disclosures that travel with the current claim
 
-Nothing is cited, so there is nothing to disclose; the manifest makes no
-per-item claim beyond "no gradable check backs this row yet". Two honesty
-notes for the future, taken from the issue that introduced this register:
+- **Item 3's DRC coverage gaps are disclosed in `layout/README.md`** →
+  "What the DRC verdict is worth", quoted verbatim from the cited report's
+  own `coverage` block. This was the honesty note this register was opened
+  with ("when item 3 first goes `met`, its coverage gaps must be stated in
+  the claim — a `met` verdict alone is not evidence that coverage was
+  disclosed"), and it is now discharged.
+- **Item 2's provenance is disclosed in the same file** → "Determinism":
+  which `klt` revision produced the bytes, what would legitimately change
+  them, and the fact that changing them fails this register's own offline
+  check until the pins are refreshed.
+- **The source/drain implants are not drawn.** `klt gen mos_array` emits no
+  `nSD`/`pSD` on this family, the curated deck has no implant rule, and
+  neither the DRC verdict nor the signoff record can see it. Stated in
+  `layout/README.md` and filed upstream as
+  [`2AMLogic/klayout-tools#2580`](https://github.com/2AMLogic/klayout-tools/issues/2580).
+  Nothing in this register should be read as a claim that the committed
+  stream is a manufacturable mask set.
 
-- When item 3 first goes `met`, its DRC **coverage gaps** (rule-free layers,
-  skipped rules) must be stated in the claim — a `met` verdict alone is not
-  evidence that coverage was disclosed.
+One honesty note still pending, from the issue that introduced this register:
+
 - When item 7 first goes `met`, its `body_bias` statement must be read and
   restated: an unexamined `body_bias` field is no statement that "every
   device body was biased"; here, today, the question has not been asked with
@@ -126,9 +171,12 @@ recorded input hash. It never opens the repo artifact that hash is supposed
 to be the hash **of** — so a pin can go stale in a way the grader structurally
 cannot see. [`pinned-inputs.json`](pinned-inputs.json) names the artifact
 behind every pin and [`check_signoff.py`](check_signoff.py) re-hashes it,
-which closes that gap the moment the first citation appears (the map is
-empty today, and the checker enforces that it gathers a row with every new
-pin).
+which closes that gap. Both of the current pins resolve to
+`layout/opamp_core/opamp_core.gds`, so regenerating the layout without also
+refreshing the DRC report, both pins and the graded record fails the offline
+half of CI — by design. The checker also enforces the converse: it gathers a
+row for every new pin, and rejects a `pinned-inputs.json` entry for an item
+the manifest does not cite.
 
 CI runs both halves
 ([`.github/workflows/signoff.yml`](../.github/workflows/signoff.yml)), on

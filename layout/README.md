@@ -1,33 +1,41 @@
 # layout/
 
-SG13G2 drawing/routing **scaffold** for this block, plus a DRC-clean smoke
-fixture that proves it. This is the machinery the op-amp layout is drawn
-*with* — it is not the op-amp layout, and nothing here is a signoff claim.
+The block's placed-and-routed `opamp_core` GDS, plus the SG13G2
+drawing/routing **scaffold** it is drawn with and the smoke fixture that
+proves the scaffold.
 
-- **What exists**: a cited SG13G2 layer table, a `klayout.db` builder with
-  routing / via / tap primitives, `klt gen` wrappers for the three device
-  flavours `design/netlist/opamp_core.spice` needs, and one committed smoke
-  GDS + `klt drc --deck sg13g2` report.
-- **What does not**: `opamp_core` itself is not drawn or routed (issue
-  [#45](https://github.com/2AMLogic/sg13g2-opamp/issues/45)); no LVS, no
-  parasitic extraction, no post-layout sim, no supply/ERC spec
-  ([#29](https://github.com/2AMLogic/sg13g2-opamp/issues/29)).
-- **Nothing under `signoff/` cites or is changed by anything in this
-  directory.** The smoke fixture is scaffolding proof; pinning it as T1
-  evidence would be a false claim (see "What the DRC verdict is worth").
+- **`opamp_core/`** — all nine instances of
+  `design/netlist/opamp_core.spice`, placed, wired and labelled, with a
+  committed `klt drc --deck sg13g2` report. This is what `signoff/` cites for
+  T1 items 2 and 3. Read ["The op-amp layout"](#the-op-amp-layout-opamp_core)
+  below before reading anything into that.
+- **`builder.py` / `devices.py` / `sg13g2_layers.py`** — the machinery:
+  a cited SG13G2 layer table, a `klayout.db` builder with routing / via / tap
+  primitives, and `klt gen` wrappers for the three device flavours the
+  netlist needs.
+- **`scaffold_smoke/`** — one device of every shape the netlist asks for,
+  deliberately *not* wired into the topology, as proof the scaffold draws
+  legal geometry. It is scaffolding proof only, and nothing under `signoff/`
+  cites it.
+- **What still does not exist**: no LVS, no parasitic extraction, no
+  post-layout sim, no supply/ERC spec
+  ([#29](https://github.com/2AMLogic/sg13g2-opamp/issues/29)), no pad ring.
 
 ## Files
 
 The structure mirrors `2AMLogic/sg13g2-bandgap`'s: shared drawing modules at
 `layout/`, and one directory per group of drawn artifacts holding its
-`generate.py`, its `.gds` and its `drc_report.json`. The op-amp layout itself
-(#45) belongs in a sibling `layout/opamp_core/`.
+`generate.py`, its `.gds` and its `drc_report.json`.
 
 | Path | What it is |
 |---|---|
 | `sg13g2_layers.py` | The SG13G2 layer table + the curated deck's 43 rule minima, each with its provenance inline. `verify_deck_minima()` re-derives the minima from the installed `klt` and raises on drift. Counterpart of the precedent's `common.py` layer table. |
 | `builder.py` | `Builder`: one `kdb.Layout` at `dbu = 0.001`, micron-valued `box`/`label`/`pr_boundary`/`route_h`/`route_v`/`cut_array`/`landing_pad`/`via`/`via_stack`/`tap`, `place_stream` for importing a generator stream, and a timestamp-free `write`. Counterpart of `_klayout_builder_base.py`. |
-| `devices.py` | `lv_nmos()` / `lv_pmos()` / `cmim_cap()` — thin, validated wrappers over `klt gen mos_array` / `klt gen cap_array` against the `ihp-sg13g2` PDK. The two primitives the precedent lacks. |
+| `devices.py` | `lv_nmos()` / `lv_pmos()` / `cmim_cap()` — thin, validated wrappers over `klt gen mos_array` / `klt gen cap_array` against the `ihp-sg13g2` PDK — plus `patch_mim_bottom_plate()`, the one implementation of the MIM.c correction both committed streams use. |
+| `opamp_core/floorplan.py` | Every coordinate of the block in one file: device placements, the Metal3 track ordinates and the Metal2 lanes, with the invariants they rest on asserted at import time. |
+| `opamp_core/generate.py` | Places and routes the block, cross-checks itself against the netlist file, re-extracts the drawn connectivity, writes the GDS and runs DRC. Also `--check`, `--devices` and `--negative-control`. |
+| `opamp_core/opamp_core.gds` | **The committed layout.** |
+| `opamp_core/drc_report.json` | Its committed `klt drc --deck sg13g2 --format json` report. |
 | `scaffold_smoke/generate.py` | The smoke fixture: draws every device shape the netlist asks for plus one of each routing/tap/via primitive, writes the GDS, runs DRC, writes the report. Also `--check` and `--negative-control`. |
 | `scaffold_smoke/sg13g2_opamp_scaffold_smoke.gds` | The committed smoke stream. |
 | `scaffold_smoke/drc_report.json` | Its committed `klt drc --deck sg13g2 --format json` report. |
@@ -37,33 +45,47 @@ The structure mirrors `2AMLogic/sg13g2-bandgap`'s: shared drawing modules at
 ```sh
 # From the repo root. Requires `klt` on PATH and an ihp-sg13g2 PDK install
 # (found via $PDK_ROOT, else the same candidate list sim/env.sh searches).
-python3 layout/scaffold_smoke/generate.py
+python3 layout/opamp_core/generate.py
 
 # Verify instead of overwrite: regenerates into a temp dir and fails on any
 # drift from the committed GDS (byte-for-byte) or DRC verdict/coverage.
-python3 layout/scaffold_smoke/generate.py --check
+python3 layout/opamp_core/generate.py --check
 
-# Negative control: prove the DRC flow can fail. Writes nothing to the repo.
-python3 layout/scaffold_smoke/generate.py --negative-control
+# DRC each generated device stream on its own, before assembly.
+python3 layout/opamp_core/generate.py --devices
+
+# Negative control: delete one wire and prove the connectivity self-check
+# notices (and that `klt drc` does not). Writes nothing to the repo.
+python3 layout/opamp_core/generate.py --negative-control
+
+# The scaffold's own smoke fixture, same four verbs minus --devices.
+python3 layout/scaffold_smoke/generate.py [--check|--negative-control]
 ```
 
 ### Revisions the committed artifacts were produced with
 
 | Thing | Value |
 |---|---|
-| `klt` | `0.6.0+g9c11986ad447` (`klt --version`) |
-| Curated `sg13g2` deck | `sha256:894326a4e37fb24fef2f7ffc6ae1da55a0e262b0f0bc1c09adc4862909278fda`, 43 rules, `released: yes` (`klt deck hash --deck sg13g2`) |
+| `klt` (for `opamp_core/`) | `0.6.0+gd574697ed72c` — read back from `opamp_core/drc_report.json`'s own `provenance.klt_version` rather than transcribed, so this row cannot drift from the committed bytes it describes. |
+| `klt` (for `scaffold_smoke/`) | `0.6.0+g9c11986ad447` — the revision that stream was first written with ([#44](https://github.com/2AMLogic/sg13g2-opamp/issues/44)). It still regenerates **byte-for-byte** at `gd574697ed72c` (`scaffold_smoke/generate.py --check` passes), so the two revisions draw identical geometry for this repo's shapes; the older value is kept because it is the one the committed bytes were actually produced with. |
+| Curated `sg13g2` deck | `sha256:894326a4e37fb24fef2f7ffc6ae1da55a0e262b0f0bc1c09adc4862909278fda`, 43 rules, `released: yes` (`klt deck hash --deck sg13g2`) — unchanged across both `klt` revisions above |
 | KLayout inside `klt` | `0.30.12`, which the report flags as `provenance.klayout_version_mismatch: true` — that `klt` build was tested against `klayout==0.30.10`. Per `klt`'s own warning the *verdict* is unaffected; report counts could in principle differ on the tested engine. |
 | KLayout used by `builder.py` | `0.30.10` (the host `python3`'s `klayout` package), i.e. the tested version |
 | PDK | IHP-Open-PDK `v0.3.0`, variant `ihp-sg13g2` — the release `sim/pdk.json` pins for this repo's evidence records |
 
-**This is deliberately not `signoff/klt-pin.txt`.** That pin
-(`b15edf5e3a2e56467a3406c98a2555eb1a5ae45c`) exists so `klt signoff
---manifest`'s *T1 checklist skeleton* cannot move under the committed verdict
-of record. It governs the signoff register, and nothing in `layout/` is cited
-by that register, so this directory does not inherit it. If a future change
-does pin a layout artifact as T1 evidence, that change owns reconciling the
-two revisions.
+**These are deliberately not `signoff/klt-pin.txt`.** That pin
+(`b15edf5e3a2e56467a3406c98a2555eb1a5ae45c`, `klt 0.5.0`) exists so `klt
+signoff --manifest`'s *T1 checklist skeleton* cannot move under the committed
+verdict of record. It governs **how the register is graded**, not how the
+evidence is produced, and the two are independent on purpose: the DRC
+envelope `signoff/block-manifest.json` now cites for items 2 and 3 was
+produced by the `klt` in the first row, and is *graded* by the pinned one.
+Both were checked to agree — `klt signoff --manifest` renders items 2 and 3
+`met` with byte-identical citation blocks at `0.5.0+gb15edf5e3a2e` (via
+`uvx --from git+…@b15edf5e3a2e…`, the revision CI installs) and at
+`0.6.0+gd574697ed72c` (the host `klt`), both re-grades matching the committed
+record verbatim. A future change that makes them disagree owns reconciling
+the two revisions, and must say which one moved.
 
 ## Which option was chosen, and why
 
@@ -124,11 +146,233 @@ repo (LV core MOS, MIM cap) are therefore supplied as **generator wrappers**
 rather than as hand-drawn geometry — with one exception, below, where the
 generator's output had to be corrected.
 
-## What the DRC verdict is worth (coverage disclosure)
+---
 
-The committed report says `status: clean`, `violation_count: 0`. Per T1 item
-3, a clean status from a deck with undisclosed holes is a false claim, so the
-holes are disclosed here, quoted from the report's own `coverage` block.
+# The op-amp layout (`opamp_core/`)
+
+85.3 µm × 32.5 µm (`prBoundary` 189/0 at `(-11.5, -0.7)`–`(73.8, 31.84)`),
+nine instances, nine nets, six labelled ports.
+`sha256:2c5829ed6a664ca7904b0012cac09c8a832e11b1cc0d2279f0c7b680e38cf4c9`.
+
+## Floorplan
+
+Three columns, read left to right:
+
+| Column | Contents | x (µm) |
+|---|---|---|
+| 1 | Stage 1 + the bias reference, stacked bottom-to-top in signal order: tail/bias pair (XM5 + XMbias), input pair (XM1 + XM2), mirror load (XM3 + XM4) | 0 … 12.6 |
+| 2 | Stage 2: output tail XM7 below, the folded gain device XM6 above | 21 … 41.4 |
+| 3 | The Miller capacitor XCc | 46 … 72.7 |
+
+XCc alone is 26.7 µm × 28.8 µm — **larger than the entire amplifier** — which
+is why it gets a column rather than a corner. The left channel (x < 0) carries
+the vertical links between channels and the five left-edge port pads.
+
+`opamp_core/floorplan.py` holds every one of those coordinates, and the two
+invariants the routing rests on (`Metal2` vertical / `Metal3` horizontal; one
+unique, non-crowding ordinate per horizontal track) are asserted there at
+import time rather than left as prose.
+
+## Matching: what was chosen for XM1/XM2 and XM3/XM4, and what it costs
+
+**Both matched pairs — and the tail/bias pair XM5/XMbias, which is equally a
+matched pair — are drawn as one-row interdigitated arrays in `B A A B` order
+with a dummy column at each end.** Each netlist device is split into two
+half-width units (`XM1` = 2 × 1.6 µm, not 1 × 3.2 µm; `XM3` = 2 × 0.52 µm;
+`XM5` = 2 × 1.1 µm), and the four units are placed so both devices share one
+centroid.
+
+The order comes from `klt gen mos_array`'s own
+`topology="common_centroid"` numbering, which at `rows=1, cols=4` lays the
+units out `U2 U0 U1 U3`. Taking device A = `{U0, U1}` and device B =
+`{U2, U3}` puts A's centroid at the mean of columns 2 and 3 and B's at the
+mean of columns 1 and 4 — **the same x, the array centre**. That is the
+property that matters: a linear gradient in oxide thickness, implant dose or
+stress across the array shifts both devices' thresholds by the same amount,
+so it cancels in the difference. The dummy columns give the two outermost
+*real* units the same diffusion/poly neighbourhood the inner ones have, so
+the edge-of-array etch and stress environment is not itself a mismatch term.
+
+**Dummies are tied, not floated.** `mos_array` draws the dummy columns but
+reports no ports for them, so their pads are derived geometrically
+(`PlacedDevice.dummy_sites()`, from the array's own uniform column pitch) and
+every one — both diffusion pads *and the gate* — is strapped to that array's
+body/source rail. A floating dummy gate is not a cosmetic issue: it is an
+undefined boundary condition on the very edge device the dummy exists to
+protect, free to couple and to invert the diffusion under it. The
+connectivity self-check below fails if any of them is left unconnected.
+
+### What this arrangement does *not* do, stated plainly
+
+- **It is one-dimensional.** A `rows=2, cols=2` cross-quad would also cancel
+  a gradient along *y*; this cancels only along *x*. It was rejected because
+  in a cross-quad each device's two units sit on opposite diagonals, so the
+  two drain nets must cross each other, and with the tracks available that
+  costs two extra metal levels and a pair of *unequal* drain routes — trading
+  a second-order placement gradient for a first-order wiring asymmetry on the
+  differential pair. On a block with no committed thermal or stress gradient
+  data, that is not a trade worth making blind. If post-layout offset (T1
+  item 7) comes back worse than `spec/target-spec.md` allows, the cross-quad
+  is the first thing to revisit, and this paragraph is the record of why it
+  was not done first.
+- **`B A A B` is symmetric but not homogeneous.** Device A occupies the two
+  inner columns and B the two outer ones, so while the *first* moment matches
+  exactly, the second (curvature) does not. Any four-unit one-row
+  interdigitation has this property; only more units, or two dimensions, fix
+  it.
+- **Routing asymmetry was corrected where it was largest, and not
+  everywhere.** Because A is inner and B is outer, A's drain track and gate
+  track are ~3 µm shorter than B's — a deliberate ~10 % capacitance imbalance
+  on a differential net if left alone. `generate.py` extends the shorter
+  track of each pair (`d1`/`d2`, `inn`/`inp`) to the longer one's span, so
+  the in-array halves match. What remains unmatched is the run out to the
+  left-channel lanes, where `d1` and `d2` use lanes 1.2 µm apart: ~0.5 µm² of
+  Metal3, three orders of magnitude below the gate capacitance it sits
+  beside. It is disclosed rather than fixed.
+- **No device-level mismatch number is claimed here.** This section is a
+  statement of *layout intent*. Whether the drawn pair actually meets the
+  ratified offset and CMRR rows is T1 item 7's question, answered by
+  extraction and re-simulation, and it has not been asked yet.
+
+## The wide devices: XM6 and XM7 are folded
+
+`XM6` (w = 33 µm) is drawn as 12 parallel fingers of 2.75 µm and `XM7`
+(w = 11.9 µm) as 7 of 1.70 µm — both exact divisions, both through
+`mos_array`'s `finger_topology="parallel"`, which straps alternating S/D
+segments and ties every gate, i.e. draws one transistor of width
+`fingers × w_um`. Unfolded, XM6 alone would be a 33 µm-tall strip taller than
+the rest of the amplifier; folded it is 20.4 × 7.7 µm. Neither carries dummy
+columns — they are not matched to anything, and a dummy finger on XM6 would
+cost 1.8 µm of pitch to protect a device whose absolute threshold is set by
+the bias loop, not by a neighbour.
+
+## The Miller capacitor's plates are not interchangeable
+
+The netlist writes `XCc out d2`. Which terminal becomes which plate is the
+layout's decision, and the layout makes it deliberately: **the `Metal5`
+bottom plate carries `out`, and the `MIM` top plate carries `d2`.** The
+bottom plate is a 26.7 µm square sitting over the substrate, so it has far
+more parasitic capacitance to ground than the MIM plate above it; that
+parasitic belongs on `out`, stage 2's low-impedance output, not on `d2`, the
+high-impedance stage-1 output and XM6's gate, where it would move the
+dominant pole and the compensation with it.
+
+## Ports and labels
+
+All six declared ports (`vdd vss inn inp out ibias`) are labelled in the
+stream. Each label is written **twice**: on `TEXT` (63/0) — the documentation
+layer `Builder.label()` defaults to, the one this README names, and the one
+`coverage.layers_in_stream_without_rules` reports below — and again on
+`Metal3` (30/0), the port's own conductor, where an LVS run looks for a net
+name. Nothing in this repo reads the second one yet; `klt lvs` is T1 item 4.
+
+## The connectivity claim, and why it is not LVS
+
+DRC cannot see a short (two nets touching is legal geometry) and cannot see
+an open. So the generator checks connectivity itself, in two steps:
+
+1. `verify_against_netlist()` parses `design/netlist/opamp_core.spice` and
+   asserts the device table in `generate.py` matches it — every instance
+   name, model, W, L and drain/gate/source/bulk net, plus `ng=1`/`m=1`, plus
+   that every declared port is used. A re-netlisted schematic that moves a
+   net fails the regeneration instead of silently producing a layout of the
+   old circuit.
+2. `check_connectivity()` re-extracts the drawn interconnect with KLayout's
+   own `LayoutToNetlist` (Metal1 → TopMetal1, through Via1/2/3/4 and
+   TopVia1) and asserts that **every terminal of each net lands on one
+   extracted net, no two nets share one, and the stream extracts to exactly
+   nine nets** — the last clause being what catches a floating conductor,
+   including an untied dummy gate.
+
+On the committed stream: **9 nets, 93 terminals, no open, no short, nothing
+floating.**
+
+**This is not LVS.** No device is *recognised* from the geometry, so nothing
+confirms that a drawn stack is the transistor its model card names;
+extraction stops at `Metal1`, so each device's own contact-to-diffusion
+connection is taken on `klt gen`'s word; and no parasitics are computed.
+`klt lvs` (T1 item 4) and `klt extract --parasitics` (item 7) remain unrun.
+
+### The connectivity check has been shown to fail
+
+`python3 layout/opamp_core/generate.py --negative-control` rebuilds the block
+with one Metal2 riser deleted — the one carrying `d2` from the mirror's drain
+track up to XM6's gate and the capacitor — and reports:
+
+```
+negative control: klt drc on the broken block says status=clean violations=0
+negative control: 2 connectivity failure(s) reported
+  d2: OPEN -- its 9 terminals extract onto 2 separate nets; one terminal of each at (3.440, 14.870), (31.190, 27.220)
+  FLOATING -- the stream extracts to 10 nets but the netlist declares 9; some drawn conductor is connected to nothing (a dummy gate, or a wire that missed its via)
+OK: the connectivity check detects a removed wire, and names the net
+```
+
+Note the first line: **the broken block is still DRC-clean.** An amplifier
+with its compensation capacitor disconnected passes `klt drc --deck sg13g2`
+without a murmur. That is the exact size of the gap between "DRC clean" and
+"correct", and the reason this check exists.
+
+## What the DRC verdict is worth (`opamp_core/drc_report.json`)
+
+`status: clean`, `violation_count: 0`, **37 of the deck's 43 rules checked**.
+Per T1 item 3, a clean status from a deck with undisclosed holes is a false
+claim, so the holes are disclosed here, quoted verbatim from the report's own
+`coverage` block.
+
+**`coverage.deck_scope`** — the rule families the curated deck carries at all:
+
+```
+["Act", "Cnt", "Gat", "M1", "M2", "M3", "M4", "M5",
+ "TM1", "TM2", "TV1", "TV2", "V1", "V2", "V3", "V4"]
+```
+
+**`coverage.layers_in_stream_without_rules`** — layers the block *draws* that
+the deck has **no rule of any kind** for:
+
+```
+["31/0", "36/0", "63/0", "129/0", "189/0"]
+```
+
+i.e. `NWell` (31/0), `MIM` (36/0), `TEXT` (63/0), `Vmim` (129/0),
+`prBoundary` (189/0). Read plainly: **the clean verdict says nothing about
+the n-well that holds both PMOS groups, and nothing about the Miller
+capacitor's plate** — two of the things a reviewer would most want checked
+about this block. `TEXT` and `prBoundary` are documentation layers and
+legitimately carry no rules. (The implant layers `nSD` 7/0 and `pSD` 14/0 are
+absent from this list only because `klt gen mos_array` does not draw them at
+all, which is its own gap — see below.)
+
+**`coverage.rules_skipped`** — 6 of the deck's 43 rules had no applicable
+geometry in this stream (every one with `reason: "no_applicable_geometry"`):
+
+```
+["topmetal1.enclosing.topvia2.1", "topmetal2.enclosing.topvia2.1",
+ "topmetal2.space.1", "topmetal2.width.1", "topvia2.space.1",
+ "topvia2.width.1"]
+```
+
+These are the TopMetal2 level and the TopVia2 cut, which the block does not
+draw — it routes on Metal1–Metal3 and reaches Metal5/TopMetal1 only for the
+capacitor. They are skipped for the honest reason (no such geometry), not
+because the deck lacks them.
+
+### `klt gen mos_array` draws no source/drain implants
+
+Neither `nSD` (7/0) nor `pSD` (14/0) appears anywhere in the committed
+stream: the generator draws `Activ`, `GatPoly`, `Cont`, `Metal1` and (for a
+pfet) `NWell`, and no implant mask. The curated deck carries no implant rule,
+so `klt drc --deck sg13g2` is silent about it, and IHP's own device
+recognition derives `sg13_lv_nmos`/`sg13_lv_pmos` from `Activ ∧ GatPoly ∧
+¬NWell` rather than from the implant — so this stream is not obviously
+un-extractable. It is, however, not a manufacturable mask set, and **no claim
+is made here that it is**. This is a tool gap, filed generically upstream per
+this repo's friction protocol:
+[`2AMLogic/klayout-tools#2580`](https://github.com/2AMLogic/klayout-tools/issues/2580).
+
+## The old smoke fixture's coverage (`scaffold_smoke/drc_report.json`)
+
+The scaffold fixture's own report is narrower than the block's — it checks 29
+rules, not 37 — and its coverage is disclosed separately below, unchanged.
 
 **`coverage.deck_scope`** — the rule families the curated deck carries at all:
 
@@ -167,10 +411,16 @@ These are the Metal4/TopMetal2 levels and the Via3/Via4/TopVia2 cuts, which
 the fixture does not draw. They are skipped for the honest reason (no such
 geometry), not because the deck lacks them.
 
-### Curated deck vs. IHP's foundry deck — not a hypothetical gap
+---
+
+## Curated deck vs. IHP's foundry deck — not a hypothetical gap
+
+**This section applies to every DRC verdict in this repository**, the block's
+and the fixture's alike.
 
 `klt drc --deck sg13g2` runs **klayout-tools' own curated starter deck**: 43
-rules. IHP's signoff deck under
+rules. **It is not IHP's foundry signoff deck**, and no result in this
+repository is a signoff-DRC result. IHP's signoff deck under
 `$PDK_ROOT/ihp-sg13g2/libs.tech/klayout/tech/drc/rule_decks/` emits **111
 distinct rule ids**, plus its templated `M2..M5` / `V2..V4` families. Whole
 families the curated deck does not carry include every `NW.*` (n-well), every
@@ -179,8 +429,11 @@ families the curated deck does not carry include every `NW.*` (n-well), every
 45° bends), and the antenna, density, latch-up, seal-ring and pad tables.
 
 **A curated-deck-clean verdict from this repo is therefore not, and must never
-be reported as, signoff-clean.** Concretely, found while building this
-scaffold:
+be reported as, signoff-clean.** That holds for `opamp_core/drc_report.json`
+exactly as it holds for the fixture's: 37 rules checked out of a 43-rule
+starter deck is not 111 rules plus the antenna, density, latch-up, seal-ring
+and pad tables. Concretely, found while building the scaffold and inherited
+unchanged by the block:
 
 > `klt gen cap_array --pdk ihp-sg13g2` draws `Metal5` enclosing the `MIM`
 > plate by **0.50 µm**. IHP's own **`MIM.c`** requires **0.60 µm**
@@ -189,14 +442,17 @@ scaffold:
 > `rule_decks/sg13g2_tech_default.json`). The curated deck carries no MIM
 > rule, so it reports the shortfall as clean.
 
-Rather than commit geometry known to violate a foundry rule, the smoke
-fixture widens the bottom plate itself —
-`scaffold_smoke/generate.py`'s `_patch_mim_bottom_plate`, against
-`devices.MIM_METAL5_ENCLOSURE_UM`. The patch is reported in the generator's
-stdout and is a no-op (returning `None`) if a future `klt` fixes the
-generator, so it cannot silently double-draw. **This one rule is the
-exception, not a general audit**: the other uncarried rule ids have not been
-checked by hand, and this scaffold does not claim they pass.
+Rather than commit geometry known to violate a foundry rule, **both** streams
+widen the bottom plate themselves — `devices.patch_mim_bottom_plate()`,
+against `devices.MIM_METAL5_ENCLOSURE_UM`. The patch is reported in each
+generator's stdout and is a no-op (returning `None`) if a future `klt` fixes
+the generator, so it cannot silently double-draw. It lives in `devices.py`,
+not in either `generate.py`, precisely because a foundry rule that no
+`klt drc` run in this repo checks must have exactly one implementation: two
+copies would drift, and only one of the two committed streams would clear
+MIM.c. **This one rule is the exception, not a general audit**: the other
+uncarried rule ids have not been checked by hand, and nothing here claims
+they pass.
 
 Filed upstream per this repo's friction protocol as a generic tool gap:
 [`2AMLogic/klayout-tools#2576`](https://github.com/2AMLogic/klayout-tools/issues/2576)
@@ -224,14 +480,29 @@ fixture is a real pass and not a silently inert check. Nothing from the
 negative control is committed — it runs entirely in a temp directory, so the
 byte-for-byte regeneration criterion is untouched.
 
+### The DRC flow's negative control covers the block too
+
+The fixture's `--negative-control` and the block's are different experiments
+and both are needed: the fixture's proves the *DRC deck* is not inert (it
+flags illegal geometry), the block's proves the *connectivity check* is not
+inert (it flags a missing wire that DRC calls clean). Neither substitutes for
+the other, and neither commits anything.
+
+---
+
 ## Determinism
 
-`python3 layout/scaffold_smoke/generate.py` reproduces
-`scaffold_smoke/sg13g2_opamp_scaffold_smoke.gds` **byte-for-byte** on a clean checkout at
-the same `klt` revision (verified by running it twice and comparing sha256:
-`d514a4f1309d40fc580ddbeb311e2393247ba02c2f2d9718e0275a33b8e5eaf5` both times
-— the same value the report records as `provenance.input.content_hash`;
-`--check` automates the comparison). Three things make that hold:
+Both committed streams reproduce **byte-for-byte** on a clean checkout at the
+same `klt` revision. `--check` automates the comparison for each: it
+regenerates into a temp directory and fails on any difference in the GDS
+bytes or in the DRC report's `status` / `violation_count` / `coverage`.
+
+| Stream | sha256 (= its report's `provenance.input.content_hash`) |
+|---|---|
+| `opamp_core/opamp_core.gds` | `2c5829ed6a664ca7904b0012cac09c8a832e11b1cc0d2279f0c7b680e38cf4c9` |
+| `scaffold_smoke/sg13g2_opamp_scaffold_smoke.gds` | `d514a4f1309d40fc580ddbeb311e2393247ba02c2f2d9718e0275a33b8e5eaf5` |
+
+Three things make that hold:
 
 1. `Builder.write` sets `SaveLayoutOptions.gds2_write_timestamps = False`.
    Without it KLayout stamps wall-clock time into every `BGNLIB`/`BGNSTR`
@@ -240,17 +511,28 @@ the same `klt` revision (verified by running it twice and comparing sha256:
    re-imported **flattened** into the assembly, so neither their own
    timestamps nor their internal cell names reach the committed stream.
 3. Every coordinate is a pure function of the constants in
-   `scaffold_smoke/generate.py` and `sg13g2_layers.py`. `params` are serialised with
-   `sort_keys=True`, and the committed DRC report's `file` field is rewritten
-   to the repo-relative GDS path so no host's absolute paths are embedded.
+   `opamp_core/floorplan.py` / `scaffold_smoke/generate.py` and
+   `sg13g2_layers.py`. `params` are serialised with `sort_keys=True`, and the
+   committed DRC report's `file` field is rewritten to the repo-relative GDS
+   path so no host's absolute paths are embedded.
 
 **What would legitimately change the bytes**: a different `klt` revision
 (device geometry comes from its generators), or a curated-deck revision that
 moves a rule minimum this code sizes against — the latter fails loudly first,
 because `verify_deck_minima()` runs before anything is drawn and raises on any
-drift from the transcribed 43 values, naming both content hashes.
+drift from the transcribed 43 values, naming both content hashes. A *change
+to the netlist* would also change the bytes, and would fail loudly first for
+the same reason: `verify_against_netlist()` runs before anything is drawn.
 
-## Devices covered
+**If the bytes change, the signoff register must be refreshed in the same
+change.** `signoff/block-manifest.json` pins the GDS's sha256 for items 2 and
+3, `signoff/pinned-inputs.json` names the file it is the hash of, and
+`signoff/check_signoff.py` re-hashes it offline — so a regenerated layout
+fails CI until the DRC report, both pins and a new graded record under
+`signoff/reports/` are refreshed together. That is the intended behaviour,
+not an obstacle.
+
+## Devices covered by the smoke fixture
 
 All nine instances in `design/netlist/opamp_core.spice` collapse to six
 distinct `(flavour, W, L)` shape classes, and the smoke fixture draws one of
@@ -274,5 +556,6 @@ them.
 Matched-array topology (common-centroid `rows`/`cols`, dummy columns) is
 available from `mos_array` but is deliberately left at `rows=1, cols=1,
 dummy=0` here: how the input pair and the mirror are interleaved is a
-floorplanning decision belonging to the op-amp layout itself (#45), not
-something a scaffold smoke fixture should bake in.
+floorplanning decision belonging to the op-amp layout itself, and it is made
+in `opamp_core/` — see ["Matching"](#matching-what-was-chosen-for-xm1xm2-and-xm3xm4-and-what-it-costs)
+above — not baked into a smoke fixture.

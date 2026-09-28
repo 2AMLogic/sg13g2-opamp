@@ -1,5 +1,16 @@
 {
   "block": "sg13g2-opamp",
   "kind": "analog",
-  "evidence": {}
+  "evidence": {
+    "2": {
+      "file": "layout/opamp_core/drc_report.json",
+      "kind": "drc",
+      "content_hash": "sha256:2c5829ed6a664ca7904b0012cac09c8a832e11b1cc0d2279f0c7b680e38cf4c9"
+    },
+    "3": {
+      "file": "layout/opamp_core/drc_report.json",
+      "kind": "drc",
+      "content_hash": "sha256:2c5829ed6a664ca7904b0012cac09c8a832e11b1cc0d2279f0c7b680e38cf4c9"
+    }
+  }
 }
