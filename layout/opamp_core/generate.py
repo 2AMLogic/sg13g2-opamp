@@ -1064,39 +1064,6 @@ def negative_control(klt: str = "klt") -> int:
     return 0
 
 
-def run_drc(gds: Path, report: Path, klt: str = "klt") -> dict:
-    """``klt drc --deck sg13g2 --format json`` over ``gds``, written to ``report``.
-
-    The report's ``file`` field is rewritten to the committed GDS's
-    repo-relative path -- ``klt`` records the path it was handed, and
-    embedding either this host's absolute paths or (under ``--check``) a temp
-    directory would make byte-for-byte regeneration unachievable. Every other
-    field, including ``provenance.input.content_hash`` (the stream's own
-    sha256), is left exactly as ``klt`` emitted it.
-    """
-    argv = [
-        devices.require_klt(klt),
-        "drc",
-        str(gds),
-        "--deck",
-        "sg13g2",
-        "--format",
-        "json",
-    ]
-    proc = subprocess.run(argv, capture_output=True, text=True, check=False)
-    try:
-        data = json.loads(proc.stdout)
-    except json.JSONDecodeError as exc:
-        raise RuntimeError(
-            f"`klt drc` did not emit JSON (exit {proc.returncode}): {exc}\n"
-            f"{proc.stderr.strip()}\n{proc.stdout[:2000]}"
-        ) from exc
-    data["file"] = str(GDS_PATH.relative_to(REPO_ROOT))
-    report.parent.mkdir(parents=True, exist_ok=True)
-    report.write_text(json.dumps(data, indent=2, sort_keys=False) + "\n")
-    return data
-
-
 def drc_each_device(klt: str = "klt") -> int:
     """DRC every device stream on its own, before any of them is assembled.
 
@@ -1223,7 +1190,7 @@ def main(argv: list[str] | None = None) -> int:
         if summary["mim_c_patch_um"] is not None:
             print(f"  MIM.c patched: {summary['mim_c_patch_um']}")
 
-        drc = run_drc(gds_out, report_out, klt=args.klt)
+        drc = devices.run_drc(gds_out, report_out, GDS_PATH, REPO_ROOT, klt=args.klt)
         cov = drc["coverage"]
         print(
             f"klt drc --deck sg13g2: status={drc['status']} "

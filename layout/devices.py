@@ -386,3 +386,56 @@ def patch_mim_bottom_plate(builder, placed) -> dict | None:
 #: cross-checked against the curated deck's ``cap_cmim`` device class.
 _L_MIM = (36, 0)
 _L_METAL5 = (67, 0)
+
+
+# --------------------------------------------------------------------------- #
+# Signoff DRC over a committed stream
+# --------------------------------------------------------------------------- #
+def run_drc(
+    gds: Path,
+    report: Path,
+    committed_gds: Path,
+    repo_root: Path,
+    klt: str = "klt",
+) -> dict:
+    """``klt drc --deck sg13g2 --format json`` over ``gds``, written to ``report``.
+
+    The one implementation both committed streams' generators use --
+    ``layout/opamp_core`` and ``layout/scaffold_smoke`` each carried a
+    line-for-line copy of this until issue #52 moved it here. Same argument as
+    :func:`patch_mim_bottom_plate`: the report shaping below (the ``file``
+    rewrite in particular) is what makes the byte-for-byte regeneration
+    criterion hold, so it must have exactly one implementation or the two
+    copies drift and only one of the two committed reports stays reproducible.
+
+    The report's ``file`` field is rewritten to ``committed_gds``'s path
+    relative to ``repo_root`` -- ``klt`` records the path it was handed, and
+    embedding either this host's absolute paths or (under ``--check``) a temp
+    directory would make byte-for-byte regeneration unachievable. That is why
+    ``committed_gds`` is a separate parameter from ``gds`` rather than derived
+    from it: under ``--check`` the caller hands ``gds`` a scratch copy in a
+    temp dir and still wants the committed stream's repo-relative path
+    recorded. Every other field, including ``provenance.input.content_hash``
+    (the stream's own sha256), is left exactly as ``klt`` emitted it.
+    """
+    argv = [
+        require_klt(klt),
+        "drc",
+        str(gds),
+        "--deck",
+        "sg13g2",
+        "--format",
+        "json",
+    ]
+    proc = subprocess.run(argv, capture_output=True, text=True, check=False)
+    try:
+        data = json.loads(proc.stdout)
+    except json.JSONDecodeError as exc:
+        raise RuntimeError(
+            f"`klt drc` did not emit JSON (exit {proc.returncode}): {exc}\n"
+            f"{proc.stderr.strip()}\n{proc.stdout[:2000]}"
+        ) from exc
+    data["file"] = str(committed_gds.relative_to(repo_root))
+    report.parent.mkdir(parents=True, exist_ok=True)
+    report.write_text(json.dumps(data, indent=2, sort_keys=False) + "\n")
+    return data

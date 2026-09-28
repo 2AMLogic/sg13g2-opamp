@@ -31,7 +31,7 @@ The structure mirrors `2AMLogic/sg13g2-bandgap`'s: shared drawing modules at
 |---|---|
 | `sg13g2_layers.py` | The SG13G2 layer table + the curated deck's 43 rule minima, each with its provenance inline. `verify_deck_minima()` re-derives the minima from the installed `klt` and raises on drift. Counterpart of the precedent's `common.py` layer table. |
 | `builder.py` | `Builder`: one `kdb.Layout` at `dbu = 0.001`, micron-valued `box`/`label`/`pr_boundary`/`route_h`/`route_v`/`cut_array`/`landing_pad`/`via`/`via_stack`/`tap`, `place_stream` for importing a generator stream, and a timestamp-free `write`. Counterpart of `_klayout_builder_base.py`. |
-| `devices.py` | `lv_nmos()` / `lv_pmos()` / `cmim_cap()` — thin, validated wrappers over `klt gen mos_array` / `klt gen cap_array` against the `ihp-sg13g2` PDK — plus `patch_mim_bottom_plate()`, the one implementation of the MIM.c correction both committed streams use. |
+| `devices.py` | `lv_nmos()` / `lv_pmos()` / `cmim_cap()` — thin, validated wrappers over `klt gen mos_array` / `klt gen cap_array` against the `ihp-sg13g2` PDK — plus `patch_mim_bottom_plate()` and `run_drc()`, the one implementation each of the MIM.c correction and of the signoff `klt drc` run + report shaping that both committed streams use. |
 | `opamp_core/floorplan.py` | Every coordinate of the block in one file: device placements, the Metal3 track ordinates and the Metal2 lanes, with the invariants they rest on asserted at import time. |
 | `opamp_core/generate.py` | Places and routes the block, cross-checks itself against the netlist file, re-extracts the drawn connectivity, writes the GDS and runs DRC. Also `--check`, `--devices` and `--negative-control`. |
 | `opamp_core/opamp_core.gds` | **The committed layout.** |
