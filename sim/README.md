@@ -27,6 +27,28 @@ checksum-pinned OpenVAF-Reloaded release (see that script's header for full
 provenance); `--check` verifies the models are present and loadable without
 rebuilding. Every experiment's `run_*.sh` preflights this before simulating.
 
+## Solver tolerance convention
+
+Every record in this tree is produced at **ngspice's default solver
+tolerance**: no `reltol` / `abstol` / `vntol` override line appears in any
+deck under `sim/`, and none may be added — decided in
+[`spec/decision-records/0005-ngspice-reltol-policy.md`](../spec/decision-records/0005-ngspice-reltol-policy.md)
+(DR-0005), which measured all eight deterministic benches at default vs
+tightened tolerance on one host and rejected tightening on convergence
+evidence (a tree-wide `reltol=1e-9` breaks input-cmr 21/45 and slew-rate
+39/45; even `1e-5` breaks input-cmr 6/45 at ~10x wall cost — 31m51s vs 3m16s, DR-0005). The one
+known tolerance-sensitivity — the gm/ID bench's finite-difference `gds` /
+`gm_gds` columns above `~+0.45 V` overdrive, ~20 % cross-host — stays
+documented in that bench's README ("Cross-host reproducibility envelope"),
+which is the standing reading rule for those numbers; a reader who needs a
+converged `gds` re-derives it from a scratch-copy tightened run using that
+README's reproduce recipe. Circuit-bench spec quantities are measured
+tolerance-insensitive at print precision (DR-0005's table), so a
+mixed-tolerance join across benches is not valid evidence — cross-bench
+column joins assume both sides ran at this default. A future proposal to
+pin a tolerance must re-run DR-0005's screen and clear its zero-broken
+gate first.
+
 ## Experiments
 
 - [`gm-id-characterization/`](gm-id-characterization/) — gm/ID, gm/gds, Cgg
