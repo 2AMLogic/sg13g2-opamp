@@ -108,10 +108,6 @@ class GeneratedDevice:
     ``ports``, ``drc_hints``, ``provenance``, ...)."""
 
     @property
-    def klt_version(self) -> str:
-        return str(self.report["provenance"]["klt_version"])
-
-    @property
     def bbox_um(self) -> tuple[float, float, float, float]:
         b = self.report["bbox_um"]
         return (b["x0"], b["y0"], b["x1"], b["y1"])

@@ -167,7 +167,7 @@ def build(scratch: Path, klt: str = "klt") -> tuple[Builder, list[dict]]:
 
         patched = None
         if dev.kind == "cap_cmim":
-            patched = _patch_mim_bottom_plate(b, placed)
+            patched = devices.patch_mim_bottom_plate(b, placed)
 
         placed_meta.append(
             {
@@ -192,19 +192,6 @@ def build(scratch: Path, klt: str = "klt") -> tuple[Builder, list[dict]]:
     bx0, by0, bx1, by1 = b.bbox_um()
     b.pr_boundary(bx0 - 1.0, by0 - 1.0, bx1 + 1.0, by1 + 1.0)
     return b, placed_meta
-
-
-def _patch_mim_bottom_plate(b: Builder, placed) -> dict | None:
-    """Widen the placed MIM cap's ``Metal5`` bottom plate to clear IHP's MIM.c.
-
-    Thin alias for :func:`devices.patch_mim_bottom_plate`, which is where the
-    rule, the shortfall arithmetic and the no-op-on-a-fixed-generator
-    behaviour live. The helper moved there when ``layout/opamp_core`` (issue
-    #45) needed the same patch: a foundry rule no ``klt drc`` run in this repo
-    checks must have exactly one implementation, or the two copies drift and
-    only one of the two committed streams clears MIM.c.
-    """
-    return devices.patch_mim_bottom_plate(b, placed)
 
 
 #: Deliberately illegal geometry for the negative control, drawn with
