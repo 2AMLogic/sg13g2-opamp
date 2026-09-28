@@ -64,7 +64,6 @@ from sg13g2_layers import (
     L_METAL2,
     L_METAL3,
     L_METAL5,
-    L_MIM,
     L_TOPMETAL1,
     verify_deck_minima,
 )
@@ -198,47 +197,14 @@ def build(scratch: Path, klt: str = "klt") -> tuple[Builder, list[dict]]:
 def _patch_mim_bottom_plate(b: Builder, placed) -> dict | None:
     """Widen the placed MIM cap's ``Metal5`` bottom plate to clear IHP's MIM.c.
 
-    ``klt gen cap_array`` draws ``Metal5`` enclosing ``MIM`` by 0.50 um; IHP's
-    own ``MIM.c`` requires 0.60 um. klayout-tools' curated ``sg13g2`` deck
-    carries **no** MIM rule, so ``klt drc --deck sg13g2`` reports the shortfall
-    as clean -- this is the concrete curated-deck-vs-foundry-deck gap
-    ``layout/README.md`` discloses. Rather than commit geometry known to
-    violate the foundry rule, the scaffold draws the extra 0.10 um itself.
-
-    Returns the patch actually applied, or ``None`` if the generator's own
-    enclosure already cleared the rule (i.e. a future ``klt`` fixed it, and
-    this patch became a no-op rather than silently double-drawing).
+    Thin alias for :func:`devices.patch_mim_bottom_plate`, which is where the
+    rule, the shortfall arithmetic and the no-op-on-a-fixed-generator
+    behaviour live. The helper moved there when ``layout/opamp_core`` (issue
+    #45) needed the same patch: a foundry rule no ``klt drc`` run in this repo
+    checks must have exactly one implementation, or the two copies drift and
+    only one of the two committed streams clears MIM.c.
     """
-    mim = placed.layer_bbox.get(L_MIM)
-    m5 = placed.layer_bbox.get(L_METAL5)
-    if mim is None or m5 is None:
-        raise RuntimeError(
-            f"{placed.name}: expected both MIM (36/0) and Metal5 (67/0) in the "
-            f"cap_array stream, got layers {sorted(placed.layer_bbox)}"
-        )
-    need = devices.MIM_METAL5_ENCLOSURE_UM
-    have = min(
-        mim[0] - m5[0],
-        mim[1] - m5[1],
-        m5[2] - mim[2],
-        m5[3] - mim[3],
-    )
-    if have >= need:
-        return None
-    want = (mim[0] - need, mim[1] - need, mim[2] + need, mim[3] + need)
-    patched = (
-        min(m5[0], want[0]),
-        min(m5[1], want[1]),
-        max(m5[2], want[2]),
-        max(m5[3], want[3]),
-    )
-    b.box(L_METAL5, *patched)
-    return {
-        "rule": "MIM.c (IHP signoff deck; absent from the curated sg13g2 deck)",
-        "required_enclosure_um": need,
-        "generator_enclosure_um": round(have, 6),
-        "patched_metal5_bbox_um": [round(v, 6) for v in patched],
-    }
+    return devices.patch_mim_bottom_plate(b, placed)
 
 
 def run_drc(gds: Path, report: Path, klt: str = "klt") -> dict:

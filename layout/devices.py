@@ -213,21 +213,43 @@ def _mos(
     cell_name: str,
     out_dir: Path,
     klt: str = "klt",
+    *,
+    rows: int = 1,
+    cols: int = 1,
+    dummy: int = 0,
+    fingers: int = 1,
+    topology: str = "common_centroid",
+    guard_ring: bool = False,
 ) -> GeneratedDevice:
-    # rows=cols=1, dummy=0: this scaffold's job is to prove the *shape* is
-    # legal at the netlist's sizes. Matched-array topology (common-centroid
-    # rows/cols, dummy columns) is a floorplanning decision that belongs to
-    # the op-amp layout itself (issue #45), not to the scaffold, and enabling
-    # it here would bake a placement choice into a smoke fixture.
+    # The keyword-only defaults (rows=cols=1, dummy=0, fingers=1, no guard
+    # ring) are the *scaffold's* values: `layout/scaffold_smoke` exists to
+    # prove the shape is legal at the netlist's sizes, and enabling matched-
+    # array topology there would bake a placement choice into a smoke fixture.
+    #
+    # A real block passes them. `layout/opamp_core` does: it draws each
+    # matched pair as a one-row interdigitated array with dummy columns and
+    # the wide devices as folded multi-finger ones. Keeping the parameters
+    # here rather than in that generator means both callers go through the
+    # same `run_gen` validation (resolved-variant assert, warnings-are-fatal).
     params: dict[str, object] = {
         "w_um": w_um,
         "l_um": l_um,
-        "rows": 1,
-        "cols": 1,
-        "dummy": 0,
+        "rows": rows,
+        "cols": cols,
+        "dummy": dummy,
         "flavor": flavor,
         "gate_contact": True,
     }
+    if fingers != 1:
+        params["fingers"] = fingers
+        # 'parallel' is the generator's own default, but state it: 'series'
+        # would chain the fingers source-to-drain on uncontactable gates,
+        # which is a different device entirely from a folded wide MOS.
+        params["finger_topology"] = "parallel"
+    if rows * cols > 1:
+        params["topology"] = topology
+    if guard_ring:
+        params["add_guard_ring"] = True
     gds = out_dir / f"{cell_name}.gds"
     report = run_gen("mos_array", params, gds, cell_name, klt=klt)
     return GeneratedDevice(
@@ -241,7 +263,7 @@ def _mos(
 
 
 def lv_nmos(
-    w_um: float, l_um: float, cell_name: str, out_dir: Path, klt: str = "klt"
+    w_um: float, l_um: float, cell_name: str, out_dir: Path, klt: str = "klt", **kwargs
 ) -> GeneratedDevice:
     """``sg13_lv_nmos``: ``Activ`` + ``GatPoly`` with no ``NWell``.
 
@@ -250,12 +272,18 @@ def lv_nmos(
     ``NWell`` (31/0) on both terminals (``klt deck devices --deck sg13g2``),
     mirroring IHP's own ``mos_extraction.lvs`` derivation of
     ``sg13_lv_nmos``.
+
+    ``**kwargs`` are :func:`_mos`'s keyword-only array parameters (``rows``,
+    ``cols``, ``dummy``, ``fingers``, ``topology``, ``guard_ring``); the
+    defaults draw one bare unit device.
     """
-    return _mos("sg13_lv_nmos", "nfet", w_um, l_um, cell_name, out_dir, klt=klt)
+    return _mos(
+        "sg13_lv_nmos", "nfet", w_um, l_um, cell_name, out_dir, klt=klt, **kwargs
+    )
 
 
 def lv_pmos(
-    w_um: float, l_um: float, cell_name: str, out_dir: Path, klt: str = "klt"
+    w_um: float, l_um: float, cell_name: str, out_dir: Path, klt: str = "klt", **kwargs
 ) -> GeneratedDevice:
     """``sg13_lv_pmos``: the same stack, enclosed in an ``NWell`` (31/0).
 
@@ -266,8 +294,12 @@ def lv_pmos(
     ``klt drc --deck sg13g2`` pass says nothing about the well; IHP's own deck
     emits four (``NW.b``, ``NW.b1``, ``NW.f1``, ``NW.f1.digibnd``). See
     ``layout/README.md``'s coverage disclosure.
+
+    ``**kwargs`` are :func:`_mos`'s keyword-only array parameters.
     """
-    return _mos("sg13_lv_pmos", "pfet", w_um, l_um, cell_name, out_dir, klt=klt)
+    return _mos(
+        "sg13_lv_pmos", "pfet", w_um, l_um, cell_name, out_dir, klt=klt, **kwargs
+    )
 
 
 def cmim_cap(
@@ -294,3 +326,63 @@ def cmim_cap(
         cell_name=cell_name,
         report=report,
     )
+
+
+def patch_mim_bottom_plate(builder, placed) -> dict | None:
+    """Widen a placed MIM cap's ``Metal5`` bottom plate to clear IHP's MIM.c.
+
+    ``klt gen cap_array`` draws ``Metal5`` enclosing ``MIM`` by
+    :data:`CAP_ARRAY_METAL5_ENCLOSURE_UM`; IHP's own ``MIM.c`` requires
+    :data:`MIM_METAL5_ENCLOSURE_UM`. klayout-tools' curated ``sg13g2`` deck
+    carries **no** MIM rule, so ``klt drc --deck sg13g2`` reports the
+    shortfall as clean -- the concrete curated-deck-vs-foundry-deck gap
+    ``layout/README.md`` discloses. Rather than commit geometry known to
+    violate the foundry rule, callers draw the extra 0.10 um themselves
+    through this helper.
+
+    ``builder`` is a :class:`builder.Builder` and ``placed`` the
+    :class:`builder.Placed` it returned for the cap (duck-typed here so this
+    module stays free of a ``klayout.db`` import).
+
+    Returns the patch actually applied, or ``None`` if the generator's own
+    enclosure already cleared the rule -- i.e. a future ``klt`` fixed it and
+    this patch became a no-op rather than silently double-drawing.
+    """
+    mim = placed.layer_bbox.get(_L_MIM)
+    m5 = placed.layer_bbox.get(_L_METAL5)
+    if mim is None or m5 is None:
+        raise RuntimeError(
+            f"{placed.name}: expected both MIM (36/0) and Metal5 (67/0) in the "
+            f"cap_array stream, got layers {sorted(placed.layer_bbox)}"
+        )
+    need = MIM_METAL5_ENCLOSURE_UM
+    have = min(
+        mim[0] - m5[0],
+        mim[1] - m5[1],
+        m5[2] - mim[2],
+        m5[3] - mim[3],
+    )
+    if have >= need:
+        return None
+    want = (mim[0] - need, mim[1] - need, mim[2] + need, mim[3] + need)
+    patched = (
+        min(m5[0], want[0]),
+        min(m5[1], want[1]),
+        max(m5[2], want[2]),
+        max(m5[3], want[3]),
+    )
+    builder.box(_L_METAL5, *patched)
+    return {
+        "rule": "MIM.c (IHP signoff deck; absent from the curated sg13g2 deck)",
+        "required_enclosure_um": need,
+        "generator_enclosure_um": round(have, 6),
+        "patched_metal5_bbox_um": [round(v, 6) for v in patched],
+    }
+
+
+#: Layer pairs :func:`patch_mim_bottom_plate` needs, spelled locally so this
+#: module does not import :mod:`sg13g2_layers` (which it otherwise has no use
+#: for). Both are cited there: ``sg13g2.lyp`` 'MIM.drawing' / 'Metal5.drawing',
+#: cross-checked against the curated deck's ``cap_cmim`` device class.
+_L_MIM = (36, 0)
+_L_METAL5 = (67, 0)
