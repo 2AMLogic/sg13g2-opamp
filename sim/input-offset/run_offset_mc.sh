@@ -80,6 +80,7 @@ fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SIM_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+# shellcheck disable=SC2034  # consumed by sim/preflight.sh once sourced below
 REPO_ROOT="$(cd "${SIM_DIR}/.." && pwd)"
 
 # shellcheck source=/dev/null
@@ -116,17 +117,8 @@ if [[ -z "${DET_ANCHOR_VOS}" ]]; then
 fi
 
 OSDI_DIR="${SG13G2_OSDI_DIR}"
-REPO_GIT_SHA="$(cd "${REPO_ROOT}" && git rev-parse --short HEAD 2>/dev/null || echo unknown)"
-RECORD_ID="mc-$(date -u +%Y%m%d-%H%M%S)-${REPO_GIT_SHA}"
-
-EXPERIMENT_DIR="${SCRIPT_DIR}"
-SNAPSHOTS_OUT="${EXPERIMENT_DIR}/netlist-snapshots/${RECORD_ID}"
-CORNERS_OUT="${EXPERIMENT_DIR}/corners/${RECORD_ID}"
-RECORDS_DIR="${EXPERIMENT_DIR}/records"
-CSV_OUT="${RECORDS_DIR}/${RECORD_ID}.csv"
+sg13g2_preflight_record_paths --prefix mc-
 DRAWS_CSV="${RECORDS_DIR}/${RECORD_ID}-draws.csv"
-MD_OUT="${RECORDS_DIR}/${RECORD_ID}.md"
-mkdir -p "${SNAPSHOTS_OUT}" "${CORNERS_OUT}" "${RECORDS_DIR}"
 
 DUT_NETLIST_SNAPSHOT="${SNAPSHOTS_OUT}/opamp_core.spice"
 cp "${DUT_NETLIST_SRC}" "${DUT_NETLIST_SNAPSHOT}"
