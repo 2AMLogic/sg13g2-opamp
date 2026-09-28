@@ -89,6 +89,7 @@ cp "${DUT_NETLIST_SRC}" "${DUT_NETLIST_SNAPSHOT}"
 CORNERS=("${SG13G2_MOS_CORNERS[@]}")
 TEMPS=(-40 27 125)
 VDDS=(1.08 1.20 1.32)
+# shellcheck disable=SC2034  # consumed by sg13g2_render_netlist (sim/preflight.sh) after this point
 CL_F="2e-12"
 
 # Coarse locate pass: +-100 mV of differential input is the same window
@@ -127,24 +128,6 @@ passed=0
 op_fail_points=()
 sim_fail_points=()
 
-render() {
-  # render <template> <out> <corner> <temp> <vdd> <vcm> <extra sed args...>
-  local tmpl="$1" out="$2" corner="$3" temp="$4" vdd="$5" vcm="$6"
-  shift 6
-  sed \
-    -e "s|@@PDK_ROOT@@|${PDK_ROOT}|g" \
-    -e "s|@@PDK@@|${PDK}|g" \
-    -e "s|@@OSDI_DIR@@|${OSDI_DIR}|g" \
-    -e "s|@@MOS_SECTION@@|${corner}|g" \
-    -e "s|@@TEMP_C@@|${temp}|g" \
-    -e "s|@@VDD_V@@|${vdd}|g" \
-    -e "s|@@VCM_V@@|${vcm}|g" \
-    -e "s|@@CL_F@@|${CL_F}|g" \
-    -e "s|@@DUT_NETLIST@@|${DUT_NETLIST_SNAPSHOT}|g" \
-    "$@" \
-    "${tmpl}" > "${out}"
-}
-
 for corner in "${CORNERS[@]}"; do
   for temp in "${TEMPS[@]}"; do
     for vdd in "${VDDS[@]}"; do
@@ -160,8 +143,8 @@ for corner in "${CORNERS[@]}"; do
       fine_csv="${CORNERS_OUT}/${point_id}_fine.csv"
 
       # --- pass 1: coarse locate sweep ---------------------------------
-      render "${EXPERIMENT_DIR}/testbench/tb_swing.spice.tmpl" "${coarse_net}" \
-        "${corner}" "${temp}" "${vdd}" "${vcm}" \
+      sg13g2_render_netlist --vcm "${vcm}" "${EXPERIMENT_DIR}/testbench/tb_swing.spice.tmpl" "${coarse_net}" \
+        "${corner}" "${temp}" "${vdd}" \
         -e "s|@@PASS_LABEL@@|coarse|g" \
         -e "s|@@VID_START@@|${COARSE_START}|g" \
         -e "s|@@VID_STOP@@|${COARSE_STOP}|g" \
@@ -242,8 +225,8 @@ PYEOF
 
       fine_start="$(python3 -c "print(${vos_coarse} - ${FINE_HALFSPAN})")"
       fine_stop="$(python3 -c "print(${vos_coarse} + ${FINE_HALFSPAN})")"
-      render "${EXPERIMENT_DIR}/testbench/tb_swing.spice.tmpl" "${fine_net}" \
-        "${corner}" "${temp}" "${vdd}" "${vcm}" \
+      sg13g2_render_netlist --vcm "${vcm}" "${EXPERIMENT_DIR}/testbench/tb_swing.spice.tmpl" "${fine_net}" \
+        "${corner}" "${temp}" "${vdd}" \
         -e "s|@@PASS_LABEL@@|fine|g" \
         -e "s|@@VID_START@@|${fine_start}|g" \
         -e "s|@@VID_STOP@@|${fine_stop}|g" \

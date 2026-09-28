@@ -8,16 +8,17 @@
 # each script did on its own before this file existed, plus
 # SG13G2_MOS_CORNERS, the PDK's MOS process-corner set every harness sweeps,
 # and SG13G2_NGSPICE_ERR_RE, the broken-simulation log signature every harness
-# scans its raw ngspice log for (see their own headers below). Five companion
+# scans its raw ngspice log for (see their own headers below). Six companion
 # functions cover the remaining shared per-caller work:
 # sg13g2_preflight_require_netlist (the DUT_NETLIST_SRC guard most -- not all
 # -- callers need), sg13g2_preflight_record_paths (the record-id and
 # output-path block all ten callers need), sg13g2_sim_broken (the per-point
 # "did this simulation actually solve?" gate all ten callers apply),
 # sg13g2_latest_record_csv (resolve the newest committed sibling record every
-# cross-referencing caller joins against) and sg13g2_csv_lookup (read one
-# column out of such a record by header name, keyed on point_id) -- see their
-# own headers below.
+# cross-referencing caller joins against), sg13g2_csv_lookup (read one
+# column out of such a record by header name, keyed on point_id) and
+# sg13g2_render_netlist (the shared sed-template render three callers each
+# carried their own byte-identical copy of) -- see their own headers below.
 #
 # Callers MUST compute SCRIPT_DIR/SIM_DIR/REPO_ROOT themselves BEFORE
 # sourcing this file, mirroring sim/env.sh's own convention:
@@ -389,4 +390,76 @@ sg13g2_csv_lookup() {
   awk -F, -v hdr="$2" -v pid="$3" '
     NR==1 { for (i = 1; i <= NF; i++) if ($i == hdr) col = i; next }
     col && $1 == pid { print $col }' "$1" 2>/dev/null || true
+}
+
+# sg13g2_render_netlist [--vcm <v>] <template> <out> <corner> <temp> <vdd> [extra sed args...]
+#   Render one netlist <template> to <out> through the shared eight-way sed
+#   substitution every sim/*/run_*.sh harness needs
+#   (@@PDK_ROOT@@/@@PDK@@/@@OSDI_DIR@@/@@MOS_SECTION@@/@@TEMP_C@@/@@VDD_V@@/
+#   @@CL_F@@/@@DUT_NETLIST@@) -- the `render()` function three callers each
+#   carried their own byte-identical copy of before this extraction.
+#
+#   --vcm <v>
+#       Add a ninth `s|@@VCM_V@@|<v>|g` substitution, positioned exactly
+#       where the two former render() copies that took a fixed `vcm`
+#       positional argument (run_offset_sweep.sh, run_swing_sweep.sh) placed
+#       it: right after @@VDD_V@@, before @@CL_F@@. A caller that instead
+#       supplies its own `@@VCM_V@@` substitution as one of its extra sed
+#       args (run_cmr_sweep.sh's coarse/fine passes) omits this flag --
+#       passing both would substitute @@VCM_V@@ twice, harmlessly but
+#       redundantly, since sed applies -e expressions in argument order and
+#       the second match against already-substituted text is a no-op.
+#
+#   Any further arguments are forwarded to `sed` positionally, immediately
+#   before <template>, exactly as the three former copies forwarded their
+#   own trailing "$@" -- this is how each caller's own per-pass placeholders
+#   (e.g. @@PASS_LABEL@@, @@SWEEP_CSV@@) are substituted.
+#
+#   Reads OSDI_DIR, CL_F, PDK_ROOT, PDK from the caller's environment (set by
+#   the caller before this is called), exactly as the local copies did.
+sg13g2_render_netlist() {
+  local vcm=""
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --vcm)
+        if [[ $# -lt 2 ]]; then
+          echo "${_sg13g2_preflight_self}: sg13g2_render_netlist: --vcm needs a value" >&2
+          exit 3
+        fi
+        vcm="$2"
+        shift 2
+        ;;
+      --)
+        shift
+        break
+        ;;
+      *)
+        break
+        ;;
+    esac
+  done
+
+  if [[ $# -lt 5 ]]; then
+    echo "${_sg13g2_preflight_self}: sg13g2_render_netlist: expected <template> <out> <corner> <temp> <vdd> [extra sed args...], got $# argument(s)" >&2
+    exit 3
+  fi
+
+  local tmpl="$1" out="$2" corner="$3" temp="$4" vdd="$5"
+  shift 5
+
+  local -a vcm_arg=()
+  [[ -n "${vcm}" ]] && vcm_arg=(-e "s|@@VCM_V@@|${vcm}|g")
+
+  sed \
+    -e "s|@@PDK_ROOT@@|${PDK_ROOT}|g" \
+    -e "s|@@PDK@@|${PDK}|g" \
+    -e "s|@@OSDI_DIR@@|${OSDI_DIR}|g" \
+    -e "s|@@MOS_SECTION@@|${corner}|g" \
+    -e "s|@@TEMP_C@@|${temp}|g" \
+    -e "s|@@VDD_V@@|${vdd}|g" \
+    "${vcm_arg[@]}" \
+    -e "s|@@CL_F@@|${CL_F}|g" \
+    -e "s|@@DUT_NETLIST@@|${DUT_NETLIST_SNAPSHOT}|g" \
+    "$@" \
+    "${tmpl}" > "${out}"
 }
