@@ -203,12 +203,12 @@ render() {
 }
 
 sim_broken() {
-  # sim_broken <rc> <log> <required-output-file>
-  local rc="$1" log="$2" outfile="$3"
-  [[ ${rc} -ne 0 ]] && return 0
-  [[ -s "${outfile}" ]] || return 0
-  grep -qiE "Unable to find definition of model|couldn't be loaded|Unknown model type|fatal error|singular matrix|gmin stepping failed|no convergence|DC solution failed" "${log}" && return 0
-  return 1
+  # sim_broken <rc> <log> <required-output-file> -- sim/preflight.sh's
+  # shared gate plus this bench's own widening, stated once here rather
+  # than repeated at each of the four call sites below: a DC bench
+  # additionally treats ngspice's "DC solution failed" banner as a
+  # broken point.
+  sg13g2_sim_broken --extra "DC solution failed" "$@"
 }
 
 op_line() {

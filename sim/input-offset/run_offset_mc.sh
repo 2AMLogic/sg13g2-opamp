@@ -281,14 +281,21 @@ for spec in "${POINT_SPECS[@]}"; do
     section="${corner}"
   fi
 
+  # SG13G2_NGSPICE_ERR_RE is exported into this step's environment rather
+  # than re-spelled as a Python literal: this draw scan is the one site of
+  # the eleven that cannot call sg13g2_sim_broken (it runs inside Python, per
+  # draw, and needs the reason string for the DRAWS_CSV row, not a shell exit
+  # status), so the regex crosses the language boundary as data. Passing it
+  # through the environment rather than argv keeps the positional unpack
+  # below unchanged. `grep -E` and Python's `re` agree on this pattern: it
+  # uses only literal text and `|`.
+  SG13G2_NGSPICE_ERR_RE="${SG13G2_NGSPICE_ERR_RE}" \
   python3 - "${SCRATCH_DIR}" "${DRAWS_CSV}" "${pid}" "${mode}" "${corner}" \
     "${section}" "${temp}" "${VDD}" "${SEED}" "${N}" "${VCM}" <<'PYEOF'
 import os, re, sys
 scratch, draws_csv, pid, mode, corner, section, temp, vdd, seed, n, vcm = sys.argv[1:12]
 n, seed, target = int(n), int(seed), float(vcm)
-err_re = re.compile(
-    r"Unable to find definition of model|couldn't be loaded|Unknown model type"
-    r"|fatal error|singular matrix|gmin stepping failed|no convergence", re.I)
+err_re = re.compile(os.environ["SG13G2_NGSPICE_ERR_RE"], re.I)
 with open(draws_csv, "a") as out:
     for idx in range(n):
         sweep = os.path.join(scratch, "sweeps", "%s_%d.csv" % (pid, idx))
