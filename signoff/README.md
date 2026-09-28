@@ -77,10 +77,31 @@ argument, here:
   committed in this repo" is closed on both ends and fails CI if either end
   moves.
 - The half item 2 asks for that no envelope can carry — "reproducibly
-  generated or with documented provenance" — is met by
-  `layout/opamp_core/generate.py` plus its `--check` mode, which regenerates
-  into a temp directory and fails on any byte difference, and by
-  `layout/README.md`'s revision table.
+  generated or with documented provenance" — **this block claims the
+  documented-provenance alternative, not a CI-enforced "reproducibly
+  generated" one.** `layout/opamp_core/generate.py --check` regenerates into
+  a temp directory and fails on any byte difference, but nothing in
+  `.github/workflows/signoff.yml` runs it: CI verifies the *committed hash*
+  offline (`check_signoff.py`, above) and never re-invokes the generator, so
+  byte-for-byte regeneration is a property verified by a human running
+  `--check` by hand, not one this register can point to as continuously
+  machine-checked. CI does not run `generate.py` at all, so it does not
+  enforce this either — but the one assumption identified as most likely to
+  break silently is machine-checked independent of who runs it: that `klt
+  gen mos_array`'s common-centroid unit ordering is what makes the block's
+  `B A A B` interdigitation actually common-centroid, via
+  `assert_common_centroid()` inside `generate.py` itself. A `klt` behaviour
+  change that broke it fails the very next *local* regeneration or `--check`
+  run — not CI — rather than only showing up as an unexplained byte diff
+  nobody was looking at. The documented-provenance claim itself rests on
+  `layout/README.md`'s revision table (exact `klt` revision, curated-deck
+  hash and PDK release the committed bytes were produced with) and its
+  "Determinism" section. Standing up a second CI job that installs `klt`
+  **and** the pinned PDK to run `--check` on every push was considered and
+  deferred as materially higher cost (PDK checkout/caching in Actions) than
+  this repo's other CI; see
+  [#50](https://github.com/2AMLogic/sg13g2-opamp/issues/50) for the record of
+  that decision.
 
 **Item 3's coverage disclosure is in `layout/README.md`**, quoted verbatim
 from the cited report's own `coverage` block: `deck_scope` (16 rule

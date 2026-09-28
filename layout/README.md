@@ -586,6 +586,52 @@ fails CI until the DRC report, both pins and a new graded record under
 `signoff/reports/` are refreshed together. That is the intended behaviour,
 not an obstacle.
 
+### What CI actually enforces, and what it does not
+
+**The paragraphs above are all true, and all verified by hand, not by CI.**
+`.github/workflows/signoff.yml` re-hashes the committed GDS offline
+(`signoff/check_signoff.py`) and fails if a committed byte moves without the
+DRC report and the signoff pins moving with it — that closes "someone
+hand-edited the stream". It does **not** run `opamp_core/generate.py --check`
+or `scaffold_smoke/generate.py --check` for either stream: nothing in CI
+regenerates a stream and diffs it against the committed bytes on every push,
+so "byte-for-byte reproducible" is not a continuously machine-checked
+property of *either* generator here — only a property a human verified by
+running `--check` and recorded in the revision table above.
+
+Item 2 of the T1 checklist accepts either "reproducibly generated" **or**
+"documented provenance" (`signoff/README.md` → "What the manifest cites").
+This repo's manifest cites `opamp_core/` for item 2, and that citation rests
+on the **documented-provenance** alternative — the revision table above, plus
+`verify_deck_minima()` and `verify_against_netlist()` failing loudly on drift
+— not on a CI-enforced "reproducibly generated" one. (`scaffold_smoke/` is
+not cited by `signoff/` at all — see the top of this file — so nothing about
+its byte-for-byte claim is graded either way; it is treated the same as
+`opamp_core/` here only so this section states one policy for both
+generators rather than leaving the uncited one to guess.)
+
+CI does not run `generate.py` at all, so nothing above is CI-enforced. One
+assumption is machine-checked independent of who runs it, though: the
+block's single most fragile one, that `klt gen mos_array`'s common-centroid
+unit ordering (`U2 U0 U1 U3`) is what makes the `B A A B` interdigitation
+described in
+["Matching"](#matching-what-was-chosen-for-xm1xm2-and-xm3xm4-and-what-it-costs)
+above actually common-centroid. `assert_common_centroid()` in
+`opamp_core/generate.py` asserts it at every regeneration and every `--check`
+run, so a future `klt` that renumbered the units fails the very next *local*
+run instead of only showing up as an unexplained byte diff that nobody was
+running `--check` to see.
+
+Standing up a second CI job that installs `klt` **and** the pinned
+IHP-Open-PDK release to run `--check` on every push for both generators was
+considered and deferred: it needs a PDK checkout (and caching strategy) in
+Actions that the rest of this repo's CI deliberately avoids
+(`.github/workflows/signoff.yml`'s own header: "needs no PDK, no ngspice and
+no klayout install of its own"), a materially larger and less-tested
+surface than this repo's other CI. The record of that decision, and the
+reasoning behind it, is
+[#50](https://github.com/2AMLogic/sg13g2-opamp/issues/50).
+
 ## Devices covered by the smoke fixture
 
 All nine instances in `design/netlist/opamp_core.spice` collapse to six

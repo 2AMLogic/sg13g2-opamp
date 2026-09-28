@@ -9,10 +9,15 @@ unwired), this generator places every device in the netlist's topology and
 wires them together.
 
 **What this is evidence for, and what it is not.** It is T1 item 2 (a
-committed, reproducibly generated GDS) and item 3 (a committed DRC report
-with its coverage disclosed). It is **not** LVS: nothing here compares the
-drawn connectivity against the SPICE netlist with an LVS engine, and no
-parasitics are extracted. See ``layout/README.md`` for the full scope and the
+committed GDS with documented provenance -- see "Determinism" in
+``layout/README.md``: CI verifies the committed hash, not a fresh ``--check``
+regeneration, so this block claims item 2's documented-provenance
+alternative rather than a CI-enforced "reproducibly generated" one; see
+`#50 <https://github.com/2AMLogic/sg13g2-opamp/issues/50>`_) and item 3 (a
+committed DRC report with its coverage disclosed). It is **not** LVS: nothing
+here compares the drawn connectivity against the SPICE netlist with an LVS
+engine, and no parasitics are extracted. See ``layout/README.md`` for the full
+scope and the
 coverage disclosure, and note in particular that ``klt drc --deck sg13g2``
 runs klayout-tools' own curated 43-rule starter deck, **not** IHP's foundry
 signoff deck.
