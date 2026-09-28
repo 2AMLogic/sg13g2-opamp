@@ -30,20 +30,13 @@ SIM_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 REPO_ROOT="$(cd "${SIM_DIR}/.." && pwd)"
 
 # shellcheck source=/dev/null
-source "${SIM_DIR}/env.sh"
-
-if [[ -z "${PDK_ROOT:-}" || ! -d "${PDK_ROOT}/${PDK}/libs.tech/ngspice" ]]; then
-  echo "run_gmid_sweep.sh: no resolvable ${PDK:-ihp-sg13g2} install -- see sim/env.sh output above." >&2
-  exit 3
-fi
-
-if ! "${SIM_DIR}/tools/build-osdi.sh" --check >/dev/null 2>&1; then
-  echo "run_gmid_sweep.sh: OSDI models missing/unloadable -- run sim/tools/build-osdi.sh first:" >&2
-  "${SIM_DIR}/tools/build-osdi.sh" --check || true
-  exit 3
-fi
-
-command -v ngspice >/dev/null 2>&1 || { echo "run_gmid_sweep.sh: ngspice not on PATH." >&2; exit 3; }
+source "${SIM_DIR}/preflight.sh"
+# This harness never references design/netlist/opamp_core.spice (it sweeps
+# bare devices), so it does not call sg13g2_preflight_require_netlist. It
+# also keeps its own un-sed'd NGSPICE_VERSION form rather than the sed'd form
+# sim/preflight.sh sets for the other 9 callers -- preserved verbatim here
+# rather than folded into the shared helper (see issue #47's acceptance
+# criteria: preserve this script's existing behavior, not "fix" it).
 NGSPICE_VERSION="$(ngspice -v 2>&1 | sed -n '2p')"
 
 OSDI_DIR="${SG13G2_OSDI_DIR}"
