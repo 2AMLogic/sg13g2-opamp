@@ -189,9 +189,21 @@ units out `U2 U0 U1 U3`. Taking device A = `{U0, U1}` and device B =
 mean of columns 1 and 4 — **the same x, the array centre**. That is the
 property that matters: a linear gradient in oxide thickness, implant dose or
 stress across the array shifts both devices' thresholds by the same amount,
-so it cancels in the difference. The dummy columns give the two outermost
-*real* units the same diffusion/poly neighbourhood the inner ones have, so
-the edge-of-array etch and stress environment is not itself a mismatch term.
+so it cancels in the difference.
+
+That ordering is `klt`'s behaviour, not this repo's, so **it is asserted at
+build time rather than assumed**: `assert_common_centroid()` reads each
+array's unit source pads back out of `klt gen`'s own port report and raises
+unless the mean x of device A's columns equals device B's to within one
+database unit (1 nm). Without it a future `klt` could renumber the units and
+nothing else here would notice — the nets would still be wired correctly, so
+DRC would still be clean and the connectivity check would still pass, and
+`signoff/check_signoff.py` re-hashes the committed stream rather than
+regenerating it.
+
+The dummy columns give the two outermost *real* units the same diffusion/poly
+neighbourhood the inner ones have, so the edge-of-array etch and stress
+environment is not itself a mismatch term.
 
 **Dummies are tied, not floated.** `mos_array` draws the dummy columns but
 reports no ports for them, so their pads are derived geometrically
@@ -223,12 +235,41 @@ connectivity self-check below fails if any of them is left unconnected.
 - **Routing asymmetry was corrected where it was largest, and not
   everywhere.** Because A is inner and B is outer, A's drain track and gate
   track are ~3 µm shorter than B's — a deliberate ~10 % capacitance imbalance
-  on a differential net if left alone. `generate.py` extends the shorter
-  track of each pair (`d1`/`d2`, `inn`/`inp`) to the longer one's span, so
-  the in-array halves match. What remains unmatched is the run out to the
-  left-channel lanes, where `d1` and `d2` use lanes 1.2 µm apart: ~0.5 µm² of
-  Metal3, three orders of magnitude below the gate capacitance it sits
-  beside. It is disclosed rather than fixed.
+  on a differential net if left alone. `generate.py`'s "matching-driven track
+  balancing" block extends the shorter track of each pair (`d1_c1`/`d2_c1`,
+  `inn`/`inp`) to the longer one's span. Measured on a fresh `build()`, the
+  two **drain** tracks come out exactly equal — `d1_c1` and `d2_c1` both span
+  −6.300 … 7.910 µm — so the in-array drain halves do match. The two **gate**
+  tracks do not, and the next bullet says why.
+- **`inp` keeps 2.0 µm more Metal3 than `inn`, because of its pin pad.** The
+  balancing loop runs *before* the pin loop, and `PIN_SITES`
+  (`opamp_core/floorplan.py`) then places `inp`'s labelled pad at x = −10.00
+  against `inn`'s at −8.00: at channel C2's 0.80 µm track pitch, two 0.60 µm
+  pads on adjacent tracks at the same x would touch, and staggering x is
+  cheaper than either spreading C2 (which moves every track above it) or
+  shrinking the pads below legibility. Drawing the pads extends `inp`'s track
+  to −10.300 while `inn` stops at −8.300, so `inp` ends up **2.000 µm (12.6 %)
+  longer** — 0.8 µm² of 0.40 µm-wide Metal3, ≲0.01 fF, ~0.2 % of the pair's
+  own C<sub>gs</sub> — on the two differential input gate nets. The stagger is
+  preferred at that price and the residual is disclosed rather than fixed. If
+  T1 item 7 ever shows it matters, the fix is to run the balancing loop *after*
+  the pin loop (or fold the pad extents into it) and refresh the stream, its
+  DRC report and the signoff record together.
+- **The mirror's two drain tracks are not balanced at all, and are not a
+  matched pair.** `d1_c2` (XM3's drains) spans −5.100 … 7.650 and `d2_c2`
+  (XM4's drains) −6.300 … 18.000 — 11.550 µm apart. 1.200 µm of that is the
+  vertical-lane offset (`LANE_UM` puts the `d1` and `d2` lanes 1.2 µm apart in
+  the left channel); the remaining 10.350 µm is topological, because `d2_c2`
+  has to reach the mid-lane at x = 18.0 to carry the stage-1 output across to
+  XM6's gate and the capacitor, and `d1_c2` has nowhere to go. No balancing is
+  attempted here and none is implied: `d1` is the diode-connected reference
+  node (held at 1/g<sub>m3</sub>) and `d2` is the high-impedance stage-1
+  output, so the two nodes are asymmetric by topology and equal wire on them
+  would not make them symmetric. The ≈4.6 µm² of extra Metal3 on `d2` is of
+  order 0.05 fF on the same per-area basis as above; what it does to the
+  dominant pole is an item-7 question, and it is the reason the Miller
+  capacitor's big plate-to-substrate parasitic is deliberately kept off this
+  node (see below).
 - **No device-level mismatch number is claimed here.** This section is a
   statement of *layout intent*. Whether the drawn pair actually meets the
   ratified offset and CMRR rows is T1 item 7's question, answered by
@@ -290,7 +331,12 @@ floating.**
 **This is not LVS.** No device is *recognised* from the geometry, so nothing
 confirms that a drawn stack is the transistor its model card names;
 extraction stops at `Metal1`, so each device's own contact-to-diffusion
-connection is taken on `klt gen`'s word; and no parasitics are computed.
+connection is taken on `klt gen`'s word — and for the same reason the
+extraction layer set (`_CONDUCTORS`/`_CUTS` in `opamp_core/generate.py`) omits
+`MIM` (36/0) and `Vmim` (129/0), so the capacitor's own top-plate stack is
+taken on `klt gen`'s word too: the `d2` probe lands on `TopMetal1`, and a
+missing `Vmim` would be as invisible to this check as a missing
+contact-to-diffusion stack is. No parasitics are computed.
 `klt lvs` (T1 item 4) and `klt extract --parasitics` (item 7) remain unrun.
 
 ### The connectivity check has been shown to fail
@@ -334,11 +380,15 @@ the deck has **no rule of any kind** for:
 ```
 
 i.e. `NWell` (31/0), `MIM` (36/0), `TEXT` (63/0), `Vmim` (129/0),
-`prBoundary` (189/0). Read plainly: **the clean verdict says nothing about
-the n-well that holds both PMOS groups, and nothing about the Miller
-capacitor's plate** — two of the things a reviewer would most want checked
-about this block. `TEXT` and `prBoundary` are documentation layers and
-legitimately carry no rules. (The implant layers `nSD` 7/0 and `pSD` 14/0 are
+`prBoundary` (189/0). Read plainly: **the clean verdict says nothing about the
+two n-wells that hold the PMOS groups, nor about their separation, and nothing
+about the Miller capacitor's plate** — two of the things a reviewer would most
+want checked about this block. (The merged 31/0 in the committed stream is two
+disjoint polygons — the mirror's, (0, 22)–(12.6, 25.88), and the gain device's,
+(21, 21)–(41.38, 28.65), 8.4 µm apart — so both the wells themselves and the
+gap between them are entirely unchecked; that is IHP `NW.*` territory, which
+the curated deck does not carry.) `TEXT` and `prBoundary` are documentation
+layers and legitimately carry no rules. (The implant layers `nSD` 7/0 and `pSD` 14/0 are
 absent from this list only because `klt gen mos_array` does not draw them at
 all, which is its own gap — see below.)
 
@@ -507,9 +557,13 @@ Three things make that hold:
 1. `Builder.write` sets `SaveLayoutOptions.gds2_write_timestamps = False`.
    Without it KLayout stamps wall-clock time into every `BGNLIB`/`BGNSTR`
    record and no two runs agree.
-2. `klt gen`'s intermediate streams are written to a temp directory and
-   re-imported **flattened** into the assembly, so neither their own
-   timestamps nor their internal cell names reach the committed stream.
+2. `klt gen`'s intermediate streams are written to a temp directory and each
+   one's top cell is **flattened on import**, so neither their own timestamps
+   nor their generator-internal cell names reach the committed stream. The
+   result is not a fully flat stream: it has exactly two levels — the assembly
+   top plus one cell per placed device, named by this repo
+   (`tail_pair`, `input_pair`, `mirror`, `out_tail`, `gain`, `miller_cap`) —
+   and no `$1`-suffixed names leak in from the generators.
 3. Every coordinate is a pure function of the constants in
    `opamp_core/floorplan.py` / `scaffold_smoke/generate.py` and
    `sg13g2_layers.py`. `params` are serialised with `sort_keys=True`, and the

@@ -29,6 +29,11 @@ asserted, in two steps that are only worth something together:
   KLayout's own ``LayoutToNetlist`` and asserts that every device terminal
   lands on the net that table puts it on, that no two nets share an extracted
   net, and that the stream contains no floating conductor at all.
+* :func:`assert_common_centroid` asserts the one *matching* claim that rests
+  on ``klt gen mos_array``'s own unit numbering: that each matched array's
+  two devices share a centroid in x to within one database unit. A future
+  ``klt`` that renumbered the units would otherwise break the ``B A A B``
+  order silently, with every other check in this file still passing.
 
 Together they catch an open, a short, an untied dummy and a drifted netlist
 -- none of which DRC can see. They are still **not LVS**: no device is
@@ -51,6 +56,7 @@ import json
 import subprocess
 import sys
 import tempfile
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from itertools import pairwise
 from pathlib import Path
@@ -65,7 +71,7 @@ sys.path.insert(0, str(HERE))
 
 import devices
 import floorplan as fp
-from builder import Builder, Placed
+from builder import DBU_UM, Builder, Placed
 from sg13g2_layers import (
     L_METAL1,
     L_METAL2,
@@ -630,6 +636,50 @@ def place_all(
     return placed
 
 
+def assert_common_centroid(
+    pair: MatchedPair, dev: PlacedDevice, side: Callable[[int], str]
+) -> None:
+    """Assert the ``B A A B`` assignment really is common-centroid in x.
+
+    The whole matching claim in ``layout/README.md`` rests on one fact this
+    repo does not control: that ``klt gen mos_array``'s internal
+    ``topology="common_centroid"`` numbering lays four units out ``U2 U0 U1
+    U3``, so that :func:`route_pair`'s ``{U0, U1} -> A`` / ``{U2, U3} -> B``
+    split puts both devices' centroids on the array centre.
+
+    If a future ``klt`` renumbered the units, *nothing else in this repo would
+    notice*: the nets would still be wired correctly, so DRC would still be
+    clean and :func:`check_connectivity` would still pass, and
+    ``signoff/check_signoff.py`` re-hashes the committed stream rather than
+    regenerating it. The only tripwire would be a human reading a byte diff
+    from ``--check``. So assert the property itself instead of documenting it:
+    the mean x of device A's unit columns must equal device B's to within one
+    database unit.
+    """
+    columns = dict(dev.unit_ports("S"))
+    if len(columns) != 2 * UNITS_PER_DEVICE:
+        raise AssertionError(
+            f"{dev.name}: expected {2 * UNITS_PER_DEVICE} unit source ports "
+            f"from `klt gen mos_array`, got {sorted(columns)}"
+        )
+    centroid = {}
+    for which in ("a", "b"):
+        xs = [x for unit, (x, _y) in columns.items() if side(unit) == which]
+        centroid[which] = sum(xs) / len(xs)
+    if abs(centroid["a"] - centroid["b"]) > DBU_UM:
+        raise AssertionError(
+            f"{dev.name} ({pair.inst_a}/{pair.inst_b}) is not common-centroid "
+            f"in x: device A's columns centre at {centroid['a']:.4f} um, "
+            f"device B's at {centroid['b']:.4f} um "
+            f"(unit source pads at "
+            f"{[(u, round(x, 4)) for u, (x, _y) in sorted(columns.items())]}). "
+            "`klt gen mos_array`'s common_centroid numbering is no longer "
+            "U2 U0 U1 U3, so route_pair()'s {U0,U1}->A / {U2,U3}->B split -- "
+            "and the matching claim in layout/README.md that rests on it -- "
+            "is wrong for this klt revision."
+        )
+
+
 def route_pair(
     r: Router, pair: MatchedPair, dev: PlacedDevice, tracks: dict[str, str]
 ) -> None:
@@ -646,6 +696,8 @@ def route_pair(
     # device A is the first pair, device B the second (see MatchedPair).
     def side(unit: int) -> str:
         return "a" if unit in (0, 1) else "b"
+
+    assert_common_centroid(pair, dev, side)
 
     for _unit, (x, y) in dev.unit_ports("S"):
         r.drop(pair.source_net, x, y, tracks["source"])
