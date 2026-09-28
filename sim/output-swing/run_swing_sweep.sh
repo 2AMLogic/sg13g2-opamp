@@ -60,15 +60,8 @@ sg13g2_preflight_require_netlist
 # that has the AC bench but not its record is not the tree the evidence
 # describes). The offset record is used when present. Override either with
 # AC_RECORD_CSV=... / OFFSET_RECORD_CSV=....
-latest_csv_in() {
-  local _found=""
-  while IFS= read -r _f; do _found="${_f}"; done < <(
-    find "$1" -maxdepth 1 -name '*.csv' 2>/dev/null | sort
-  )
-  printf '%s' "${_found}"
-}
 if [[ -z "${AC_RECORD_CSV:-}" ]]; then
-  AC_RECORD_CSV="$(latest_csv_in "${SIM_DIR}/open-loop-ac/records")"
+  AC_RECORD_CSV="$(sg13g2_latest_record_csv "${SIM_DIR}/open-loop-ac/records")"
 fi
 if [[ -z "${AC_RECORD_CSV}" || ! -s "${AC_RECORD_CSV}" ]]; then
   echo "run_swing_sweep.sh: no sim/open-loop-ac/records/*.csv found -- the peak-gain" >&2
@@ -76,20 +69,11 @@ if [[ -z "${AC_RECORD_CSV}" || ! -s "${AC_RECORD_CSV}" ]]; then
   exit 3
 fi
 if [[ -z "${OFFSET_RECORD_CSV:-}" ]]; then
-  OFFSET_RECORD_CSV="$(latest_csv_in "${SIM_DIR}/input-offset/records")"
+  OFFSET_RECORD_CSV="$(sg13g2_latest_record_csv "${SIM_DIR}/input-offset/records")"
 fi
 if [[ -z "${OFFSET_RECORD_CSV}" || ! -s "${OFFSET_RECORD_CSV}" ]]; then
   OFFSET_RECORD_CSV=""
 fi
-
-csv_lookup() {
-  # csv_lookup <file> <header> <point_id> -- column looked up by HEADER
-  # NAME, not a hardcoded index, so this keeps working if the source record
-  # ever adds a column. Empty output if not found.
-  awk -F, -v hdr="$2" -v pid="$3" '
-    NR==1 { for (i = 1; i <= NF; i++) if ($i == hdr) col = i; next }
-    col && $1 == pid { print $col }' "$1" 2>/dev/null || true
-}
 
 OSDI_DIR="${SG13G2_OSDI_DIR}"
 sg13g2_preflight_record_paths
@@ -276,13 +260,13 @@ PYEOF
       fi
 
       # --- sibling-record cross-reference inputs ------------------------
-      av0_db_ac="$(csv_lookup "${AC_RECORD_CSV}" av0_db "${point_id}")"
+      av0_db_ac="$(sg13g2_csv_lookup "${AC_RECORD_CSV}" av0_db "${point_id}")"
       [[ -n "${av0_db_ac}" ]] || av0_db_ac="nan"
-      ivdd_ac="$(csv_lookup "${AC_RECORD_CSV}" ivdd_total_a "${point_id}")"
+      ivdd_ac="$(sg13g2_csv_lookup "${AC_RECORD_CSV}" ivdd_total_a "${point_id}")"
       [[ -n "${ivdd_ac}" ]] || ivdd_ac="nan"
       vos_off="nan"
       if [[ -n "${OFFSET_RECORD_CSV}" ]]; then
-        vos_off="$(csv_lookup "${OFFSET_RECORD_CSV}" vos_null_v "${point_id}")"
+        vos_off="$(sg13g2_csv_lookup "${OFFSET_RECORD_CSV}" vos_null_v "${point_id}")"
         [[ -n "${vos_off}" ]] || vos_off="nan"
       fi
 

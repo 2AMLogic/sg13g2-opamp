@@ -83,15 +83,8 @@ sg13g2_preflight_require_netlist
 # REQUIRED: this bench's rows describe the same 45 point_ids, and a
 # checkout with a bench but without its record is not the tree the
 # evidence describes.
-latest_csv_in() {
-  local _found=""
-  while IFS= read -r _f; do _found="${_f}"; done < <(
-    find "$1" -maxdepth 1 -name '*.csv' 2>/dev/null | sort
-  )
-  printf '%s' "${_found}"
-}
 if [[ -z "${AC_RECORD_CSV:-}" ]]; then
-  AC_RECORD_CSV="$(latest_csv_in "${SIM_DIR}/open-loop-ac/records")"
+  AC_RECORD_CSV="$(sg13g2_latest_record_csv "${SIM_DIR}/open-loop-ac/records")"
 fi
 if [[ -z "${AC_RECORD_CSV}" || ! -s "${AC_RECORD_CSV}" ]]; then
   echo "run_cmr_sweep.sh: no sim/open-loop-ac/records/*.csv found -- the op-point cross-check" >&2
@@ -99,22 +92,13 @@ if [[ -z "${AC_RECORD_CSV}" || ! -s "${AC_RECORD_CSV}" ]]; then
   exit 3
 fi
 if [[ -z "${SWING_RECORD_CSV:-}" ]]; then
-  SWING_RECORD_CSV="$(latest_csv_in "${SIM_DIR}/output-swing/records")"
+  SWING_RECORD_CSV="$(sg13g2_latest_record_csv "${SIM_DIR}/output-swing/records")"
 fi
 if [[ -z "${SWING_RECORD_CSV}" || ! -s "${SWING_RECORD_CSV}" ]]; then
   echo "run_cmr_sweep.sh: no sim/output-swing/records/*.csv found -- the buffer-usable-interval" >&2
   echo "run_cmr_sweep.sh: columns need that experiment's per-point vout_max_track/lo columns." >&2
   exit 3
 fi
-
-csv_lookup() {
-  # csv_lookup <file> <header> <point_id> -- column looked up by HEADER
-  # NAME, not a hardcoded index, so this keeps working if the source record
-  # ever adds a column. Empty output if not found.
-  awk -F, -v hdr="$2" -v pid="$3" '
-    NR==1 { for (i = 1; i <= NF; i++) if ($i == hdr) col = i; next }
-    col && $1 == pid { print $col }' "$1" 2>/dev/null || true
-}
 
 OSDI_DIR="${SG13G2_OSDI_DIR}"
 sg13g2_preflight_record_paths
@@ -678,17 +662,17 @@ PYEOF
 )
 
       # --- sibling-record cross-reference inputs -------------------------
-      ac_vtail="$(csv_lookup "${AC_RECORD_CSV}" vtail_dc_v "${point_id}")"
+      ac_vtail="$(sg13g2_csv_lookup "${AC_RECORD_CSV}" vtail_dc_v "${point_id}")"
       [[ -n "${ac_vtail}" ]] || ac_vtail="nan"
-      ac_vd1="$(csv_lookup "${AC_RECORD_CSV}" vd1_dc_v "${point_id}")"
+      ac_vd1="$(sg13g2_csv_lookup "${AC_RECORD_CSV}" vd1_dc_v "${point_id}")"
       [[ -n "${ac_vd1}" ]] || ac_vd1="nan"
-      ac_vd2="$(csv_lookup "${AC_RECORD_CSV}" vd2_dc_v "${point_id}")"
+      ac_vd2="$(sg13g2_csv_lookup "${AC_RECORD_CSV}" vd2_dc_v "${point_id}")"
       [[ -n "${ac_vd2}" ]] || ac_vd2="nan"
-      ac_vibias="$(csv_lookup "${AC_RECORD_CSV}" vibias_dc_v "${point_id}")"
+      ac_vibias="$(sg13g2_csv_lookup "${AC_RECORD_CSV}" vibias_dc_v "${point_id}")"
       [[ -n "${ac_vibias}" ]] || ac_vibias="nan"
-      swing_hi="$(csv_lookup "${SWING_RECORD_CSV}" vout_max_track_v "${point_id}")"
+      swing_hi="$(sg13g2_csv_lookup "${SWING_RECORD_CSV}" vout_max_track_v "${point_id}")"
       [[ -n "${swing_hi}" ]] || swing_hi="nan"
-      swing_lo="$(csv_lookup "${SWING_RECORD_CSV}" vout_min_track_v "${point_id}")"
+      swing_lo="$(sg13g2_csv_lookup "${SWING_RECORD_CSV}" vout_min_track_v "${point_id}")"
       [[ -n "${swing_lo}" ]] || swing_lo="nan"
 
       # --- per-point sanity checks + row assembly ------------------------

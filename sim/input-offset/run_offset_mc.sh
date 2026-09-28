@@ -94,12 +94,10 @@ sg13g2_preflight_require_netlist --no-hint
 # this campaign has landed a record of its own) the join still selects an
 # issue-#11 record, not the newest MC digest sitting beside it.
 if [[ -z "${OFFSET_DET_RECORD_CSV:-}" ]]; then
-  OFFSET_DET_RECORD_CSV=""
-  while IFS= read -r _f; do
-    if head -n 1 "${_f}" 2>/dev/null | grep -q "vos_closed_loop_v"; then
-      OFFSET_DET_RECORD_CSV="${_f}"
-    fi
-  done < <(find "${SCRIPT_DIR}/records" -maxdepth 1 -name '*.csv' ! -name '*-draws.csv' 2>/dev/null | sort)
+  OFFSET_DET_RECORD_CSV="$(sg13g2_latest_record_csv \
+    --require-header vos_closed_loop_v \
+    --exclude '*-draws.csv' \
+    "${SCRIPT_DIR}/records")"
 fi
 if [[ -z "${OFFSET_DET_RECORD_CSV}" || ! -s "${OFFSET_DET_RECORD_CSV}" ]]; then
   echo "run_offset_mc.sh: no deterministic issue-#11 record found (need a records/*.csv" >&2
@@ -108,9 +106,7 @@ if [[ -z "${OFFSET_DET_RECORD_CSV}" || ! -s "${OFFSET_DET_RECORD_CSV}" ]]; then
 fi
 DET_RECORD_ID="$(basename "${OFFSET_DET_RECORD_CSV}" .csv)"
 DET_ANCHOR_PID="mos_tt_27C_1.20V"
-DET_ANCHOR_VOS="$(awk -F, -v pid="${DET_ANCHOR_PID}" '
-  NR==1 { for (i = 1; i <= NF; i++) if ($i == "vos_null_v") col = i; next }
-  col && $1 == pid { print $col }' "${OFFSET_DET_RECORD_CSV}")"
+DET_ANCHOR_VOS="$(sg13g2_csv_lookup "${OFFSET_DET_RECORD_CSV}" vos_null_v "${DET_ANCHOR_PID}")"
 if [[ -z "${DET_ANCHOR_VOS}" ]]; then
   echo "run_offset_mc.sh: no ${DET_ANCHOR_PID} row in ${OFFSET_DET_RECORD_CSV} -- cannot anchor the negative control." >&2
   exit 3
@@ -161,9 +157,7 @@ point_id_of() { # <mode> <corner> <temp> -> stable digest/point id
 }
 
 det_vos_of() { # <corner> <temp> -> systematic vos_null_v joined from the issue-#11 record
-  awk -F, -v pid="$1_$2C_${VDD}V" '
-    NR==1 { for (i = 1; i <= NF; i++) if ($i == "vos_null_v") col = i; next }
-    col && $1 == pid { print $col }' "${OFFSET_DET_RECORD_CSV}"
+  sg13g2_csv_lookup "${OFFSET_DET_RECORD_CSV}" vos_null_v "$1_$2C_${VDD}V"
 }
 
 echo "run_offset_mc.sh: record-id=${RECORD_ID} seed=${SEED} n=${N} parallel=${PARALLEL}"

@@ -8,13 +8,16 @@
 # each script did on its own before this file existed, plus
 # SG13G2_MOS_CORNERS, the PDK's MOS process-corner set every harness sweeps,
 # and SG13G2_NGSPICE_ERR_RE, the broken-simulation log signature every harness
-# scans its raw ngspice log for (see their own headers below). Three companion
+# scans its raw ngspice log for (see their own headers below). Five companion
 # functions cover the remaining shared per-caller work:
 # sg13g2_preflight_require_netlist (the DUT_NETLIST_SRC guard most -- not all
 # -- callers need), sg13g2_preflight_record_paths (the record-id and
-# output-path block all ten callers need) and sg13g2_sim_broken (the per-point
-# "did this simulation actually solve?" gate all ten callers apply) -- see
-# their own headers below.
+# output-path block all ten callers need), sg13g2_sim_broken (the per-point
+# "did this simulation actually solve?" gate all ten callers apply),
+# sg13g2_latest_record_csv (resolve the newest committed sibling record every
+# cross-referencing caller joins against) and sg13g2_csv_lookup (read one
+# column out of such a record by header name, keyed on point_id) -- see their
+# own headers below.
 #
 # Callers MUST compute SCRIPT_DIR/SIM_DIR/REPO_ROOT themselves BEFORE
 # sourcing this file, mirroring sim/env.sh's own convention:
@@ -271,4 +274,119 @@ sg13g2_preflight_record_paths() {
   CSV_OUT="${RECORDS_DIR}/${RECORD_ID}.csv"
   MD_OUT="${RECORDS_DIR}/${RECORD_ID}.md"
   mkdir -p "${SNAPSHOTS_OUT}" "${CORNERS_OUT}" "${RECORDS_DIR}"
+}
+
+# sg13g2_latest_record_csv [--require-header <name>] [--exclude <glob>] <dir>
+#   Print the newest committed record CSV directly under <dir> -- the
+#   "which sibling record does this bench join against?" resolution six
+#   harnesses each carried their own copy of before this extraction. Prints
+#   the empty string (and returns 0) when <dir> holds no match, so the
+#   caller keeps making its own "required vs. optional record" call with the
+#   `[[ -z ... || ! -s ... ]]` guard it already had:
+#
+#     AC_RECORD_CSV="$(sg13g2_latest_record_csv "${SIM_DIR}/open-loop-ac/records")"
+#
+#   "Newest" is the LAST entry of `find -maxdepth 1 -name '*.csv' | sort`,
+#   not an mtime comparison, and that is deliberate: record ids are minted
+#   as <prefix>YYYYmmdd-HHMMSS-<sha> by sg13g2_preflight_record_paths above,
+#   so a lexicographic sort of the filenames IS chronological order and is
+#   reproducible on a fresh checkout, where every file's mtime is the clone
+#   time. Non-recursive on purpose -- per-corner scratch under
+#   records/<id>/ is not a record.
+#
+#   Two knobs, both needed by run_offset_mc.sh's deterministic-record join
+#   and by nothing else today (see its own header comment for why that join
+#   has to be narrower than the plain newest-CSV rule):
+#
+#   --require-header <name>
+#       Consider only files whose FIRST line contains <name>, so a bench can
+#       ask for "the newest record of a particular shape" rather than the
+#       newest record of any shape. run_offset_mc.sh requires
+#       vos_closed_loop_v -- the deterministic issue-#11 bench's own column,
+#       absent from the MC digest on purpose -- so that a RE-run, executed
+#       once this campaign has landed a digest of its own beside it, still
+#       joins the deterministic record instead of its own previous output.
+#   --exclude <glob>
+#       Skip files matching <glob> (passed to find as `! -name <glob>`).
+#       run_offset_mc.sh excludes '*-draws.csv', its own per-draw sidecar.
+#
+#   Passing one knob without the other is supported, but note they guard
+#   different failure modes and run_offset_mc.sh needs both: the header
+#   filter alone would still let a '*-draws.csv' sidecar win if a future
+#   draws file ever carried the deterministic column.
+sg13g2_latest_record_csv() {
+  local require_header="" exclude=""
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --require-header)
+        if [[ $# -lt 2 ]]; then
+          echo "${_sg13g2_preflight_self}: sg13g2_latest_record_csv: --require-header needs a value" >&2
+          exit 3
+        fi
+        require_header="$2"
+        shift 2
+        ;;
+      --exclude)
+        if [[ $# -lt 2 ]]; then
+          echo "${_sg13g2_preflight_self}: sg13g2_latest_record_csv: --exclude needs a value" >&2
+          exit 3
+        fi
+        exclude="$2"
+        shift 2
+        ;;
+      --)
+        shift
+        break
+        ;;
+      *)
+        break
+        ;;
+    esac
+  done
+
+  if [[ $# -ne 1 ]]; then
+    echo "${_sg13g2_preflight_self}: sg13g2_latest_record_csv: expected <dir>, got $# argument(s)" >&2
+    exit 3
+  fi
+
+  local -a _find_args=("$1" -maxdepth 1 -name '*.csv')
+  [[ -n "${exclude}" ]] && _find_args+=(! -name "${exclude}")
+
+  local _found="" _f
+  while IFS= read -r _f; do
+    if [[ -n "${require_header}" ]]; then
+      head -n 1 "${_f}" 2>/dev/null | grep -q "${require_header}" || continue
+    fi
+    _found="${_f}"
+  done < <(find "${_find_args[@]}" 2>/dev/null | sort)
+  printf '%s' "${_found}"
+}
+
+# sg13g2_csv_lookup <csv> <header> <point_id>
+#   Print the <header> column of <csv>'s row whose point_id (column 1) is
+#   <point_id> -- the per-point join four harnesses each carried their own
+#   copy of before this extraction. Empty output when the header or the row
+#   is absent; callers that need a placeholder apply their own
+#   `[[ -n ... ]] || x=nan` afterward, exactly as they did before.
+#
+#   The column is resolved by HEADER NAME, never by a hardcoded index, so a
+#   join keeps working when the source record gains a column -- which it is
+#   expected to, records here being append-only evidence that grows columns
+#   over time.
+#
+#   Reading a MISSING or unreadable <csv> yields empty output rather than a
+#   failure (the awk's own `2>/dev/null || true`, carried over from the
+#   majority of the call sites this replaced). That is safe because every
+#   call site has already asserted its record is non-empty with the
+#   `[[ -z ... || ! -s ... ]]` guard at resolution time; it is not licence
+#   to skip that guard.
+sg13g2_csv_lookup() {
+  if [[ $# -ne 3 ]]; then
+    echo "${_sg13g2_preflight_self}: sg13g2_csv_lookup: expected <csv> <header> <point_id>, got $# argument(s)" >&2
+    exit 3
+  fi
+
+  awk -F, -v hdr="$2" -v pid="$3" '
+    NR==1 { for (i = 1; i <= NF; i++) if ($i == hdr) col = i; next }
+    col && $1 == pid { print $col }' "$1" 2>/dev/null || true
 }

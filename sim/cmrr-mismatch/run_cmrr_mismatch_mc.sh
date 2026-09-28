@@ -104,10 +104,7 @@ fi
 # sim/cmrr-psrr/ does; the negative control additionally asserts equality
 # with #25's committed per-point systematic acm0/vout/vibias/cmrr.
 if [[ -z "${AC_RECORD_CSV:-}" ]]; then
-  AC_RECORD_CSV=""
-  while IFS= read -r _f; do AC_RECORD_CSV="${_f}"; done < <(
-    find "${SIM_DIR}/open-loop-ac/records" -maxdepth 1 -name '*.csv' 2>/dev/null | sort
-  )
+  AC_RECORD_CSV="$(sg13g2_latest_record_csv "${SIM_DIR}/open-loop-ac/records")"
 fi
 if [[ -z "${AC_RECORD_CSV:-}" || ! -s "${AC_RECORD_CSV}" ]]; then
   echo "run_cmrr_mismatch_mc.sh: no sim/open-loop-ac/records/*.csv found -- this experiment's CMRR" >&2
@@ -117,10 +114,7 @@ fi
 AC_RECORD_ID="$(basename "${AC_RECORD_CSV}" .csv)"
 
 if [[ -z "${CMRR_RECORD_CSV:-}" ]]; then
-  CMRR_RECORD_CSV=""
-  while IFS= read -r _f; do CMRR_RECORD_CSV="${_f}"; done < <(
-    find "${SIM_DIR}/cmrr-psrr/records" -maxdepth 1 -name '*.csv' 2>/dev/null | sort
-  )
+  CMRR_RECORD_CSV="$(sg13g2_latest_record_csv "${SIM_DIR}/cmrr-psrr/records")"
 fi
 if [[ -z "${CMRR_RECORD_CSV:-}" || ! -s "${CMRR_RECORD_CSV}" ]]; then
   echo "run_cmrr_mismatch_mc.sh: no sim/cmrr-psrr/records/*.csv found -- the negative control" >&2
