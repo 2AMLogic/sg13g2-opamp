@@ -185,7 +185,7 @@ PYEOF
         rc=0
         ngspice -b "${netlist}" > "${log}" 2>&1 || rc=$?
 
-        if [[ ${rc} -ne 0 ]] || ! [[ -s "${ac_csv}" ]] || grep -qiE "Unable to find definition of model|couldn't be loaded|Unknown model type|fatal error|singular matrix|gmin stepping failed|no convergence" "${log}"; then
+        if sg13g2_sim_broken "${rc}" "${log}" "${ac_csv}"; then
           echo "run_cmrr_psrr_sweep.sh: SIM FAILED ${point_id} ${harness} (rc=${rc}) -- see ${log}" >&2
           sim_fail_points+=("${point_id}")
           continue 2

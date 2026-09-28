@@ -130,15 +130,6 @@ render() {
     "${tmpl}" > "${out}"
 }
 
-sim_broken() {
-  # sim_broken <rc> <log> <required-output-file>
-  local rc="$1" log="$2" outfile="$3"
-  [[ ${rc} -ne 0 ]] && return 0
-  [[ -s "${outfile}" ]] || return 0
-  grep -qiE "Unable to find definition of model|couldn't be loaded|Unknown model type|fatal error|singular matrix|gmin stepping failed|no convergence" "${log}" && return 0
-  return 1
-}
-
 for corner in "${CORNERS[@]}"; do
   for temp in "${TEMPS[@]}"; do
     for vdd in "${VDDS[@]}"; do
@@ -167,7 +158,7 @@ for corner in "${CORNERS[@]}"; do
 
       rc=0
       ngspice -b "${coarse_net}" > "${coarse_log}" 2>&1 || rc=$?
-      if sim_broken "${rc}" "${coarse_log}" "${coarse_csv}"; then
+      if sg13g2_sim_broken "${rc}" "${coarse_log}" "${coarse_csv}"; then
         echo "run_offset_sweep.sh: SIM FAILED ${point_id} coarse pass (rc=${rc}) -- see ${coarse_log}" >&2
         sim_fail_points+=("${point_id}:coarse")
         continue
@@ -222,7 +213,7 @@ PYEOF
 
       rc=0
       ngspice -b "${fine_net}" > "${fine_log}" 2>&1 || rc=$?
-      if sim_broken "${rc}" "${fine_log}" "${fine_csv}"; then
+      if sg13g2_sim_broken "${rc}" "${fine_log}" "${fine_csv}"; then
         echo "run_offset_sweep.sh: SIM FAILED ${point_id} fine pass (rc=${rc}) -- see ${fine_log}" >&2
         sim_fail_points+=("${point_id}:fine")
         continue
@@ -233,7 +224,10 @@ PYEOF
         "${corner}" "${temp}" "${vdd}" "${vcm}"
       rc=0
       ngspice -b "${cl_net}" > "${cl_log}" 2>&1 || rc=$?
-      if [[ ${rc} -ne 0 ]] || grep -qiE "Unable to find definition of model|couldn't be loaded|Unknown model type|fatal error|singular matrix|gmin stepping failed|no convergence" "${cl_log}"; then
+      # Two arguments, no output file: this pass produces no wrdata CSV --
+      # it echoes CL_VOUT into the log, and the missing-CL_VOUT case is
+      # checked on its own just below.
+      if sg13g2_sim_broken "${rc}" "${cl_log}"; then
         echo "run_offset_sweep.sh: SIM FAILED ${point_id} closed-loop pass (rc=${rc}) -- see ${cl_log}" >&2
         sim_fail_points+=("${point_id}:closedloop")
         continue

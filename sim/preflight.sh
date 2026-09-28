@@ -6,12 +6,15 @@
 # missing OSDI build, missing ngspice) every harness in sim/ needs before it
 # can run a single corner. Exports NGSPICE_VERSION for the caller, exactly as
 # each script did on its own before this file existed, plus
-# SG13G2_MOS_CORNERS, the PDK's MOS process-corner set every harness sweeps
-# (see its own header below). Two companion functions cover the remaining
-# per-caller preamble: sg13g2_preflight_require_netlist (the DUT_NETLIST_SRC
-# guard most -- not all -- callers need) and sg13g2_preflight_record_paths
-# (the record-id and output-path block all ten callers need) -- see their own
-# headers below.
+# SG13G2_MOS_CORNERS, the PDK's MOS process-corner set every harness sweeps,
+# and SG13G2_NGSPICE_ERR_RE, the broken-simulation log signature every harness
+# scans its raw ngspice log for (see their own headers below). Three companion
+# functions cover the remaining shared per-caller work:
+# sg13g2_preflight_require_netlist (the DUT_NETLIST_SRC guard most -- not all
+# -- callers need), sg13g2_preflight_record_paths (the record-id and
+# output-path block all ten callers need) and sg13g2_sim_broken (the per-point
+# "did this simulation actually solve?" gate all ten callers apply) -- see
+# their own headers below.
 #
 # Callers MUST compute SCRIPT_DIR/SIM_DIR/REPO_ROOT themselves BEFORE
 # sourcing this file, mirroring sim/env.sh's own convention:
@@ -54,6 +57,105 @@ fi
 command -v ngspice >/dev/null 2>&1 || { echo "${_sg13g2_preflight_self}: ngspice not on PATH." >&2; exit 3; }
 # shellcheck disable=SC2034  # consumed by callers after they source this file
 NGSPICE_VERSION="$(ngspice -v 2>&1 | sed -n '2p' | sed -E 's/^\*\* *//; s/ *:.*$//')"
+
+# SG13G2_NGSPICE_ERR_RE
+#   The "this point's simulation is broken" log signature every sim/*/run_*.sh
+#   harness greps its raw ngspice log for, as one `grep -E` alternation.
+#
+#   These seven strings are here because ngspice DOES NOT report them through
+#   its exit status: it exits 0 after falling back through gmin stepping,
+#   after a non-convergent DC operating point, and after a singular-matrix
+#   bailout, and it still writes its `wrdata` rows in those cases. rc and a
+#   non-empty output file therefore cannot, on their own, distinguish a solved
+#   point from a silently-degraded one -- scanning the log is the only
+#   detector, which is why every harness in sim/ does it.
+#
+#   Do not narrow this set in one bench. A bench that greps for fewer
+#   alternatives records points as PASS that every sibling bench would fail,
+#   against CLAUDE.md's "verification is the product" -- that is exactly the
+#   drift issue #60 found in run_gmid_sweep.sh (which checked only the first
+#   four) and removed by routing every site through sg13g2_sim_broken below --
+#   except run_offset_mc.sh's per-draw scan, which runs inside Python and
+#   reads this constant out of its environment instead. WIDENING the set
+#   per-bench is supported and explicit: see that function's --extra hook.
+SG13G2_NGSPICE_ERR_RE="Unable to find definition of model|couldn't be loaded|Unknown model type|fatal error|singular matrix|gmin stepping failed|no convergence"
+
+# sg13g2_sim_broken [--extra <alternations>] <rc> <log> [required-output-file]
+#   Decide whether one simulated point is broken. Returns 0 (success/true)
+#   when it IS broken, 1 when it looks good -- the sense the `if sim_broken
+#   ...; then <record a failure>` call sites in sim/ already used before this
+#   extraction. A point is broken when ANY of:
+#
+#     * <rc> (ngspice's exit status for that point) is non-zero;
+#     * <required-output-file> is given and is missing or empty;
+#     * <log> matches SG13G2_NGSPICE_ERR_RE (case-insensitive), plus any
+#       --extra alternations.
+#
+#   The optional third argument is what distinguishes the call sites, and the
+#   distinctions are deliberate, not incidental:
+#
+#     * Most callers pass the CSV the testbench's `wrdata` was supposed to
+#       produce, so a point that wrote nothing is caught even when ngspice
+#       exited 0.
+#     * run_offset_sweep.sh's closed-loop pass has no wrdata CSV at all (it
+#       reads a CL_VOUT echo line out of the log, and checks for that line
+#       itself right after), so it passes two arguments and no output file.
+#
+#   --extra <alternations>
+#       Widen the regex for this call with additional `grep -E` alternations
+#       (no leading "|"). Three benches legitimately watch for one more
+#       analysis-appropriate string than the shared core: input-cmr for
+#       "DC solution failed", slew-rate for "Transient solution failed",
+#       cmrr-mismatch for "Simulation interrupted". Stating those at the call
+#       site keeps them visible as deliberate per-bench widenings rather than
+#       as copy-paste divergence. SG13G2_NGSPICE_ERR_EXTRA in the environment
+#       supplies the same widening for a caller that has no --extra of its
+#       own, e.g. when debugging a new failure mode across benches without
+#       editing them.
+#
+#   A caller that needs the log signature ALONE (run_cmrr_mismatch_mc.sh
+#   folds it into a larger condition and wants a 0/1 value, not an exit
+#   status) passes rc=0 with no output file and converts:
+#
+#     sig="$(sg13g2_sim_broken 0 "${log}" && echo 1 || echo 0)"
+sg13g2_sim_broken() {
+  local extra="${SG13G2_NGSPICE_ERR_EXTRA:-}"
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --extra)
+        if [[ $# -lt 2 ]]; then
+          echo "${_sg13g2_preflight_self}: sg13g2_sim_broken: --extra needs a value" >&2
+          exit 3
+        fi
+        extra="$2"
+        shift 2
+        ;;
+      --)
+        shift
+        break
+        ;;
+      *)
+        break
+        ;;
+    esac
+  done
+
+  if [[ $# -lt 2 || $# -gt 3 ]]; then
+    echo "${_sg13g2_preflight_self}: sg13g2_sim_broken: expected <rc> <log> [required-output-file], got $# argument(s)" >&2
+    exit 3
+  fi
+
+  local rc="$1" log="$2" outfile="${3:-}"
+  local re="${SG13G2_NGSPICE_ERR_RE}"
+  [[ -n "${extra}" ]] && re="${re}|${extra}"
+
+  [[ "${rc}" -ne 0 ]] && return 0
+  if [[ -n "${outfile}" && ! -s "${outfile}" ]]; then
+    return 0
+  fi
+  grep -qiE "${re}" "${log}" && return 0
+  return 1
+}
 
 # SG13G2_MOS_CORNERS
 #   cornerMOSlv.lib's five MOS process sections [DR-1] -- typical,

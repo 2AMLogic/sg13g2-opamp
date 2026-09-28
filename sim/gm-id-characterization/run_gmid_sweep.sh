@@ -87,7 +87,13 @@ for device in "${DEVICES[@]}"; do
       rc=0
       ngspice -b "${netlist}" > "${log}" 2>&1 || rc=$?
 
-      if [[ ${rc} -ne 0 ]] || ! [[ -s "${dc_csv}" ]] || grep -qiE "Unable to find definition of model|couldn't be loaded|Unknown model type|fatal error" "${log}"; then
+      # Shared gate (issue #60). This bench previously grepped only the
+      # first four alternations of SG13G2_NGSPICE_ERR_RE, so a point that
+      # hit a singular matrix, fell back through gmin stepping, or failed
+      # to converge was recorded as PASS here while the identical
+      # condition failed the point in every other bench in sim/. It now
+      # applies the same seven-alternation core as its siblings.
+      if sg13g2_sim_broken "${rc}" "${log}" "${dc_csv}"; then
         echo "run_gmid_sweep.sh: FAILED ${point_id} (rc=${rc}) -- see ${log}" >&2
         failed_points+=("${point_id}")
         continue
@@ -407,7 +413,11 @@ done
   echo "  1.04u} x corner {mos_tt, mos_ss, mos_ff, mos_sf, mos_fs} ="
   echo "  ${total} (device,length,corner) points, 56 Vgs points each."
   echo "- **Result**: ${passed}/${total} points PASS (ngspice exit 0, DC"
-  echo "  wrdata present, all 56 Vgs rows merged with a matching AC point)."
+  echo "  wrdata present, no broken-simulation signature in the raw ngspice"
+  echo "  log -- \`sim/preflight.sh\`'s \`SG13G2_NGSPICE_ERR_RE\`, the same"
+  echo "  seven-alternation set every other bench in \`sim/\` applies, which"
+  echo "  this bench narrowed to four until issue #60 -- and all 56 Vgs rows"
+  echo "  merged with a matching AC point)."
   if [[ ${#failed_points[@]} -gt 0 ]]; then
     echo "- **Failed points**: ${failed_points[*]}"
   fi

@@ -126,7 +126,7 @@ them instead:
 
 ## ngspice gotchas this testbench works around
 
-Two non-obvious ngspice behaviors cost significant debugging time building
+Three non-obvious ngspice behaviors cost significant debugging time building
 this testbench; documented here so a future editor of these templates does
 not rediscover them the hard way.
 
@@ -160,6 +160,25 @@ not rediscover them the hard way.
      index (`vec[i]`) to define a *new* vector fails ("When creating a new
      vector, it cannot be indexed"); the fix is the same range syntax used
      for slices, with equal start/end (`vec[i,i]`).
+3. **A degraded solve exits 0 and still writes `wrdata` rows.** ngspice
+   returns exit status 0 after falling back through gmin stepping, after a
+   non-convergent DC operating point, and after a singular-matrix bailout —
+   and it goes on to write the `wrdata` CSV in those cases. `rc` and a
+   non-empty `dc_csv` therefore cannot, on their own, tell a solved point
+   from a silently-degraded one; scanning the raw log for the solver's own
+   banners is the only detector. That is what
+   `sim/preflight.sh`'s `SG13G2_NGSPICE_ERR_RE` is, and what
+   `sg13g2_sim_broken` applies here — the same seven-alternation set every
+   other bench in `sim/` applies. Until issue #60 this driver grepped only
+   the first four of those alternations, so a point that hit `singular
+   matrix`, `gmin stepping failed` or `no convergence` was recorded as PASS
+   here while the identical condition failed the point in every sibling
+   bench. Do not narrow the set again: every sizing decision cites this
+   study (`CLAUDE.md`, "gm/ID first"), so it should carry the strictest
+   failure detector in `sim/`, not the weakest. The >=50/56-merged-rows
+   assertion and the sanity checks below are backstops for a *badly* broken
+   point, not substitutes — a non-convergent point can still write 56
+   plausible-looking rows.
 
 ## Observed sub-peak gm/ID roll-off in deep subthreshold
 

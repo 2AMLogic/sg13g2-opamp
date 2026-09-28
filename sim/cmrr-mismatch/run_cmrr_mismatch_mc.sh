@@ -378,7 +378,12 @@ run_deck() { # <point_index> <section> <n> <tag> [seed-override]
   rc=0
   ngspice -b "${netlist}" > "${log}" 2>&1 || rc=$?
 
-  sig="$(grep -qiE "Unable to find definition of model|couldn't be loaded|Unknown model type|fatal error|singular matrix|gmin stepping failed|no convergence|Simulation interrupted" "${log}" && echo 1 || echo 0)"
+  # The LOG SIGNATURE ALONE as a 0/1 value: rc and the sample-line count
+  # are folded into the same condition just below, so rc=0 is passed here
+  # deliberately and no required-output-file is given. --extra: a
+  # resumable MC campaign additionally treats "Simulation interrupted" as
+  # a broken run.
+  sig="$(sg13g2_sim_broken --extra "Simulation interrupted" 0 "${log}" && echo 1 || echo 0)"
   have="$(grep -c -E '^(OP|AC) ' "${samples}" 2>/dev/null || true)"
   if [[ ${rc} -ne 0 ]] || [[ "${sig}" == "1" ]] || [[ "${have}" -ne $((2 * n)) ]]; then
     echo "run_cmrr_mismatch_mc.sh: SIM FAILED ${pid} ${tag} (rc=${rc}, lines=${have}/$((2*n))) -- raw log retained: ${log}" >&2

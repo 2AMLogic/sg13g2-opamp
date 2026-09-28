@@ -135,7 +135,9 @@ for corner in "${CORNERS[@]}"; do
       rc=0
       ngspice -b "${netlist}" > "${log}" 2>&1 || rc=$?
 
-      if [[ ${rc} -ne 0 ]] || ! [[ -s "${tran_csv}" ]] || grep -qiE "Unable to find definition of model|couldn't be loaded|Unknown model type|fatal error|singular matrix|gmin stepping failed|no convergence|Transient solution failed" "${log}"; then
+      # --extra: a transient bench additionally treats ngspice's own
+      # "Transient solution failed" banner as a broken point.
+      if sg13g2_sim_broken --extra "Transient solution failed" "${rc}" "${log}" "${tran_csv}"; then
         echo "run_slew_sweep.sh: SIM FAILED ${point_id} (rc=${rc}) -- see ${log}" >&2
         sim_fail_points+=("${point_id}")
         continue
