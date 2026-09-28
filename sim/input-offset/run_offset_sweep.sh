@@ -85,7 +85,7 @@ cp "${DUT_NETLIST_SRC}" "${DUT_NETLIST_SNAPSHOT}"
 # supply grid from spec/target-spec.md Sec 1. Identical 45-point grid to
 # sim/open-loop-ac/, by construction -- the two benches' records are meant
 # to be joined point-by-point on point_id.
-CORNERS=(mos_tt mos_ss mos_ff mos_sf mos_fs)
+CORNERS=("${SG13G2_MOS_CORNERS[@]}")
 TEMPS=(-40 27 125)
 VDDS=(1.08 1.20 1.32)
 CL_F="2e-12"

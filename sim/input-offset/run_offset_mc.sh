@@ -144,7 +144,7 @@ cp "${DUT_NETLIST_SRC}" "${DUT_NETLIST_SNAPSHOT}"
 # triple the campaign for no incremental evidence value). Every corner
 # family is drawn at N>=300 at EACH of its three temperatures, so the
 # "N>=300 per corner" requirement holds everywhere it is claimed.
-CORNERS=(mos_tt mos_ss mos_ff mos_sf mos_fs)
+CORNERS=("${SG13G2_MOS_CORNERS[@]}")
 TEMPS=(-40 27 125)
 VDD="1.20"
 VCM="0.6"

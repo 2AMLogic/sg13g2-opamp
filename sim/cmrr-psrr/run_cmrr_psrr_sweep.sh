@@ -97,7 +97,7 @@ cp "${DUT_NETLIST_SRC}" "${DUT_NETLIST_SNAPSHOT}"
 # Same grid as sim/open-loop-ac/: cornerMOSlv.lib's five sections [DR-1],
 # crossed at testbench time with spec/target-spec.md Sec 1's temperature
 # and supply axes.
-CORNERS=(mos_tt mos_ss mos_ff mos_sf mos_fs)
+CORNERS=("${SG13G2_MOS_CORNERS[@]}")
 TEMPS=(-40 27 125)
 VDDS=(1.08 1.20 1.32)
 CL_F="2e-12"

@@ -5,7 +5,9 @@
 # models, and ngspice on PATH -- the same guard clauses (no resolvable PDK,
 # missing OSDI build, missing ngspice) every harness in sim/ needs before it
 # can run a single corner. Exports NGSPICE_VERSION for the caller, exactly as
-# each script did on its own before this file existed. A companion function,
+# each script did on its own before this file existed, plus
+# SG13G2_MOS_CORNERS, the PDK's MOS process-corner set every harness sweeps
+# (see its own header below). A companion function,
 # sg13g2_preflight_require_netlist, covers the DUT_NETLIST_SRC guard most
 # (not all) callers also need -- see its own header below.
 #
@@ -50,6 +52,26 @@ fi
 command -v ngspice >/dev/null 2>&1 || { echo "${_sg13g2_preflight_self}: ngspice not on PATH." >&2; exit 3; }
 # shellcheck disable=SC2034  # consumed by callers after they source this file
 NGSPICE_VERSION="$(ngspice -v 2>&1 | sed -n '2p' | sed -E 's/^\*\* *//; s/ *:.*$//')"
+
+# SG13G2_MOS_CORNERS
+#   cornerMOSlv.lib's five MOS process sections [DR-1] -- typical,
+#   slow-slow, fast-fast, slow-fast, fast-slow -- in the order every
+#   sim/*/run_*.sh harness iterates them. This is a fixed property of the
+#   PDK, not a per-measurement parameter, and the order is load-bearing:
+#   each bench's point_id numbering is assigned by iterating this list, and
+#   sibling benches' records are meant to join point-by-point on point_id.
+#
+#   Callers copy it into their own local CORNERS array rather than reading
+#   this name directly in their sweep loops:
+#
+#     CORNERS=("${SG13G2_MOS_CORNERS[@]}")
+#
+#   so the ten harnesses keep one definition of the corner set between them
+#   and a future corner rename/addition cannot silently land in nine benches
+#   and miss the tenth (which would record a stale corner set with no error,
+#   against CLAUDE.md's "PVT corners on every recorded result").
+# shellcheck disable=SC2034  # consumed by callers after they source this file
+SG13G2_MOS_CORNERS=(mos_tt mos_ss mos_ff mos_sf mos_fs)
 
 # sg13g2_preflight_require_netlist [--no-hint]
 #   Verify design/netlist/opamp_core.spice exists and is non-empty, exiting 3

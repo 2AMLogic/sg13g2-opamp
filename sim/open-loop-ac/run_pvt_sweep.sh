@@ -54,7 +54,7 @@ cp "${DUT_NETLIST_SRC}" "${DUT_NETLIST_SNAPSHOT}"
 
 # --- Sweep grid ----------------------------------------------------------
 # Process corner grid: cornerMOSlv.lib's five sections [DR-1].
-CORNERS=(mos_tt mos_ss mos_ff mos_sf mos_fs)
+CORNERS=("${SG13G2_MOS_CORNERS[@]}")
 # Temperature x supply grid: spec/target-spec.md Sec 1 ("Operating
 # temperature", "Supply voltage, VDD") -- crossed with the corner grid "at
 # testbench time", which is exactly what this bench is.
