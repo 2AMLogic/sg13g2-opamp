@@ -56,28 +56,8 @@ SIM_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 REPO_ROOT="$(cd "${SIM_DIR}/.." && pwd)"
 
 # shellcheck source=/dev/null
-source "${SIM_DIR}/env.sh"
-
-if [[ -z "${PDK_ROOT:-}" || ! -d "${PDK_ROOT}/${PDK}/libs.tech/ngspice" ]]; then
-  echo "run_cmrr_psrr_sweep.sh: no resolvable ${PDK:-ihp-sg13g2} install -- see sim/env.sh output above." >&2
-  exit 3
-fi
-
-if ! "${SIM_DIR}/tools/build-osdi.sh" --check >/dev/null 2>&1; then
-  echo "run_cmrr_psrr_sweep.sh: OSDI models missing/unloadable -- run sim/tools/build-osdi.sh first:" >&2
-  "${SIM_DIR}/tools/build-osdi.sh" --check || true
-  exit 3
-fi
-
-command -v ngspice >/dev/null 2>&1 || { echo "run_cmrr_psrr_sweep.sh: ngspice not on PATH." >&2; exit 3; }
-NGSPICE_VERSION="$(ngspice -v 2>&1 | sed -n '2p' | sed -E 's/^\*\* *//; s/ *:.*$//')"
-
-DUT_NETLIST_SRC="${REPO_ROOT}/design/netlist/opamp_core.spice"
-if [[ ! -s "${DUT_NETLIST_SRC}" ]]; then
-  echo "run_cmrr_psrr_sweep.sh: ${DUT_NETLIST_SRC} missing -- regenerate it first, see design/README.md" >&2
-  echo "run_cmrr_psrr_sweep.sh:   (cd design && xschem -n -x -q -r --rcfile ./xschemrc -o ./netlist ./opamp_core.sch)" >&2
-  exit 3
-fi
+source "${SIM_DIR}/preflight.sh"
+sg13g2_preflight_require_netlist
 
 # --- Open-loop AC record cross-reference ---------------------------------
 # Both ratios this experiment reports divide the SAME grid point's Av0 out
