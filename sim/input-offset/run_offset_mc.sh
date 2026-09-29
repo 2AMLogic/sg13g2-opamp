@@ -136,6 +136,7 @@ CORNERS=("${SG13G2_MOS_CORNERS[@]}")
 TEMPS=(-40 27 125)
 VDD="1.20"
 VCM="0.6"
+# shellcheck disable=SC2034  # consumed by sg13g2_render_netlist (sim/preflight.sh) after this point
 CL_F="2e-12"
 COARSE_START="-0.1"
 COARSE_STOP="0.1"
@@ -191,16 +192,8 @@ render_netlist() { # <out> <point_id> <mode> <corner> <temp> <draw_index> <draw_
   else
     section="${corner}"
   fi
-  sed \
-    -e "s|@@PDK_ROOT@@|${PDK_ROOT}|g" \
-    -e "s|@@PDK@@|${PDK}|g" \
-    -e "s|@@OSDI_DIR@@|${OSDI_DIR}|g" \
-    -e "s|@@MOS_SECTION@@|${section}|g" \
-    -e "s|@@TEMP_C@@|${temp}|g" \
-    -e "s|@@VDD_V@@|${VDD}|g" \
-    -e "s|@@VCM_V@@|${VCM}|g" \
-    -e "s|@@CL_F@@|${CL_F}|g" \
-    -e "s|@@DUT_NETLIST@@|${DUT_NETLIST_SNAPSHOT}|g" \
+  sg13g2_render_netlist --vcm "${VCM}" "${EXPERIMENT_DIR}/testbench/tb_offset_mc.spice.tmpl" "${out}" \
+    "${section}" "${temp}" "${VDD}" \
     -e "s|@@POINT_ID@@|${pid}|g" \
     -e "s|@@CORNER@@|${corner}|g" \
     -e "s|@@MISMATCH_MODE@@|${mode}|g" \
@@ -211,8 +204,7 @@ render_netlist() { # <out> <point_id> <mode> <corner> <temp> <draw_index> <draw_
     -e "s|@@VID_STOP@@|${COARSE_STOP}|g" \
     -e "s|@@VID_STEP@@|${COARSE_STEP}|g" \
     -e "s|@@WRDATA_VECTORS@@|${SWEEP_VECTORS}|g" \
-    -e "s|@@SWEEP_CSV@@|${SCRATCH_DIR}/sweeps/${pid}_${idx}.csv|g" \
-    "${EXPERIMENT_DIR}/testbench/tb_offset_mc.spice.tmpl" > "${out}"
+    -e "s|@@SWEEP_CSV@@|${SCRATCH_DIR}/sweeps/${pid}_${idx}.csv|g"
 }
 
 # -------------------------------------------------------------- Pass 1: render

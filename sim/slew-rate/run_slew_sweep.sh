@@ -52,6 +52,7 @@ CORNERS=("${SG13G2_MOS_CORNERS[@]}")
 # testbench time", the same 45-point grid sim/open-loop-ac/ uses.
 TEMPS=(-40 27 125)
 VDDS=(1.08 1.20 1.32)
+# shellcheck disable=SC2034  # consumed by sg13g2_render_netlist (sim/preflight.sh) after this point
 CL_F="2e-12"
 
 # --- Drive and measurement conditions ------------------------------------
@@ -105,14 +106,8 @@ for corner in "${CORNERS[@]}"; do
       log="${CORNERS_OUT}/${point_id}.log"
       tran_csv="${CORNERS_OUT}/${point_id}_tran.csv"
 
-      sed \
-        -e "s|@@PDK_ROOT@@|${PDK_ROOT}|g" \
-        -e "s|@@PDK@@|${PDK}|g" \
-        -e "s|@@OSDI_DIR@@|${OSDI_DIR}|g" \
-        -e "s|@@MOS_SECTION@@|${corner}|g" \
-        -e "s|@@TEMP_C@@|${temp}|g" \
-        -e "s|@@VDD_V@@|${vdd}|g" \
-        -e "s|@@VCM_V@@|${vcm}|g" \
+      sg13g2_render_netlist --vcm "${vcm}" "${EXPERIMENT_DIR}/testbench/tb_slew.spice.tmpl" "${netlist}" \
+        "${corner}" "${temp}" "${vdd}" \
         -e "s|@@VSTEP_V@@|${VSTEP_V}|g" \
         -e "s|@@VP_HI@@|${vp_hi}|g" \
         -e "s|@@VP_LO@@|${vp_lo}|g" \
@@ -127,10 +122,7 @@ for corner in "${CORNERS[@]}"; do
         -e "s|@@T_STOP@@|${tstop}|g" \
         -e "s|@@T_PRINT@@|${TPRINT_NS}n|g" \
         -e "s|@@T_MAX@@|${TMAX_NS}n|g" \
-        -e "s|@@CL_F@@|${CL_F}|g" \
-        -e "s|@@DUT_NETLIST@@|${DUT_NETLIST_SNAPSHOT}|g" \
-        -e "s|@@TRAN_CSV@@|${tran_csv}|g" \
-        "${EXPERIMENT_DIR}/testbench/tb_slew.spice.tmpl" > "${netlist}"
+        -e "s|@@TRAN_CSV@@|${tran_csv}|g"
 
       rc=0
       ngspice -b "${netlist}" > "${log}" 2>&1 || rc=$?

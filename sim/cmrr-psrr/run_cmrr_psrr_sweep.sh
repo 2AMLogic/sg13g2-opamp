@@ -89,6 +89,7 @@ cp "${DUT_NETLIST_SRC}" "${DUT_NETLIST_SNAPSHOT}"
 CORNERS=("${SG13G2_MOS_CORNERS[@]}")
 TEMPS=(-40 27 125)
 VDDS=(1.08 1.20 1.32)
+# shellcheck disable=SC2034  # consumed by sg13g2_render_netlist (sim/preflight.sh) after this point
 CL_F="2e-12"
 
 echo "point_id,corner,temp_c,vdd_v,vcm_v,op_pass,vout_dc_v,vd1_dc_v,vd2_dc_v,vtail_dc_v,vibias_dc_v,ivdd_total_a,av0_db,acm0_db,acm_1khz_db,cmrr_db,cmrr_1khz_db,cmrr_plateau_delta_db,avs0_db,avs_1khz_db,psrr_db,psrr_1khz_db,psrr_plateau_delta_db,op_xcheck_psrr_delta_v,ol_vout_dc_v,ol_vout_delta_v" > "${CSV_OUT}.raw"
@@ -166,18 +167,9 @@ PYEOF
         log="${CORNERS_OUT}/${point_id}_${harness}.log"
         ac_csv="${CORNERS_OUT}/${point_id}_${harness}_ac.csv"
 
-        sed \
-          -e "s|@@PDK_ROOT@@|${PDK_ROOT}|g" \
-          -e "s|@@PDK@@|${PDK}|g" \
-          -e "s|@@OSDI_DIR@@|${OSDI_DIR}|g" \
-          -e "s|@@MOS_SECTION@@|${corner}|g" \
-          -e "s|@@TEMP_C@@|${temp}|g" \
-          -e "s|@@VDD_V@@|${vdd}|g" \
-          -e "s|@@VCM_V@@|${vcm}|g" \
-          -e "s|@@CL_F@@|${CL_F}|g" \
-          -e "s|@@DUT_NETLIST@@|${DUT_NETLIST_SNAPSHOT}|g" \
-          -e "s|@@AC_CSV@@|${ac_csv}|g" \
-          "${EXPERIMENT_DIR}/testbench/tb_${harness}.spice.tmpl" > "${netlist}"
+        sg13g2_render_netlist --vcm "${vcm}" "${EXPERIMENT_DIR}/testbench/tb_${harness}.spice.tmpl" "${netlist}" \
+          "${corner}" "${temp}" "${vdd}" \
+          -e "s|@@AC_CSV@@|${ac_csv}|g"
 
         rc=0
         ngspice -b "${netlist}" > "${log}" 2>&1 || rc=$?

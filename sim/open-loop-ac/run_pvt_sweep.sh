@@ -52,6 +52,7 @@ CORNERS=("${SG13G2_MOS_CORNERS[@]}")
 # testbench time", which is exactly what this bench is.
 TEMPS=(-40 27 125)
 VDDS=(1.08 1.20 1.32)
+# shellcheck disable=SC2034  # consumed by sg13g2_render_netlist (sim/preflight.sh) after this point
 CL_F="2e-12"
 
 echo "point_id,corner,temp_c,vdd_v,vcm_v,op_pass,vout_dc_v,vd1_dc_v,vd2_dc_v,vtail_dc_v,vibias_dc_v,ivdd_total_a,ivdd_signal_path_a,av0_db,gbw_hz,pm_deg,gm_status,gm_db,gm_freq_hz" > "${CSV_OUT}.raw"
@@ -71,18 +72,9 @@ for corner in "${CORNERS[@]}"; do
       log="${CORNERS_OUT}/${point_id}.log"
       ac_csv="${CORNERS_OUT}/${point_id}_ac.csv"
 
-      sed \
-        -e "s|@@PDK_ROOT@@|${PDK_ROOT}|g" \
-        -e "s|@@PDK@@|${PDK}|g" \
-        -e "s|@@OSDI_DIR@@|${OSDI_DIR}|g" \
-        -e "s|@@MOS_SECTION@@|${corner}|g" \
-        -e "s|@@TEMP_C@@|${temp}|g" \
-        -e "s|@@VDD_V@@|${vdd}|g" \
-        -e "s|@@VCM_V@@|${vcm}|g" \
-        -e "s|@@CL_F@@|${CL_F}|g" \
-        -e "s|@@DUT_NETLIST@@|${DUT_NETLIST_SNAPSHOT}|g" \
-        -e "s|@@AC_CSV@@|${ac_csv}|g" \
-        "${EXPERIMENT_DIR}/testbench/tb_openloop_ac.spice.tmpl" > "${netlist}"
+      sg13g2_render_netlist --vcm "${vcm}" "${EXPERIMENT_DIR}/testbench/tb_openloop_ac.spice.tmpl" "${netlist}" \
+        "${corner}" "${temp}" "${vdd}" \
+        -e "s|@@AC_CSV@@|${ac_csv}|g"
 
       rc=0
       ngspice -b "${netlist}" > "${log}" 2>&1 || rc=$?

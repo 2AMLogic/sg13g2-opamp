@@ -147,6 +147,7 @@ PLATEAU_TOL_DB="${PLATEAU_TOL_DB:-0.05}"     # same plateau guard tolerance as #
 CORNERS=("${SG13G2_MOS_CORNERS[@]}")
 TEMPS=(-40 27 125)
 VDDS=(1.08 1.20 1.32)
+# shellcheck disable=SC2034  # consumed by sg13g2_render_netlist (sim/preflight.sh) after this point
 CL_F="2e-12"
 
 point_ids=()
@@ -352,20 +353,11 @@ run_deck() { # <point_index> <section> <n> <tag> [seed-override]
     fi
   fi
 
-  sed \
-    -e "s|@@PDK_ROOT@@|${PDK_ROOT}|g" \
-    -e "s|@@PDK@@|${PDK}|g" \
-    -e "s|@@OSDI_DIR@@|${OSDI_DIR}|g" \
-    -e "s|@@MOS_SECTION@@|${section}|g" \
-    -e "s|@@TEMP_C@@|${temp}|g" \
-    -e "s|@@VDD_V@@|${vdd}|g" \
-    -e "s|@@VCM_V@@|${vcm}|g" \
-    -e "s|@@CL_F@@|${CL_F}|g" \
-    -e "s|@@DUT_NETLIST@@|${DUT_NETLIST_SNAPSHOT}|g" \
+  sg13g2_render_netlist --vcm "${vcm}" "${EXPERIMENT_DIR}/testbench/tb_cmrr_mc.spice.tmpl" "${netlist}" \
+    "${section}" "${temp}" "${vdd}" \
     -e "s|@@SEED@@|${seed}|g" \
     -e "s|@@MC_N@@|${n}|g" \
-    -e "s|@@MC_OUT@@|${samples}|g" \
-    "${EXPERIMENT_DIR}/testbench/tb_cmrr_mc.spice.tmpl" > "${netlist}"
+    -e "s|@@MC_OUT@@|${samples}|g"
 
   rm -f "${samples}"
 
