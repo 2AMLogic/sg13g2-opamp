@@ -597,6 +597,32 @@ correct the design is. All 49 gate×level antenna work items are in
   connectivity model. `Metal5` stays a full conductor role on purpose: a MiM
   *bottom* plate is ordinary metal carrying the same net's real routing.
 
+### The ERC supply check has been shown to fail
+
+A clean verdict from a check that cannot fail is worth nothing, and a supply
+spec is unusually easy to write so that it passes for the wrong reason. Three
+perturbations of the committed spec were run against the committed,
+unmodified GDS. None is committed — reproduce them by editing a scratch copy
+of `erc_supply_spec.json` and re-running `klt erc` against it:
+
+| Perturbation | Result |
+|---|---|
+| Delete the `via2` role (the Metal2↔Metal3 cut) — severs every rail at its own track | `erc_status: "violations"`, 5 × `erc.missing_tie` (every well and every asserted substrate box loses its path to the rail) |
+| Point `nwell_tie_vdd.tap_requires` at `ThickGateOx` 44/0, a layer this stream never draws | `erc_status: "violations"`, 2 × `erc.missing_tie` — *"well/tub region has no 'nwell_tie_vdd' tap contact drawn inside it"*, one per well |
+| Drop `tap_requires` from both ties, leaving the bare `Activ` tap the docs warn against | `erc_status: "clean_partial"`, **0 findings**, both ties in `erc_coverage.skipped` with reason `degenerate_tap_declaration` — and `klt signoff` renders item 11 `unmet` / `supply_spec_incomplete` off exactly that, *not* `met` off the zero findings |
+
+The third row is the one worth reading twice: an unfalsifiable tie
+declaration produces a *finding-free* report, and the only thing standing
+between that and a green item-11 row is the register's refusal to read
+skipped work as a clean answer.
+
+The first row also demonstrates the single-label bound from the section
+above, from the other direction: severing every rail at every Metal3 track
+produces **zero** `erc.unconnected_net` findings. The orphaned pieces carry
+no label, so the rule cannot see them; the defect surfaces only because the
+taps happen to land on the far side of the cut. That is the documented
+behaviour (klayout-tools#2497), measured here rather than taken on trust.
+
 ## The old smoke fixture's coverage (`scaffold_smoke/drc_report.json`)
 
 The scaffold fixture's own report is narrower than the block's — it checks 29
