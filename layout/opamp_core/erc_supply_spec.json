@@ -1,0 +1,370 @@
+{
+  "_comment": [
+    "T1 item 11 (power delivery, structural) -- the `klt erc` SUPPLY SPEC for",
+    "layout/opamp_core/opamp_core.gds. This is the item-11 artifact:",
+    "klayout-tools' docs/design-evidence-tiers.md item 11 is graded from a",
+    "`klt erc` run against this document plus the LVS report item 4 cites",
+    "(layout/opamp_core/lvs_report.json). The run is",
+    "layout/opamp_core/run_erc.sh; its envelope is",
+    "layout/opamp_core/erc_report.json.",
+    "",
+    "JSON has no comment syntax, so every justification below lives in a",
+    "`comment` key on the entry it justifies (klt erc ignores keys it does",
+    "not declare). Nothing here is transcribed from gf180mcu or sky130:",
+    "every layer/datatype pair is IHP SG13G2's own, taken from",
+    "layout/sg13g2_layers.py, which in turn cites",
+    "$PDK_ROOT/ihp-sg13g2/libs.tech/klayout/tech/sg13g2.lyp (IHP-Open-PDK",
+    "v0.3.0) entry by entry and cross-checks every pair the curated deck",
+    "also declares against klayout-tools' own decks/sg13g2.py. SG13G2's",
+    "numbering is unrelated to the other two PDKs': Metal1 is 8/0, Via1 is",
+    "19/0 and Metal2 is 10/0 -- the via between M1 and M2 carries a *higher*",
+    "layer number than M2 itself.",
+    "",
+    "WHAT IS DELIBERATELY NOT A CONDUCTOR HERE. Activ (1/0) is absent from",
+    "`stackup` on purpose. klt erc registers no device recognition, so a",
+    "declared diffusion role would make every MOSFET's source, channel and",
+    "drain one conductor -- shorting vdd to vss through the stacks and",
+    "reporting a false erc.supply_short on a correct layout. Activ appears",
+    "only where it is genuinely not a wire: as stackup[0].active_layer (the",
+    "poly-intersect-diff gate-area denominator) and as the ties[] tap layer,",
+    "which is evaluated in its own second extraction and cannot reach the",
+    "primary graph (klayout-tools#2169). The consequence is that supply",
+    "continuity below is proven *in metal only*, which is the conservative",
+    "reading: the guard rings are not allowed to stand in for a missing",
+    "strap.",
+    "",
+    "BOUND ON erc.unconnected_net, STATED RATHER THAN HIDDEN. This stream",
+    "draws exactly one label per port (generate.py's Router.pin), so",
+    "erc.unconnected_net -- which counts islands *carrying the declared",
+    "label* (klayout-tools#2497) -- can report at most one island for vdd",
+    "and one for vss. A clean verdict here is therefore evidence that the",
+    "labelled rail is not shorted and not absent; it is NOT by itself",
+    "evidence that no unlabelled fragment of a rail was orphaned. Read",
+    "nets[].matched_islands in the report alongside the verdict. The",
+    "nets[].roles remainder measurement (klayout-tools#2510) is deliberately",
+    "NOT declared: Metal1/2/3 here carry the signal nets too, so no supply",
+    "owns a role outright and claiming one would be false. The independent",
+    "evidence that no rail fragment is orphaned is the cited LVS compare",
+    "(status match, 9/9 nets, 38/38 devices) plus generate.py's own",
+    "check_connectivity re-extraction."
+  ],
+
+  "stackup": [
+    {
+      "name": "gatpoly",
+      "layer": "5/0",
+      "role": "gate",
+      "active_layer": "1/0",
+      "comment": [
+        "sg13g2.lyp 'GatPoly.drawing' 5/0 -- the only gate/interconnect",
+        "polysilicon layer this PDK has, and the only layer in this stream",
+        "that can carry a transistor gate, so it is stackup[0] (role",
+        "'gate'), as klt erc requires. active_layer is Activ 1/0",
+        "(sg13g2.lyp 'Activ.drawing'), so gate area is computed as",
+        "poly-intersect-diff rather than raw poly area: this block's five",
+        "MOS arrays are drawn with guard rings whose poly-free Activ and",
+        "whose dummy/edge poly would otherwise inflate the antenna",
+        "denominator. Activ is named here and in ties[] only -- never as a",
+        "conductor role (see _comment)."
+      ]
+    },
+    {
+      "name": "metal1",
+      "layer": "8/0",
+      "comment": [
+        "sg13g2.lyp 'Metal1.drawing' 8/0, cross-checked against the same",
+        "install's sg13g2.map stream-out line 'Metal1 NET,SPNET,PIN,LEFPIN,",
+        "VIA 8 0'. First metal: every device terminal and every guard-ring",
+        "tap reaches the rails through it, and it is the ties[] connect_to",
+        "role for both ties below."
+      ]
+    },
+    {
+      "name": "metal2",
+      "layer": "10/0",
+      "comment": [
+        "sg13g2.lyp 'Metal2.drawing' 10/0 (sg13g2.map 'Metal2 ... 10 0').",
+        "The vertical drop layer: generate.py's Router.drop/riser take every",
+        "net from its Metal1 device port up to the Metal3 track on Metal2,",
+        "so omitting it would sever both rails at every drop."
+      ]
+    },
+    {
+      "name": "metal3",
+      "layer": "30/0",
+      "label_layer": "30/25",
+      "comment": [
+        "sg13g2.lyp 'Metal3.drawing' 30/0. The horizontal track layer that",
+        "carries the vss_rail and vdd_rail trunks (floorplan.TRACK_UM) and",
+        "every port pin.",
+        "",
+        "label_layer 30/25 is sg13g2.lyp 'Metal3.text' -- and, decisively,",
+        "it is one of the seven pairs in klayout-tools' curated sg13g2 deck",
+        "EXTRACTION_DECK.metal_labels ((8,25),(10,25),(30,25),(50,25),",
+        "(67,25),(126,25),(134,25)), i.e. the text purpose extraction",
+        "actually reads to name a net. Metal3 is the only role in this",
+        "stream carrying text at all (generate.py's Router.pin writes the",
+        "six port labels on the Metal3 track), so it is the only role that",
+        "declares a label_layer: declaring one on a role with no text would",
+        "trip klt erc's own no-text warning (klayout-tools#2401) for no",
+        "gain. 30/25 is chosen over the two other purposes this stream",
+        "happens to draw the same six strings on -- 30/0 (the drawing layer,",
+        "which extraction ignores) and TEXT 63/0 (a documentation layer with",
+        "no metal association at all) -- because only 30/25 is the pair the",
+        "PDK's own deck treats as Metal3's net name."
+      ]
+    },
+    {
+      "name": "metal4",
+      "layer": "50/0",
+      "comment": [
+        "sg13g2.lyp 'Metal4.drawing' 50/0. Drawn in this stream only as",
+        "landing pads of the two via stacks that reach the Miller cap, but",
+        "declared as a conductor role for the reason klayout-tools' erc.md",
+        "gives: a supply spec is a committed artifact graded against a",
+        "layout that gets re-routed under it, and a rail that later moves",
+        "onto an undeclared level reports as a false island split rather",
+        "than as the routing change it is. A declared layer this stream did",
+        "not draw costs nothing (erc.md: 'a stackup entry naming a layer",
+        "absent from the given layout is not itself an error')."
+      ]
+    },
+    {
+      "name": "metal5",
+      "layer": "67/0",
+      "comment": [
+        "sg13g2.lyp 'Metal5.drawing' 67/0. Also the cap_cmim BOTTOM plate in",
+        "the curated deck (EXTRACTION_DECK.capacitors[0].bottom_plate =",
+        "(67,0)) -- which is why it stays a full conductor role here and is",
+        "not carved out: a MiM bottom plate is ordinary metal carrying the",
+        "same net's real routing, and --deck sg13g2's device auto-detection",
+        "(klayout-tools#2204) deliberately matches only top_plate and",
+        "top_plate_via, never bottom_plate. The Miller cap's top plate (MIM",
+        "36/0) and its Vmim cut (129/0) are declared nowhere in this spec,",
+        "so the capacitor is correctly an open in this DC connectivity",
+        "model and cannot bridge out to d2."
+      ]
+    },
+    {
+      "name": "topmetal1",
+      "layer": "126/0",
+      "comment": [
+        "sg13g2.lyp 'TopMetal1.drawing' 126/0 -- the top of the routing",
+        "stack this block actually draws (generate.py's own _CONDUCTORS ends",
+        "here). Carries the d2 side of the Miller cap."
+      ]
+    },
+    {
+      "name": "topmetal2",
+      "layer": "134/0",
+      "comment": [
+        "sg13g2.lyp 'TopMetal2.drawing' 134/0. Not drawn in this stream --",
+        "declared for the same re-route-durability reason as metal4 above,",
+        "and because TopMetal2 is where a real supply strap/bus over this",
+        "core would land if one is added. Contributes nothing to the current",
+        "report beyond a zero-area level on every gate."
+      ]
+    }
+  ],
+
+  "vias": [
+    {
+      "name": "cont",
+      "layer": "6/0",
+      "between": ["gatpoly", "metal1"],
+      "comment": [
+        "sg13g2.lyp 'Cont.drawing' 6/0 -- SG13G2 has ONE contact layer, used",
+        "both for GatPoly->Metal1 and for Activ->Metal1. Only the poly side",
+        "is declared here, because Activ is deliberately not a conductor",
+        "role (see _comment). A Cont cut landing on Activ therefore joins",
+        "nothing in the primary graph, which is exactly the intent: device",
+        "source/drain diffusion must not become a wire."
+      ]
+    },
+    {
+      "name": "via1",
+      "layer": "19/0",
+      "between": ["metal1", "metal2"],
+      "comment": "sg13g2.lyp 'Via1.drawing' 19/0 (sg13g2.map 'Via1 ... 19 0'). Note the non-monotonic numbering: 19/0 sits between Metal1 8/0 and Metal2 10/0."
+    },
+    {
+      "name": "via2",
+      "layer": "29/0",
+      "between": ["metal2", "metal3"],
+      "comment": "sg13g2.lyp 'Via2.drawing' 29/0. Joins every Metal2 drop to its Metal3 track -- omitting it would split both rails into one island per drop."
+    },
+    {
+      "name": "via3",
+      "layer": "49/0",
+      "between": ["metal3", "metal4"],
+      "comment": "sg13g2.lyp 'Via3.drawing' 49/0."
+    },
+    {
+      "name": "via4",
+      "layer": "66/0",
+      "between": ["metal4", "metal5"],
+      "comment": "sg13g2.lyp 'Via4.drawing' 66/0."
+    },
+    {
+      "name": "topvia1",
+      "layer": "125/0",
+      "between": ["metal5", "topmetal1"],
+      "comment": "sg13g2.lyp 'TopVia1.drawing' 125/0 -- the ordinary Metal5->TopMetal1 cut, distinct from Vmim 129/0 (the MiM top-plate cut), which is deliberately not declared."
+    },
+    {
+      "name": "topvia2",
+      "layer": "133/0",
+      "between": ["topmetal1", "topmetal2"],
+      "comment": "sg13g2.lyp 'TopVia2.drawing' 133/0. Not drawn in this stream; declared to keep the topmetal2 role reachable if a strap is ever added there."
+    }
+  ],
+
+  "nets": [
+    {
+      "name": "vdd",
+      "kind": "supply",
+      "islands": 1,
+      "comment": [
+        "The positive rail. Spelled lowercase because that is the label this",
+        "stream draws and the layout-side name klt lvs reports in",
+        "lvs_report.json's net_correspondence ('vdd' -> 'VDD', pin: true) --",
+        "item 11's analog branch pairs a declared supply against that",
+        "layout-side spelling. islands is declared explicitly (1) rather",
+        "than left to the default so the expectation is falsifiable in both",
+        "directions, per klayout-tools#2400."
+      ]
+    },
+    {
+      "name": "vss",
+      "kind": "supply",
+      "islands": 1,
+      "comment": "The negative rail; same reasoning as vdd. net_correspondence pairs 'vss' -> 'VSS', pin: true. These two are the block's entire supply set: a two-stage Miller OTA with no separate analog/digital or pre-regulated domain, so there is no third rail to declare and no same_net_as tie to assert."
+    },
+    {
+      "name": "inn",
+      "kind": "signal",
+      "comment": "The four ports below are declared as signals, not because item 11 grades them (it grades erc.unconnected_net only on declared supplies) but so that a rail touching a port reports as erc.multiply_driven_net instead of going unnoticed. Their own island counts are reported in the reports's nets[] block."
+    },
+    { "name": "inp", "kind": "signal" },
+    { "name": "out", "kind": "signal" },
+    { "name": "ibias", "kind": "signal" }
+  ],
+
+  "ties": [
+    {
+      "name": "nwell_tie_vdd",
+      "well_layer": "31/0",
+      "tap_layer": "1/0",
+      "tap_requires": ["7/0"],
+      "connect_to": "metal1",
+      "net": "vdd",
+      "comment": [
+        "The n-well tie. well_layer is NWell 31/0 (sg13g2.lyp",
+        "'NWell.drawing'; the curated deck's EXTRACTION_DECK.nwell), which",
+        "this stream draws as two merged shapes -- one around the 'mirror'",
+        "PMOS array at (0,22), one around the 'gain' PMOS array at (21,21).",
+        "Each is graded independently.",
+        "",
+        "SG13G2 has no dedicated tap mask: the curated deck's",
+        "EXTRACTION_DECK.tap is None and it derives a well tie as nSD inside",
+        "an NWell instead (tap_nplus). tap_layer is therefore Activ 1/0",
+        "narrowed by tap_requires nSD 7/0 (sg13g2.lyp 'nSD.drawing') --",
+        "exactly the deck's own boolean, and exactly the implant",
+        "generate.py's overlay_tap_implants draws over each PMOS guard ring.",
+        "The narrowing is real, not decorative: inside the two wells the",
+        "drawn Activ is 88.55 um^2, of which Activ-and-nSD is 34.97 um^2, so",
+        "this declaration is not the degenerate form klayout-tools#2199",
+        "records as skipped work -- it genuinely excludes every PMOS",
+        "source/drain contact in the same well.",
+        "",
+        "connect_to metal1: the ring is contacted on Cont and strapped to",
+        "the vdd_rail on Metal1 by generate.py's route_pair/build, and each",
+        "tap region overlaps Metal1 (12.63 and 22.34 um^2). tap_is_dedicated",
+        "is NOT asserted -- Activ is not a tap-only layer on this PDK, and",
+        "asserting it would be false."
+      ]
+    },
+    {
+      "name": "psub_tie_vss",
+      "well_layer": null,
+      "well_boxes": [
+        [0.0, 4.0, 12.3, 8.16],
+        [0.0, 13.0, 10.68, 17.66],
+        [21.0, 4.0, 30.14, 10.3]
+      ],
+      "tap_layer": "1/0",
+      "tap_requires": ["14/0"],
+      "connect_to": "metal1",
+      "net": "vss",
+      "comment": [
+        "The substrate tie. SG13G2 draws no p-substrate/tub layer at all --",
+        "the NMOS bodies sit in native substrate -- so there is nothing in",
+        "the stream to name as well_layer and this entry uses the asserted",
+        "form klayout-tools#2255 defines: well_layer null plus well_boxes.",
+        "That is a CALLER ASSERTION, weaker provenance than the drawn NWell",
+        "above, and the report says so in",
+        "erc_coverage.checked_by_well_assertion.",
+        "",
+        "The three boxes are not a guess and not one block-sized rectangle",
+        "(which klt erc would refuse as degenerate_well_assertion): each is",
+        "the exact bounding box of one drawn pSD region -- i.e. of one NMOS",
+        "array's guard ring -- read off the committed stream and matching",
+        "floorplan.PLACE_UM entry for entry:",
+        "  [0.0, 4.0, 12.3, 8.16]    -> 'tail_pair'  (XM5 + XMbias) at (0,4)",
+        "  [0.0, 13.0, 10.68, 17.66] -> 'input_pair' (XM1 + XM2)    at (0,13)",
+        "  [21.0, 4.0, 30.14, 10.3]  -> 'out_tail'   (XM7)          at (21,4)",
+        "They are pairwise disjoint, so they merge to three polygons and the",
+        "claim graded is the strong one: EACH of the three NMOS bodies",
+        "independently holds a tap that reaches vss. Their union is ~159",
+        "um^2 against a 2776 um^2 top-cell extent, so the assertion is",
+        "nowhere near the whole-block form that would be unfalsifiable.",
+        "",
+        "tap_layer/tap_requires mirror the well tie with the opposite",
+        "implant: Activ 1/0 narrowed by pSD 14/0 (sg13g2.lyp 'pSD.drawing'),",
+        "the curated deck's tap_pplus substrate-tie boolean. The narrowing",
+        "is real inside every asserted box (e.g. box 1: 22.10 um^2 of drawn",
+        "Activ, 13.12 um^2 of Activ-and-pSD), so this entry is not",
+        "degenerate either. connect_to metal1 for the same reason as above;",
+        "every one of the three tap regions overlaps Metal1 (13.12, 12.18",
+        "and 12.26 um^2)."
+      ]
+    }
+  ],
+
+  "ties_disclosure": null,
+
+  "_ties_decision": [
+    "THE ties[] DECISION, stated rather than implied (klayout-tools#2169).",
+    "",
+    "#2169 is the known false-positive in which a declared ties[] entry",
+    "joined the well/tap regions into the PRIMARY connectivity graph, so a",
+    "blanket well conducted across its whole plan-view extent and any routed",
+    "design collapsed into one or two islands -- a false erc.supply_short",
+    "between vdd and vss produced by a *correct* declaration. On such a",
+    "build the honest move is ties: [] plus a ties_disclosure of kind",
+    "'tool_limitation', which item 11 renders unmet",
+    "(supply_spec_disclosed_tool_limitation).",
+    "",
+    "That is not this build. #2169 was fixed: a ties[] entry is now",
+    "evaluated in its own second extraction, the well is never itself a",
+    "conductor, and a tie declaration provably cannot alter gates[] or the",
+    "nets[] findings (klayout-tools' own",
+    "test_ties_never_alter_gates_or_net_findings asserts exactly this). The",
+    "fix is in the klt that produced the committed report -- check",
+    "provenance.klt_version in erc_report.json, which is what a reader is",
+    "supposed to check rather than take this paragraph's word for it. So",
+    "ties are DECLARED here, both of them, and ties_disclosure is null: a",
+    "disclosure describes work nobody did, and this spec did the work.",
+    "",
+    "The stand-in evidence a disclosure would otherwise have had to lean on",
+    "is still true and still worth naming, because it is what makes the",
+    "declared ties above credible in the first place: the cited LVS compare",
+    "(layout/opamp_core/lvs_report.json) reports status 'match' with",
+    "body_verification 'verified' -- i.e. the device-aware extractor",
+    "recognised the same guard rings this spec calls taps, resolved every",
+    "NMOS body to vss and every PMOS body to its own well's vdd, and matched",
+    "38/38 devices and 9/9 nets against the reference netlist. Two",
+    "independent models therefore agree about the ties, one with device",
+    "recognition and one without."
+  ]
+}
