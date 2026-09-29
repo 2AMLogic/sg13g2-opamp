@@ -43,6 +43,9 @@ The structure mirrors `2AMLogic/sg13g2-bandgap`'s: shared drawing modules at
 | `opamp_core/lvs_request.json` | The committed `klt lvs` request: layout = the committed GDS under the curated `sg13g2` deck, reference = the expanded plain-element netlist. Paths inside resolve relative to this file's own directory. |
 | `opamp_core/lvs_report.json` | The committed `klt lvs --format json` verdict (see ["The LVS verdict"](#the-lvs-verdict-opamp_corelvs_reportjson)). |
 | `opamp_core/run_lvs.sh` | Regenerates `lvs_report.json` from the committed request, verdict intact whatever it is. |
+| `opamp_core/erc_supply_spec.json` | **The T1 item-11 supply spec.** The `klt erc` spec document declaring the two supplies, the conductor stackup/vias they are allowed to run on, and the two well/substrate ties — every entry carrying an inline justification (see ["The ERC supply verdict"](#the-erc-supply-verdict-opamp_corerc_reportjson)). |
+| `opamp_core/erc_report.json` | The committed `klt erc --deck sg13g2 --format json` envelope over the committed GDS against that spec. |
+| `opamp_core/run_erc.sh` | Regenerates `erc_report.json`. Runs from the repo root on purpose — `klt signoff` re-opens the spec path the envelope echoes, resolved against *its* cwd. |
 | `scaffold_smoke/generate.py` | The smoke fixture: draws every device shape the netlist asks for plus one of each routing/tap/via primitive, writes the GDS, runs DRC, writes the report. Also `--check` and `--negative-control`. |
 | `scaffold_smoke/sg13g2_opamp_scaffold_smoke.gds` | The committed smoke stream. |
 | `scaffold_smoke/drc_report.json` | Its committed `klt drc --deck sg13g2 --format json` report. |
@@ -79,6 +82,10 @@ python3 layout/opamp_core/lvs_reference.py --negative-control
 # own directory (unlike the request form) -- run it from layout/opamp_core/.
 cd layout/opamp_core && klt lvs --check lvs_report.json; cd ../..
 
+# Re-run the committed ERC supply check (T1 item 11) after any change to the
+# layout or to erc_supply_spec.json. Exits 0 only on erc_status "clean".
+bash layout/opamp_core/run_erc.sh
+
 # The scaffold's own smoke fixture, same four verbs minus --devices.
 python3 layout/scaffold_smoke/generate.py [--check|--negative-control]
 ```
@@ -88,6 +95,7 @@ python3 layout/scaffold_smoke/generate.py [--check|--negative-control]
 | Thing | Value |
 |---|---|
 | `klt` (for `opamp_core/`) | `0.6.0` — read back from `opamp_core/drc_report.json`'s own `provenance.klt_version` rather than transcribed, so this row cannot drift from the committed bytes it describes. (The prior stream's report recorded `0.6.0+gd574697ed72c`; the #57 regeneration's report records the plain `0.6.0` this install reports. The LVS report records the same value.) |
+| `klt` (for `opamp_core/erc_report.json`) | `0.6.0+g5265f1a27e8f` — read back from that report's own `provenance.klt_version`. **Deliberately a different, newer build than the DRC/LVS row above**, and the difference is load-bearing rather than incidental: the ERC report's two `ties[]` entries need both the tie-isolation fix (klayout-tools#2169 — without it a correct tie declaration reports a false `erc.supply_short` on any routed design) and the asserted-substrate form (`well_layer: null` + `well_boxes`, klayout-tools#2255) that SG13G2's undrawn p-substrate leaves as the only truthful way to declare the `vss` tie. Neither the DRC nor the LVS verdict depends on the build that produced the ERC one; nothing was regenerated to obtain this row. |
 | `klt` (for `scaffold_smoke/`) | `0.6.0+g9c11986ad447` — the revision that stream was first written with ([#44](https://github.com/2AMLogic/sg13g2-opamp/issues/44)). It still regenerates **byte-for-byte** at `gd574697ed72c` (`scaffold_smoke/generate.py --check` passes), so the two revisions draw identical geometry for this repo's shapes; the older value is kept because it is the one the committed bytes were actually produced with. |
 | Curated `sg13g2` deck | `sha256:894326a4e37fb24fef2f7ffc6ae1da55a0e262b0f0bc1c09adc4862909278fda`, 43 rules, `released: yes` (`klt deck hash --deck sg13g2`) — unchanged across both `klt` revisions above |
 | KLayout inside `klt` | `0.30.12`, which the report flags as `provenance.klayout_version_mismatch: true` — that `klt` build was tested against `klayout==0.30.10`. Per `klt`'s own warning the *verdict* is unaffected; report counts could in principle differ on the tested engine. |
@@ -521,6 +529,73 @@ paired).
   means exactly: drawn geometry and drawn connectivity are equivalent to
   the expanded reference of the committed schematic netlist, under the
   curated deck's recognition rules.
+
+## The ERC supply verdict (`opamp_core/erc_report.json`)
+
+**`erc_status: "clean"`, `erc_finding_count: 0`** — the structural
+power-delivery read T1 item 11 asks for, computed over
+`opamp_core/erc_supply_spec.json`. Gate on `erc_status`, **not** on the
+envelope's `status` or on `klt erc`'s exit code: both answer the *antenna*
+question, and `klt` ships an antenna-ratio limit table for sky130 only, so a
+clean run on this PDK reports `status: "not_checked"` and exits 4 however
+correct the design is. All 49 gate×level antenna work items are in
+`coverage.skipped` with reason `missing_antenna_pdk`.
+
+- **Two supplies declared, both resolving to one island.** `vdd` and `vss`,
+  each `"kind": "supply"` with an explicit `islands: 1`, each reporting
+  `matched_islands: 1`. No `erc.unconnected_net`, no `erc.supply_short`, no
+  `erc.multiply_driven_net` against the four declared signal ports, no
+  `erc.floating_gate` on any of the 7 gate nets.
+- **Both well/substrate ties computed, neither skipped.**
+  `erc_coverage.checked` carries `erc.missing_tie:["nwell_tie_vdd"]` and
+  `erc.missing_tie:["psub_tie_vss"]`; `erc_coverage.skipped` is empty.
+  `ties_disclosure` is `null` — the ties are declared and answered, not
+  disclosed away (see the spec's own `_ties_decision` block for why
+  klayout-tools#2169 no longer forces the disclosure route here).
+- **The n-well tie is derived, the substrate tie is asserted.** SG13G2 draws
+  no dedicated tap mask — the curated deck's `EXTRACTION_DECK.tap` is `None`
+  and it derives ties from the opposite-doping implant — so both ties use
+  `Activ` narrowed by an implant: `nSD` inside `NWell` for `vdd`, `pSD` for
+  `vss`. The narrowing is measured, not assumed (inside the two wells, 88.55
+  µm² of drawn `Activ` narrows to 34.97 µm² of tap), so neither tie is the
+  degenerate form klayout-tools#2199 records as skipped work. But SG13G2
+  draws **no p-substrate layer at all**, so `psub_tie_vss` has to assert its
+  region (`well_layer: null` + `well_boxes`, klayout-tools#2255) as the three
+  NMOS guard-ring extents, one box each. The report says so itself:
+  `erc_coverage.checked_by_well_assertion` names that tie. That is weaker
+  provenance than the drawn `NWell` the `vdd` tie grades against.
+- **What a clean `erc.unconnected_net` here does not prove.** The rule counts
+  islands *carrying the declared label* (klayout-tools#2497), and
+  `Router.pin` draws exactly one label per port — so a severed, unlabelled
+  rail fragment is invisible to it by construction, not by luck.
+  `nets[].matched_islands` in the report is that bound made explicit. The
+  independent evidence against a severed rail is the LVS compare above (9/9
+  nets) and `generate.py`'s own connectivity self-check, which re-extracts
+  the drawn metal. The `nets[].roles` remainder measurement
+  (klayout-tools#2510) is deliberately not declared: Metal1–Metal3 carry the
+  signal nets too, so neither supply owns a role outright and claiming one
+  would be false.
+- **What is deliberately not a conductor.** `Activ` (1/0) is absent from the
+  spec's `stackup`. `klt erc` does no device recognition, so declaring the
+  diffusion would make every MOSFET's source, channel and drain one
+  conductor and report a false `erc.supply_short` between the rails on a
+  correct layout. `Activ` appears only as `stackup[0].active_layer` (the
+  `poly ∩ diff` gate-area denominator) and as the `ties[]` tap layer, which
+  since klayout-tools#2169 is evaluated in a second extraction that cannot
+  reach the primary graph. Consequence worth stating: supply continuity here
+  is proven **in metal only** — the guard rings are not allowed to stand in
+  for a missing strap.
+- **`erc_coverage.layers_in_stream_without_declaration` is empty** under
+  `--deck sg13g2`, i.e. every conducting layer this stream draws is declared
+  somewhere in the spec. (Without a deck that list is the unfiltered one,
+  markers and implants included; the deck narrows it to routing, which is
+  what makes an empty list meaningful.)
+- **The Miller capacitor is correctly an open.** The MIM top plate (36/0) and
+  its `Vmim` cut (129/0) are declared nowhere, and `--deck sg13g2`'s
+  device-marker auto-detection lists both in `provenance.devices` with
+  `"on": null` — so `out` and `d2` cannot bridge through the cap in this DC
+  connectivity model. `Metal5` stays a full conductor role on purpose: a MiM
+  *bottom* plate is ordinary metal carrying the same net's real routing.
 
 ## The old smoke fixture's coverage (`scaffold_smoke/drc_report.json`)
 

@@ -25,11 +25,31 @@
         "committed GDS's own hash in both cases, and the re-hash here is what turns",
         "\"the envelope says it ran on this hash\" into \"and that hash is the layout",
         "committed in this repo\". Regenerating the layout therefore fails the",
-        "offline check until the DRC report and both pins are refreshed together."
+        "offline check until the DRC report and both pins are refreshed together.",
+        "",
+        "Item 11 is the one COMPOUND citation (klayout-tools#2025): power",
+        "delivery (structural) is not proved by a single artifact, so the",
+        "manifest cites a *list* -- the `klt erc` supply run",
+        "(layout/opamp_core/erc_report.json, against the supply spec",
+        "layout/opamp_core/erc_supply_spec.json) plus the same `klt lvs`",
+        "envelope item 4 cites. Its entry below is therefore a list too, one",
+        "artifact per part in the same order, and check_signoff.py re-hashes",
+        "each part's own pin. Both parts land on the same GDS hash for the same",
+        "reason items 2/3/4 do -- an `erc` envelope records the sha256 of the",
+        "stream it ran on in `provenance.input`, exactly as `drc` and `lvs` do.",
+        "Note what this does NOT pin: the ERC *spec document* is named by the",
+        "envelope (`spec`) and hashed by newer klt in `provenance.spec`, but the",
+        "revision pinned in klt-pin.txt predates that check, so editing the",
+        "supply spec without re-running layout/opamp_core/run_erc.sh would not",
+        "be caught here. Re-run it whenever the spec changes."
     ],
     "inputs": {
         "2": "layout/opamp_core/opamp_core.gds",
         "3": "layout/opamp_core/opamp_core.gds",
-        "4": "layout/opamp_core/opamp_core.gds"
+        "4": "layout/opamp_core/opamp_core.gds",
+        "11": [
+            "layout/opamp_core/opamp_core.gds",
+            "layout/opamp_core/opamp_core.gds"
+        ]
     }
 }

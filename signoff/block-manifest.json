@@ -16,6 +16,18 @@
       "file": "layout/opamp_core/lvs_report.json",
       "kind": "lvs",
       "content_hash": "sha256:07fcb21698709178395cb2f04ba998c3752efb6eff24aace7626d9ffc10e553e"
-    }
+    },
+    "11": [
+      {
+        "file": "layout/opamp_core/erc_report.json",
+        "kind": "erc",
+        "content_hash": "sha256:07fcb21698709178395cb2f04ba998c3752efb6eff24aace7626d9ffc10e553e"
+      },
+      {
+        "file": "layout/opamp_core/lvs_report.json",
+        "kind": "lvs",
+        "content_hash": "sha256:07fcb21698709178395cb2f04ba998c3752efb6eff24aace7626d9ffc10e553e"
+      }
+    ]
   }
 }

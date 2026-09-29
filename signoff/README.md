@@ -54,12 +54,20 @@ A clean DRC, or any pre-layout corner sweep — however thorough — renders
 
 ## What the manifest cites, and what it deliberately does not
 
-**The manifest cites two items: 2 (Layout) and 3 (DRC clean).** Both cite the
-same envelope — `layout/opamp_core/drc_report.json`, the `klt drc --deck
-sg13g2` run over the committed `layout/opamp_core/opamp_core.gds` — and both
-pin the same hash, because a DRC envelope records the sha256 of the stream it
-ran on. Everything else still renders `unmet` with reason `no_evidence`,
-which remains the honest graded result rather than a placeholder.
+**The manifest cites four items: 2 (Layout), 3 (DRC clean), 4 (LVS clean) and
+11 (Power delivery, structural).** Every one of them is about the same
+committed stream, `layout/opamp_core/opamp_core.gds`, and every one of them
+pins that stream's own sha256 — because a `drc`, `lvs` or `erc` envelope all
+record the sha256 of the layout they ran on in `provenance.input`:
+
+| Item | Envelope cited | Produced by |
+|---|---|---|
+| 2, 3 | `layout/opamp_core/drc_report.json` | `klt drc --deck sg13g2` |
+| 4 | `layout/opamp_core/lvs_report.json` | `layout/opamp_core/run_lvs.sh` |
+| 11 | **both** `layout/opamp_core/erc_report.json` *and* the same LVS report | `layout/opamp_core/run_erc.sh` (+ the LVS run above) |
+
+Everything else still renders `unmet` with reason `no_evidence`, which
+remains the honest graded result rather than a placeholder.
 
 **Why a `drc` envelope is a legitimate citation for item 2, and not
 borrowed-green.** Item 2 has no `klt` verb of its own, so the grader scores it
@@ -125,17 +133,66 @@ would make the record say something no check verified.
 `klayout-tools/docs/cli/signoff.md` recommends exactly this default — leave
 them visibly `unmet` rather than borrowed-green.
 
-**Items 4, 7 and 11 are uncited because the checks have not been run.** The
-layout now exists, so the blocker that held them is gone, but `klt lvs`
-(item 4), `klt extract --parasitics` + post-layout re-simulation (item 7) and
-an ERC/supply spec (item 11,
-[#29](https://github.com/2AMLogic/sg13g2-opamp/issues/29)) are each their own
-piece of work and none has been done. The layout generator does run a
-connectivity **self-check** — it re-extracts the drawn metal and asserts the
-nine nets are wired as `design/netlist/opamp_core.spice` says, with no open,
-no short and nothing floating — but that is not LVS (no device recognition,
-extraction stops at Metal1) and is deliberately **not** cited as item 4.
-Tracker: [#3](https://github.com/2AMLogic/sg13g2-opamp/issues/3).
+**Item 7 is uncited because the check has not been run.** `klt extract
+--parasitics` + post-layout re-simulation is its own piece of work and none
+has been done. Tracker:
+[#3](https://github.com/2AMLogic/sg13g2-opamp/issues/3).
+
+**Item 11 is the one compound citation, and what it does and does not
+prove.** T1 item 11 (power delivery, structural — klayout-tools#2025) is the
+first item no single artifact proves, so its manifest entry is a *list*: the
+`klt erc` supply run plus the LVS report item 4 already cites. The supply
+spec that run grades against is
+[`layout/opamp_core/erc_supply_spec.json`](../layout/opamp_core/erc_supply_spec.json),
+which carries an inline justification for every `stackup` entry, every
+`label_layer` and both `ties[]` entries; the run is
+[`layout/opamp_core/run_erc.sh`](../layout/opamp_core/run_erc.sh). What the
+graded verdict rests on, stated here rather than left in the envelope:
+
+- **Two supplies, `vdd` and `vss`** — this block's entire supply set — each
+  declared `"kind": "supply"` with `islands: 1`, each resolving to exactly
+  one labelled island, with zero `erc.unconnected_net`, zero
+  `erc.supply_short` and zero `erc.missing_tie` (`erc_status: "clean"`,
+  `erc_finding_count: 0`).
+- **Both supplies are paired to a reference-side net** in the cited LVS
+  report's `net_correspondence` (`vdd` → `VDD`, `vss` → `VSS`, both
+  `pin: true`), which is the analog branch of the item — the block cites no
+  `place-and-route` response, so `power_connectivity: "unchecked"` is the
+  right and sufficient state here, exactly as it is for item 4.
+- **Ties are declared, not disclosed away.** klayout-tools#2169 — where a
+  declared `ties[]` entry collapsed a routed design into one island and
+  reported a *false* `erc.supply_short` — is fixed in the `klt` that produced
+  the committed report (`provenance.klt_version`), so the honest move is to
+  declare the ties and let them be computed, not to file a
+  `ties_disclosure` that item 11 would (correctly) render `unmet`. Both ties
+  are graded as `checked` work, neither is `skipped`.
+- **The n-well tie is derived from drawn geometry; the substrate tie is a
+  caller assertion.** SG13G2 draws no p-substrate layer, so `psub_tie_vss`
+  uses `well_layer: null` + `well_boxes` (klayout-tools#2255) naming the
+  three NMOS guard-ring extents one at a time. The report says so itself in
+  `erc_coverage.checked_by_well_assertion`. That is weaker provenance than
+  the drawn `NWell` the `vdd` tie uses, and it is stated rather than buried.
+- **What a clean `erc.unconnected_net` here is *not* evidence of.** The rule
+  counts islands *carrying the declared label* (klayout-tools#2497), and this
+  stream draws exactly one label per port — so it cannot, even in principle,
+  report a severed-but-unlabelled rail fragment. `nets[].matched_islands: 1`
+  in the report is that bound made visible. The independent evidence that no
+  fragment is orphaned is the cited LVS compare (9/9 nets, 38/38 devices,
+  `status: "match"`) and the generator's own connectivity self-check — not
+  this rule.
+- **The antenna half of the same envelope checked nothing.** `klt` ships an
+  antenna-ratio limit table for sky130 only, so every one of the 49
+  gate×level antenna work items is in `coverage.skipped` with reason
+  `missing_antenna_pdk` and the envelope's own `status` is `not_checked`.
+  Item 11 deliberately does not grade that field (it grades the supply rules
+  directly), and antenna is tracked separately as klayout-tools#1994 — but a
+  reader should not mistake the `met` row for an antenna verdict.
+
+The layout generator also runs a connectivity **self-check** — it re-extracts
+the drawn metal and asserts the nine nets are wired as
+`design/netlist/opamp_core.spice` says, with no open, no short and nothing
+floating — but that is not LVS (no device recognition, extraction stops at
+Metal1) and is deliberately **not** cited as item 4 or item 11.
 
 **Items 5 and 6 are uncited because this repo's evidence is not in a
 gradable shape.** `spec/target-spec.md` is partially ratified (decision
@@ -177,6 +234,13 @@ correct citation is the opt-in `generic` envelope wrapper (`"kind":
   [`2AMLogic/klayout-tools#2580`](https://github.com/2AMLogic/klayout-tools/issues/2580).
   Nothing in this register should be read as a claim that the committed
   stream is a manufacturable mask set.
+- **Item 11's three caveats are in "What the manifest cites" above** — the
+  asserted (rather than drawn) substrate region behind the `vss` tie, the
+  single-label bound on `erc.unconnected_net`, and the fact that the same
+  envelope's antenna half checked nothing on this PDK. This discharges the
+  honesty note the item was opened with: a `met` power-delivery row is a
+  statement about the declared supplies' continuity in *metal*, not a
+  statement that every rail fragment was found or that antenna was graded.
 
 One honesty note still pending, from the issue that introduced this register:
 
@@ -192,12 +256,21 @@ recorded input hash. It never opens the repo artifact that hash is supposed
 to be the hash **of** — so a pin can go stale in a way the grader structurally
 cannot see. [`pinned-inputs.json`](pinned-inputs.json) names the artifact
 behind every pin and [`check_signoff.py`](check_signoff.py) re-hashes it,
-which closes that gap. Both of the current pins resolve to
-`layout/opamp_core/opamp_core.gds`, so regenerating the layout without also
-refreshing the DRC report, both pins and the graded record fails the offline
-half of CI — by design. The checker also enforces the converse: it gathers a
-row for every new pin, and rejects a `pinned-inputs.json` entry for an item
-the manifest does not cite.
+which closes that gap. Every current pin — including both parts of item 11's
+compound citation, whose `pinned-inputs.json` entry is a list with one
+artifact per part — resolves to `layout/opamp_core/opamp_core.gds`, so
+regenerating the layout without also refreshing the DRC, LVS and ERC reports,
+every pin and the graded record fails the offline half of CI — by design. The
+checker also enforces the converse: it gathers a row for every new pin, and
+rejects a `pinned-inputs.json` entry for an item the manifest does not cite.
+
+One gap this does **not** close, stated because it is real: the ERC *supply
+spec* is a second document the `klt erc` envelope merely names. Newer `klt`
+hashes it into `provenance.spec` and `klt signoff` verifies it
+(klayout-tools#2508), but the revision pinned in `klt-pin.txt` predates that,
+so editing `erc_supply_spec.json` without re-running `run_erc.sh` would not
+fail a build here. Re-run it whenever the spec changes; a klt-pin bump past
+#2508 retires this caveat.
 
 CI runs both halves
 ([`.github/workflows/signoff.yml`](../.github/workflows/signoff.yml)), on
