@@ -218,15 +218,12 @@ def _mos(
     guard_ring: bool = False,
 ) -> GeneratedDevice:
     # The keyword-only defaults (rows=cols=1, dummy=0, fingers=1, no guard
-    # ring) are the *scaffold's* values: `layout/scaffold_smoke` exists to
-    # prove the shape is legal at the netlist's sizes, and enabling matched-
-    # array topology there would bake a placement choice into a smoke fixture.
-    #
-    # A real block passes them. `layout/opamp_core` does: it draws each
-    # matched pair as a one-row interdigitated array with dummy columns and
-    # the wide devices as folded multi-finger ones. Keeping the parameters
-    # here rather than in that generator means both callers go through the
-    # same `run_gen` validation (resolved-variant assert, warnings-are-fatal).
+    # ring) are the plain single-device case. `layout/opamp_core` is the only
+    # caller and passes every one of them explicitly: it draws each matched
+    # pair as a one-row interdigitated array with dummy columns and the wide
+    # devices as folded multi-finger ones. Keeping the parameters here rather
+    # than in that generator means the call goes through the shared `run_gen`
+    # validation (resolved-variant assert, warnings-are-fatal).
     params: dict[str, object] = {
         "w_um": w_um,
         "l_um": l_um,
@@ -396,9 +393,9 @@ def run_drc(
 ) -> dict:
     """``klt drc --deck sg13g2 --format json`` over ``gds``, written to ``report``.
 
-    The one implementation both committed streams' generators use --
-    ``layout/opamp_core`` and ``layout/scaffold_smoke`` each carried a
-    line-for-line copy of this until issue #52 moved it here. Same argument as
+    The one implementation of the report shaping used by ``layout/opamp_core``
+    (an earlier second generator carried a line-for-line copy until issue #52
+    moved it here). Same argument as
     :func:`patch_mim_bottom_plate`: the report shaping below (the ``file``
     rewrite in particular) is what makes the byte-for-byte regeneration
     criterion hold, so it must have exactly one implementation or the two

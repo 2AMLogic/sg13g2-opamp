@@ -3,10 +3,8 @@
 
 Reads ``design/netlist/opamp_core.spice`` -- nine instances, ports ``vdd vss
 inn inp out ibias`` -- and emits one committed stream plus its
-``klt drc --deck sg13g2`` report. Unlike ``layout/scaffold_smoke`` (which
-proves the scaffold draws legal *shapes* and deliberately leaves the devices
-unwired), this generator places every device in the netlist's topology and
-wires them together.
+``klt drc --deck sg13g2`` report. This generator places every device in the
+netlist's topology and wires them together.
 
 **What this is evidence for, and what it is not.** It is T1 item 2 (a
 committed GDS with documented provenance -- see "Determinism" in
@@ -58,6 +56,9 @@ Usage (from the repo root)::
     python3 layout/opamp_core/generate.py --check            # verify only
     python3 layout/opamp_core/generate.py --devices          # per-device DRC
     python3 layout/opamp_core/generate.py --negative-control # break it on purpose
+    python3 layout/opamp_core/generate.py --drc-negative-control
+                                                             # prove the DRC deck
+                                                             # flags illegal shapes
 """
 
 from __future__ import annotations
@@ -1259,6 +1260,97 @@ def drc_each_device(klt: str = "klt") -> int:
     return 0
 
 
+#: Deliberately illegal geometry for the negative control, drawn with
+#: ``klt draw`` (no PDK awareness, no rule checking -- see ``klt draw --help``:
+#: "it will happily emit rule-violating geometry"). Each shape breaks exactly
+#: one transcribed rule, so the expected violation set is an exact match, not
+#: "at least one violation".
+NEGATIVE_CONTROL_SHAPES = {
+    "shapes": [
+        # 0.10 um Metal1 line: metal1.width.1 is 0.16 um (IHP M1.a).
+        {"layer": [8, 0], "rect_um": [0, 0, 5.0, 0.10]},
+        # ...with a 0.10 um gap to the next Metal1 line: metal1.space.1 is
+        # 0.18 um (IHP M1.b). The second line is itself 0.20 um, i.e. legal
+        # width, so the space violation is attributable on its own.
+        {"layer": [8, 0], "rect_um": [0, 0.20, 5.0, 0.40]},
+        # 0.10 um Activ: activ.width.1 is 0.15 um (IHP Act.a).
+        {"layer": [1, 0], "rect_um": [0, -2.0, 5.0, -1.90]},
+    ]
+}
+
+#: What :data:`NEGATIVE_CONTROL_SHAPES` must provoke, exactly.
+NEGATIVE_CONTROL_EXPECTED = {
+    "activ.width.1": 1,
+    "metal1.space.1": 1,
+    "metal1.width.1": 1,
+}
+
+
+def drc_negative_control(klt: str = "klt") -> int:
+    """Prove the DRC *deck* can *fail*, into a temp dir, committing nothing.
+
+    A DRC step that has never returned a violation is not evidence of
+    anything. This draws three known-illegal shapes, runs the same
+    ``klt drc --deck sg13g2`` invocation used for the block, and asserts
+    the verdict is ``violations`` with exactly the expected rule counts.
+
+    Nothing is committed: the stream and its report live in a temp directory
+    that is deleted on exit, so the deterministic-regeneration criterion for
+    the committed artifacts is untouched.
+    """
+    exe = devices.require_klt(klt)
+    with tempfile.TemporaryDirectory(prefix="sg13g2-layout-negctl-") as tmp:
+        bad_gds = Path(tmp) / "negative_control.gds"
+        draw = subprocess.run(
+            [
+                exe,
+                "draw",
+                "--params",
+                json.dumps(NEGATIVE_CONTROL_SHAPES),
+                "--cell-name",
+                "negative_control",
+                "-o",
+                str(bad_gds),
+                "--format",
+                "json",
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if draw.returncode != 0:
+            print(f"FAIL: `klt draw` failed: {draw.stderr.strip()}", file=sys.stderr)
+            return 1
+        drc = json.loads(
+            subprocess.run(
+                [exe, "drc", str(bad_gds), "--deck", "sg13g2", "--format", "json"],
+                capture_output=True,
+                text=True,
+                check=False,
+            ).stdout
+        )
+    print(
+        f"negative control: status={drc['status']} "
+        f"violations={drc['violation_count']} rule_counts={drc['rule_counts']}"
+    )
+    if drc["status"] == "clean":
+        print(
+            "FAIL: the DRC flow reported known-illegal geometry as clean, so a "
+            "'clean' verdict from it means nothing",
+            file=sys.stderr,
+        )
+        return 1
+    if drc["rule_counts"] != NEGATIVE_CONTROL_EXPECTED:
+        print(
+            f"FAIL: expected rule_counts {NEGATIVE_CONTROL_EXPECTED}, "
+            f"got {drc['rule_counts']}",
+            file=sys.stderr,
+        )
+        return 1
+    print("OK: the DRC flow flags violations, and attributes them correctly")
+    return 0
+
+
 # --------------------------------------------------------------------------- #
 # CLI
 # --------------------------------------------------------------------------- #
@@ -1282,6 +1374,12 @@ def main(argv: list[str] | None = None) -> int:
         help="instead of regenerating, prove the connectivity self-check "
         "detects a deliberately removed wire (writes nothing to the repo)",
     )
+    ap.add_argument(
+        "--drc-negative-control",
+        action="store_true",
+        help="instead of regenerating, prove `klt drc --deck sg13g2` flags "
+        "three deliberately illegal shapes (writes nothing to the repo)",
+    )
     ap.add_argument("--klt", default="klt", help="klt executable (default: klt)")
     args = ap.parse_args(argv)
 
@@ -1289,6 +1387,8 @@ def main(argv: list[str] | None = None) -> int:
         return drc_each_device(args.klt)
     if args.negative_control:
         return negative_control(args.klt)
+    if args.drc_negative_control:
+        return drc_negative_control(args.klt)
 
     drift = verify_against_netlist()
     if drift:

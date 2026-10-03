@@ -1,8 +1,7 @@
 # layout/
 
 The block's placed-and-routed `opamp_core` GDS, plus the SG13G2
-drawing/routing **scaffold** it is drawn with and the smoke fixture that
-proves the scaffold.
+drawing/routing **scaffold** it is drawn with.
 
 - **`opamp_core/`** — all nine instances of
   `design/netlist/opamp_core.spice`, placed, wired and labelled, with a
@@ -16,10 +15,6 @@ proves the scaffold.
   a cited SG13G2 layer table, a `klayout.db` builder with routing / via / tap
   primitives, and `klt gen` wrappers for the three device flavours the
   netlist needs.
-- **`scaffold_smoke/`** — one device of every shape the netlist asks for,
-  deliberately *not* wired into the topology, as proof the scaffold draws
-  legal geometry. It is scaffolding proof only, and nothing under `signoff/`
-  cites it.
 - **What still does not exist**: no parasitic extraction, no post-layout
   sim, no supply/ERC spec
   ([#29](https://github.com/2AMLogic/sg13g2-opamp/issues/29)), no pad ring.
@@ -33,10 +28,10 @@ The structure mirrors `2AMLogic/sg13g2-bandgap`'s: shared drawing modules at
 | Path | What it is |
 |---|---|
 | `sg13g2_layers.py` | The SG13G2 layer table + the curated deck's 43 rule minima, each with its provenance inline. `verify_deck_minima()` re-derives the minima from the installed `klt` and raises on drift. Counterpart of the precedent's `common.py` layer table. |
-| `builder.py` | `Builder`: one `kdb.Layout` at `dbu = 0.001`, micron-valued `box`/`label`/`pr_boundary`/`route_h`/`route_v`/`cut_array`/`landing_pad`/`via`/`via_stack`/`tap`, `place_stream` for importing a generator stream, and a timestamp-free `write`. Counterpart of `_klayout_builder_base.py`. |
-| `devices.py` | `lv_nmos()` / `lv_pmos()` / `cmim_cap()` — thin, validated wrappers over `klt gen mos_array` / `klt gen cap_array` against the `ihp-sg13g2` PDK — plus `patch_mim_bottom_plate()` and `run_drc()`, the one implementation each of the MIM.c correction and of the signoff `klt drc` run + report shaping that both committed streams use. |
+| `builder.py` | `Builder`: one `kdb.Layout` at `dbu = 0.001`, micron-valued `box`/`label`/`pr_boundary`/`route_h`/`route_v`/`cut_array`/`landing_pad`/`via`/`via_stack`, `place_stream` for importing a generator stream, and a timestamp-free `write`. Counterpart of `_klayout_builder_base.py`. |
+| `devices.py` | `lv_nmos()` / `lv_pmos()` / `cmim_cap()` — thin, validated wrappers over `klt gen mos_array` / `klt gen cap_array` against the `ihp-sg13g2` PDK — plus `patch_mim_bottom_plate()` and `run_drc()`, the one implementation each of the MIM.c correction and of the signoff `klt drc` run + report shaping that `opamp_core/` uses. |
 | `opamp_core/floorplan.py` | Every coordinate of the block in one file: device placements, the Metal3 track ordinates and the Metal2 lanes, with the invariants they rest on asserted at import time. |
-| `opamp_core/generate.py` | Places and routes the block, cross-checks itself against the netlist file, re-extracts the drawn connectivity, writes the GDS and runs DRC. Also `--check`, `--devices` and `--negative-control`. |
+| `opamp_core/generate.py` | Places and routes the block, cross-checks itself against the netlist file, re-extracts the drawn connectivity, writes the GDS and runs DRC. Also `--check`, `--devices`, `--negative-control` and `--drc-negative-control`. |
 | `opamp_core/opamp_core.gds` | **The committed layout.** |
 | `opamp_core/drc_report.json` | Its committed `klt drc --deck sg13g2 --format json` report. |
 | `opamp_core/lvs_reference.py` | Emits `opamp_core.lvs_reference.spice`, the plain-element LVS reference: the schematic's nine instances expanded to the 38 drawn units (matched-array unit/dummy columns, folded fingers), sourced from `generate.py`'s own tables. Also `--check` and `--negative-control`. |
@@ -46,9 +41,6 @@ The structure mirrors `2AMLogic/sg13g2-bandgap`'s: shared drawing modules at
 | `opamp_core/erc_supply_spec.json` | **The T1 item-11 supply spec.** The `klt erc` spec document declaring the two supplies, the conductor stackup/vias they are allowed to run on, and the two well/substrate ties — every entry carrying an inline justification (see ["The ERC supply verdict"](#the-erc-supply-verdict-opamp_corerc_reportjson)). |
 | `opamp_core/erc_report.json` | The committed `klt erc --deck sg13g2 --format json` envelope over the committed GDS against that spec. |
 | `opamp_core/run_erc.sh` | Regenerates `erc_report.json`. Runs from the repo root on purpose — `klt signoff` re-opens the spec path the envelope echoes, resolved against *its* cwd. |
-| `scaffold_smoke/generate.py` | The smoke fixture: draws every device shape the netlist asks for plus one of each routing/tap/via primitive, writes the GDS, runs DRC, writes the report. Also `--check` and `--negative-control`. |
-| `scaffold_smoke/sg13g2_opamp_scaffold_smoke.gds` | The committed smoke stream. |
-| `scaffold_smoke/drc_report.json` | Its committed `klt drc --deck sg13g2 --format json` report. |
 
 ## Regenerating
 
@@ -86,8 +78,10 @@ cd layout/opamp_core && klt lvs --check lvs_report.json; cd ../..
 # layout or to erc_supply_spec.json. Exits 0 only on erc_status "clean".
 bash layout/opamp_core/run_erc.sh
 
-# The scaffold's own smoke fixture, same four verbs minus --devices.
-python3 layout/scaffold_smoke/generate.py [--check|--negative-control]
+# Negative control for the DRC deck: draw three deliberately illegal shapes
+# with `klt draw` and prove `klt drc --deck sg13g2` flags and attributes them.
+# Writes nothing to the repo.
+python3 layout/opamp_core/generate.py --drc-negative-control
 ```
 
 ### Revisions the committed artifacts were produced with
@@ -96,8 +90,7 @@ python3 layout/scaffold_smoke/generate.py [--check|--negative-control]
 |---|---|
 | `klt` (for `opamp_core/`) | `0.6.0` — read back from `opamp_core/drc_report.json`'s own `provenance.klt_version` rather than transcribed, so this row cannot drift from the committed bytes it describes. (The prior stream's report recorded `0.6.0+gd574697ed72c`; the #57 regeneration's report records the plain `0.6.0` this install reports. The LVS report records the same value.) |
 | `klt` (for `opamp_core/erc_report.json`) | `0.6.0+g5265f1a27e8f` — read back from that report's own `provenance.klt_version`. **Deliberately a different, newer build than the DRC/LVS row above**, and the difference is load-bearing rather than incidental: the ERC report's two `ties[]` entries need both the tie-isolation fix (klayout-tools#2169 — without it a correct tie declaration reports a false `erc.supply_short` on any routed design) and the asserted-substrate form (`well_layer: null` + `well_boxes`, klayout-tools#2255) that SG13G2's undrawn p-substrate leaves as the only truthful way to declare the `vss` tie. Neither the DRC nor the LVS verdict depends on the build that produced the ERC one; nothing was regenerated to obtain this row. |
-| `klt` (for `scaffold_smoke/`) | `0.6.0+g9c11986ad447` — the revision that stream was first written with ([#44](https://github.com/2AMLogic/sg13g2-opamp/issues/44)). It still regenerates **byte-for-byte** at `gd574697ed72c` (`scaffold_smoke/generate.py --check` passes), so the two revisions draw identical geometry for this repo's shapes; the older value is kept because it is the one the committed bytes were actually produced with. |
-| Curated `sg13g2` deck | `sha256:894326a4e37fb24fef2f7ffc6ae1da55a0e262b0f0bc1c09adc4862909278fda`, 43 rules, `released: yes` (`klt deck hash --deck sg13g2`) — unchanged across both `klt` revisions above |
+| Curated `sg13g2` deck | `sha256:894326a4e37fb24fef2f7ffc6ae1da55a0e262b0f0bc1c09adc4862909278fda`, 43 rules, `released: yes` (`klt deck hash --deck sg13g2`) — unchanged across the `klt` revisions above |
 | KLayout inside `klt` | `0.30.12`, which the report flags as `provenance.klayout_version_mismatch: true` — that `klt` build was tested against `klayout==0.30.10`. Per `klt`'s own warning the *verdict* is unaffected; report counts could in principle differ on the tested engine. |
 | KLayout used by `builder.py` | `0.30.10` (the host `python3`'s `klayout` package), i.e. the tested version |
 | PDK | IHP-Open-PDK `v0.3.0`, variant `ihp-sg13g2` — the release `sim/pdk.json` pins for this repo's evidence records |
@@ -623,54 +616,11 @@ no label, so the rule cannot see them; the defect surfaces only because the
 taps happen to land on the far side of the cut. That is the documented
 behaviour (klayout-tools#2497), measured here rather than taken on trust.
 
-## The old smoke fixture's coverage (`scaffold_smoke/drc_report.json`)
-
-The scaffold fixture's own report is narrower than the block's — it checks 29
-rules, not 37 — and its coverage is disclosed separately below, unchanged.
-
-**`coverage.deck_scope`** — the rule families the curated deck carries at all:
-
-```
-["Act", "Cnt", "Gat", "M1", "M2", "M3", "M4", "M5",
- "TM1", "TM2", "TV1", "TV2", "V1", "V2", "V3", "V4"]
-```
-
-**`coverage.layers_in_stream_without_rules`** — layers the fixture *draws*
-that the deck has **no rule of any kind** for:
-
-```
-["7/0", "14/0", "31/0", "36/0", "63/0", "129/0", "189/0"]
-```
-
-i.e. `nSD` (7/0), `pSD` (14/0), `NWell` (31/0), `MIM` (36/0), `TEXT` (63/0),
-`Vmim` (129/0), `prBoundary` (189/0). Read plainly: **the clean verdict says
-nothing about the PMOS well, nothing about the implants, and nothing about the
-MIM capacitor** — three of the four things a reviewer would most want checked
-about this particular fixture. `TEXT`/`prBoundary` are documentation layers
-and legitimately carry no rules.
-
-**`coverage.rules_skipped`** — 14 of the deck's 43 rules had no applicable
-geometry in this stream (every one with `reason: "no_applicable_geometry"`; 29
-rules were checked):
-
-```
-["metal3.enclosing.via3.1", "metal4.enclosing.via4.1", "metal4.space.1",
- "metal4.width.1", "topmetal1.enclosing.topvia2.1",
- "topmetal2.enclosing.topvia2.1", "topmetal2.space.1", "topmetal2.width.1",
- "topvia2.space.1", "topvia2.width.1", "via3.space.1", "via3.width.1",
- "via4.space.1", "via4.width.1"]
-```
-
-These are the Metal4/TopMetal2 levels and the Via3/Via4/TopVia2 cuts, which
-the fixture does not draw. They are skipped for the honest reason (no such
-geometry), not because the deck lacks them.
-
 ---
 
 ## Curated deck vs. IHP's foundry deck — not a hypothetical gap
 
-**This section applies to every DRC verdict in this repository**, the block's
-and the fixture's alike.
+**This section applies to every DRC verdict in this repository**, the block's.
 
 `klt drc --deck sg13g2` runs **klayout-tools' own curated starter deck**: 43
 rules. **It is not IHP's foundry signoff deck**, and no result in this
@@ -684,10 +634,10 @@ families the curated deck does not carry include every `NW.*` (n-well), every
 
 **A curated-deck-clean verdict from this repo is therefore not, and must never
 be reported as, signoff-clean.** That holds for `opamp_core/drc_report.json`
-exactly as it holds for the fixture's: 37 rules checked out of a 43-rule
+as for any other verdict here: 37 rules checked out of a 43-rule
 starter deck is not 111 rules plus the antenna, density, latch-up, seal-ring
-and pad tables. Concretely, found while building the scaffold and inherited
-unchanged by the block:
+and pad tables. Concretely, found while building the scaffold and
+present in the block:
 
 > `klt gen cap_array --pdk ihp-sg13g2` draws `Metal5` enclosing the `MIM`
 > plate by **0.50 µm**. IHP's own **`MIM.c`** requires **0.60 µm**
@@ -696,8 +646,8 @@ unchanged by the block:
 > `rule_decks/sg13g2_tech_default.json`). The curated deck carries no MIM
 > rule, so it reports the shortfall as clean.
 
-Rather than commit geometry known to violate a foundry rule, **both** streams
-widen the bottom plate themselves — `devices.patch_mim_bottom_plate()`,
+Rather than commit geometry known to violate a foundry rule, the block
+widens the bottom plate itself — `devices.patch_mim_bottom_plate()`,
 against `devices.MIM_METAL5_ENCLOSURE_UM`. The patch is reported in each
 generator's stdout and is a no-op (returning `None`) if a future `klt` fixes
 the generator, so it cannot silently double-draw. It lives in `devices.py`,
@@ -717,7 +667,7 @@ above is filed separately as
 
 ### The DRC flow has been shown to fail
 
-`python3 layout/scaffold_smoke/generate.py --negative-control` draws three deliberately
+`python3 layout/opamp_core/generate.py --drc-negative-control` draws three deliberately
 illegal shapes with `klt draw` (which has no PDK awareness — its own help text
 says "it will happily emit rule-violating geometry") and asserts the verdict.
 Result on the revisions above:
@@ -729,16 +679,16 @@ OK: the DRC flow flags violations, and attributes them correctly
 
 A 0.10 µm Metal1 line (`metal1.width.1` = 0.16), a 0.10 µm Metal1 gap
 (`metal1.space.1` = 0.18) and a 0.10 µm Activ (`activ.width.1` = 0.15) each
-come back flagged and correctly attributed, so the clean verdict on the smoke
-fixture is a real pass and not a silently inert check. Nothing from the
+come back flagged and correctly attributed, so the clean verdict on the block
+is a real pass and not a silently inert check. Nothing from the
 negative control is committed — it runs entirely in a temp directory, so the
 byte-for-byte regeneration criterion is untouched.
 
 ### The DRC flow's negative control covers the block too
 
-The fixture's `--negative-control` and the block's are different experiments
-and both are needed: the fixture's proves the *DRC deck* is not inert (it
-flags illegal geometry), the block's proves the *connectivity check* is not
+`--drc-negative-control` and `--negative-control` are different experiments
+and both are needed: the former proves the *DRC deck* is not inert (it
+flags illegal geometry), the latter proves the *connectivity check* is not
 inert (it flags a missing wire that DRC calls clean). Neither substitutes for
 the other, and neither commits anything.
 
@@ -746,15 +696,14 @@ the other, and neither commits anything.
 
 ## Determinism
 
-Both committed streams reproduce **byte-for-byte** on a clean checkout at the
-same `klt` revision. `--check` automates the comparison for each: it
+The committed stream reproduces **byte-for-byte** on a clean checkout at the
+same `klt` revision. `--check` automates the comparison: it
 regenerates into a temp directory and fails on any difference in the GDS
 bytes or in the DRC report's `status` / `violation_count` / `coverage`.
 
 | Stream | sha256 (= its report's `provenance.input.content_hash`) |
 |---|---|
 | `opamp_core/opamp_core.gds` | `2c5829ed6a664ca7904b0012cac09c8a832e11b1cc0d2279f0c7b680e38cf4c9` |
-| `scaffold_smoke/sg13g2_opamp_scaffold_smoke.gds` | `d514a4f1309d40fc580ddbeb311e2393247ba02c2f2d9718e0275a33b8e5eaf5` |
 
 Three things make that hold:
 
@@ -769,7 +718,7 @@ Three things make that hold:
    (`tail_pair`, `input_pair`, `mirror`, `out_tail`, `gain`, `miller_cap`) —
    and no `$1`-suffixed names leak in from the generators.
 3. Every coordinate is a pure function of the constants in
-   `opamp_core/floorplan.py` / `scaffold_smoke/generate.py` and
+   `opamp_core/floorplan.py` and `opamp_core/generate.py` and
    `sg13g2_layers.py`. `params` are serialised with `sort_keys=True`, and the
    committed DRC report's `file` field is rewritten to the repo-relative GDS
    path so no host's absolute paths are embedded.
@@ -796,11 +745,11 @@ not an obstacle.
 `.github/workflows/signoff.yml` re-hashes the committed GDS offline
 (`signoff/check_signoff.py`) and fails if a committed byte moves without the
 DRC report and the signoff pins moving with it — that closes "someone
-hand-edited the stream". It does **not** run `opamp_core/generate.py --check`
-or `scaffold_smoke/generate.py --check` for either stream: nothing in CI
-regenerates a stream and diffs it against the committed bytes on every push,
+hand-edited the stream". It does **not** run `opamp_core/generate.py --check`:
+nothing in CI
+regenerates the stream and diffs it against the committed bytes on every push,
 so "byte-for-byte reproducible" is not a continuously machine-checked
-property of *either* generator here — only a property a human verified by
+property of the generator here — only a property a human verified by
 running `--check` and recorded in the revision table above.
 
 Item 2 of the T1 checklist accepts either "reproducibly generated" **or**
@@ -808,11 +757,7 @@ Item 2 of the T1 checklist accepts either "reproducibly generated" **or**
 This repo's manifest cites `opamp_core/` for item 2, and that citation rests
 on the **documented-provenance** alternative — the revision table above, plus
 `verify_deck_minima()` and `verify_against_netlist()` failing loudly on drift
-— not on a CI-enforced "reproducibly generated" one. (`scaffold_smoke/` is
-not cited by `signoff/` at all — see the top of this file — so nothing about
-its byte-for-byte claim is graded either way; it is treated the same as
-`opamp_core/` here only so this section states one policy for both
-generators rather than leaving the uncited one to guess.)
+— not on a CI-enforced "reproducibly generated" one.
 
 CI does not run `generate.py` at all, so nothing above is CI-enforced. One
 assumption is machine-checked independent of who runs it, though: the
@@ -827,7 +772,7 @@ run instead of only showing up as an unexplained byte diff that nobody was
 running `--check` to see.
 
 Standing up a second CI job that installs `klt` **and** the pinned
-IHP-Open-PDK release to run `--check` on every push for both generators was
+IHP-Open-PDK release to run `--check` on every push was
 considered and deferred: it needs a PDK checkout (and caching strategy) in
 Actions that the rest of this repo's CI deliberately avoids
 (`.github/workflows/signoff.yml`'s own header: "needs no PDK, no ngspice and
@@ -835,31 +780,3 @@ no klayout install of its own"), a materially larger and less-tested
 surface than this repo's other CI. The record of that decision, and the
 reasoning behind it, is
 [#50](https://github.com/2AMLogic/sg13g2-opamp/issues/50).
-
-## Devices covered by the smoke fixture
-
-All nine instances in `design/netlist/opamp_core.spice` collapse to six
-distinct `(flavour, W, L)` shape classes, and the smoke fixture draws one of
-each:
-
-| Cell | Device | W / L | Stands in for |
-|---|---|---|---|
-| `m_in_pair` | `sg13_lv_nmos` | 3.2 µm / 0.13 µm | `XM1`, `XM2` input pair |
-| `m_mirror` | `sg13_lv_pmos` | 1.04 µm / 0.52 µm | `XM3`, `XM4` mirror load |
-| `m_tail` | `sg13_lv_nmos` | 2.2 µm / 0.52 µm | `XM5`, `XMbias` tail + bias diode |
-| `m_gain` | `sg13_lv_pmos` | 33 µm / 1.04 µm | `XM6` output gain device (widest) |
-| `m_out_tail` | `sg13_lv_nmos` | 11.9 µm / 0.52 µm | `XM7` output tail |
-| `c_miller` | `cap_cmim` | 25.7 µm / 25.7 µm | `XCc` Miller cap |
-
-The fixture deliberately **does not** wire these into the schematic's
-topology. A partially-connected op-amp in `layout/` would invite exactly the
-"this is the layout" misreading that the top of this file forbids; the devices
-sit in a row, with the tap and routing primitives exercised separately below
-them.
-
-Matched-array topology (common-centroid `rows`/`cols`, dummy columns) is
-available from `mos_array` but is deliberately left at `rows=1, cols=1,
-dummy=0` here: how the input pair and the mirror are interleaved is a
-floorplanning decision belonging to the op-amp layout itself, and it is made
-in `opamp_core/` — see ["Matching"](#matching-what-was-chosen-for-xm1xm2-and-xm3xm4-and-what-it-costs)
-above — not baked into a smoke fixture.

@@ -40,13 +40,8 @@ import klayout.db as kdb
 from sg13g2_layers import (
     CUT_SIZE_UM,
     DECK_MIN_UM,
-    L_ACTIV,
-    L_CONT,
     L_METAL1,
-    L_NSD,
-    L_NWELL,
     L_PRBOUNDARY,
-    L_PSD,
     L_TEXT,
     LAYER_NAMES,
     VIA_STACK,
@@ -459,52 +454,3 @@ class Builder:
             if (pad[2] - pad[0]) > (widest[2] - widest[0]):
                 widest = pad
         return widest
-
-    # ----------------------------------------------------------------- taps --
-    def tap(
-        self,
-        kind: str,
-        x_center: float,
-        y_center: float,
-        rows: int = 1,
-        cols: int = 1,
-    ) -> tuple[float, float, float, float]:
-        """A well/substrate tie: contacted ``Activ`` with the matching implant,
-        strapped up to ``Metal1``.
-
-        ``kind`` is ``"psub"`` (p+ ``Activ`` outside every ``NWell`` -- ties the
-        p-substrate, i.e. the NMOS bodies) or ``"nwell"`` (n+ ``Activ`` inside
-        an ``NWell`` -- ties the well, i.e. the PMOS bodies). SG13G2 draws no
-        distinct tap mask, so the implant polarity plus NWell presence is what
-        distinguishes the two; this mirrors how IHP's own LVS deck derives
-        ``ptap``/``ntap`` (see :mod:`sg13g2_layers`'s note on ``L_ACTIV``).
-
-        Returns the drawn ``Activ`` box. The ``NWell`` for ``kind="nwell"`` is
-        drawn by this helper, oversized past the ``Activ`` pad; a caller
-        merging several n-well devices into one well should draw its own
-        ``NWell`` and pass ``kind="nwell"`` taps inside it.
-        """
-        if kind not in ("psub", "nwell"):
-            raise ValueError(f"tap kind must be 'psub' or 'nwell', got {kind!r}")
-        cx0, cy0, cx1, cy1 = self.cut_array(L_CONT, x_center, y_center, rows, cols)
-        enc = DECK_MIN_UM["activ.enclosing.cont.1"]
-        # Draw the Activ pad with margin over the bare Cnt.c minimum, and keep
-        # it at or above activ.width.1 in both directions.
-        margin = max(enc * 2.0, DECK_MIN_UM["activ.width.1"] / 2.0)
-        activ = (cx0 - margin, cy0 - margin, cx1 + margin, cy1 + margin)
-        self.box(L_ACTIV, *activ)
-        implant = L_PSD if kind == "psub" else L_NSD
-        # Implant fully covers the Activ pad; SG13G2's own devices draw the
-        # implant generously past the diffusion it dopes.
-        self.box(
-            implant, activ[0] - 0.2, activ[1] - 0.2, activ[2] + 0.2, activ[3] + 0.2
-        )
-        if kind == "nwell":
-            self.box(
-                L_NWELL, activ[0] - 0.4, activ[1] - 0.4, activ[2] + 0.4, activ[3] + 0.4
-            )
-        m1_enc = max(
-            DECK_MIN_UM["metal1.width.1"] / 2.0, DECK_MIN_UM["metal1.enclosing.via1.1"]
-        )
-        self.box(L_METAL1, cx0 - m1_enc, cy0 - m1_enc, cx1 + m1_enc, cy1 + m1_enc)
-        return activ
