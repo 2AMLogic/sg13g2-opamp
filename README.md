@@ -5,8 +5,11 @@ A two-stage Miller-compensated operational amplifier on IHP SG13G2 on
 [klayout-tools](https://github.com/2AMLogic/klayout-tools) and the
 open-source xschem + ngspice flow.
 
-**Status: just opened.** Nothing is designed yet. The first work is
-the device-characterization study — gm/ID curves for the PDK's core CMOS devices, committed as the sizing basis every later claim leans on.
+**Status: implementation and structural verification in progress.** The
+gm/ID sizing basis, schematic, simulation benches, routed layout, DRC, LVS,
+and structural power-delivery evidence are committed. The machine-graded
+signoff record currently marks 4 of 11 T1 items met; remaining gaps stay
+tracked in the signoff manifest and issue backlog.
 
 **Built agent-native.** Every specification, decision record, testbench, and
 line of documentation here is produced by AI agents working from a ratified
