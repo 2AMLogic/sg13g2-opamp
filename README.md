@@ -53,8 +53,8 @@ for this block's current distance from a sim-validated design.
 
 **Where this block sits on the evidence ladder is graded, not asserted**:
 [`signoff/`](signoff/README.md) holds the `klt signoff --manifest` block
-manifest and the committed per-item T1 verdict it produces — every item
-`unmet` today, the honest machine-readable statement of the gap. That
+manifest and the committed per-item T1 verdict it produces — 4 of 11 items
+`met` in the current record, with the remaining 7 `unmet`. That
 record — not this paragraph, and not a hand-maintained checkbox list — is
 the verdict of record for the tracker above, and CI re-grades it so a claim
 resting on an artifact that has since changed fails instead of rotting.
