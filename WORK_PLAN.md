@@ -19,7 +19,7 @@ _None._
 
 Human-approved issues ready for implementation (`loom:issue`).
 
-_None._
+- **#84**: signoff: bind T1 items 1, 9 and 10 to audited artifacts (klayout-tools#2718 landed)
 
 ## In Progress
 
@@ -45,6 +45,7 @@ Issues carrying `loom:curated`.
 
 - **#3**: Track the gap to T1 sim-validated / bronze (klayout-tools design-evidence tiers) *(curated)*
 - **#43**: README: embed the fleet burndown chart (one line) *(curated)*
+- **#84**: signoff: bind T1 items 1, 9 and 10 to audited artifacts (klayout-tools#2718 landed) *(curated)*
 
 ## Proposed (Architect / Hermit)
 
@@ -60,11 +61,11 @@ _None._
 |------|-------|
 | Operator merge-risk holds | 0 |
 | Operator priority | 0 |
-| Ready (`loom:issue`) | 0 |
+| Ready (`loom:issue`) | 1 |
 | In Progress (`loom:building`) | 0 |
 | PRs awaiting review | 0 |
 | Approved PRs awaiting merge | 0 |
-| Curated | 2 |
+| Curated | 3 |
 | Architect / Hermit proposals | 0 |
 | Active epics | 0 |
 <!-- guide:plan-body:end -->
