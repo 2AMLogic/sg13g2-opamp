@@ -1,0 +1,47 @@
+# Testbench inventory -- T1 item 9 (Testbenches shipped)
+#
+# Attested by: signoff/evidence/testbenches.json (generic envelope bound to
+# the bytes of THIS file). `status: "pass"` is the author's assertion, not a
+# tool re-audit.
+#
+# One line per measurement claimed in spec/target-spec.md section 2. Format:
+#   <spec row> | <bench dir> | <cold-start command> | <committed record the row cites>
+#
+# Common to every command below (see each bench README, "Cold-start
+# invocation"):
+#   export PDK_ROOT=/path/to/ihp-open-pdk  PDK=ihp-sg13g2   # or a prefix sim/env.sh probes
+#   sim/tools/build-osdi.sh                                  # one-time, idempotent
+# Pinned PDK revision: sim/pdk.json -> IHP-GmbH/IHP-Open-PDK release_tag v0.3.0
+#   (osdi_toolchain.ngspice_actually_used: ngspice-46).
+#
+# Audit performed (2026-10-08) -- STATIC, and stated as such: for each bench,
+# the run script exists and is executable and parses (`bash -n`), the
+# testbench templates it renders exist, its README has a "Cold-start
+# invocation" section naming the command below, the cited record exists, and
+# the PDK v0.3.0 install plus OSDI build the scripts' preflight needs resolve
+# (`sim/tools/build-osdi.sh --check` OK). The full PVT / Monte Carlo grids were
+# NOT re-executed for this attestation (each is a long ngspice loop; the
+# audit host is a shared dispatch worker); the committed records are the
+# evidence that they ran.
+#
+# Ratified rows only. "Area" is [TBD-12], not ratified, claims no measurement,
+# and has no bench (it is a post-layout property).
+
+Open-loop DC gain           | sim/open-loop-ac            | sim/open-loop-ac/run_pvt_sweep.sh            | sim/open-loop-ac/records/20260910-221601-22feaba.csv
+GBW (CL = 2 pF)             | sim/open-loop-ac            | sim/open-loop-ac/run_pvt_sweep.sh            | sim/open-loop-ac/records/20260910-221601-22feaba.csv
+Phase margin                | sim/open-loop-ac            | sim/open-loop-ac/run_pvt_sweep.sh            | sim/open-loop-ac/records/20260910-221601-22feaba.csv
+Quiescent power             | sim/open-loop-ac            | sim/open-loop-ac/run_pvt_sweep.sh            | sim/open-loop-ac/records/20260910-221601-22feaba.csv
+Slew rate (CL = 2 pF)       | sim/slew-rate               | sim/slew-rate/run_slew_sweep.sh              | sim/slew-rate/records/20260918-210216-90844d2.csv
+Input-referred noise        | sim/input-noise             | sim/input-noise/run_noise_sweep.sh           | sim/input-noise/records/20260918-203850-90844d2.csv
+Input offset (systematic)   | sim/input-offset            | sim/input-offset/run_offset_sweep.sh         | sim/input-offset/records/20260918-203858-90844d2.csv
+Input offset (3 sigma, MC)  | sim/input-offset            | sim/input-offset/run_offset_mc.sh            | sim/input-offset/records/mc-20260921-174056-0a509fb.csv
+CMRR (systematic floor)     | sim/cmrr-psrr               | sim/cmrr-psrr/run_cmrr_psrr_sweep.sh         | sim/cmrr-psrr/records/20260921-151815-707b34c.csv
+CMRR (mismatch-inclusive)   | sim/cmrr-mismatch           | sim/cmrr-mismatch/run_cmrr_mismatch_mc.sh    | sim/cmrr-mismatch/records/20260921-172304-65f5fb4.csv
+PSRR (DC shelf)             | sim/cmrr-psrr               | sim/cmrr-psrr/run_cmrr_psrr_sweep.sh         | sim/cmrr-psrr/records/20260921-151815-707b34c.csv
+Input common-mode range     | sim/input-cmr               | sim/input-cmr/run_cmr_sweep.sh               | sim/input-cmr/records/20260921-174405-65f5fb4.csv
+Output swing                | sim/output-swing            | sim/output-swing/run_swing_sweep.sh          | sim/output-swing/records/20260921-151759-707b34c.csv
+
+# Sizing basis (not a spec row; the gm/ID study every sizing decision cites):
+gm/ID characterization      | sim/gm-id-characterization  | sim/gm-id-characterization/run_gmid_sweep.sh | sim/gm-id-characterization/records/20260928-161200-a6fa678.csv
+
+# Shared harness: sim/env.sh, sim/preflight.sh, sim/tools/build-osdi.sh, sim/pdk.json

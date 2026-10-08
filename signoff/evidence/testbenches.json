@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "kind": "generic",
+  "status": "pass",
+  "t1_item": 9,
+  "summary": "testbench inventory: every ratified spec section 2 measurement row maps to a committed sim/ bench with a cold-start command, a committed record and the pinned PDK; static audit, grids not re-executed",
+  "source": "testbenches.txt",
+  "provenance": {
+    "klt_version": "0.6.0",
+    "klayout_version": null,
+    "pdk": null,
+    "deck": null,
+    "input": {
+      "path": "testbenches.txt",
+      "content_hash": "sha256:6bf69ed2f5b8908dc99c489bed6e1a9f5093ffebaa9bac302c3bc66a91c206dc"
+    }
+  }
+}

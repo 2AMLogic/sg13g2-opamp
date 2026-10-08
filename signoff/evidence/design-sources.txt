@@ -1,0 +1,23 @@
+# Design-source inventory -- T1 item 1 (Design sources)
+#
+# Attested by: signoff/evidence/design-sources.json (generic envelope bound to
+# the bytes of THIS file). The envelope's `status: "pass"` is the author's
+# assertion, not a tool re-audit; the audit that backs it is described in
+# signoff/README.md.
+#
+# Audit performed (2026-10-08): every path below exists in the tree; the
+# netlist was regenerated from the schematic with the command below against
+# the pinned PDK (IHP-Open-PDK v0.3.0, sim/pdk.json) into a scratch directory
+# and compared with the committed netlist -- identical except the first-line
+# `** sch_path:` comment, which records the absolute path of the checkout that
+# ran xschem.
+
+schematic:       design/opamp_core.sch
+symbol:          design/opamp_core.sym
+netlist:         design/netlist/opamp_core.spice
+netlist-origin:  generated from design/opamp_core.sch (flat, xschem-emitted; committed so it is reviewable)
+regenerate:      cd design && xschem -n -x -q -r --rcfile ./xschemrc -o ./netlist ./opamp_core.sch
+regenerate-doc:  design/README.md ("Running xschem / regenerating the netlist")
+regenerate-needs: PDK_ROOT/PDK pointing at an ihp-sg13g2 install (see sim/pdk.json for the pinned release)
+xschem-config:   design/xschemrc
+sizing-basis:    design/opamp_sizing.md

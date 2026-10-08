@@ -44,9 +44,12 @@
         "be caught here. Re-run it whenever the spec changes."
     ],
     "inputs": {
+        "1": "signoff/evidence/design-sources.txt",
         "2": "layout/opamp_core/opamp_core.gds",
         "3": "layout/opamp_core/opamp_core.gds",
         "4": "layout/opamp_core/opamp_core.gds",
+        "9": "signoff/evidence/testbenches.txt",
+        "10": "signoff/evidence/hygiene.txt",
         "11": [
             "layout/opamp_core/opamp_core.gds",
             "layout/opamp_core/opamp_core.gds"

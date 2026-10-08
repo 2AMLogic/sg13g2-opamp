@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "kind": "generic",
+  "status": "pass",
+  "t1_item": 1,
+  "summary": "design sources inventory: schematic, symbol, committed netlist and the command that regenerates it; netlist regeneration reproduced the committed bytes (bar the sch_path comment) against PDK v0.3.0",
+  "source": "design-sources.txt",
+  "provenance": {
+    "klt_version": "0.6.0",
+    "klayout_version": null,
+    "pdk": null,
+    "deck": null,
+    "input": {
+      "path": "design-sources.txt",
+      "content_hash": "sha256:e38a1eb751ea88ff5ecc0a389bfb2040fca1d8940d54e5bf480d4cbdb531dc74"
+    }
+  }
+}
