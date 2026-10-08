@@ -12,4 +12,4 @@
 # Bumping this pin is a deliberate act: bump the rev, re-run
 # signoff/regenerate.sh, commit the new report, and state in the PR what moved
 # in the checklist. One non-comment line: a full 40-hex git sha.
-b15edf5e3a2e56467a3406c98a2555eb1a5ae45c
+3a75c3ae705b7ad3803625255de93bcd982e70c6

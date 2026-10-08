@@ -1,0 +1,13 @@
+# Repo-hygiene record -- T1 item 10 (Repo hygiene)
+#
+# Attested by: signoff/evidence/hygiene.json (generic envelope bound to the
+# bytes of THIS file). `status: "pass"` is the author's assertion, not a tool
+# re-audit.
+#
+# Audit performed (2026-10-08): each item below was read in the tree.
+
+what-the-block-is:  README.md (title paragraph + "Why this block, on this PDK")
+spec-table:         README.md ("Target specification") -> spec/target-spec.md (section 2 is the table)
+how-to-reproduce:   README.md ("Reproducing the results") -> design/README.md (netlist regeneration), sim/<bench>/README.md ("Cold-start invocation"), signoff/README.md (graded verdict)
+license:            LICENSE (Apache-2.0; README.md "License")
+ci-workflow:        .github/workflows/signoff.yml (offline check_signoff.py + klt --run-klt re-grade, on every push and PR)

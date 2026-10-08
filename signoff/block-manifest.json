@@ -2,6 +2,10 @@
   "block": "sg13g2-opamp",
   "kind": "analog",
   "evidence": {
+    "1": {
+      "file": "signoff/evidence/design-sources.json",
+      "content_hash": "sha256:e38a1eb751ea88ff5ecc0a389bfb2040fca1d8940d54e5bf480d4cbdb531dc74"
+    },
     "2": {
       "file": "layout/opamp_core/drc_report.json",
       "kind": "drc",
@@ -16,6 +20,14 @@
       "file": "layout/opamp_core/lvs_report.json",
       "kind": "lvs",
       "content_hash": "sha256:07fcb21698709178395cb2f04ba998c3752efb6eff24aace7626d9ffc10e553e"
+    },
+    "9": {
+      "file": "signoff/evidence/testbenches.json",
+      "content_hash": "sha256:6bf69ed2f5b8908dc99c489bed6e1a9f5093ffebaa9bac302c3bc66a91c206dc"
+    },
+    "10": {
+      "file": "signoff/evidence/hygiene.json",
+      "content_hash": "sha256:a3ced374d09415d9f64e683440f9afb865eca876a22751394ecc5478097a4e86"
     },
     "11": [
       {

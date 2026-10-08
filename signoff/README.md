@@ -54,8 +54,9 @@ A clean DRC, or any pre-layout corner sweep — however thorough — renders
 
 ## What the manifest cites, and what it deliberately does not
 
-**The manifest cites four items: 2 (Layout), 3 (DRC clean), 4 (LVS clean) and
-11 (Power delivery, structural).** Every one of them is about the same
+**The manifest cites seven items: 1, 9 and 10 (the inventories below) and
+2 (Layout), 3 (DRC clean), 4 (LVS clean) and 11 (Power delivery,
+structural).** The layout items are about the same
 committed stream, `layout/opamp_core/opamp_core.gds`, and every one of them
 pins that stream's own sha256 — because a `drc`, `lvs` or `erc` envelope all
 record the sha256 of the layout they ran on in `provenance.input`:
@@ -66,7 +67,7 @@ record the sha256 of the layout they ran on in `provenance.input`:
 | 4 | `layout/opamp_core/lvs_report.json` | `layout/opamp_core/run_lvs.sh` |
 | 11 | **both** `layout/opamp_core/erc_report.json` *and* the same LVS report | `layout/opamp_core/run_erc.sh` (+ the LVS run above) |
 
-Everything else still renders `unmet` with reason `no_evidence`, which
+Items 5, 6, 7 and 8 still render `unmet` with reason `no_evidence`, which
 remains the honest graded result rather than a placeholder.
 
 **Why a `drc` envelope is a legitimate citation for item 2, and not
@@ -122,16 +123,39 @@ itself is klayout-tools' own curated 43-rule starter deck, **not IHP's
 foundry signoff deck** — see `layout/README.md` → "Curated deck vs. IHP's
 foundry deck".
 
-**Items 1, 9 and 10 are uncited on purpose**, for the reason item 2 had to
-argue its way past: they have no `klt` verb behind them and no envelope names
-the artifact they are about, so any citation would be borrowed-green. This
-repo already owns artifacts those items describe (schematic + regenerated
-netlist under `design/`; seven manifest-driven bench suites under `sim/` with
-documented cold-start invocations and a pinned PDK revision; a README and
-Apache-2.0 license; CI), but asserting them through an unrelated citation
-would make the record say something no check verified.
-`klayout-tools/docs/cli/signoff.md` recommends exactly this default — leave
-them visibly `unmet` rather than borrowed-green.
+**Items 1, 9 and 10 are cited through artifact-anchored `generic` envelopes**
+(klayout-tools#2718, available from the pinned revision on). These items have
+no `klt` verb, so the old advice was to leave them visibly `unmet` rather than
+borrow a passing DRC report. The grader now accepts a `generic` envelope that
+declares `"t1_item": <id>`, names the audited file in `provenance.input.path`,
+records its `content_hash`, and is pinned by the manifest at the same hash;
+`klt signoff` re-hashes that file, so an edit after the attestation renders the
+row `unmet` / `stale_evidence`. The three audited files are plain-text
+inventories under [`evidence/`](evidence/):
+
+| Item | Envelope | Inventory it is bound to | What the inventory attests |
+|---|---|---|---|
+| 1 Design sources | [`design-sources.json`](evidence/design-sources.json) | [`design-sources.txt`](evidence/design-sources.txt) | the schematic, symbol, committed netlist and the `xschem` command that regenerates the netlist; the netlist was regenerated from the schematic against PDK v0.3.0 and matched the committed one byte for byte except the `** sch_path:` header comment |
+| 9 Testbenches shipped | [`testbenches.json`](evidence/testbenches.json) | [`testbenches.txt`](evidence/testbenches.txt) | one line per ratified measurement row of `spec/target-spec.md` section 2: its `sim/` bench, cold-start command, committed record and the pinned PDK revision (`sim/pdk.json`) |
+| 10 Repo hygiene | [`hygiene.json`](evidence/hygiene.json) | [`hygiene.txt`](evidence/hygiene.txt) | the README sections (what the block is, the spec table, how to reproduce), `LICENSE` and the CI workflow `.github/workflows/signoff.yml` |
+
+**What that does and does not mean.** `status: "pass"` in each envelope is the
+author's assertion, bound to bytes. It is not a re-audit by the tool: `klt
+signoff` verifies that the inventory still has the hash the envelope named, not
+that its contents are true. The audit behind the assertion is stated in each
+inventory's header. In particular the item 9 audit was *static* (scripts,
+templates, READMEs, committed records and the PDK/OSDI preflight were checked;
+the PVT and Monte Carlo grids were not re-executed for the attestation), and
+`Area` (`[TBD-12]`) is not a ratified row, claims no measurement and has no
+bench. Refresh an envelope (and its manifest pin) whenever the inventory it
+names changes; `check_signoff.py` fails offline if the pin and the file
+disagree, and `--run-klt` fails with `stale_evidence` if only the inventory
+moved.
+
+Item 2 is still cited through the native `drc` envelope, which the grader
+accepts without being able to judge its relevance (`topic: not bound` in the
+report); binding it with a `generic` envelope over the GDS is a possible
+follow-up and is not done here.
 
 **Item 7 is uncited because the check has not been run.** `klt extract
 --parasitics` + post-layout re-simulation is its own piece of work and none
