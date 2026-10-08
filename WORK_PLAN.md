@@ -19,7 +19,7 @@ _None._
 
 Human-approved issues ready for implementation (`loom:issue`).
 
-- **#84**: signoff: bind T1 items 1, 9 and 10 to audited artifacts (klayout-tools#2718 landed)
+_None._
 
 ## In Progress
 
@@ -45,11 +45,13 @@ Issues carrying `loom:curated`.
 
 - **#3**: Track the gap to T1 sim-validated / bronze (klayout-tools design-evidence tiers) *(curated)*
 - **#43**: README: embed the fleet burndown chart (one line) *(curated)*
-- **#84**: signoff: bind T1 items 1, 9 and 10 to audited artifacts (klayout-tools#2718 landed) *(curated)*
+- **#85**: sim: express the open-loop AC bench as a `klt sim` request, the first gradable envelope toward T1 item 5 *(curated)*
 
 ## Proposed (Architect / Hermit)
 
-_None._
+- **#90**: characterization: generate a reproducible per-row report from committed evidence *(architect)*
+- **#91**: integration: synchronize published GDS availability and graded maturity *(architect)*
+- **#92**: signoff: continuously validate the static audit inventory entries *(architect)*
 
 ## Epics
 
@@ -61,11 +63,11 @@ _None._
 |------|-------|
 | Operator merge-risk holds | 0 |
 | Operator priority | 0 |
-| Ready (`loom:issue`) | 1 |
+| Ready (`loom:issue`) | 0 |
 | In Progress (`loom:building`) | 0 |
 | PRs awaiting review | 0 |
 | Approved PRs awaiting merge | 0 |
 | Curated | 3 |
-| Architect / Hermit proposals | 0 |
+| Architect / Hermit proposals | 3 |
 | Active epics | 0 |
 <!-- guide:plan-body:end -->

@@ -2,6 +2,11 @@
 
 <!-- Maintained by the Loom Guide role. Newest entries first. -->
 
+### 2026-10-08
+
+- **PR #88**: signoff: bind T1 items 1, 9 and 10 to audited artifacts (klt 3a75c3ae)
+- **Issue #84** (closed): signoff: bind T1 items 1, 9 and 10 to audited artifacts (klayout-tools#2718 landed)
+
 ### 2026-10-03
 
 - **Issue #71** (closed): Retire the scaffold_smoke fixture: its DRC coverage is a strict subset of opamp_core's, and nothing cites it
