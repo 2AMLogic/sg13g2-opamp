@@ -68,7 +68,11 @@ record the sha256 of the layout they ran on in `provenance.input`:
 | 11 | **both** `layout/opamp_core/erc_report.json` *and* the same LVS report | `layout/opamp_core/run_erc.sh` (+ the LVS run above) |
 
 Items 5, 6 and 7 still render `unmet` with reason `no_evidence`, which
-remains the honest graded result rather than a placeholder.
+remains the honest graded result rather than a placeholder. Item 8 is cited
+but renders `unmet` with reason `check_failed`. Its envelope truthfully
+carries `status: "fail"`, because the characterization report it wraps grades
+four ratified rows FAIL (see below and
+[#101](https://github.com/2AMLogic/sg13g2-opamp/issues/101)).
 
 **Why a `drc` envelope is a legitimate citation for item 2, and not
 borrowed-green.** Item 2 has no `klt` verb of its own, so the grader scores it
@@ -253,22 +257,31 @@ python3 signoff/characterization/generate.py --check  # cited record reproduces
 ```
 
 That re-reads committed evidence; it is **not** a re-run of the simulations
-(each bench README's "Cold-start invocation" is). What the `met` row does and
+(each bench README's "Cold-start invocation" is). What the item 8 row does and
 does not mean:
 
-- The envelope's `status: "pass"` is written by the generator, and only when
-  the report's overall verdict is `PASS`: every ratified bound present, full
-  valid grid coverage on every selected record, no input in error.
+- The generator writes the envelope's `status`. It writes `"pass"` only when
+  the report's overall verdict is `PASS`: every ratified bound met, full valid
+  grid coverage on every selected record, no input in error. Otherwise it
+  writes `"fail"`, and klt then grades item 8 `unmet` (`check_failed`).
   `check_signoff.py` re-derives the cited record from its selected evidence
-  (`generate.py --check`), so a record that moved, or an envelope that no
-  longer matches the newest report and its verdict, fails offline.
-- **Comparison precision is stated, not hidden.** Bounds are compared at the
-  precision they were ratified at (DR-0002 set each bound *at* the measured
-  worst case it cites, written rounded). Four rows — DC gain, integrated
-  noise, systematic offset and swing span — clear their bound only that way;
-  the raw worst case lies beyond the literal decimal by 0.0188 dB,
-  0.049 µVrms, 0.027 mV and 0.04 mV respectively. The report lists them
-  under the overall verdict with every row's raw margin.
+  (`generate.py --check`). A record that moved, or an envelope that no longer
+  matches the newest report and its verdict, fails offline.
+- **Bounds are compared literally, and the current report is FAIL.** Every raw
+  grid value must meet the ratified bound as written. No rounding or
+  precision convention is applied, because no ratification record defines
+  one. Four rows miss the literal bound: DC gain, integrated noise,
+  systematic offset and swing span, by 0.0188 dB, 0.049 µVrms, 0.027 mV and
+  0.042 mV respectively. Their raw worst cases come from the very records
+  DR-0002 cites, and only round onto the bounds it wrote. Whether to restate
+  those bounds or ratify a comparison convention is a spec decision for the
+  keys ([#101](https://github.com/2AMLogic/sg13g2-opamp/issues/101)), not
+  something this tooling settles. Until then item 8 stays `unmet`.
+- The first minted record, `characterization/reports/20261009-005750-622fb9c`,
+  and the verdict of record graded from it, `reports/20261009-005834-69b7b63`
+  (8/11, item 8 `met`), used a rounding rule that has since been withdrawn.
+  Both are kept unedited as append-only history, but they are superseded and
+  must not be read as the current verdict.
 - Unratified measured quantities (offset mismatch 3σ `[P]`, ICMR) are
   reported in their own section with no pass/fail, the superseded systematic
   CMRR floor is context only, and Area stays `PENDING`. The offset Monte

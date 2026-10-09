@@ -8,7 +8,7 @@ open-source xschem + ngspice flow.
 **Status: implementation and structural verification in progress.** The
 gm/ID sizing basis, schematic, simulation benches, routed layout, DRC, LVS,
 and structural power-delivery evidence are committed. The machine-graded
-signoff record currently marks 8 of 11 T1 items met; remaining gaps stay
+signoff record currently marks 7 of 11 T1 items met; remaining gaps stay
 tracked in the signoff manifest and issue backlog.
 
 **Built agent-native.** Every specification, decision record, testbench, and
@@ -53,8 +53,11 @@ for this block's current distance from a sim-validated design.
 
 **Where this block sits on the evidence ladder is graded, not asserted**:
 [`signoff/`](signoff/README.md) holds the `klt signoff --manifest` block
-manifest and the committed per-item T1 verdict it produces — 8 of 11 items
-`met` in the current record, with the remaining 3 `unmet`. That
+manifest and the committed per-item T1 verdict it produces — 7 of 11 items
+`met` in the current record, with the remaining 4 `unmet` (item 8's
+characterization report is cited but grades four ratified rows FAIL against
+their literal bounds — a spec question routed to the keys in
+[#101](https://github.com/2AMLogic/sg13g2-opamp/issues/101)). That
 record — not this paragraph, and not a hand-maintained checkbox list — is
 the verdict of record for the tracker above, and CI re-grades it so a claim
 resting on an artifact that has since changed fails instead of rotting.
