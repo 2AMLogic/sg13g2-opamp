@@ -146,6 +146,18 @@ jobs:
           python3 -m pip install "klayout-tools @ git+https://github.com/2AMLogic/klayout-tools@${pin}"
           klt version || true
 
+      - name: Proposed area measurement verifies and its tests pass (offline)
+        # TBD-12 draft evidence (DR-0007, proposed -- not ratified). Needs only
+        # the `klayout` python module, which the klt install above pulled in;
+        # install it explicitly if that ever stops being true. No PDK, klt run
+        # or simulator. --check re-derives layout/opamp_core/area_measurement.json
+        # from the committed GDS and never writes.
+        run: |
+          set -euo pipefail
+          python3 -c "import klayout.db" 2>/dev/null || python3 -m pip install klayout
+          python3 layout/opamp_core/measure_area.py --check
+          python3 -m unittest discover -s layout/opamp_core -p 'test_measure_area.py' -v
+
       - name: Re-grade the block manifest
         # `klt signoff --manifest` exits 3 when the block is not yet T1,
         # which is this block's current state and not an error --
