@@ -171,6 +171,13 @@ refuses `--n < 300`. Both write new, timestamped, append-only records under
 `netlist-snapshots/<record-id>/`, `corners/<record-id>/` and
 `records/<record-id>.{csv,md}` — never overwriting a prior run.
 
+**Local-grid guard (interim, issue #110).** On a shared dispatch worker the
+daemon exports `KLT_SIM_BACKEND=batch`; `run_offset_mc.sh` then refuses
+(exit 2, before any ngspice launch) unless `--allow-local-grid` is passed.
+Migration to `klt sim` requests is tracked in #97/#98. The default
+`--parallel` is 2 (was 8); raise it explicitly if the host is yours.
+`sim/tools/test-grid-guard.sh` is the negative control.
+
 ## What was actually measured (this repo's committed record)
 
 Record [`20260918-203858-90844d2`](records/20260918-203858-90844d2.md) —

@@ -128,6 +128,12 @@ each is picked automatically, overridable with `AC_RECORD_CSV` /
 under `netlist-snapshots/<record-id>/`, `corners/<record-id>/` and
 `records/<record-id>.{csv,md}` — never overwriting a prior run.
 
+**Local-grid guard (interim, issue #110).** On a shared dispatch worker the
+daemon exports `KLT_SIM_BACKEND=batch`; `run_cmrr_mismatch_mc.sh` then refuses
+(exit 2, before any ngspice launch) unless `--allow-local-grid` is passed.
+Migration to `klt sim` requests is tracked in #97/#98.
+`sim/tools/test-grid-guard.sh` is the negative control.
+
 ## What was actually measured (this repo's committed record)
 
 Record [`20260921-172304-65f5fb4`](records/20260921-172304-65f5fb4.md) —
