@@ -212,15 +212,19 @@ has not yet produced a committed report. Tracker:
 *What is in place (issue #86):* `layout/opamp_core/run_pex.sh` drives
 `klt pex --measure-command` over the committed GDS, measuring the schematic
 (`design/netlist/opamp_core.spice`) and the extracted netlist with
-`sim/post-layout/measure_openloop_ac.sh` -- the existing open-loop AC bench on
-the ratified 45-point PVT grid, four rows per corner (DC gain, GBW, phase
-margin, total Iq). `sim/post-layout/check_bounds.py` then grades every
-extracted value against the ratified `spec/target-spec.md` Sec 2 bounds (gain
->= 37.8 dB, GBW >= 4.74 MHz, PM >= 60 deg, Iq <= 119.7 uA). **The report itself
-has not been generated**: the authoring host could not run the grid (see the
-PR for #86), so item 7 stays uncited and `unmet / no_evidence` -- no
-`pex_report.json`, manifest entry or pinned-input was added. The pinned klt
-(`klt-pin.txt`) already has `--measure-command`; no bump is needed.
+`sim/post-layout/measure_openloop_ac.sh`: the open-loop AC bench expressed as
+`klt sim` AC + OP requests over the ratified 45-point PVT grid (batch fleet,
+no local ngspice loop), four rows per corner (DC gain, GBW, phase margin, total
+Iq). `sim/post-layout/check_bounds.py` then grades every extracted value
+against the ratified `spec/target-spec.md` Sec 2 bounds (gain >= 37.8 dB, GBW
+>= 4.74 MHz, PM >= 60 deg, Iq <= 119.7 uA). **The report has not been
+generated**: the batch fleet rejects the submit with
+`batch_runner_version_mismatch` (runner klt 0.5.0 vs client
+0.7.0+g4cbdfa769875; 2AMLogic/2am#2193), and the host cannot run the OSDI
+models locally. Item 7 therefore stays uncited and `unmet / no_evidence` -- no
+`pex_report.json`, manifest entry or pinned-input was added, and no post-layout
+row verdict, `body_bias` statement or covered-row claim is made yet. The pinned
+klt (`klt-pin.txt`) already has `--measure-command`; no bump is needed.
 
 **Item 11 is the one compound citation, and what it does and does not
 prove.** T1 item 11 (power delivery, structural — klayout-tools#2025) is the

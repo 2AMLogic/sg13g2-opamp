@@ -1,0 +1,201 @@
+{
+  "_comment": [
+    "sim/open-loop-ac as a `klt sim` request (issue #85): the DC operating-point half of the bench.",
+    "Same circuit body, same 45-corner grid and same options as openloop_ac.request.json; only the analysis differs (op).",
+    "ivdd_total_a is the ratified quiescent-power row: total Vdd current INCLUDING the 10 uA external ibias, bound <= 119.7 uA [DR-2].",
+    "The op_* expressions reproduce run_pvt_sweep.sh's per-point DC sanity check exactly, graded by the tool:",
+    "  |Vout - VDD/2| <= 0.15*VDD, and Vd1, Vd2, Vtail, Vout each within [0.02*VDD, 0.98*VDD].",
+    "op_vcm_frac asserts the vinp alter tracked vdd (Vcm = VDD/2) at every corner -- a negative control on the supply axis itself.",
+    "The *_dc_v node voltages carry no limits: they are reported for compare.py's join against the harness CSV.",
+    "ngspice_init raises the printed digits only (measureprec for .meas, numdgt for expr); it changes no solver setting.",
+    "keep_artifacts is false so the committed envelope carries no host-absolute artifact paths; to debug a corner, run a copy of this request with it set (and --outdir outside the repo)."
+  ],
+  "netlist": "tb_openloop_ac.body.spice",
+  "netlist_source": "schematic",
+  "engine": "ngspice",
+  "backend": "batch",
+  "models": {
+    "pdk": "ihp-sg13g2",
+    "lib": "libs.tech/ngspice/models/cornerMOSlv.lib"
+  },
+  "corners": {
+    "process": [
+      {
+        "name": "mos_tt",
+        "sections": [
+          "mos_tt",
+          {
+            "lib": "libs.tech/ngspice/models/cornerCAP.lib",
+            "section": "cap_typ"
+          }
+        ]
+      },
+      {
+        "name": "mos_ss",
+        "sections": [
+          "mos_ss",
+          {
+            "lib": "libs.tech/ngspice/models/cornerCAP.lib",
+            "section": "cap_typ"
+          }
+        ]
+      },
+      {
+        "name": "mos_ff",
+        "sections": [
+          "mos_ff",
+          {
+            "lib": "libs.tech/ngspice/models/cornerCAP.lib",
+            "section": "cap_typ"
+          }
+        ]
+      },
+      {
+        "name": "mos_sf",
+        "sections": [
+          "mos_sf",
+          {
+            "lib": "libs.tech/ngspice/models/cornerCAP.lib",
+            "section": "cap_typ"
+          }
+        ]
+      },
+      {
+        "name": "mos_fs",
+        "sections": [
+          "mos_fs",
+          {
+            "lib": "libs.tech/ngspice/models/cornerCAP.lib",
+            "section": "cap_typ"
+          }
+        ]
+      }
+    ],
+    "supply_v": {
+      "vdd": [
+        1.08,
+        1.2,
+        1.32
+      ],
+      "vinp": [
+        0.54,
+        0.6,
+        0.66
+      ]
+    },
+    "temperature_c": [
+      -40,
+      27,
+      125
+    ]
+  },
+  "analysis": {
+    "kind": "op",
+    "args": ""
+  },
+  "measurements": [
+    {
+      "name": "ivdd_total_a",
+      "expr": "-i(vdd)",
+      "unit": "A",
+      "limits": {
+        "max": 0.0001197
+      }
+    },
+    {
+      "name": "vout_dc_v",
+      "expr": "v(out)",
+      "unit": "V"
+    },
+    {
+      "name": "vd1_dc_v",
+      "expr": "v(d1)",
+      "unit": "V"
+    },
+    {
+      "name": "vd2_dc_v",
+      "expr": "v(d2)",
+      "unit": "V"
+    },
+    {
+      "name": "vtail_dc_v",
+      "expr": "v(tail)",
+      "unit": "V"
+    },
+    {
+      "name": "vibias_dc_v",
+      "expr": "v(ibias)",
+      "unit": "V"
+    },
+    {
+      "name": "op_vcm_frac",
+      "expr": "v(inp)/v(vdd)",
+      "limits": {
+        "min": 0.4999,
+        "max": 0.5001
+      }
+    },
+    {
+      "name": "op_vout_offset_frac",
+      "expr": "abs(v(out) - v(vdd)/2)/v(vdd)",
+      "limits": {
+        "max": 0.15
+      }
+    },
+    {
+      "name": "op_vout_rail_frac",
+      "expr": "v(out)/v(vdd)",
+      "limits": {
+        "min": 0.02,
+        "max": 0.98
+      }
+    },
+    {
+      "name": "op_vd1_rail_frac",
+      "expr": "v(d1)/v(vdd)",
+      "limits": {
+        "min": 0.02,
+        "max": 0.98
+      }
+    },
+    {
+      "name": "op_vd2_rail_frac",
+      "expr": "v(d2)/v(vdd)",
+      "limits": {
+        "min": 0.02,
+        "max": 0.98
+      }
+    },
+    {
+      "name": "op_vtail_rail_frac",
+      "expr": "v(tail)/v(vdd)",
+      "limits": {
+        "min": 0.02,
+        "max": 0.98
+      }
+    }
+  ],
+  "options": {
+    "timeout_s": 300,
+    "keep_artifacts": false,
+    "osdi_preload": [
+      "$PDK_ROOT/ihp-sg13g2/libs.tech/ngspice/osdi/psp103.osdi",
+      "$PDK_ROOT/ihp-sg13g2/libs.tech/ngspice/osdi/psp103_nqs.osdi",
+      "$PDK_ROOT/ihp-sg13g2/libs.tech/ngspice/osdi/mosvar.osdi",
+      "$PDK_ROOT/ihp-sg13g2/libs.tech/ngspice/osdi/r3_cmc.osdi"
+    ],
+    "stage_model_inputs": true,
+    "fail_on_diagnostic": [
+      "singular_matrix",
+      "nonconvergence"
+    ],
+    "node_voltage_bounds": {
+      "min": -0.1,
+      "max": 1.42
+    },
+    "ngspice_init": [
+      "set measureprec=12",
+      "set numdgt=12"
+    ]
+  }
+}
