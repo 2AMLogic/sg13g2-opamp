@@ -1,0 +1,1394 @@
+{
+  "content": {
+    "block": "sg13g2-opamp",
+    "caveats": [
+      "Offset Monte Carlo (input-offset-mc) was run at a FIXED 1.20 V supply only: five <corner>_mismatch sections x {-40, 27, 125} degC. The supply axis (1.08 V / 1.32 V) is covered only by the deterministic systematic-offset record; no statistical figure here is a statement about 1.08 V or 1.32 V.",
+      "Systematic and statistical offset are distinct evidence: the ratified bound is the systematic (nominal-device) half [DR-2]; the mismatch-driven 3σ half is measured [P] and is not ratified (DR-0002 residual (b), pending its own two-key pass). This report does not combine them into a ratified total.",
+      "The CMRR row is ratified on its mismatch-inclusive figure [DR-4], whose definition (Av0 minus the +3σ point of the drawn-Acm distribution, mean + 3σ in the LINEAR domain, N = 300 + process corners) is part of the number. This report reads that per-point figure from the record and re-derives it from the record's own linear mean and σ (definition check cmrr_linear_3sigma); it never aggregates in the dB domain. The superseded systematic floor is shown as context only.",
+      "Output swing is unloaded (CL = 2 pF, no resistive load): an upper bound. PSRR+ is ratified at the DC shelf and is strongly frequency-dependent.",
+      "Every measured row comes from nominal-device deterministic benches except the two Monte Carlo records (offset, CMRR); no other row carries a statistical basis.",
+      "Bound precision is an open spec question, not settled by this report: four DR-0002 bounds (DC gain >= 37.8 dB, integrated noise <= 108.9 µVrms, systematic offset <= 21.9 mV, swing span >= 0.571 V) are stricter than the raw worst case of the very records DR-0002 cites, which only round onto them (37.7812 dB, 108.949 µVrms, 21.927 mV, 0.570958 V). This report compares literally, so those rows FAIL. Whether to restate the bounds or ratify a comparison convention is for the keys in a decision record: 2AMLogic/sg13g2-opamp#101."
+    ],
+    "comparison_rule": "Each ratified bound is compared literally: every valid grid point's raw measured value, scaled to the bound's unit, must satisfy the bound exactly as written in spec/target-spec.md (e.g. >= 37.8 means 37.7999 fails). No rounding, tolerance or precision convention is applied: no ratification record defines one, and choosing one is a spec decision, not the report's. The worst value rounded to the bound's written decimals is shown for information only and never gates a verdict. A point that fails its record's validity flags never contributes an extremum: it is counted as missing coverage, so a failed simulation point can only make a row INCOMPLETE, never PASS.",
+    "environment": {
+      "design_netlist": "design/netlist/opamp_core.spice",
+      "design_netlist_normalized_sha256": "sha256:c71347288feb7061b593eadf24a45c9c6dcc855c2b377c89e1e70da884029bd3",
+      "ngspice_pin": "ngspice-46",
+      "note": "every selected record must name this ngspice and must have simulated this netlist (comment/blank lines ignored); a mismatch is an error, never a silent mix",
+      "pdk_pin": "IHP-GmbH/IHP-Open-PDK v0.3.0",
+      "pdk_pin_file": "sim/pdk.json"
+    },
+    "errors": [],
+    "inventory_coverage": [
+      {
+        "covered": true,
+        "row": "CMRR (mismatch-inclusive)"
+      },
+      {
+        "covered": true,
+        "row": "CMRR (systematic floor)"
+      },
+      {
+        "covered": true,
+        "row": "GBW (CL = 2 pF)"
+      },
+      {
+        "covered": true,
+        "row": "Input common-mode range"
+      },
+      {
+        "covered": true,
+        "row": "Input offset (3 sigma, MC)"
+      },
+      {
+        "covered": true,
+        "row": "Input offset (systematic)"
+      },
+      {
+        "covered": true,
+        "row": "Input-referred noise"
+      },
+      {
+        "covered": true,
+        "row": "Open-loop DC gain"
+      },
+      {
+        "covered": true,
+        "row": "Output swing"
+      },
+      {
+        "covered": true,
+        "row": "PSRR (DC shelf)"
+      },
+      {
+        "covered": true,
+        "row": "Phase margin"
+      },
+      {
+        "covered": true,
+        "row": "Quiescent power"
+      },
+      {
+        "covered": true,
+        "row": "Slew rate (CL = 2 pF)"
+      }
+    ],
+    "not_claimed": [
+      "Not item 5 or item 6 evidence: it is a generic, offline aggregation of harness-native records, not a `klt sim` or `klt yield` envelope, and the signoff manifest cites it for item 8 only.",
+      "Not a re-run: regenerating this report re-reads committed records; it does not re-simulate anything. Re-running the benches is the separate cold-start procedure in each sim/ bench README.",
+      "Not a claim that every T1 item is satisfied; post-layout (PEX) re-simulation does not exist yet, so every number here is pre-layout."
+    ],
+    "overall": {
+      "fail_only_beyond_written_decimals": [
+        "dc_gain",
+        "input_noise",
+        "offset_systematic",
+        "swing_span"
+      ],
+      "ratified_pass": 8,
+      "ratified_rows": 12,
+      "rule": "ERROR if any input is in error; else FAIL if any ratified (binding) row fails its bound; else INCOMPLETE if any non-pending row lacks full valid grid coverage; else PASS. Superseded rows are context and never FAIL the report; measured rows carry no bound; Area is PENDING.",
+      "verdict": "FAIL",
+      "verdict_counts": {
+        "FAIL": 4,
+        "MEASURED": 5,
+        "PASS": 9,
+        "PENDING": 1
+      }
+    },
+    "rows": [
+      {
+        "binding": true,
+        "bound": {
+          "op": ">=",
+          "unit": "dB",
+          "value": "37.8",
+          "written_decimals": 1
+        },
+        "class": "ratified",
+        "conditions": "open-loop AC, Vcm = VDD/2; Av0 read at the low-frequency shelf",
+        "coverage": {
+          "complete": true,
+          "expected": 45,
+          "grid": "pvt45",
+          "invalid": {},
+          "missing": [],
+          "observed": 45,
+          "valid": 45
+        },
+        "decision_record": "spec/decision-records/0002-target-spec-ratification.md",
+        "errors": [],
+        "extremum": "min",
+        "fails_only_beyond_written_decimals": true,
+        "id": "dc_gain",
+        "load": "CL = 2 pF [DR-1], no resistive load",
+        "measured_best": {
+          "point": "mos_ss_-40C_1.32V",
+          "value": "45.1965"
+        },
+        "measured_worst": {
+          "point": "mos_fs_125C_1.08V",
+          "raw_margin": "-0.0188",
+          "rounded_to_bound_decimals": "37.8",
+          "value": "37.7812"
+        },
+        "meets_bound": false,
+        "source": {
+          "column": "av0_db",
+          "csv": "sim/open-loop-ac/records/20260910-221601-22feaba.csv",
+          "csv_sha256": "sha256:dd71064b760d418ecd0250441370dae46e8ea0ff10771af2dd4ac8f241777d0b",
+          "record": "open-loop-ac",
+          "scale_to_unit": "1"
+        },
+        "spec_row": "Open-loop DC gain",
+        "tag": "DR-2",
+        "unit": "dB",
+        "verdict": "FAIL",
+        "violating_points": [
+          "mos_fs_125C_1.08V"
+        ]
+      },
+      {
+        "binding": true,
+        "bound": {
+          "op": ">=",
+          "unit": "MHz",
+          "value": "4.74",
+          "written_decimals": 2
+        },
+        "class": "ratified",
+        "conditions": "open-loop AC, Vcm = VDD/2; unity-gain crossing of the open-loop response",
+        "coverage": {
+          "complete": true,
+          "expected": 45,
+          "grid": "pvt45",
+          "invalid": {},
+          "missing": [],
+          "observed": 45,
+          "valid": 45
+        },
+        "decision_record": "spec/decision-records/0002-target-spec-ratification.md",
+        "errors": [],
+        "extremum": "min",
+        "fails_only_beyond_written_decimals": false,
+        "id": "gbw",
+        "load": "CL = 2 pF [DR-1], no resistive load",
+        "measured_best": {
+          "point": "mos_sf_-40C_1.08V",
+          "value": "6.62333"
+        },
+        "measured_worst": {
+          "point": "mos_fs_125C_1.08V",
+          "raw_margin": "0.00216",
+          "rounded_to_bound_decimals": "4.74",
+          "value": "4.74216"
+        },
+        "meets_bound": true,
+        "source": {
+          "column": "gbw_hz",
+          "csv": "sim/open-loop-ac/records/20260910-221601-22feaba.csv",
+          "csv_sha256": "sha256:dd71064b760d418ecd0250441370dae46e8ea0ff10771af2dd4ac8f241777d0b",
+          "record": "open-loop-ac",
+          "scale_to_unit": "1e-6"
+        },
+        "spec_row": "GBW (into stated CL = 2 pF)",
+        "tag": "DR-2",
+        "unit": "MHz",
+        "verdict": "PASS",
+        "violating_points": []
+      },
+      {
+        "binding": true,
+        "bound": {
+          "op": ">=",
+          "unit": "deg",
+          "value": "60",
+          "written_decimals": 0
+        },
+        "class": "ratified",
+        "conditions": "open-loop AC, Vcm = VDD/2; phase margin at the GBW crossing",
+        "coverage": {
+          "complete": true,
+          "expected": 45,
+          "grid": "pvt45",
+          "invalid": {},
+          "missing": [],
+          "observed": 45,
+          "valid": 45
+        },
+        "decision_record": "spec/decision-records/0002-target-spec-ratification.md",
+        "errors": [],
+        "extremum": "min",
+        "fails_only_beyond_written_decimals": false,
+        "id": "phase_margin",
+        "load": "CL = 2 pF [DR-1], no resistive load",
+        "measured_best": {
+          "point": "mos_ss_-40C_1.32V",
+          "value": "78.6369"
+        },
+        "measured_worst": {
+          "point": "mos_ff_125C_1.32V",
+          "raw_margin": "16.3643",
+          "rounded_to_bound_decimals": "76",
+          "value": "76.3643"
+        },
+        "meets_bound": true,
+        "source": {
+          "column": "pm_deg",
+          "csv": "sim/open-loop-ac/records/20260910-221601-22feaba.csv",
+          "csv_sha256": "sha256:dd71064b760d418ecd0250441370dae46e8ea0ff10771af2dd4ac8f241777d0b",
+          "record": "open-loop-ac",
+          "scale_to_unit": "1"
+        },
+        "spec_row": "Phase margin (at GBW, same CL)",
+        "tag": "DR-2",
+        "unit": "deg",
+        "verdict": "PASS",
+        "violating_points": []
+      },
+      {
+        "binding": true,
+        "bound": {
+          "op": ">=",
+          "unit": "V/µs",
+          "value": "7.51",
+          "written_decimals": 2
+        },
+        "class": "ratified",
+        "conditions": "large-signal step, input common mode Vcm = VDD/2, ±0.3 V-per-input antiphase drive, measured in the VDD/2 ± 0.15 V window; worse of the rising and falling edge per point",
+        "context": [
+          {
+            "label": "rising edge alone, worst",
+            "point": "mos_ss_-40C_1.08V",
+            "unit": "V/µs",
+            "value": "7.53778"
+          },
+          {
+            "label": "falling edge alone, worst",
+            "point": "mos_ss_-40C_1.08V",
+            "unit": "V/µs",
+            "value": "7.51441"
+          }
+        ],
+        "coverage": {
+          "complete": true,
+          "expected": 45,
+          "grid": "pvt45",
+          "invalid": {},
+          "missing": [],
+          "observed": 45,
+          "valid": 45
+        },
+        "decision_record": "spec/decision-records/0002-target-spec-ratification.md",
+        "errors": [],
+        "extremum": "min",
+        "fails_only_beyond_written_decimals": false,
+        "id": "slew_rate",
+        "load": "CL = 2 pF [DR-1], no resistive load",
+        "measured_best": {
+          "point": "mos_ff_125C_1.32V",
+          "value": "9.90983"
+        },
+        "measured_worst": {
+          "point": "mos_ss_-40C_1.08V",
+          "raw_margin": "0.00441",
+          "rounded_to_bound_decimals": "7.51",
+          "value": "7.51441"
+        },
+        "meets_bound": true,
+        "source": {
+          "column": "sr_worst_v_per_us",
+          "csv": "sim/slew-rate/records/20260918-210216-90844d2.csv",
+          "csv_sha256": "sha256:025cbee18bf3bdf12f399948ab1f9d4931837f84715b0e0adf7abf802ca65c65",
+          "record": "slew-rate",
+          "scale_to_unit": "1"
+        },
+        "spec_row": "Slew rate (into stated CL = 2 pF)",
+        "tag": "DR-2",
+        "unit": "V/µs",
+        "verdict": "PASS",
+        "violating_points": []
+      },
+      {
+        "binding": true,
+        "bound": {
+          "op": "<=",
+          "unit": "µVrms",
+          "value": "108.9",
+          "written_decimals": 1
+        },
+        "class": "ratified",
+        "conditions": "unity-gain closed-loop .noise analysis, integrated over 100 Hz – 1 MHz (the band is part of the number); nominal devices, ideal ibias contributes no noise",
+        "context": [
+          {
+            "label": "spot density @ 100 Hz, worst",
+            "point": "mos_fs_125C_1.08V",
+            "unit": "µV/√Hz",
+            "value": "3.47626"
+          },
+          {
+            "label": "spot density @ 1 kHz, worst",
+            "point": "mos_fs_125C_1.08V",
+            "unit": "nV/√Hz",
+            "value": "1099.59"
+          },
+          {
+            "label": "spot density @ 1 MHz, worst",
+            "point": "mos_fs_125C_1.08V",
+            "unit": "nV/√Hz",
+            "value": "44.2529"
+          }
+        ],
+        "coverage": {
+          "complete": true,
+          "expected": 45,
+          "grid": "pvt45",
+          "invalid": {},
+          "missing": [],
+          "observed": 45,
+          "valid": 45
+        },
+        "decision_record": "spec/decision-records/0002-target-spec-ratification.md",
+        "errors": [],
+        "extremum": "max",
+        "fails_only_beyond_written_decimals": true,
+        "id": "input_noise",
+        "load": "CL = 2 pF [DR-1], no resistive load",
+        "measured_best": {
+          "point": "mos_ff_-40C_1.32V",
+          "value": "73.3562"
+        },
+        "measured_worst": {
+          "point": "mos_fs_125C_1.08V",
+          "raw_margin": "-0.049",
+          "rounded_to_bound_decimals": "108.9",
+          "value": "108.949"
+        },
+        "meets_bound": false,
+        "source": {
+          "column": "vni_int_vrms",
+          "csv": "sim/input-noise/records/20260918-203850-90844d2.csv",
+          "csv_sha256": "sha256:1841f63b519713c4c108f0197606bbf7fbba39148dfdc3d88ab8c6bea7eea249",
+          "record": "input-noise",
+          "scale_to_unit": "1e6"
+        },
+        "spec_row": "Input-referred noise (100 Hz – 1 MHz integrated)",
+        "tag": "DR-2",
+        "unit": "µVrms",
+        "verdict": "FAIL",
+        "violating_points": [
+          "mos_fs_125C_1.08V"
+        ]
+      },
+      {
+        "binding": true,
+        "bound": {
+          "op": "<=",
+          "unit": "mV",
+          "value": "21.9",
+          "written_decimals": 1
+        },
+        "class": "ratified",
+        "conditions": "DC, Vcm = VDD/2, perfectly matched (nominal) devices; magnitude of the null-method offset, cross-checked per point by a closed-loop method (xcheck_pass)",
+        "context": [
+          {
+            "label": "largest disagreement between the two methods",
+            "point": "mos_fs_125C_1.08V",
+            "unit": "mV",
+            "value": "0.3037413"
+          }
+        ],
+        "coverage": {
+          "complete": true,
+          "expected": 45,
+          "grid": "pvt45",
+          "invalid": {},
+          "missing": [],
+          "observed": 45,
+          "valid": 45
+        },
+        "decision_record": "spec/decision-records/0002-target-spec-ratification.md",
+        "errors": [],
+        "extremum": "absmax",
+        "fails_only_beyond_written_decimals": true,
+        "id": "offset_systematic",
+        "load": "CL = 2 pF [DR-1] attached (a DC analysis ignores it), no resistive load",
+        "measured_best": {
+          "point": "mos_sf_-40C_1.32V",
+          "value": "11.4304056"
+        },
+        "measured_worst": {
+          "point": "mos_fs_125C_1.08V",
+          "raw_margin": "-0.0273527",
+          "rounded_to_bound_decimals": "21.9",
+          "value": "21.9273527"
+        },
+        "meets_bound": false,
+        "source": {
+          "column": "vos_null_v",
+          "csv": "sim/input-offset/records/20260918-203858-90844d2.csv",
+          "csv_sha256": "sha256:f0263167c6b550e5138b1b706e37c6dcfe11388bcf9c5b77f726a47c20813813",
+          "record": "input-offset",
+          "scale_to_unit": "1e3"
+        },
+        "spec_row": "Input-referred offset — systematic (deterministic, corner-only)",
+        "tag": "DR-2",
+        "unit": "mV",
+        "verdict": "FAIL",
+        "violating_points": [
+          "mos_fs_125C_1.08V"
+        ]
+      },
+      {
+        "binding": true,
+        "bound": {
+          "op": ">=",
+          "unit": "dB",
+          "value": "26.68",
+          "written_decimals": 2
+        },
+        "class": "ratified",
+        "conditions": "per point: joined open-loop Av0 minus the +3σ point of the 300-draw common-mode-gain distribution, mean + 3σ taken in the LINEAR domain (DR-0004); SG13G2 per-corner mismatch decks + process corners; DC shelf",
+        "context": [
+          {
+            "label": "worst single drawn sample (dB-domain minimum, not the ratified statistic)",
+            "point": "mos_ss_-40C_1.08V",
+            "unit": "dB",
+            "value": "25.942"
+          },
+          {
+            "label": "worst +3σ figure at 1 kHz",
+            "point": "mos_ss_-40C_1.08V",
+            "unit": "dB",
+            "value": "26.6844"
+          }
+        ],
+        "coverage": {
+          "complete": true,
+          "expected": 45,
+          "grid": "pvt45",
+          "invalid": {},
+          "missing": [],
+          "observed": 45,
+          "valid": 45
+        },
+        "decision_record": "spec/decision-records/0004-cmrr-mismatch-inclusive-ratification.md",
+        "errors": [],
+        "extremum": "min",
+        "fails_only_beyond_written_decimals": false,
+        "id": "cmrr_mismatch",
+        "load": "CL = 2 pF [DR-1], no resistive load",
+        "measured_best": {
+          "point": "mos_ss_125C_1.08V",
+          "value": "37.57"
+        },
+        "measured_worst": {
+          "point": "mos_ss_-40C_1.08V",
+          "raw_margin": "0.0026",
+          "rounded_to_bound_decimals": "26.68",
+          "value": "26.6826"
+        },
+        "meets_bound": true,
+        "source": {
+          "column": "cmrr_3sigma_db",
+          "csv": "sim/cmrr-mismatch/records/20260921-172304-65f5fb4.csv",
+          "csv_sha256": "sha256:d64d9b3a39b9ac82cef4c4ce94be29390f4e33b3bc9295c48601c7ea1c2f8875",
+          "record": "cmrr-mismatch",
+          "scale_to_unit": "1"
+        },
+        "spec_row": "CMRR — mismatch-inclusive (+3σ of Acm, linear domain)",
+        "tag": "DR-4",
+        "unit": "dB",
+        "verdict": "PASS",
+        "violating_points": []
+      },
+      {
+        "binding": false,
+        "bound": {
+          "op": ">=",
+          "unit": "dB",
+          "value": "30.75",
+          "written_decimals": 2
+        },
+        "class": "superseded",
+        "conditions": "perfectly matched devices; joined open-loop Av0 divided by the in-phase common-mode gain; DC shelf (10 mHz read)",
+        "coverage": {
+          "complete": true,
+          "expected": 45,
+          "grid": "pvt45",
+          "invalid": {},
+          "missing": [],
+          "observed": 45,
+          "valid": 45
+        },
+        "decision_record": "spec/decision-records/0002-target-spec-ratification.md",
+        "errors": [],
+        "extremum": "min",
+        "fails_only_beyond_written_decimals": false,
+        "id": "cmrr_systematic",
+        "load": "CL = 2 pF [DR-1], no resistive load",
+        "measured_best": {
+          "point": "mos_fs_-40C_1.08V",
+          "value": "62.8322"
+        },
+        "measured_worst": {
+          "point": "mos_fs_125C_1.08V",
+          "raw_margin": "0.0005",
+          "rounded_to_bound_decimals": "30.75",
+          "value": "30.7505"
+        },
+        "meets_bound": true,
+        "source": {
+          "column": "cmrr_db",
+          "csv": "sim/cmrr-psrr/records/20260921-151815-707b34c.csv",
+          "csv_sha256": "sha256:ede23361c795e73e0476da9ea4f3f05140af1a6927fb6878fca2ee2c4f728c6a",
+          "record": "cmrr-psrr",
+          "scale_to_unit": "1"
+        },
+        "spec_row": "CMRR — systematic nominal-device floor (superseded by DR-4, context)",
+        "tag": "DR-2, superseded by DR-4",
+        "unit": "dB",
+        "verdict": "PASS",
+        "violating_points": []
+      },
+      {
+        "binding": true,
+        "bound": {
+          "op": ">=",
+          "unit": "dB",
+          "value": "1.87",
+          "written_decimals": 2
+        },
+        "class": "ratified",
+        "conditions": "joined open-loop Av0 divided by the VDD-to-output gain (PSRR+; vss is ground), DC shelf (10 mHz read); ideal external 10 µA ibias contributes no supply ripple. Strongly frequency-dependent: the in-band figure below is part of the ratified number's context",
+        "context": [
+          {
+            "label": "in-band PSRR+ at 1 kHz, worst",
+            "point": "mos_sf_-40C_1.32V",
+            "unit": "dB",
+            "value": "1.2998"
+          }
+        ],
+        "coverage": {
+          "complete": true,
+          "expected": 45,
+          "grid": "pvt45",
+          "invalid": {},
+          "missing": [],
+          "observed": 45,
+          "valid": 45
+        },
+        "decision_record": "spec/decision-records/0002-target-spec-ratification.md",
+        "errors": [],
+        "extremum": "min",
+        "fails_only_beyond_written_decimals": false,
+        "id": "psrr",
+        "load": "CL = 2 pF [DR-1], no resistive load",
+        "measured_best": {
+          "point": "mos_ss_-40C_1.08V",
+          "value": "29.5448"
+        },
+        "measured_worst": {
+          "point": "mos_ff_125C_1.32V",
+          "raw_margin": "0.0009",
+          "rounded_to_bound_decimals": "1.87",
+          "value": "1.8709"
+        },
+        "meets_bound": true,
+        "source": {
+          "column": "psrr_db",
+          "csv": "sim/cmrr-psrr/records/20260921-151815-707b34c.csv",
+          "csv_sha256": "sha256:ede23361c795e73e0476da9ea4f3f05140af1a6927fb6878fca2ee2c4f728c6a",
+          "record": "cmrr-psrr",
+          "scale_to_unit": "1"
+        },
+        "spec_row": "PSRR+ (DC shelf)",
+        "tag": "DR-2",
+        "unit": "dB",
+        "verdict": "PASS",
+        "violating_points": []
+      },
+      {
+        "binding": true,
+        "bound": {
+          "op": ">=",
+          "unit": "mV",
+          "value": "251",
+          "written_decimals": 0
+        },
+        "class": "ratified",
+        "conditions": "open-loop differential DC transfer curve, −6 dB incremental-gain criterion",
+        "coverage": {
+          "complete": true,
+          "expected": 45,
+          "grid": "pvt45",
+          "invalid": {},
+          "missing": [],
+          "observed": 45,
+          "valid": 45
+        },
+        "decision_record": "spec/decision-records/0002-target-spec-ratification.md",
+        "errors": [],
+        "extremum": "min",
+        "fails_only_beyond_written_decimals": false,
+        "id": "swing_headroom_vdd",
+        "load": "CL = 2 pF [DR-1], NO resistive load (an upper bound; a loaded-row decision is separate)",
+        "measured_best": {
+          "point": "mos_ss_125C_1.32V",
+          "value": "319.0598"
+        },
+        "measured_worst": {
+          "point": "mos_fs_-40C_1.08V",
+          "raw_margin": "0.491128",
+          "rounded_to_bound_decimals": "251",
+          "value": "251.491128"
+        },
+        "meets_bound": true,
+        "source": {
+          "column": "headroom_hi_v",
+          "csv": "sim/output-swing/records/20260921-151759-707b34c.csv",
+          "csv_sha256": "sha256:d84349f59b65c83576e75a8a8b26123f14c79737f6aadd6680f6fdb0addee172",
+          "record": "output-swing",
+          "scale_to_unit": "1e3"
+        },
+        "spec_row": "Output swing — headroom from VDD",
+        "tag": "DR-2",
+        "unit": "mV",
+        "verdict": "PASS",
+        "violating_points": []
+      },
+      {
+        "binding": true,
+        "bound": {
+          "op": ">=",
+          "unit": "mV",
+          "value": "141",
+          "written_decimals": 0
+        },
+        "class": "ratified",
+        "conditions": "open-loop differential DC transfer curve, −6 dB incremental-gain criterion",
+        "coverage": {
+          "complete": true,
+          "expected": 45,
+          "grid": "pvt45",
+          "invalid": {},
+          "missing": [],
+          "observed": 45,
+          "valid": 45
+        },
+        "decision_record": "spec/decision-records/0002-target-spec-ratification.md",
+        "errors": [],
+        "extremum": "min",
+        "fails_only_beyond_written_decimals": false,
+        "id": "swing_headroom_vss",
+        "load": "CL = 2 pF [DR-1], NO resistive load (an upper bound; a loaded-row decision is separate)",
+        "measured_best": {
+          "point": "mos_ss_125C_1.32V",
+          "value": "223.073866"
+        },
+        "measured_worst": {
+          "point": "mos_ff_-40C_1.08V",
+          "raw_margin": "0.167273",
+          "rounded_to_bound_decimals": "141",
+          "value": "141.167273"
+        },
+        "meets_bound": true,
+        "source": {
+          "column": "headroom_lo_v",
+          "csv": "sim/output-swing/records/20260921-151759-707b34c.csv",
+          "csv_sha256": "sha256:d84349f59b65c83576e75a8a8b26123f14c79737f6aadd6680f6fdb0addee172",
+          "record": "output-swing",
+          "scale_to_unit": "1e3"
+        },
+        "spec_row": "Output swing — headroom from VSS",
+        "tag": "DR-2",
+        "unit": "mV",
+        "verdict": "PASS",
+        "violating_points": []
+      },
+      {
+        "binding": true,
+        "bound": {
+          "op": ">=",
+          "unit": "V",
+          "value": "0.571",
+          "written_decimals": 3
+        },
+        "class": "ratified",
+        "conditions": "open-loop differential DC transfer curve, −6 dB incremental-gain criterion",
+        "coverage": {
+          "complete": true,
+          "expected": 45,
+          "grid": "pvt45",
+          "invalid": {},
+          "missing": [],
+          "observed": 45,
+          "valid": 45
+        },
+        "decision_record": "spec/decision-records/0002-target-spec-ratification.md",
+        "errors": [],
+        "extremum": "min",
+        "fails_only_beyond_written_decimals": true,
+        "id": "swing_span",
+        "load": "CL = 2 pF [DR-1], NO resistive load (an upper bound; a loaded-row decision is separate)",
+        "measured_best": {
+          "point": "mos_ff_-40C_1.32V",
+          "value": "0.900091812"
+        },
+        "measured_worst": {
+          "point": "mos_ss_125C_1.08V",
+          "raw_margin": "-0.000042227",
+          "rounded_to_bound_decimals": "0.571",
+          "value": "0.570957773"
+        },
+        "meets_bound": false,
+        "source": {
+          "column": "swing_span_v",
+          "csv": "sim/output-swing/records/20260921-151759-707b34c.csv",
+          "csv_sha256": "sha256:d84349f59b65c83576e75a8a8b26123f14c79737f6aadd6680f6fdb0addee172",
+          "record": "output-swing",
+          "scale_to_unit": "1"
+        },
+        "spec_row": "Output swing — tracking span",
+        "tag": "DR-2",
+        "unit": "V",
+        "verdict": "FAIL",
+        "violating_points": [
+          "mos_ss_125C_1.08V"
+        ]
+      },
+      {
+        "binding": true,
+        "bound": {
+          "op": "<=",
+          "unit": "µA",
+          "value": "119.7",
+          "written_decimals": 1
+        },
+        "class": "ratified",
+        "conditions": "total VDD current at the open-loop bench's DC operating point, INCLUDING the external 10 µA ibias reference",
+        "context": [
+          {
+            "label": "signal-path-only current (excl. ibias), worst",
+            "point": "mos_ss_-40C_1.32V",
+            "unit": "µA",
+            "value": "109.655"
+          }
+        ],
+        "coverage": {
+          "complete": true,
+          "expected": 45,
+          "grid": "pvt45",
+          "invalid": {},
+          "missing": [],
+          "observed": 45,
+          "valid": 45
+        },
+        "decision_record": "spec/decision-records/0002-target-spec-ratification.md",
+        "errors": [],
+        "extremum": "max",
+        "fails_only_beyond_written_decimals": false,
+        "id": "quiescent_current",
+        "load": "CL = 2 pF [DR-1] attached (DC operating point), no resistive load",
+        "measured_best": {
+          "point": "mos_ss_125C_1.08V",
+          "value": "99.8521"
+        },
+        "measured_worst": {
+          "point": "mos_ss_-40C_1.32V",
+          "raw_margin": "0.045",
+          "rounded_to_bound_decimals": "119.7",
+          "value": "119.655"
+        },
+        "meets_bound": true,
+        "source": {
+          "column": "ivdd_total_a",
+          "csv": "sim/open-loop-ac/records/20260910-221601-22feaba.csv",
+          "csv_sha256": "sha256:dd71064b760d418ecd0250441370dae46e8ea0ff10771af2dd4ac8f241777d0b",
+          "record": "open-loop-ac",
+          "scale_to_unit": "1e6"
+        },
+        "spec_row": "Quiescent power (total VDD current Iq)",
+        "tag": "DR-2",
+        "unit": "µA",
+        "verdict": "PASS",
+        "violating_points": []
+      },
+      {
+        "binding": false,
+        "class": "measured",
+        "conditions": "device-mismatch Monte Carlo, N = 300 draws per point, campaign seed 20260921; SG13G2 <corner>_mismatch sections layered on the process corners; FIXED 1.20 V supply",
+        "context": [
+          {
+            "label": "σ(Vos), smallest",
+            "point": "mos_ff_mismatch_-40C_1.20V",
+            "unit": "mV",
+            "value": "8.81067829"
+          },
+          {
+            "label": "σ(Vos), largest",
+            "point": "mos_ss_mismatch_125C_1.20V",
+            "unit": "mV",
+            "value": "9.13321623"
+          },
+          {
+            "label": "negative control (plain section, zero mismatch) σ(Vos)",
+            "point": "mos_tt_negctrl_27C_1.20V",
+            "unit": "mV",
+            "value": "1.73762193E-14"
+          }
+        ],
+        "coverage": {
+          "complete": true,
+          "expected": 16,
+          "grid": "offset_mc15",
+          "invalid": {},
+          "missing": [],
+          "observed": 16,
+          "valid": 16
+        },
+        "decision_record": "spec/decision-records/0002-target-spec-ratification.md",
+        "errors": [],
+        "extremum": "max",
+        "id": "offset_mc_3sigma",
+        "load": "CL = 2 pF [DR-1] attached (a DC analysis ignores it), no resistive load",
+        "measured_best": {
+          "point": "mos_ff_mismatch_-40C_1.20V",
+          "value": "26.4320349"
+        },
+        "measured_worst": {
+          "point": "mos_ss_mismatch_125C_1.20V",
+          "value": "27.3996487"
+        },
+        "source": {
+          "column": "three_sigma_v",
+          "csv": "sim/input-offset/records/mc-20260921-174056-0a509fb.csv",
+          "csv_sha256": "sha256:aaf45e4d1e6f45a4069bb057b774948a6dedaea47be6bc364f80e9d3d73b4434",
+          "record": "input-offset-mc",
+          "scale_to_unit": "1e3"
+        },
+        "spec_row": "Input-referred offset — mismatch-driven random 3σ (measured [P], not ratified)",
+        "tag": "P (DR-0002 residual (b), re-ratification pending)",
+        "unit": "mV",
+        "verdict": "MEASURED"
+      },
+      {
+        "binding": false,
+        "class": "measured",
+        "conditions": "per point: |systematic offset at the same corner/temperature, 1.20 V| + 3σ of the drawn distribution; FIXED 1.20 V supply",
+        "coverage": {
+          "complete": true,
+          "expected": 16,
+          "grid": "offset_mc15",
+          "invalid": {},
+          "missing": [],
+          "observed": 16,
+          "valid": 16
+        },
+        "decision_record": "spec/decision-records/0002-target-spec-ratification.md",
+        "errors": [],
+        "extremum": "max",
+        "id": "offset_mc_total",
+        "load": "CL = 2 pF [DR-1] attached (a DC analysis ignores it), no resistive load",
+        "measured_best": {
+          "point": "mos_sf_mismatch_-40C_1.20V",
+          "value": "38.892429"
+        },
+        "measured_worst": {
+          "point": "mos_fs_mismatch_125C_1.20V",
+          "value": "46.6868332"
+        },
+        "source": {
+          "column": "vos_total_wc_det_plus_3sigma_v",
+          "csv": "sim/input-offset/records/mc-20260921-174056-0a509fb.csv",
+          "csv_sha256": "sha256:aaf45e4d1e6f45a4069bb057b774948a6dedaea47be6bc364f80e9d3d73b4434",
+          "record": "input-offset-mc",
+          "scale_to_unit": "1e3"
+        },
+        "spec_row": "Input-referred offset — worst single-PVT |systematic| + 3σ (measured [P], not ratified)",
+        "tag": "P (DR-0002 residual (b), re-ratification pending)",
+        "unit": "mV",
+        "verdict": "MEASURED"
+      },
+      {
+        "binding": false,
+        "class": "measured",
+        "conditions": "open-loop common-mode sweep, differential input pinned at zero; lower bound at the measured Vdsat(M5) knee (m5_headroom), upper bound at pair saturation (pair_saturation); nominal matched devices",
+        "context": [
+          {
+            "count": 15,
+            "label": "points where the measured range excludes the nominal Vcm = VDD/2",
+            "of": 45
+          }
+        ],
+        "coverage": {
+          "complete": true,
+          "expected": 45,
+          "grid": "pvt45",
+          "invalid": {},
+          "missing": [],
+          "observed": 45,
+          "valid": 45
+        },
+        "decision_record": "spec/decision-records/0002-target-spec-ratification.md",
+        "errors": [],
+        "extremum": "min",
+        "id": "icmr_span",
+        "load": "CL = 2 pF [DR-1], no resistive load",
+        "measured_best": {
+          "point": "mos_ff_-40C_1.32V",
+          "value": "0.676870423"
+        },
+        "measured_worst": {
+          "point": "mos_ss_125C_1.08V",
+          "value": "0.253205764"
+        },
+        "source": {
+          "column": "icmr_span_v",
+          "csv": "sim/input-cmr/records/20260921-174405-65f5fb4.csv",
+          "csv_sha256": "sha256:d625dc59a5c54bf683291eb4a05825fd6efd637450c44fe681635a363ab9b7b0",
+          "record": "input-cmr",
+          "scale_to_unit": "1"
+        },
+        "spec_row": "Input common-mode range — span (measured, not ratified)",
+        "tag": "P (pre-dates ratification, not part of DR-2)",
+        "unit": "V",
+        "verdict": "MEASURED"
+      },
+      {
+        "binding": false,
+        "class": "measured",
+        "conditions": "worst (highest) lower common-mode bound, m5_headroom criterion",
+        "coverage": {
+          "complete": true,
+          "expected": 45,
+          "grid": "pvt45",
+          "invalid": {},
+          "missing": [],
+          "observed": 45,
+          "valid": 45
+        },
+        "decision_record": "spec/decision-records/0002-target-spec-ratification.md",
+        "errors": [],
+        "extremum": "max",
+        "id": "icmr_lower",
+        "load": "CL = 2 pF [DR-1], no resistive load",
+        "measured_best": {
+          "point": "mos_ff_125C_1.32V",
+          "value": "0.470431235"
+        },
+        "measured_worst": {
+          "point": "mos_ss_-40C_1.08V",
+          "value": "0.640129553"
+        },
+        "source": {
+          "column": "icmr_lo_v",
+          "csv": "sim/input-cmr/records/20260921-174405-65f5fb4.csv",
+          "csv_sha256": "sha256:d625dc59a5c54bf683291eb4a05825fd6efd637450c44fe681635a363ab9b7b0",
+          "record": "input-cmr",
+          "scale_to_unit": "1"
+        },
+        "spec_row": "Input common-mode range — lower bound (measured, not ratified)",
+        "tag": "P (pre-dates ratification, not part of DR-2)",
+        "unit": "V",
+        "verdict": "MEASURED"
+      },
+      {
+        "binding": false,
+        "class": "measured",
+        "conditions": "worst (lowest) upper common-mode bound, pair_saturation criterion",
+        "coverage": {
+          "complete": true,
+          "expected": 45,
+          "grid": "pvt45",
+          "invalid": {},
+          "missing": [],
+          "observed": 45,
+          "valid": 45
+        },
+        "decision_record": "spec/decision-records/0002-target-spec-ratification.md",
+        "errors": [],
+        "extremum": "min",
+        "id": "icmr_upper",
+        "load": "CL = 2 pF [DR-1], no resistive load",
+        "measured_best": {
+          "point": "mos_sf_-40C_1.32V",
+          "value": "1.25120811"
+        },
+        "measured_worst": {
+          "point": "mos_fs_125C_1.08V",
+          "value": "0.795393113"
+        },
+        "source": {
+          "column": "icmr_hi_v",
+          "csv": "sim/input-cmr/records/20260921-174405-65f5fb4.csv",
+          "csv_sha256": "sha256:d625dc59a5c54bf683291eb4a05825fd6efd637450c44fe681635a363ab9b7b0",
+          "record": "input-cmr",
+          "scale_to_unit": "1"
+        },
+        "spec_row": "Input common-mode range — upper bound (measured, not ratified)",
+        "tag": "P (pre-dates ratification, not part of DR-2)",
+        "unit": "V",
+        "verdict": "MEASURED"
+      },
+      {
+        "class": "pending",
+        "conditions": null,
+        "decision_record": "spec/decision-records/0002-target-spec-ratification.md",
+        "errors": [],
+        "id": "area",
+        "load": null,
+        "pending_reason": "a post-layout property with no ratified bound and no bench; stays pending until its own decision record (DR-0002 residual (a))",
+        "spec_row": "Area",
+        "tag": "TBD-12 (DR-0002 residual (a))",
+        "verdict": "PENDING"
+      }
+    ],
+    "schema": "sg13g2-opamp/characterization-report/2",
+    "selection": {
+      "path": "signoff/characterization/selection.json",
+      "sha256": "sha256:a62cec8e794b6dcb0704d9aa4ada8447c03752ca67132d0b5737805cc430f063"
+    },
+    "sources": {
+      "cmrr-mismatch": {
+        "csv": "sim/cmrr-mismatch/records/20260921-172304-65f5fb4.csv",
+        "csv_sha256": "sha256:d64d9b3a39b9ac82cef4c4ce94be29390f4e33b3bc9295c48601c7ea1c2f8875",
+        "definition_checks": [
+          "cmrr_linear_3sigma"
+        ],
+        "expected_points": 45,
+        "filter": null,
+        "grid": "pvt45",
+        "invalid_points": {},
+        "md": "sim/cmrr-mismatch/records/20260921-172304-65f5fb4.md",
+        "md_sha256": "sha256:aa0a4104a5eb23d371d8199922166cef9a68824646734d9b67b04f8feb7e15fb",
+        "missing_points": [],
+        "netlist_snapshot": "sim/cmrr-mismatch/netlist-snapshots/20260921-172304-65f5fb4/opamp_core.spice",
+        "netlist_snapshot_sha256": "sha256:4cddebec6a043f682bb74a463ac3e72112f33ad341d19575a0606f276e18db37",
+        "ngspice": "ngspice-46",
+        "observed_points": 45,
+        "valid_points": 45,
+        "valid_when": [
+          [
+            "mc_n_ok",
+            ">=",
+            "300"
+          ],
+          [
+            "mc_n_excluded",
+            "==",
+            "0"
+          ],
+          [
+            "op_fail",
+            "==",
+            "0"
+          ],
+          [
+            "plateau_fail",
+            "==",
+            "0"
+          ]
+        ]
+      },
+      "cmrr-psrr": {
+        "csv": "sim/cmrr-psrr/records/20260921-151815-707b34c.csv",
+        "csv_sha256": "sha256:ede23361c795e73e0476da9ea4f3f05140af1a6927fb6878fca2ee2c4f728c6a",
+        "definition_checks": [],
+        "expected_points": 45,
+        "filter": null,
+        "grid": "pvt45",
+        "invalid_points": {},
+        "md": "sim/cmrr-psrr/records/20260921-151815-707b34c.md",
+        "md_sha256": "sha256:c3a2755afbb6da8112d8fc87569bbd893d5a08e04f1a046c77f740a305022e36",
+        "missing_points": [],
+        "netlist_snapshot": "sim/cmrr-psrr/netlist-snapshots/20260921-151815-707b34c/opamp_core.spice",
+        "netlist_snapshot_sha256": "sha256:4cddebec6a043f682bb74a463ac3e72112f33ad341d19575a0606f276e18db37",
+        "ngspice": "ngspice-46",
+        "observed_points": 45,
+        "valid_points": 45,
+        "valid_when": [
+          [
+            "op_pass",
+            "==",
+            "1"
+          ]
+        ]
+      },
+      "input-cmr": {
+        "csv": "sim/input-cmr/records/20260921-174405-65f5fb4.csv",
+        "csv_sha256": "sha256:d625dc59a5c54bf683291eb4a05825fd6efd637450c44fe681635a363ab9b7b0",
+        "definition_checks": [],
+        "expected_points": 45,
+        "filter": null,
+        "grid": "pvt45",
+        "invalid_points": {},
+        "md": "sim/input-cmr/records/20260921-174405-65f5fb4.md",
+        "md_sha256": "sha256:f1643ab3ff4cdf37db5bdaf2df5d208023056300c0169ac9a47bd75af2a3dcdb",
+        "missing_points": [],
+        "netlist_snapshot": "sim/input-cmr/netlist-snapshots/20260921-174405-65f5fb4/opamp_core.spice",
+        "netlist_snapshot_sha256": "sha256:4cddebec6a043f682bb74a463ac3e72112f33ad341d19575a0606f276e18db37",
+        "ngspice": "ngspice-46",
+        "observed_points": 45,
+        "valid_points": 45,
+        "valid_when": [
+          [
+            "op_pass",
+            "==",
+            "1"
+          ],
+          [
+            "hi_converged",
+            "==",
+            "1"
+          ]
+        ]
+      },
+      "input-noise": {
+        "csv": "sim/input-noise/records/20260918-203850-90844d2.csv",
+        "csv_sha256": "sha256:1841f63b519713c4c108f0197606bbf7fbba39148dfdc3d88ab8c6bea7eea249",
+        "definition_checks": [],
+        "expected_points": 45,
+        "filter": null,
+        "grid": "pvt45",
+        "invalid_points": {},
+        "md": "sim/input-noise/records/20260918-203850-90844d2.md",
+        "md_sha256": "sha256:6c64198791c1fb5bfdad09abed87c60240a642b58c7737e04f6250f178508fc3",
+        "missing_points": [],
+        "netlist_snapshot": "sim/input-noise/netlist-snapshots/20260918-203850-90844d2/opamp_core.spice",
+        "netlist_snapshot_sha256": "sha256:4cddebec6a043f682bb74a463ac3e72112f33ad341d19575a0606f276e18db37",
+        "ngspice": "ngspice-46",
+        "observed_points": 45,
+        "valid_points": 45,
+        "valid_when": [
+          [
+            "op_pass",
+            "==",
+            "1"
+          ]
+        ]
+      },
+      "input-offset": {
+        "csv": "sim/input-offset/records/20260918-203858-90844d2.csv",
+        "csv_sha256": "sha256:f0263167c6b550e5138b1b706e37c6dcfe11388bcf9c5b77f726a47c20813813",
+        "definition_checks": [
+          "offset_magnitude"
+        ],
+        "expected_points": 45,
+        "filter": null,
+        "grid": "pvt45",
+        "invalid_points": {},
+        "md": "sim/input-offset/records/20260918-203858-90844d2.md",
+        "md_sha256": "sha256:9c4a9e4e325bf30694bc86c5d92e3ca018556c2edc47afbbf58a0b0c5440fa9a",
+        "missing_points": [],
+        "netlist_snapshot": "sim/input-offset/netlist-snapshots/20260918-203858-90844d2/opamp_core.spice",
+        "netlist_snapshot_sha256": "sha256:4cddebec6a043f682bb74a463ac3e72112f33ad341d19575a0606f276e18db37",
+        "ngspice": "ngspice-46",
+        "observed_points": 45,
+        "valid_points": 45,
+        "valid_when": [
+          [
+            "op_pass",
+            "==",
+            "1"
+          ],
+          [
+            "xcheck_pass",
+            "==",
+            "1"
+          ]
+        ]
+      },
+      "input-offset-mc": {
+        "csv": "sim/input-offset/records/mc-20260921-174056-0a509fb.csv",
+        "csv_sha256": "sha256:aaf45e4d1e6f45a4069bb057b774948a6dedaea47be6bc364f80e9d3d73b4434",
+        "definition_checks": [],
+        "expected_points": 16,
+        "filter": {
+          "column": "mode",
+          "equals": "mismatch"
+        },
+        "grid": "offset_mc15",
+        "invalid_points": {},
+        "md": "sim/input-offset/records/mc-20260921-174056-0a509fb.md",
+        "md_sha256": "sha256:b007656df04e546d666e31a3b602259c9efa46330a993e660ee7786b420206f8",
+        "missing_points": [],
+        "netlist_snapshot": "sim/input-offset/netlist-snapshots/mc-20260921-174056-0a509fb/opamp_core.spice",
+        "netlist_snapshot_sha256": "sha256:4cddebec6a043f682bb74a463ac3e72112f33ad341d19575a0606f276e18db37",
+        "ngspice": "ngspice-46",
+        "observed_points": 16,
+        "valid_points": 16,
+        "valid_when": [
+          [
+            "status",
+            "==",
+            "PASS"
+          ],
+          [
+            "n_draws",
+            ">=",
+            "300"
+          ],
+          [
+            "n_pass",
+            "==col",
+            "n_draws"
+          ]
+        ]
+      },
+      "open-loop-ac": {
+        "csv": "sim/open-loop-ac/records/20260910-221601-22feaba.csv",
+        "csv_sha256": "sha256:dd71064b760d418ecd0250441370dae46e8ea0ff10771af2dd4ac8f241777d0b",
+        "definition_checks": [],
+        "expected_points": 45,
+        "filter": null,
+        "grid": "pvt45",
+        "invalid_points": {},
+        "md": "sim/open-loop-ac/records/20260910-221601-22feaba.md",
+        "md_sha256": "sha256:01988711eec6320f7a5219fb231e5ecb0713fb9444ffd7121cb0a72dfb2483cf",
+        "missing_points": [],
+        "netlist_snapshot": "sim/open-loop-ac/netlist-snapshots/20260910-221601-22feaba/opamp_core.spice",
+        "netlist_snapshot_sha256": "sha256:d1526468a8e218ea43ee2b0f62913a06400d338e0d28f189348f3957da490ab4",
+        "ngspice": "ngspice-46",
+        "observed_points": 45,
+        "valid_points": 45,
+        "valid_when": [
+          [
+            "op_pass",
+            "==",
+            "1"
+          ],
+          [
+            "gm_status",
+            "==",
+            "measured"
+          ]
+        ]
+      },
+      "output-swing": {
+        "csv": "sim/output-swing/records/20260921-151759-707b34c.csv",
+        "csv_sha256": "sha256:d84349f59b65c83576e75a8a8b26123f14c79737f6aadd6680f6fdb0addee172",
+        "definition_checks": [],
+        "expected_points": 45,
+        "filter": null,
+        "grid": "pvt45",
+        "invalid_points": {},
+        "md": "sim/output-swing/records/20260921-151759-707b34c.md",
+        "md_sha256": "sha256:5fe5cfc2c58ba3ff93648e1f910f0dcb22b2e1e1e2fc0a173b9c772b130902d1",
+        "missing_points": [],
+        "netlist_snapshot": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/opamp_core.spice",
+        "netlist_snapshot_sha256": "sha256:4cddebec6a043f682bb74a463ac3e72112f33ad341d19575a0606f276e18db37",
+        "ngspice": "ngspice-46",
+        "observed_points": 45,
+        "valid_points": 45,
+        "valid_when": [
+          [
+            "op_pass",
+            "==",
+            "1"
+          ]
+        ]
+      },
+      "slew-rate": {
+        "csv": "sim/slew-rate/records/20260918-210216-90844d2.csv",
+        "csv_sha256": "sha256:025cbee18bf3bdf12f399948ab1f9d4931837f84715b0e0adf7abf802ca65c65",
+        "definition_checks": [
+          "slew_worse_edge"
+        ],
+        "expected_points": 45,
+        "filter": null,
+        "grid": "pvt45",
+        "invalid_points": {},
+        "md": "sim/slew-rate/records/20260918-210216-90844d2.md",
+        "md_sha256": "sha256:d3e278ad4438a3c33f05eb73c65099dbb5190f8cc0a30def4fbad820ba6ef91d",
+        "missing_points": [],
+        "netlist_snapshot": "sim/slew-rate/netlist-snapshots/20260918-210216-90844d2/opamp_core.spice",
+        "netlist_snapshot_sha256": "sha256:4cddebec6a043f682bb74a463ac3e72112f33ad341d19575a0606f276e18db37",
+        "ngspice": "ngspice-46",
+        "observed_points": 45,
+        "valid_points": 45,
+        "valid_when": [
+          [
+            "op_pass",
+            "==",
+            "1"
+          ],
+          [
+            "linearity_pass",
+            "==",
+            "1"
+          ],
+          [
+            "traverse_pass",
+            "==",
+            "1"
+          ],
+          [
+            "drive_pass",
+            "==",
+            "1"
+          ]
+        ]
+      }
+    },
+    "spec_coverage": [
+      {
+        "covered": true,
+        "row": "Open-loop DC gain"
+      },
+      {
+        "covered": true,
+        "row": "GBW (into stated CL = 2 pF [DR-1], above)"
+      },
+      {
+        "covered": true,
+        "row": "Phase margin (at GBW, same CL)"
+      },
+      {
+        "covered": true,
+        "row": "Slew rate (into stated CL = 2 pF [DR-1], above)"
+      },
+      {
+        "covered": true,
+        "row": "Input-referred noise (band: **100 Hz – 1 MHz integrated**, plus spot densities; same stated CL = 2 pF [DR-1])"
+      },
+      {
+        "covered": true,
+        "row": "Input-referred offset"
+      },
+      {
+        "covered": true,
+        "row": "CMRR"
+      },
+      {
+        "covered": true,
+        "row": "PSRR"
+      },
+      {
+        "covered": true,
+        "row": "Input common-mode range (ICMR)"
+      },
+      {
+        "covered": true,
+        "row": "Output swing"
+      },
+      {
+        "covered": true,
+        "row": "Quiescent power"
+      },
+      {
+        "covered": true,
+        "row": "Area"
+      }
+    ]
+  },
+  "content_sha256": "sha256:77aec35b7bc1ed536716b51bcc8860264534a7d3162880f5da7ab091fe8ece83",
+  "record_metadata": {
+    "_note": "The ONLY fields excluded from reproduction: --check compares `content` (and content_sha256) and nothing here.",
+    "generated_utc": "2026-10-09T01:05:37Z",
+    "generator": "signoff/characterization/generate.py",
+    "generator_sha256": "sha256:7d56169b710b1c3f54bd9258aebe6577cfc42d4ee152e07b1d0068b9517870d7",
+    "git_head": "3b553cb",
+    "record_id": "20261009-010537-3b553cb"
+  }
+}

@@ -54,7 +54,10 @@ for this block's current distance from a sim-validated design.
 **Where this block sits on the evidence ladder is graded, not asserted**:
 [`signoff/`](signoff/README.md) holds the `klt signoff --manifest` block
 manifest and the committed per-item T1 verdict it produces — 7 of 11 items
-`met` in the current record, with the remaining 4 `unmet`. That
+`met` in the current record, with the remaining 4 `unmet` (item 8's
+characterization report is cited but grades four ratified rows FAIL against
+their literal bounds — a spec question routed to the keys in
+[#101](https://github.com/2AMLogic/sg13g2-opamp/issues/101)). That
 record — not this paragraph, and not a hand-maintained checkbox list — is
 the verdict of record for the tracker above, and CI re-grades it so a claim
 resting on an artifact that has since changed fails instead of rotting.
@@ -87,6 +90,14 @@ committed netlist is regenerated from the schematic with the command in
 are described in [`layout/README.md`](layout/README.md), and the graded
 verdict is re-derived with `bash signoff/regenerate.sh`
 ([`signoff/README.md`](signoff/README.md)).
+
+The per-spec-row characterization report (every row's bound, worst case,
+binding point, grid coverage and source record) is regenerated from the
+committed records alone — no PDK, no ngspice — with
+`python3 signoff/characterization/generate.py` (`--check` verifies the
+committed record reproduces); see
+[`signoff/characterization/README.md`](signoff/characterization/README.md).
+That aggregates existing evidence; it does not re-run the benches above.
 
 ## License
 
