@@ -2,6 +2,27 @@
 
 <!-- Maintained by the Loom Guide role. Newest entries first. -->
 
+### 2026-10-09
+
+- **PR #120**: ci: run sim/ offline tests and evidence checkers in signoff.yml
+- **PR #118**: sim: express the slew-rate bench as a klt sim request (T1 item 5, #95)
+- **PR #117**: spec: draft DR-0006 resolving the ICMR row (not ratified)
+- **PR #116**: post-layout: klt pex harness for T1 item 7 (#86) - grid NOT run
+- **PR #113**: test(signoff): negative controls for check_signoff.py and sync_integrator.py
+- **PR #112**: sim: guard MC runners against local grid execution under batch backend
+- **PR #109**: signoff: record why T1 item 6 stays unmet; stage offset-MC sample-set (#105)
+- **PR #104**: feat(signoff): continuously validate the item 1/9/10 inventory entries
+- **PR #103**: integration: synchronize published GDS availability and graded maturity
+- **PR #94**: signoff: per-spec-row characterization report from committed evidence (T1 item 8)
+- **Issue #119** (closed): ci: run the sim/ offline tests and evidence checkers in signoff.yml
+- **Issue #114** (closed): spec: resolve the unratified ICMR row -- measured lower bound excludes mid-rail Vcm at 15 of 45 PVT points
+- **Issue #111** (closed): signoff: negative-control tests for check_signoff.py and sync_integrator.py
+- **Issue #110** (closed): sim: guard MC runners against local grid execution when KLT_SIM_BACKEND=batch
+- **Issue #92** (closed): signoff: continuously validate the static audit inventory entries
+- **Issue #91** (closed): integration: synchronize published GDS availability and graded maturity
+- **Issue #90** (closed): characterization: generate a reproducible per-row report from committed evidence
+- **Issue #89** (closed): Auditor guard review: keep literal body=@path rejection
+
 ### 2026-10-08
 
 - **PR #88**: signoff: bind T1 items 1, 9 and 10 to audited artifacts (klt 3a75c3ae)
