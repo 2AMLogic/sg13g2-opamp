@@ -308,3 +308,119 @@ describing the committed DUT; nothing in `records/` needs re-running.
   generator's own noise is not in this number.
 - **Not post-layout.** No extracted parasitics; the DUT is the committed
   schematic netlist.
+
+## The `klt sim` path (issue #96, first increment)
+
+[`klt/`](klt/) expresses this same bench as a `klt sim` request, because T1
+item 5 ("full corner verification vs a ratified spec") accepts only a `klt
+sim` envelope (see `signoff/README.md`, "Item 5 envelope coverage, per
+ratified row"). It is a second measurement path for the same circuit, not a
+new bench, and follows the pattern of `../slew-rate/klt/` (issue #95).
+
+**Delivered: request, circuit body, runner, comparator, tests. Pending: the
+real 45-corner envelope and the measured comparison.** Issue #96 stays open;
+this increment is `Part of #96`. Nothing under `klt/` is signoff evidence yet.
+
+| File | What it is |
+|---|---|
+| [`klt/tb_noise.body.spice`](klt/tb_noise.body.spice) | The test circuit as a `klt sim` circuit body: flat DUT include, `Vfb` (0 V, `inn` to `out`) unity-gain follower, `Vinp` with `ac 1`, `CL = 2 pF`, 10 µA `ibias`; exactly one `.include` of `design/netlist/opamp_core.spice`, no `.control` block. No re-expression was needed (`Vinp` is a plain DC source `klt` can `alter`). |
+| [`klt/noise.request.json`](klt/noise.request.json) | The request: `noise v(out) Vinp dec 20 100 1meg` over the 45-point grid; the ratified bound on the integrated figure, plus tool-graded band integrity checks and unlimited spot densities for the join. |
+| [`klt/run.sh`](klt/run.sh) | Sources `sim/preflight.sh`, runs the request, gates the envelope, writes it unmodified to `klt/records/<UTC>-<sha>.sim.json`, then the comparison `.compare.json`. |
+| [`klt/compare.py`](klt/compare.py) | The validation gate and the comparison against this bench's harness record; tests in [`klt/test_compare.py`](klt/test_compare.py). |
+
+### How the two paths relate, and which one is the record of evidence
+
+The harness record
+[`records/20260918-203850-90844d2.csv`](records/20260918-203850-90844d2.csv)
+stays the **record of evidence** for the noise row; nothing in `klt/` edits or
+replaces it. A `klt sim` envelope under `klt/records/` (none yet) will be the
+**gradable form** of the same measurement: the tool assigns the verdict and
+binding corner against the ratified bound, and `compare.json` ties the two
+together point by point. The harness `run_noise_sweep.sh` path is unchanged.
+
+### The band is part of the number
+
+The request keeps the ratified band: `100 Hz – 1 MHz`, `dec 20`, 81 points,
+bound `≤ 108.9 µVrms` (`inoise_int_vrms`, `limits.max = 108.9e-6`), into
+`CL = 2 pF`. The integrated figure is `noise2.inoise_total`, ngspice's
+already-square-rooted RMS volts over the swept band, which is the vector the
+harness reads. Five spot densities come from `noise1.inoise_spectrum[0, 20,
+40, 60, 80]`. As the harness asserts its spot frequencies instead of trusting
+index arithmetic, the request carries `band_points` (= 81), `band_f_first_hz`
+(100), `band_f_last_hz` (10⁶) and `spot_f_{1k,10k,100k}hz` with tight limits,
+and `compare.py validate` refuses an envelope whose band differs.
+
+**A bound miss stays a miss.** The harness's own worst point,
+`mos_fs_125C_1.08V` at 108.949 µVrms, is already 0.049 µVrms above the literal
+108.9 µVrms bound (see `signoff/README.md`, "Bounds are compared literally").
+The tool will grade that corner `fail` against the unrounded bound, and
+`compare.py` expects the harness-side verdict to agree. Neither the bound nor
+the band is relaxed here.
+
+### Is the integrated value reachable through `klt`? (partial evidence)
+
+Yes, for the plot and vector selection; checked on a **toy resistor
+divider, not the DUT**, with `klt 0.7.0+gb82427b30c96` and ngspice-42, one
+local corner, request kept outside the repo. After `noise v(out) Vin dec 20
+100 1meg` the `expr` entries `noise2.inoise_total`,
+`noise1.inoise_spectrum[k]`, `noise1.frequency[k]` and
+`length(noise1.inoise_spectrum)` each reduce to a scalar (`inoise_total`
+5.7575e-6 V for 1 k / 1 k at 27 °C, i.e. 2·√(4kT·500 Ω·(10⁶−100)) as the
+divider's gain 1/2 implies; 81 points; 100/1000 Hz). Unqualified
+`inoise_spectrum[20]` / `frequency[20]` do not resolve, so the request uses
+plot-qualified names (`noise1.`, `noise2.`). No klayout-tools friction issue
+was needed for this. **This does not validate the DUT corner**: the units,
+the integrated value at a DUT corner and the OSDI models are untested.
+
+### Not reproduced from the harness
+
+`klt sim` runs one analysis per corner. The harness's DC operating-point
+sanity check (`op_pass`) and its closed-loop-gain guard at both band edges
+(`clgain_100hz`, `clgain_1mhz`) need an `op` / `ac` analysis in the same
+corner; the wide reference-only sweep and the flicker/thermal fit are also not
+in the request. `compare.py` does not compare them and lists them under
+`not_compared`. The harness record keeps carrying them. The noise units check
+(`tb_noise_units_check.spice`) is likewise a harness-side step; the first
+real envelope must be checked against the harness' units (V/√Hz, RMS V)
+through the join itself.
+
+### Comparison tolerance (provisional)
+
+| Metric | Tolerance | Why |
+|---|---|---|
+| `inoise_int_vrms`, `inoise_*_v_rthz` | 2×10⁻³ relative | Same circuit, same analysis, ngspice default tolerance (DR-0005), no waveform post-processing on either side. The harness ran on macOS/aarch64 ngspice-46; DR-0005 measured 9.9×10⁻⁴ relative drain-current difference to a Linux/x86_64 record of this PDK, and noise tracks bias current and gm. 2×10⁻³ is that figure doubled, as in `../slew-rate/klt/`. |
+
+**These tolerances are provisional.** No measured envelope exists, so none is
+justified from measurement. They must be replaced by a measured
+justification, and every out-of-tolerance point explained, in the evidence
+increment. A comparison tolerance never loosens the bound: the bound is graded
+by `klt sim`, and a verdict that flips within tolerance of it is listed in
+`bound_verdict_disagreements` as *explained*, never hidden. Proximity, stated
+in advance: the harness-worst integrated figure is 4.5×10⁻⁴ relative above
+the bound, so a tool value within the tolerance can flip the verdict there.
+
+### Tests
+
+`python3 -m pytest sim/input-noise/klt/test_compare.py` (36 tests, offline).
+The synthetic envelopes are **built from the harness CSV** and are comparator
+tests with negative controls (perturbed value, missing/duplicate/extra
+point, null/NaN, mis-biased Vcm, wrong band/point count/spot frequency,
+errored/inconclusive/skipped coverage, bound flips). They are not evidence
+about the circuit.
+
+### Status (2026-10-09): what is and is not done
+
+- Delivered: request, body, runner, comparator, tests, this section.
+- **Not done: prototype of a DUT corner.** `klt/run.sh` on the dispatch host
+  (ngspice-42) fails `sim/preflight.sh`'s OSDI check (`Unknown model type
+  pspnqs103va`, exit 3) before anything is submitted: the OSDI binaries
+  target OSDI v0.4 (ngspice-46, the `sim/pdk.json` pin). Prototype validation
+  of the DUT, and therefore the units/value at a real corner, is pending a host
+  that passes the preflight.
+- **Not done: the real 45-corner envelope and the measured comparison.** The
+  fleet submission depends on 2AMLogic/2am#2193 (runner image klt version) or
+  a verified compatible sharded bridge; deployed runner/client compatibility
+  must be re-checked first. The grid is never run locally on a shared dispatch
+  host. No fleet submission was attempted in this increment.
+- The signoff manifest is unchanged; item 5 stays uncited until all ten
+  ratified rows have envelopes.

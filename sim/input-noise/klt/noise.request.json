@@ -1,0 +1,209 @@
+{
+  "_comment": [
+    "sim/input-noise as a `klt sim` request (issue #96): T1 item 5 coverage for the ratified input-referred-noise row.",
+    "Circuit: tb_noise.body.spice -- the same test circuit as ../testbench/tb_noise.spice.tmpl (unity-gain follower via Vfb, CL = 2 pF, 10 uA ibias, ac 1 on Vinp).",
+    "Grid: cornerMOSlv.lib mos_tt/ss/ff/sf/fs [DR-1] x {-40, 27, 125} C x VDD {1.08, 1.20, 1.32} V = 45 corners.",
+    "vinp sweeps WITH vdd by index (klt's supply_v semantics), so Vcm = VDD/2 at every corner, as in the harness.",
+    "Each process corner is a bundle carrying the template's fixed cornerCAP.lib cap_typ section.",
+    "Analysis: noise v(out) Vinp dec 20 100 1meg = the template's claimed band, 100 Hz - 1 MHz, 81 points. The band is part of the ratified number and is not changed here.",
+    "Ratified row: input-referred noise <= 108.9 uVrms worst-case [DR-2], integrated over 100 Hz - 1 MHz, CL = 2 pF (spec/target-spec.md section 2). Carried as inoise_int_vrms limits.max = 108.9e-6 V.",
+    "Integrated figure: `noise2.inoise_total` -- ngspice's already-square-rooted RMS volts over the swept band, the vector the harness reads (setplot noise2). Reached with an `expr`; no `.meas` is needed.",
+    "Spot densities: noise1.inoise_spectrum[0/20/40/60/80] = 100 Hz / 1 kHz / 10 kHz / 100 kHz / 1 MHz (V/sqrt(Hz)); the band_* / spot_f_* measurements assert the frequencies and the 81-point length, as the harness does, so index arithmetic is never trusted silently.",
+    "The harness's DC operating-point sanity and closed-loop-gain guard need a second analysis (op / ac) in the same corner; klt sim runs ONE analysis per corner, so they are not reproduced here and compare.py does not compare them.",
+    "Prototype status: the `expr` forms were exercised ONLY on a toy resistor divider (ngspice-42, klt 0.7.0): all 12 resolved to scalars. NOT run against the DUT: the OSDI preflight needs ngspice-46. See ../README.md.",
+    "options.timeout_s = 300 s per corner: the harness noise deck (op + two noise sweeps + ac) is seconds per point; this deck runs one 81-point noise sweep.",
+    "Solver tolerance: ngspice default, no .options reltol/abstol/vntol (DR-0005).",
+    "ngspice_init raises the printed digits only (measureprec for .meas, numdgt for expr); it changes no solver setting.",
+    "keep_artifacts is false so the committed envelope carries no host-absolute artifact paths."
+  ],
+  "netlist": "tb_noise.body.spice",
+  "netlist_source": "schematic",
+  "engine": "ngspice",
+  "backend": "batch",
+  "models": {
+    "pdk": "ihp-sg13g2",
+    "lib": "libs.tech/ngspice/models/cornerMOSlv.lib"
+  },
+  "corners": {
+    "process": [
+      {
+        "name": "mos_tt",
+        "sections": [
+          "mos_tt",
+          {
+            "lib": "libs.tech/ngspice/models/cornerCAP.lib",
+            "section": "cap_typ"
+          }
+        ]
+      },
+      {
+        "name": "mos_ss",
+        "sections": [
+          "mos_ss",
+          {
+            "lib": "libs.tech/ngspice/models/cornerCAP.lib",
+            "section": "cap_typ"
+          }
+        ]
+      },
+      {
+        "name": "mos_ff",
+        "sections": [
+          "mos_ff",
+          {
+            "lib": "libs.tech/ngspice/models/cornerCAP.lib",
+            "section": "cap_typ"
+          }
+        ]
+      },
+      {
+        "name": "mos_sf",
+        "sections": [
+          "mos_sf",
+          {
+            "lib": "libs.tech/ngspice/models/cornerCAP.lib",
+            "section": "cap_typ"
+          }
+        ]
+      },
+      {
+        "name": "mos_fs",
+        "sections": [
+          "mos_fs",
+          {
+            "lib": "libs.tech/ngspice/models/cornerCAP.lib",
+            "section": "cap_typ"
+          }
+        ]
+      }
+    ],
+    "supply_v": {
+      "vdd": [
+        1.08,
+        1.2,
+        1.32
+      ],
+      "vinp": [
+        0.54,
+        0.6,
+        0.66
+      ]
+    },
+    "temperature_c": [
+      -40,
+      27,
+      125
+    ]
+  },
+  "analysis": {
+    "kind": "noise",
+    "args": "v(out) Vinp dec 20 100 1meg"
+  },
+  "measurements": [
+    {
+      "name": "inoise_int_vrms",
+      "expr": "noise2.inoise_total",
+      "unit": "V",
+      "limits": {
+        "max": 0.0001089
+      }
+    },
+    {
+      "name": "inoise_100hz_v_rthz",
+      "expr": "noise1.inoise_spectrum[0]",
+      "unit": "V/rtHz"
+    },
+    {
+      "name": "inoise_1khz_v_rthz",
+      "expr": "noise1.inoise_spectrum[20]",
+      "unit": "V/rtHz"
+    },
+    {
+      "name": "inoise_10khz_v_rthz",
+      "expr": "noise1.inoise_spectrum[40]",
+      "unit": "V/rtHz"
+    },
+    {
+      "name": "inoise_100khz_v_rthz",
+      "expr": "noise1.inoise_spectrum[60]",
+      "unit": "V/rtHz"
+    },
+    {
+      "name": "inoise_1mhz_v_rthz",
+      "expr": "noise1.inoise_spectrum[80]",
+      "unit": "V/rtHz"
+    },
+    {
+      "name": "band_points",
+      "expr": "length(noise1.inoise_spectrum)",
+      "limits": {
+        "min": 81,
+        "max": 81
+      }
+    },
+    {
+      "name": "band_f_first_hz",
+      "expr": "noise1.frequency[0]",
+      "unit": "Hz",
+      "limits": {
+        "min": 99.9999,
+        "max": 100.0001
+      }
+    },
+    {
+      "name": "band_f_last_hz",
+      "expr": "noise1.frequency[80]",
+      "unit": "Hz",
+      "limits": {
+        "min": 999999,
+        "max": 1000001
+      }
+    },
+    {
+      "name": "spot_f_1khz_hz",
+      "expr": "noise1.frequency[20]",
+      "unit": "Hz",
+      "limits": {
+        "min": 999.999,
+        "max": 1000.001
+      }
+    },
+    {
+      "name": "spot_f_10khz_hz",
+      "expr": "noise1.frequency[40]",
+      "unit": "Hz",
+      "limits": {
+        "min": 9999.99,
+        "max": 10000.01
+      }
+    },
+    {
+      "name": "spot_f_100khz_hz",
+      "expr": "noise1.frequency[60]",
+      "unit": "Hz",
+      "limits": {
+        "min": 99999.9,
+        "max": 100000.1
+      }
+    }
+  ],
+  "options": {
+    "timeout_s": 300,
+    "keep_artifacts": false,
+    "osdi_preload": [
+      "$PDK_ROOT/ihp-sg13g2/libs.tech/ngspice/osdi/psp103.osdi",
+      "$PDK_ROOT/ihp-sg13g2/libs.tech/ngspice/osdi/psp103_nqs.osdi",
+      "$PDK_ROOT/ihp-sg13g2/libs.tech/ngspice/osdi/mosvar.osdi",
+      "$PDK_ROOT/ihp-sg13g2/libs.tech/ngspice/osdi/r3_cmc.osdi"
+    ],
+    "stage_model_inputs": true,
+    "fail_on_diagnostic": [
+      "singular_matrix",
+      "nonconvergence"
+    ],
+    "ngspice_init": [
+      "set measureprec=12",
+      "set numdgt=12"
+    ]
+  }
+}

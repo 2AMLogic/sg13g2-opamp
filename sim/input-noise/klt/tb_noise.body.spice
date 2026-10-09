@@ -1,0 +1,39 @@
+* sg13g2-opamp -- input-noise bench as a `klt sim` circuit body (issue #96)
+*
+* The SAME test circuit as ../testbench/tb_noise.spice.tmpl (the harness
+* path, sim/input-noise/run_noise_sweep.sh), in the shape `klt sim`
+* requires: a circuit body with no .control/.end of its own. klt generates
+* the per-corner wrapper deck around this file and adds, per corner: the
+* process `.lib` cards (cornerMOSlv.lib mos_<corner> plus cornerCAP.lib
+* cap_typ), `.temp`, `alter vdd=<V>` and `alter vinp=<V/2>` (swept together
+* by index, so Vcm = VDD/2 exactly as the harness's `vcm = vdd/2`),
+* `pre_osdi` for the four OSDI libraries, and the one analysis the request
+* declares (`noise v(out) Vinp dec 20 100 1meg` -- the template's claimed
+* band, 100 Hz - 1 MHz).
+*
+* Element-for-element the template's circuit: flat DUT include (no X
+* instance); Vfb, a 0 V source tying inn to out (unity-gain follower, so the
+* noise gain is 1 across the band and inoise_spectrum is the amplifier's
+* input-referred density directly -- see the template header for why this
+* and not the open-loop Lbreak trick); Vinp carrying `ac 1` (the noise
+* analysis's input reference); CL = 2 pF [DR-1]; the 10 uA external ibias
+* sunk from vdd (an ideal current source is noiseless in ngspice).
+*
+* Unlike the slew bench there is no re-expression: Vinp is a plain DC source
+* that klt can `alter` per corner. Not reproduced from the template: its
+* op / second (wide, reference-only) noise / ac-guard analyses -- klt sim
+* runs one analysis per corner.
+*
+* Exactly one .include, of the committed DUT netlist, by a path relative to
+* this file.
+
+.include ../../../design/netlist/opamp_core.spice
+
+.options tnom=27
+
+Vdd vdd 0 dc 1.2
+Vss vss 0 dc 0
+Iibias vdd ibias dc 10u
+Vinp inp 0 dc 0.6 ac 1
+Vfb inn out dc 0
+Cload out vss 2e-12
