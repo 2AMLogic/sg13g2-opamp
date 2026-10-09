@@ -1,0 +1,138 @@
+#!/usr/bin/env bash
+#
+# `klt pex --measure-command` target: the open-loop AC bench (T1 item 7).
+#
+#   sim/post-layout/measure_openloop_ac.sh <dut-netlist>
+#
+# Runs sim/open-loop-ac/testbench/tb_openloop_ac.spice.tmpl against the given
+# device-under-test netlist over the ratified 45-point grid (cornerMOSlv.lib
+# mos_tt/ss/ff/sf/fs x -40/27/125 C x 1.08/1.20/1.32 V, CL = 2 pF [DR-1]) and
+# prints, on stdout and nowhere else, the measurement document `klt pex`
+# expects:
+#
+#   {"corners": [{"corner_id": "mos_tt/1.20V/27C",
+#                 "measurements": [{"name": "av0_db", "value": ..}, ...]}]}
+#
+# Four rows per corner -- av0_db, gbw_hz, pm_deg, iq_a (total Vdd current,
+# incl. the external 10 uA ibias reference, as in the pre-layout record) --
+# i.e. the spec/target-spec.md Sec 2 rows DC gain, GBW, phase margin and
+# quiescent power. klt pex computes every schematic-vs-extracted delta itself;
+# the bounds are checked by sim/post-layout/check_bounds.py.
+#
+# The DUT is either the flat xschem netlist (design/netlist/opamp_core.spice,
+# nodes land at the testbench's top level) or a `.SUBCKT` netlist such as the
+# one `klt pex` extracts. A `.SUBCKT` is wrapped in an `Xdut` instance whose
+# pins are matched by NAME to the testbench nodes (vdd vss inn inp out ibias).
+# Internal-node echoes (d1/d2/tail) are dropped from BOTH legs so the two legs
+# run an identical bench; the output-DC sanity gate below still applies.
+#
+# Loud, never partial: a broken simulation (sim/preflight.sh's
+# sg13g2_sim_broken: rc, missing wrdata, or the shared log signature), a missing
+# OP_* line or a non-regulating DC point aborts with exit 1 and NO document --
+# an unmeasured leg must not read as a measured one.
+#
+# HOST RULE -- this is a 45-ngspice-run grid per call (two calls per klt pex).
+# Under KLT_SIM_BACKEND=batch (shared dispatch worker) it REFUSES to run
+# (exit 2, before any ngspice launch) unless:
+#   * SG13G2_PEX_POINTS restricts it to ONE point (a debug probe), e.g.
+#       SG13G2_PEX_POINTS="mos_tt:27:1.20"      (corner:temp_c:vdd_v)
+#     (several space-separated points are a grid and are refused too), or
+#   * SG13G2_PEX_ALLOW_LOCAL_GRID=1 is set deliberately.
+# Off a dispatch worker the full grid runs.
+#
+# Environment (all optional): KLT_PEX_ARTIFACTS_DIR (kept logs/decks; default a
+# temp dir), KLT_PEX_SIDE (label only).
+
+set -euo pipefail
+
+if [[ $# -ne 1 ]]; then
+  echo "usage: $0 <dut-netlist>" >&2
+  exit 2
+fi
+DUT_ARG="$1"
+[[ -s "${DUT_ARG}" ]] || { echo "$(basename "$0"): DUT netlist not found/empty: ${DUT_ARG}" >&2; exit 1; }
+DUT_ARG="$(cd "$(dirname "${DUT_ARG}")" && pwd)/$(basename "${DUT_ARG}")"
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SIM_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+# shellcheck disable=SC2034  # consumed by sim/preflight.sh once sourced below
+REPO_ROOT="$(cd "${SIM_DIR}/.." && pwd)"
+
+# --- Grid selection + host-rule guard (before any ngspice launch) -----------
+# Preflight is sourced with stdout sent to stderr: stdout is the JSON document.
+# shellcheck source=/dev/null
+source "${SIM_DIR}/preflight.sh" >&2
+
+POINTS=()
+if [[ -n "${SG13G2_PEX_POINTS:-}" ]]; then
+  read -r -a _pts <<<"${SG13G2_PEX_POINTS}"
+  for p in "${_pts[@]}"; do POINTS+=("$p"); done
+else
+  for c in "${SG13G2_MOS_CORNERS[@]}"; do
+    for t in -40 27 125; do
+      for v in 1.08 1.20 1.32; do POINTS+=("${c}:${t}:${v}"); done
+    done
+  done
+fi
+if [[ "${KLT_SIM_BACKEND:-}" == "batch" && "${SG13G2_PEX_ALLOW_LOCAL_GRID:-0}" != "1" && ${#POINTS[@]} -gt 1 ]]; then
+  {
+    echo "$(basename "$0"): refusing to run a ${#POINTS[@]}-point local ngspice grid: KLT_SIM_BACKEND=batch"
+    echo "$(basename "$0"): marks this host as a shared dispatch worker (grids go to the Spot batch fleet)."
+    echo "$(basename "$0"): Probe one point with SG13G2_PEX_POINTS=corner:temp:vdd, or set"
+    echo "$(basename "$0"): SG13G2_PEX_ALLOW_LOCAL_GRID=1 to override deliberately."
+  } >&2
+  exit 2
+fi
+
+ART="${KLT_PEX_ARTIFACTS_DIR:-$(mktemp -d)}"
+mkdir -p "${ART}"
+OSDI_DIR="${SG13G2_OSDI_DIR}"
+# shellcheck disable=SC2034  # consumed by sg13g2_render_netlist (sim/preflight.sh)
+CL_F="2e-12"
+TMPL="${SIM_DIR}/open-loop-ac/testbench/tb_openloop_ac.spice.tmpl"
+
+# --- DUT: flat netlist as-is, or a .SUBCKT wrapped in an Xdut instance ------
+DUT_NETLIST_SNAPSHOT="${DUT_ARG}"
+sub_line="$(grep -i -m1 '^[[:space:]]*\.subckt[[:space:]]' "${DUT_ARG}" || true)"
+if [[ -n "${sub_line}" ]]; then
+  read -r -a _sub <<<"${sub_line}"
+  sub_name="${_sub[1]}"
+  for pin in vdd vss inn inp out ibias; do
+    if ! printf '%s\n' "${_sub[@]:2}" | tr '[:upper:]' '[:lower:]' | grep -qx "${pin}"; then
+      echo "$(basename "$0"): .SUBCKT ${sub_name} has no pin '${pin}' (pins: ${_sub[*]:2})" >&2
+      exit 1
+    fi
+  done
+  xline="Xdut"
+  for pin in "${_sub[@]:2}"; do xline+=" $(printf '%s' "${pin}" | tr '[:upper:]' '[:lower:]')"; done
+  xline+=" ${sub_name}"
+  DUT_NETLIST_SNAPSHOT="${ART}/dut_wrapped.spice"
+  { echo "* wrapper generated by measure_openloop_ac.sh"; echo ".include \"${DUT_ARG}\""; echo "${xline}"; } > "${DUT_NETLIST_SNAPSHOT}"
+fi
+
+# --- Per-point runs ----------------------------------------------------------
+: > "${ART}/points.tsv"
+for pt in "${POINTS[@]}"; do
+  IFS=: read -r corner temp vdd <<<"${pt}"
+  if [[ -z "${corner}" || -z "${temp}" || -z "${vdd}" ]]; then
+    echo "$(basename "$0"): bad point '${pt}' (want corner:temp_c:vdd_v)" >&2; exit 2
+  fi
+  point_id="${corner}_${temp}C_${vdd}V"
+  vcm="$(python3 -c "print(${vdd}/2)")"
+  netlist="${ART}/${point_id}.spice"
+  log="${ART}/${point_id}.log"
+  ac_csv="${ART}/${point_id}_ac.csv"
+  sg13g2_render_netlist --vcm "${vcm}" "${TMPL}" "${netlist}" "${corner}" "${temp}" "${vdd}" \
+    -e "s|@@AC_CSV@@|${ac_csv}|g" \
+    -e '/OP_VD1\|OP_VD2\|OP_VTAIL/d'
+  rc=0
+  ngspice -b "${netlist}" > "${log}" 2>&1 || rc=$?
+  if sg13g2_sim_broken "${rc}" "${log}" "${ac_csv}"; then
+    echo "$(basename "$0"): SIM FAILED ${point_id} (rc=${rc}) -- see ${log}" >&2
+    exit 1
+  fi
+  printf '%s\t%s\t%s\t%s\t%s\t%s\n' "${point_id}" "${corner}" "${temp}" "${vdd}" "${ac_csv}" "${log}" >> "${ART}/points.tsv"
+done
+
+# --- Post-process to the measurement document (stdout) ----------------------
+python3 -I "${SCRIPT_DIR}/ac_metrics.py" "${ART}/points.tsv"
