@@ -57,12 +57,16 @@ set -euo pipefail
 
 SEED=20260921
 N=300
-PARALLEL=8
+# Default capped at 2: the host rule is not to exceed 2 workers on one's own
+# (shared 8-vCPU worker). --parallel <n> remains an explicit override.
+PARALLEL=2
+ALLOW_LOCAL_GRID=0
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --seed) SEED="$2"; shift 2 ;;
     --n) N="$2"; shift 2 ;;
     --parallel) PARALLEL="$2"; shift 2 ;;
+    --allow-local-grid) ALLOW_LOCAL_GRID=1; shift ;;
     *) echo "run_offset_mc.sh: unknown argument: $1" >&2; exit 2 ;;
   esac
 done
@@ -83,6 +87,9 @@ SIM_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 # shellcheck disable=SC2034  # consumed by sim/preflight.sh once sourced below
 REPO_ROOT="$(cd "${SIM_DIR}/.." && pwd)"
 
+# shellcheck source=/dev/null
+source "${SIM_DIR}/grid-guard.sh"
+sg13g2_guard_local_grid run_offset_mc.sh "${ALLOW_LOCAL_GRID}"
 # shellcheck source=/dev/null
 source "${SIM_DIR}/preflight.sh"
 sg13g2_preflight_require_netlist --no-hint

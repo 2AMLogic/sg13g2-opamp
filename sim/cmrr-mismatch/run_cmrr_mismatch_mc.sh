@@ -83,11 +83,22 @@
 # record-id's partial sample files, never another record's evidence.
 set -euo pipefail
 
+ALLOW_LOCAL_GRID=0
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --allow-local-grid) ALLOW_LOCAL_GRID=1; shift ;;
+    *) echo "run_cmrr_mismatch_mc.sh: unknown argument: $1" >&2; exit 2 ;;
+  esac
+done
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SIM_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 # shellcheck disable=SC2034  # consumed by sim/preflight.sh once sourced below
 REPO_ROOT="$(cd "${SIM_DIR}/.." && pwd)"
 
+# shellcheck source=/dev/null
+source "${SIM_DIR}/grid-guard.sh"
+sg13g2_guard_local_grid run_cmrr_mismatch_mc.sh "${ALLOW_LOCAL_GRID}"
 # shellcheck source=/dev/null
 source "${SIM_DIR}/preflight.sh"
 sg13g2_preflight_require_netlist --no-hint
