@@ -373,19 +373,19 @@ uncited, and the manifest has no item 5 entry. Per row, today:
 | Phase margin ≥ 60° | `sim/open-loop-ac/` | yes (PR #102) | **no** | #85 |
 | Quiescent current ≤ 119.7 µA | `sim/open-loop-ac/` | yes (PR #102) | **no** | #85 |
 | Slew rate ≥ 7.51 V/µs (worse of the two edges) | `sim/slew-rate/` | yes, `sim/slew-rate/klt/` (one measurement per edge, each carrying the bound) | **no**: real run blocked (below) | [#95](https://github.com/2AMLogic/sg13g2-opamp/issues/95) |
-| Input-referred noise ≤ 108.9 µVrms | `sim/input-noise/` | no | no | [#96](https://github.com/2AMLogic/sg13g2-opamp/issues/96) |
+| Input-referred noise ≤ 108.9 µVrms | `sim/input-noise/` | yes, `sim/input-noise/klt/` (request, runner and comparator delivered; DUT corner prototype pending, the OSDI preflight needs ngspice-46) | **no**: real run pending | [#96](https://github.com/2AMLogic/sg13g2-opamp/issues/96) |
 | Offset (systematic) ≤ +21.9 mV | `sim/input-offset/` | no | no | [#97](https://github.com/2AMLogic/sg13g2-opamp/issues/97) |
 | CMRR ≥ 26.68 dB (mismatch-inclusive [DR-4]) | `sim/cmrr-mismatch/` | no | no | [#98](https://github.com/2AMLogic/sg13g2-opamp/issues/98) |
 | PSRR ≥ 1.87 dB (DC shelf) | `sim/cmrr-psrr/` | no | no | [#99](https://github.com/2AMLogic/sg13g2-opamp/issues/99) |
 | Output swing (headroom ≥ 251/141 mV, span ≥ 0.571 V) | `sim/output-swing/` | no | no | [#100](https://github.com/2AMLogic/sg13g2-opamp/issues/100) |
 
-Five of ten rows have a `klt sim` request. **None has a committed envelope
-yet.** The requests were submitted to the batch fleet and rejected before
+Six of ten rows have a `klt sim` request. **None has a committed envelope
+yet.** The open-loop and slew-rate requests were submitted to the batch fleet and rejected before
 simulating, because the fleet runner's klt (0.5.0) is older than the client
 (`batch_runner_version_mismatch`, exit 87; 2AMLogic/2am#2193). The slew-rate
 submission was job `klt-sim-994a710c60f3`. `sim/slew-rate/README.md` → "The
 `klt sim` path" has the exact error, the second (host ngspice-46 for the
-preflight) blocker and how to run once both clear. When an envelope lands, it
+preflight) blocker and how to run once both clear. The input-noise request has not been submitted: this increment delivered the request and comparator only (`sim/input-noise/README.md` → "The `klt sim` path"). When an envelope lands, it
 moves its rows to "yes" here. It still does not touch the manifest.
 
 ## Disclosures that travel with the current claim
