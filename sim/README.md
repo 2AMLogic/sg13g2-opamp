@@ -8,6 +8,32 @@ edited or deleted after it lands. This follows the same per-experiment shape
 (`README.md` / `testbench/` / `corners/` / `netlist-snapshots/` / `records/`)
 `sg13g2-bandgap/sim/<experiment>/` established on this same PDK.
 
+## Append-only enforcement and superseding a mistaken record
+
+CI enforces the rule above rather than trusting it:
+[`tools/check_append_only_evidence.py`](tools/check_append_only_evidence.py)
+(run by `.github/workflows/signoff.yml`) compares the previous Git tree with
+the tested tree and fails if any previously committed file under
+`sim/<experiment>/records/`, `netlist-snapshots/` or `corners/`,
+`signoff/reports/` or `signoff/characterization/reports/` was modified,
+deleted, renamed (no rename detection: the old path must still exist) or had
+its mode changed. The failure names the path. New files are always allowed, and
+so are edits to everything outside those directories (selectors such as
+`signoff/characterization/selection.json`, manifests, generators, `run_*.sh`,
+testbenches, READMEs). The comparison is PR base vs the tested tree on pull
+requests and the push's `before` vs `after` on pushes; the first push of a
+branch (all-zero `before`) has nothing to compare and is gated by its PR. There
+is no bypass label. Run it locally with
+`python3 sim/tools/check_append_only_evidence.py --base origin/main`.
+
+**To supersede a mistaken record, never edit or delete it.** Re-run the bench so
+a new timestamped record lands next to the original (new `records/`,
+`netlist-snapshots/` and `corners/<record-id>/` paths), then change the mutable
+selector (for example `signoff/characterization/selection.json`) to cite the
+corrected record and regenerate the dependent reports as new appended records.
+The original stays in the tree as history; explain why it was superseded in the
+new record's README/PR text.
+
 ## PDK pin
 
 Every record in this tree is generated against the PDK revision pinned in

@@ -35,10 +35,46 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          # Full history, on purpose: the append-only evidence gate below
+          # compares against the PR base / push `before` commit, which a
+          # default depth-1 checkout does not contain.
+          fetch-depth: 0
 
       - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
+
+      - name: Evidence is append-only against the previous tree (offline)
+        # Rejects modification, deletion, rename or mode change of any
+        # previously committed file under sim/*/{records,netlist-snapshots,
+        # corners}/, signoff/reports/ or signoff/characterization/reports/.
+        # New paths and edits to selectors/generators/READMEs pass. Explicit
+        # comparison commits: pull_request -> PR base SHA vs the tested tree
+        # (HEAD, the merge commit); push -> event `before` vs HEAD (the whole
+        # multi-commit push). An all-zero `before` (first push of a branch)
+        # has no previous tree and passes with an explicit notice; the PR run
+        # gates that branch. A base that cannot be obtained fails with a
+        # diagnostic, never a silent pass. No bypass label. Git + stdlib only.
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PUSH_BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          if [ "${EVENT_NAME}" = "pull_request" ]; then
+            base="${PR_BASE_SHA}"
+          else
+            base="${PUSH_BEFORE_SHA}"
+          fi
+          [ -n "${base}" ] || { echo "no comparison base for event ${EVENT_NAME}" >&2; exit 2; }
+          if ! [[ "${base}" =~ ^0+$ ]] && ! git cat-file -e "${base}^{commit}" 2>/dev/null; then
+            git fetch --no-tags origin "${base}" || true
+          fi
+          python3 sim/tools/check_append_only_evidence.py --base "${base}" --head HEAD
+
+      - name: Append-only gate negative controls (offline)
+        run: python3 -m unittest discover -s sim/tools -p 'test_check_append_only_evidence.py' -v
 
       - name: Offline checks (manifest, pins, record consistency)
         # Includes `signoff/characterization/generate.py --check`: the T1
