@@ -1,0 +1,301 @@
+{
+  "_comment": [
+    "sim/slew-rate as a `klt sim` request (issue #95): T1 item 5 coverage for the ratified slew-rate row.",
+    "Circuit: tb_slew.body.spice -- the same test circuit as ../testbench/tb_slew.spice.tmpl (one deliberate re-expression of the inp pwl drive; see the body's header).",
+    "Grid: cornerMOSlv.lib mos_tt/ss/ff/sf/fs [DR-1] x {-40, 27, 125} C x VDD {1.08, 1.20, 1.32} V = 45 corners.",
+    "vinp sweeps WITH vdd by index (klt's supply_v semantics), so Vcm = VDD/2 at every corner, as in the harness.",
+    "Each process corner is a bundle carrying the template's fixed cornerCAP.lib cap_typ section (the Miller cap is a cap_cmim MIM device).",
+    "Analysis: tran 1n 800n 0 0.05n = the template's T_PRINT, T_STOP, startup 0, T_MAX; `.options interp` is in the body, as in the template.",
+    "Ratified row: slew rate into CL = 2 pF >= 7.51 V/us worst-case [DR-2], the WORSE of the rising and falling edge at each point (spec/target-spec.md section 2).",
+    "Encoding of 'the worse of two edges': one measurement per edge, sr_rise_v_per_us and sr_fall_v_per_us, EACH carrying the same ratified bound min 7.51.",
+    "min(rise, fall) >= 7.51 holds if and only if rise >= 7.51 AND fall >= 7.51, so the pair passes at a corner if and only if the worse edge passes there,",
+    "and the row's verdict is the conjunction of the two measurement verdicts. No combined 'worst' value is invented: a `.meas` result is not visible to an `expr`",
+    "(checked while building #85), so the tool cannot compute min(rise, fall) itself; the worse edge at each corner is read off the two reported values.",
+    "Each edge is the time between the two crossings of the window Vcm +/- 0.15 V (0.3 V span) by the output, read on `orel = v(out) - VDD/2` so a single literal level serves every corner;",
+    "`td` confines each search to the edge under test (rise: after 250 ns, edge at 300 ns; fall: after 500 ns, edge at 550 ns), the harness's [T2,T3] / [T3,T_STOP] windows.",
+    "sr = 0.3 V / dt / 1e6 (V/us), a `.meas ... param` of the preceding time measurement (verified to evaluate in ngspice batch mode).",
+    "The *_inner_* measurements and lin_*_ratio reproduce the harness's ramp-linearity check (Vcm +/- 0.075 V window within 2% of the outer-window slew).",
+    "pre_rise_orel_v / pre_fall_orel_v reproduce its full-swing traverse check (output parked below the window just before the rising edge, above it before the falling edge).",
+    "drive_pp_v / drive_centre_err_v reproduce its drive-integrity check (inn excursion 2*0.3 V +/- 2%, centred within 10 mV of the DC output).",
+    "op_* reproduce its per-point DC sanity rule on the t = 0 (operating-point) solution: |Vout - VDD/2| <= 0.15*VDD and Vd1, Vd2, Vtail, Vout each within [0.02, 0.98]*VDD.",
+    "The *_dc_v node voltages and the t_*/inner/vinn measurements carry no limits: they are reported for compare.py's join against the harness CSV.",
+    "options.timeout_s = 300 s per corner: the harness ran the whole 45-point grid in roughly 8 minutes (about 10 s per corner, sim/slew-rate/README.md), so 300 s is ~30x headroom for the 800 ns / 0.05 ns-max-step window (>= 16000 timepoints).",
+    "klt's --fail-fast-probe applies to the local backends only; on the batch backend the per-corner timeout above is the guard, and a timed-out corner is graded error, which run.sh/compare.py refuse as evidence.",
+    "Solver tolerance: ngspice default, no .options reltol/abstol/vntol (DR-0005).",
+    "ngspice_init raises the printed digits only (measureprec for .meas, numdgt for expr); it changes no solver setting.",
+    "keep_artifacts is false so the committed envelope carries no host-absolute artifact paths; to debug a corner, run a copy of this request with it set (and --outdir outside the repo)."
+  ],
+  "netlist": "tb_slew.body.spice",
+  "netlist_source": "schematic",
+  "engine": "ngspice",
+  "backend": "batch",
+  "models": {
+    "pdk": "ihp-sg13g2",
+    "lib": "libs.tech/ngspice/models/cornerMOSlv.lib"
+  },
+  "corners": {
+    "process": [
+      {
+        "name": "mos_tt",
+        "sections": [
+          "mos_tt",
+          {
+            "lib": "libs.tech/ngspice/models/cornerCAP.lib",
+            "section": "cap_typ"
+          }
+        ]
+      },
+      {
+        "name": "mos_ss",
+        "sections": [
+          "mos_ss",
+          {
+            "lib": "libs.tech/ngspice/models/cornerCAP.lib",
+            "section": "cap_typ"
+          }
+        ]
+      },
+      {
+        "name": "mos_ff",
+        "sections": [
+          "mos_ff",
+          {
+            "lib": "libs.tech/ngspice/models/cornerCAP.lib",
+            "section": "cap_typ"
+          }
+        ]
+      },
+      {
+        "name": "mos_sf",
+        "sections": [
+          "mos_sf",
+          {
+            "lib": "libs.tech/ngspice/models/cornerCAP.lib",
+            "section": "cap_typ"
+          }
+        ]
+      },
+      {
+        "name": "mos_fs",
+        "sections": [
+          "mos_fs",
+          {
+            "lib": "libs.tech/ngspice/models/cornerCAP.lib",
+            "section": "cap_typ"
+          }
+        ]
+      }
+    ],
+    "supply_v": {
+      "vdd": [
+        1.08,
+        1.2,
+        1.32
+      ],
+      "vinp": [
+        0.54,
+        0.6,
+        0.66
+      ]
+    },
+    "temperature_c": [
+      -40,
+      27,
+      125
+    ]
+  },
+  "analysis": {
+    "kind": "tran",
+    "args": "1n 800n 0 0.05n"
+  },
+  "measurements": [
+    {
+      "name": "t_rise_outer_s",
+      "spice": ".meas tran t_rise_outer_s trig v(orel) val=-0.15 rise=1 td=250n targ v(orel) val=0.15 rise=1 td=250n",
+      "unit": "s"
+    },
+    {
+      "name": "t_fall_outer_s",
+      "spice": ".meas tran t_fall_outer_s trig v(orel) val=0.15 fall=1 td=500n targ v(orel) val=-0.15 fall=1 td=500n",
+      "unit": "s"
+    },
+    {
+      "name": "t_rise_inner_s",
+      "spice": ".meas tran t_rise_inner_s trig v(orel) val=-0.075 rise=1 td=250n targ v(orel) val=0.075 rise=1 td=250n",
+      "unit": "s"
+    },
+    {
+      "name": "t_fall_inner_s",
+      "spice": ".meas tran t_fall_inner_s trig v(orel) val=0.075 fall=1 td=500n targ v(orel) val=-0.075 fall=1 td=500n",
+      "unit": "s"
+    },
+    {
+      "name": "sr_rise_v_per_us",
+      "spice": ".meas tran sr_rise_v_per_us param='0.3/t_rise_outer_s*1e-6'",
+      "unit": "V/us",
+      "limits": {
+        "min": 7.51
+      }
+    },
+    {
+      "name": "sr_fall_v_per_us",
+      "spice": ".meas tran sr_fall_v_per_us param='0.3/t_fall_outer_s*1e-6'",
+      "unit": "V/us",
+      "limits": {
+        "min": 7.51
+      }
+    },
+    {
+      "name": "sr_rise_inner_v_per_us",
+      "spice": ".meas tran sr_rise_inner_v_per_us param='0.15/t_rise_inner_s*1e-6'",
+      "unit": "V/us"
+    },
+    {
+      "name": "sr_fall_inner_v_per_us",
+      "spice": ".meas tran sr_fall_inner_v_per_us param='0.15/t_fall_inner_s*1e-6'",
+      "unit": "V/us"
+    },
+    {
+      "name": "lin_rise_ratio",
+      "spice": ".meas tran lin_rise_ratio param='sr_rise_inner_v_per_us/sr_rise_v_per_us'",
+      "limits": {
+        "min": 0.98,
+        "max": 1.02
+      }
+    },
+    {
+      "name": "lin_fall_ratio",
+      "spice": ".meas tran lin_fall_ratio param='sr_fall_inner_v_per_us/sr_fall_v_per_us'",
+      "limits": {
+        "min": 0.98,
+        "max": 1.02
+      }
+    },
+    {
+      "name": "pre_rise_orel_v",
+      "spice": ".meas tran pre_rise_orel_v find v(orel) at=299n",
+      "unit": "V",
+      "limits": {
+        "max": -0.15
+      }
+    },
+    {
+      "name": "pre_fall_orel_v",
+      "spice": ".meas tran pre_fall_orel_v find v(orel) at=549n",
+      "unit": "V",
+      "limits": {
+        "min": 0.15
+      }
+    },
+    {
+      "name": "vinn_max_v",
+      "spice": ".meas tran vinn_max_v max v(inn)",
+      "unit": "V"
+    },
+    {
+      "name": "vinn_min_v",
+      "spice": ".meas tran vinn_min_v min v(inn)",
+      "unit": "V"
+    },
+    {
+      "name": "vout_dc_v",
+      "spice": ".meas tran vout_dc_v find v(out) at=0",
+      "unit": "V"
+    },
+    {
+      "name": "drive_pp_v",
+      "spice": ".meas tran drive_pp_v param='vinn_max_v-vinn_min_v'",
+      "unit": "V",
+      "limits": {
+        "min": 0.588,
+        "max": 0.612
+      }
+    },
+    {
+      "name": "drive_centre_err_v",
+      "spice": ".meas tran drive_centre_err_v param='abs((vinn_max_v+vinn_min_v)/2-vout_dc_v)'",
+      "unit": "V",
+      "limits": {
+        "max": 0.01
+      }
+    },
+    {
+      "name": "vd1_dc_v",
+      "spice": ".meas tran vd1_dc_v find v(d1) at=0",
+      "unit": "V"
+    },
+    {
+      "name": "vd2_dc_v",
+      "spice": ".meas tran vd2_dc_v find v(d2) at=0",
+      "unit": "V"
+    },
+    {
+      "name": "vtail_dc_v",
+      "spice": ".meas tran vtail_dc_v find v(tail) at=0",
+      "unit": "V"
+    },
+    {
+      "name": "vibias_dc_v",
+      "spice": ".meas tran vibias_dc_v find v(ibias) at=0",
+      "unit": "V"
+    },
+    {
+      "name": "op_vout_offset_frac",
+      "spice": ".meas tran op_vout_offset_frac find v(ofrac) at=0",
+      "limits": {
+        "max": 0.15
+      }
+    },
+    {
+      "name": "op_vout_rail_frac",
+      "spice": ".meas tran op_vout_rail_frac find v(fout) at=0",
+      "limits": {
+        "min": 0.02,
+        "max": 0.98
+      }
+    },
+    {
+      "name": "op_vd1_rail_frac",
+      "spice": ".meas tran op_vd1_rail_frac find v(fd1) at=0",
+      "limits": {
+        "min": 0.02,
+        "max": 0.98
+      }
+    },
+    {
+      "name": "op_vd2_rail_frac",
+      "spice": ".meas tran op_vd2_rail_frac find v(fd2) at=0",
+      "limits": {
+        "min": 0.02,
+        "max": 0.98
+      }
+    },
+    {
+      "name": "op_vtail_rail_frac",
+      "spice": ".meas tran op_vtail_rail_frac find v(ftail) at=0",
+      "limits": {
+        "min": 0.02,
+        "max": 0.98
+      }
+    }
+  ],
+  "options": {
+    "timeout_s": 300,
+    "keep_artifacts": false,
+    "osdi_preload": [
+      "$PDK_ROOT/ihp-sg13g2/libs.tech/ngspice/osdi/psp103.osdi",
+      "$PDK_ROOT/ihp-sg13g2/libs.tech/ngspice/osdi/psp103_nqs.osdi",
+      "$PDK_ROOT/ihp-sg13g2/libs.tech/ngspice/osdi/mosvar.osdi",
+      "$PDK_ROOT/ihp-sg13g2/libs.tech/ngspice/osdi/r3_cmc.osdi"
+    ],
+    "stage_model_inputs": true,
+    "fail_on_diagnostic": [
+      "singular_matrix",
+      "nonconvergence"
+    ],
+    "ngspice_init": [
+      "set measureprec=12",
+      "set numdgt=12"
+    ]
+  }
+}

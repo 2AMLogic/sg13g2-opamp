@@ -1,0 +1,70 @@
+* sg13g2-opamp -- slew-rate bench as a `klt sim` circuit body (issue #95)
+*
+* The SAME test circuit as ../testbench/tb_slew.spice.tmpl (the harness
+* path, sim/slew-rate/run_slew_sweep.sh), re-expressed in the shape `klt sim`
+* requires: a circuit body with no .control/.end of its own (klayout-tools
+* docs/cli/sim.md, "Netlist convention"). klt generates the per-corner
+* wrapper deck around this file and adds, per corner: the process `.lib`
+* cards (cornerMOSlv.lib mos_<corner> plus cornerCAP.lib cap_typ), `.temp`,
+* `alter vdd=<V>` and `alter vinp=<V/2>` (swept together by index, so
+* Vcm = VDD/2 exactly as the harness's `vcm = vdd/2`), `pre_osdi` for the
+* four OSDI libraries, and the one analysis the request declares
+* (`tran 1n 800n 0 0.05n` -- the template's own T_PRINT/T_STOP/T_MAX).
+*
+* Element-for-element the template's circuit: flat DUT include (no X
+* instance), Lbreak = 1e18 H from inn to out (DC servo; open circuit on this
+* bench's ns timescale), Cinj = 1 uF coupling the antiphase source into inn,
+* CL = 2 pF [DR-1], the 10 uA external ibias sunk from vdd.
+*
+* ONE deliberate re-expression: the template writes the inp drive as a single
+* pwl source whose levels are the literal Vcm +/- 0.3 V of that corner
+* (`Vinp inp 0 dc @@VCM_V@@ pwl(...)`). klt `alter`s a source's DC value per
+* corner but cannot rewrite pwl levels, so the corner-dependent part is split
+* off: Vinp (altered per corner, dc = Vcm) in series with Vdrvp, a pwl source
+* carrying only the corner-INDEPENDENT offsets 0 / -0.3 / +0.3 / -0.3 V on the
+* template's schedule. v(inp) = Vcm + offset(t) is then the template's
+* waveform, sample for sample. Vstepn (inn side) is corner-independent in the
+* template and is copied verbatim.
+*
+* Step schedule (same as the template; ns): T1 = 50 step down (out parks low),
+* T2 = 300 step up (measured RISING edge), T3 = 550 step down (measured
+* FALLING edge), T_STOP = 800; 0.1 ns transitions.
+*
+* Measurement nodes (B-sources, no loading: nothing is connected to them but
+* the .meas cards and the klt measurements):
+*   orel  = v(out) - VDD/2           the output relative to the mid-rail
+*                                    window centre (the window is Vcm +/- h,
+*                                    Vcm = VDD/2), so ONE literal .meas level
+*                                    (+/-0.15, +/-0.075) serves every corner;
+*   ofrac, fd1, fd2, ftail, fout     per-point DC sanity fractions of VDD
+*                                    (the template's op_pass rule).
+*
+* `.options interp` is the template's own: the tran output is interpolated
+* onto the uniform 1 ns print grid, so the .meas cards read the same samples
+* the harness's committed wrdata waveform holds. No solver option is set
+* (DR-0005: ngspice default tolerance).
+*
+* Exactly one .include, of the committed DUT netlist, by a path relative to
+* this file (ngspice resolves a nested .include against the including file's
+* directory; klt's off-host backends stage the same closure).
+
+.include ../../../design/netlist/opamp_core.spice
+
+.options tnom=27 interp
+
+Vdd vdd 0 dc 1.2
+Vss vss 0 dc 0
+Iibias vdd ibias dc 10u
+Lbreak inn out 1e18
+Cinj inn nstep 1e-6
+Cload out vss 2e-12
+Vinp inp na dc 0.6
+Vdrvp na 0 dc 0 pwl(0 0 50n 0 50.1n -0.3 300n -0.3 300.1n 0.3 550n 0.3 550.1n -0.3 800n -0.3)
+Vstepn nstep 0 dc 0 pwl(0 0 50n 0 50.1n 0.3 300n 0.3 300.1n -0.3 550n -0.3 550.1n 0.3 800n 0.3)
+
+Borel orel 0 v=v(out)-v(vdd)/2
+Bofrac ofrac 0 v=abs(v(out)-v(vdd)/2)/v(vdd)
+Bfout fout 0 v=v(out)/v(vdd)
+Bfd1 fd1 0 v=v(d1)/v(vdd)
+Bfd2 fd2 0 v=v(d2)/v(vdd)
+Bftail ftail 0 v=v(tail)/v(vdd)
