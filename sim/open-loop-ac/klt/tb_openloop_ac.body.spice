@@ -1,0 +1,44 @@
+* sg13g2-opamp -- open-loop AC bench as a `klt sim` circuit body (issue #85)
+*
+* The SAME test circuit as ../testbench/tb_openloop_ac.spice.tmpl (the
+* harness path, sim/open-loop-ac/run_pvt_sweep.sh), re-expressed in the
+* shape `klt sim` requires: a circuit body with no .control/.end of its own
+* (klayout-tools docs/cli/sim.md, "Netlist convention"). klt generates the
+* per-corner wrapper deck around this file and adds, per corner:
+*
+*   - the process `.lib` cards  (cornerMOSlv.lib mos_<corner>, plus
+*                                 cornerCAP.lib cap_typ -- the template's
+*                                 own fixed `.lib ... cornerCAP.lib cap_typ`
+*                                 line, carried as a second section of every
+*                                 process bundle in the request);
+*   - `.temp <T>`               (the template's `.options temp=@@TEMP_C@@`);
+*   - `alter vdd=<V>` and `alter vinp=<V/2>` (the template's @@VDD_V@@ and
+*                                 @@VCM_V@@ = VDD/2, swept together by index
+*                                 so Vcm tracks VDD exactly as the harness's
+*                                 `vcm = vdd/2` does);
+*   - `pre_osdi` for the four OSDI libraries the template preloads;
+*   - the one analysis the request declares (`ac dec 20 1 1g`, or `op` for
+*     the companion operating-point request -- see README.md "Why two
+*     requests").
+*
+* Element-for-element identical to the template otherwise: flat DUT
+* include (no X instance -- design/netlist/opamp_core.spice is a flat
+* xschem netlist whose .subckt lines are comments), Lbreak = 1e18 H loop
+* break from inn to out, CL = 2 pF [DR-1], the 10 uA external ibias sunk
+* from vdd, 1 V AC at inp only. The DC values written on Vdd and Vinp below
+* are the nominal point; every corner overrides both with `alter`.
+*
+* Exactly one .include, of the committed DUT netlist, by a path relative to
+* this file (ngspice resolves a nested .include against the including
+* file's directory; klt's off-host backends stage the same closure).
+
+.include ../../../design/netlist/opamp_core.spice
+
+.options tnom=27
+
+Vdd vdd 0 dc 1.2
+Vss vss 0 dc 0
+Iibias vdd ibias dc 10u
+Vinp inp 0 dc 0.6 ac 1
+Lbreak inn out 1e18
+Cload out vss 2e-12

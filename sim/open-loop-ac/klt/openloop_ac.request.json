@@ -1,0 +1,148 @@
+{
+  "_comment": [
+    "sim/open-loop-ac as a `klt sim` request (issue #85): the AC half of the bench.",
+    "Circuit: tb_openloop_ac.body.spice -- the same test circuit as ../testbench/tb_openloop_ac.spice.tmpl.",
+    "Grid: cornerMOSlv.lib mos_tt/ss/ff/sf/fs [DR-1] x {-40, 27, 125} C x VDD {1.08, 1.20, 1.32} V = 45 corners.",
+    "vinp sweeps WITH vdd by index (klt's supply_v semantics), so Vcm = VDD/2 at every corner, as in the harness.",
+    "Each process corner is a bundle carrying the template's fixed cornerCAP.lib cap_typ section (the Miller cap is a cap_cmim MIM device).",
+    "limits are the RATIFIED bounds of spec/target-spec.md section 2 [DR-2], unrounded: Av0 >= 37.8 dB, GBW >= 4.74 MHz, PM >= 60 deg.",
+    "PM is graded through its defining quantity: this bench defines PM = 180 deg + phase(v(out)) at the 0 dB crossing (README 'Sign convention'),",
+    "so phase_at_ugf_rad >= -2*pi/3 rad is exactly PM >= 60 deg, and its margin x 180/pi is PM - 60 deg. A `.meas` result is not",
+    "visible to an `expr` in ngspice's control block (checked on ngspice-42), so the tool cannot add the 180 deg offset itself.",
+    "Iq and the per-point DC operating-point sanity checks live in openloop_op.request.json: klt sim runs one analysis per corner",
+    "(docs/cli/sim.md 'Still one analysis per corner'); compare.py joins the two envelopes on (process, temperature, vdd). See README.md.",
+    "gbw_hz is ngspice's own .meas WHEN interpolation (linear in frequency between the bracketing sweep points); the harness interpolates",
+    "in log10(frequency). The bias is one-signed and bounded; compare.py quantifies it -- see README.md 'Measurement method'.",
+    "Solver tolerance: ngspice default, no .options reltol/abstol/vntol (DR-0005).",
+    "ngspice_init raises the printed digits only (measureprec for .meas, numdgt for expr); it changes no solver setting.",
+    "keep_artifacts is false so the committed envelope carries no host-absolute artifact paths; to debug a corner, run a copy of this request with it set (and --outdir outside the repo)."
+  ],
+  "netlist": "tb_openloop_ac.body.spice",
+  "netlist_source": "schematic",
+  "engine": "ngspice",
+  "backend": "batch",
+  "models": {
+    "pdk": "ihp-sg13g2",
+    "lib": "libs.tech/ngspice/models/cornerMOSlv.lib"
+  },
+  "corners": {
+    "process": [
+      {
+        "name": "mos_tt",
+        "sections": [
+          "mos_tt",
+          {
+            "lib": "libs.tech/ngspice/models/cornerCAP.lib",
+            "section": "cap_typ"
+          }
+        ]
+      },
+      {
+        "name": "mos_ss",
+        "sections": [
+          "mos_ss",
+          {
+            "lib": "libs.tech/ngspice/models/cornerCAP.lib",
+            "section": "cap_typ"
+          }
+        ]
+      },
+      {
+        "name": "mos_ff",
+        "sections": [
+          "mos_ff",
+          {
+            "lib": "libs.tech/ngspice/models/cornerCAP.lib",
+            "section": "cap_typ"
+          }
+        ]
+      },
+      {
+        "name": "mos_sf",
+        "sections": [
+          "mos_sf",
+          {
+            "lib": "libs.tech/ngspice/models/cornerCAP.lib",
+            "section": "cap_typ"
+          }
+        ]
+      },
+      {
+        "name": "mos_fs",
+        "sections": [
+          "mos_fs",
+          {
+            "lib": "libs.tech/ngspice/models/cornerCAP.lib",
+            "section": "cap_typ"
+          }
+        ]
+      }
+    ],
+    "supply_v": {
+      "vdd": [
+        1.08,
+        1.2,
+        1.32
+      ],
+      "vinp": [
+        0.54,
+        0.6,
+        0.66
+      ]
+    },
+    "temperature_c": [
+      -40,
+      27,
+      125
+    ]
+  },
+  "analysis": {
+    "kind": "ac",
+    "args": "dec 20 1 1g"
+  },
+  "measurements": [
+    {
+      "name": "av0_db",
+      "spice": ".meas ac av0_db find vdb(out) at=1",
+      "unit": "dB",
+      "limits": {
+        "min": 37.8
+      }
+    },
+    {
+      "name": "gbw_hz",
+      "spice": ".meas ac gbw_hz when vdb(out)=0",
+      "unit": "Hz",
+      "limits": {
+        "min": 4740000.0
+      }
+    },
+    {
+      "name": "phase_at_ugf_rad",
+      "spice": ".meas ac phase_at_ugf_rad find vp(out) when vdb(out)=0",
+      "unit": "rad",
+      "limits": {
+        "min": -2.0943951023931953
+      }
+    }
+  ],
+  "options": {
+    "timeout_s": 300,
+    "keep_artifacts": false,
+    "osdi_preload": [
+      "$PDK_ROOT/ihp-sg13g2/libs.tech/ngspice/osdi/psp103.osdi",
+      "$PDK_ROOT/ihp-sg13g2/libs.tech/ngspice/osdi/psp103_nqs.osdi",
+      "$PDK_ROOT/ihp-sg13g2/libs.tech/ngspice/osdi/mosvar.osdi",
+      "$PDK_ROOT/ihp-sg13g2/libs.tech/ngspice/osdi/r3_cmc.osdi"
+    ],
+    "stage_model_inputs": true,
+    "fail_on_diagnostic": [
+      "singular_matrix",
+      "nonconvergence"
+    ],
+    "ngspice_init": [
+      "set measureprec=12",
+      "set numdgt=12"
+    ]
+  }
+}
