@@ -184,3 +184,159 @@ pass's own compensation-network math (`Cc`/`M6` chosen jointly for a
 - **Not proof the input pair/output stage are in saturation at a
   device-by-device level** — see "Per-point sanity checks" above for the
   honest scope of what is actually checked.
+
+## The `klt sim` path (issue #85)
+
+[`klt/`](klt/) expresses this same bench as `klt sim` requests, because T1
+item 5 ("full corner verification vs a ratified spec") accepts only a `klt
+sim` envelope (see `signoff/README.md`). It is a second measurement path for
+the same circuit, not a new bench.
+
+| File | What it is |
+|---|---|
+| [`klt/tb_openloop_ac.body.spice`](klt/tb_openloop_ac.body.spice) | The test circuit as a `klt sim` circuit body: element-for-element the circuit in `testbench/tb_openloop_ac.spice.tmpl` (flat DUT include, `Lbreak = 1e18 H`, `CL = 2 pF`, 10 µA external `ibias`, 1 V AC at `inp` only), with exactly one `.include` of `design/netlist/opamp_core.spice` and no `.control` block. |
+| [`klt/openloop_ac.request.json`](klt/openloop_ac.request.json) | AC request: `ac dec 20 1 1g` over the 45-point grid; Av0, GBW and the phase at the 0 dB crossing, each with its ratified bound as `limits`. |
+| [`klt/openloop_op.request.json`](klt/openloop_op.request.json) | Operating-point request: same body, grid and options; total Vdd current (`ivdd_total_a`, the Iq row) with its ratified bound, the DC node voltages, and the per-point sanity checks below as tool-graded measurements. |
+| [`klt/run.sh`](klt/run.sh) | Runs both requests, gates each envelope, writes them unmodified to `klt/records/<UTC>-<sha>.{ac,op}.sim.json`, then writes the comparison `klt/records/<UTC>-<sha>.compare.json`. |
+| [`klt/compare.py`](klt/compare.py) | The validation gate and the comparison against this bench's harness record; tests in [`klt/test_compare.py`](klt/test_compare.py). |
+
+### How the two paths relate, and which one is the record of evidence
+
+The harness record
+[`records/20260910-221601-22feaba.csv`](records/20260910-221601-22feaba.csv)
+stays the **record of evidence** for the four rows this bench carries. It is
+what DR-0002 ratified the bounds on, and nothing in `klt/` edits or replaces
+it. A `klt sim` envelope pair under `klt/records/` is the **gradable form** of
+the same measurement: the tool assigns each row's pass/fail verdict and
+binding corner against the ratified bound. The `compare.json` written beside
+each pair ties the two together point by point. Where the two disagree beyond
+the stated tolerance, the disagreement is reported in that file and must be
+explained here before the envelope is cited anywhere.
+
+**No envelope is committed yet.** The real 45-corner run is blocked; see
+"Status" below.
+
+### Grid encoding
+
+- Process: one `corners.process` bundle per `cornerMOSlv.lib` section
+  (`mos_tt/ss/ff/sf/fs`), each bundle also selecting `cornerCAP.lib`
+  `cap_typ`. That reproduces the template's fixed `cap_typ` line (the Miller
+  capacitor is a `cap_cmim` device).
+- Supply: `corners.supply_v` sweeps `vdd` `{1.08, 1.20, 1.32}` and `vinp`
+  `{0.54, 0.60, 0.66}` **together by index** (klt's semantics for multiple
+  supply keys). That gives `Vcm = VDD/2` at every corner, as the harness does.
+  The OP request asserts it per corner (`op_vcm_frac` within `0.5 ± 1e-4`).
+- Temperature: `.temp` per corner (−40, 27, 125 °C), `tnom = 27`, as in
+  the template.
+- Solver tolerance: ngspice defaults, with no `reltol`/`abstol`/`vntol`
+  override (DR-0005). `options.ngspice_init` sets only `measureprec`/`numdgt`,
+  the number of digits ngspice prints.
+
+### Why two requests
+
+`klt sim` runs **one analysis per corner** (klayout-tools `docs/cli/sim.md`,
+"Still one analysis per corner"; klayout-tools#2482). Av0, GBW and PM come
+from the AC sweep. Iq and the DC sanity checks are operating-point
+quantities, and an AC solve's plot does not carry them. So the bench is two
+requests over the identical body and grid. `compare.py` joins them on the
+full (process, temperature, VDD) key and refuses anything but the same 45
+unique points on both sides. Both envelopes are kept as the tool wrote them.
+
+### Measurement method, row by row
+
+| Row (ratified bound [DR-2]) | Envelope measurement | Same as the harness? |
+|---|---|---|
+| Open-loop DC gain ≥ 37.8 dB | `av0_db`: `.meas ac find vdb(out) at=1` | Yes. Both read the first sweep point (1 Hz). |
+| GBW ≥ 4.74 MHz | `gbw_hz`: `.meas ac when vdb(out)=0` | **No, a bounded one-signed difference.** ngspice interpolates the crossing linearly in *frequency* between the two bracketing sweep points. `run_pvt_sweep.sh` interpolates linearly in *log10(frequency)* with the same bracketing fraction. The tool value is larger by `f_lin/f_log − 1`, which lies between 0 and 1.657e-3 at 20 points/decade. Recomputed per corner from the harness's own committed raw sweeps (`corners/20260910-221601-22feaba/*_ac.csv`), it ranges from 7.0e-5 to 1.66e-3 across the 45 points. `compare.py` corrects for it per corner and reports the uncorrected difference too. At the binding corner the bias makes the tool's GBW slightly *higher*, never lower, so it cannot turn a harness pass into a tool fail. |
+| Phase margin ≥ 60° | `phase_at_ugf_rad`: `.meas ac find vp(out) when vdb(out)=0`, limit `min −2π/3 rad` | The same interpolation as the harness (same bracketing fraction). This bench *defines* PM as `180° + phase at the 0 dB crossing` ("Sign convention" above), so `phase ≥ −120°` **is** `PM ≥ 60°`, and the envelope's margin × 180/π is `PM − 60°`. The tool grades the phase rather than PM itself because an `expr` cannot read a `.meas` result in the same request (checked on ngspice-42; klayout-tools#2826), so the 180° offset cannot be added inside the tool. Radians rather than `set units=degrees`: a runner that silently ignored `ngspice_init` would then grade degrees against a radian bound and pass everything. |
+| Iq ≤ 119.7 µA (total, incl. `ibias`) | `ivdd_total_a`: `-i(vdd)` after `op` | Yes. Same operating point, same sign convention. |
+
+The per-point DC sanity check ("Per-point sanity checks" above) is
+reproduced exactly as tool-graded OP measurements: `op_vout_offset_frac =
+|Vout − VDD/2|/VDD ≤ 0.15`, and `op_{vout,vd1,vd2,vtail}_rail_frac` within
+`[0.02, 0.98]`. A point failing any of them fails the OP envelope, and
+`compare.py` requires the tool's sanity result to equal the harness's
+`op_pass` at every point. Both requests also set
+`options.fail_on_diagnostic: ["singular_matrix", "nonconvergence"]`. A corner
+whose solve needed gmin/source stepping is therefore graded `inconclusive`,
+never `pass`, which mirrors the harness's broken-simulation detector
+(`SG13G2_NGSPICE_ERR_RE`) treating those log lines as a broken point. The OP
+request adds a `[−0.1, 1.42] V` plausibility window on the node voltages.
+
+### Comparison tolerance
+
+These are per-metric tolerances in `compare.py`'s `TOLERANCES`. A comparison
+tolerance never loosens a ratified bound or a solver tolerance. A tool
+verdict on the far side of a bound from the harness verdict is reported in
+`bound_verdict_disagreements` even when the two values agree within
+tolerance.
+
+| Metric | Tolerance | Why |
+|---|---|---|
+| `ivdd_total_a` | 1e-3 relative | ngspice's default `reltol = 1e-3` is the solver's own DC acceptance criterion. DR-0005 measured a 9.9e-4 relative drain-current difference between the macOS/aarch64 and Linux/x86_64 default-tolerance records of this PDK. The harness ran on macOS/aarch64. The envelope runs on the fleet's Linux image. |
+| DC node voltages | 1e-3 relative + 1 µV | Same basis (`reltol`, `vntol = 1 µV`). |
+| `av0_db` | 0.02 dB | Two gm/gds stage ratios, each moving by at most about 1e-3 under that current envelope: 20·log10(1.002) = 0.017 dB. |
+| `gbw_hz` (after the per-corner method correction) | 2e-3 relative | GBW ≈ gm1/Cc, which moves by about 1e-3, doubled for margin. The method term is removed exactly, not absorbed. |
+| PM (derived as 180° + phase) | 0.1° | A 2e-3 shift in the second-pole/GBW ratio moves PM by about 0.03° at this design's ~77°. |
+
+Both sides' print quantisation (the harness CSV is `%.6g`) is two decades
+below these tolerances.
+
+**Bound proximity, stated in advance:** the harness's worst Av0 is
+**37.7812 dB at `mos_fs_125C_1.08V`, below the 37.8 dB bound by 0.019 dB**.
+That is inside the 0.02 dB comparison tolerance, so a tool value on either
+side of 37.8 dB at that corner would agree with the harness. The verdict of
+record is the envelope's, unrounded, and `compare.py` will list a flip there
+as an explained disagreement rather than hide it. Iq's worst point
+(119.655 µA at `mos_ss_-40C_1.32V`) sits 3.8e-4 relative under its bound,
+also inside its comparison tolerance. GBW's worst (4.74216 MHz at
+`mos_fs_125C_1.08V`, 4.6e-4 relative margin) can only move up under the
+method bias. PM's worst (76.36°) is 16° clear.
+
+### Status (2026-10-09): the real run is blocked
+
+Two independent blockers. Neither is solved by running the grid locally on
+a shared dispatch host, and that is not done.
+
+1. **The batch fleet runner is older than the client.** The fleet image pins
+   klt **0.5.0** (2AMLogic/2am `infra/aws/batch-image-pins.env`,
+   `PIN_KLAYOUT_TOOLS_VERSION`). klt's runner/client version gate rejects
+   the job before simulating. A submission of `openloop_ac.request.json` with
+   klt `0.7.0+g4cbdfa769875` staged its 14 model inputs and launched job
+   `klt-sim-671820687a2e`. The job then failed with exit 87,
+   `batch_runner_version_mismatch`: "the fleet runner runs klt 0.5.0 but the
+   submitting client is 0.7.0+g4cbdfa769875 -- the request was not run". All
+   45 corners came back `error`. The requests also need features that 0.5.0
+   lacks: `options.osdi_preload` with `stage_model_inputs`, per-section
+   corner libraries, `expr` measurements, `ngspice_init` and
+   `fail_on_diagnostic`. So the runner must move forward. Pinning the client
+   back to 0.5.0 does not work. Tracked in 2AMLogic/2am#2193. After the bump,
+   run with a client whose `klt --version` equals the runner's, for example
+   `KLT="uvx --from klayout-tools==X.Y.Z klt" sim/open-loop-ac/klt/run.sh`.
+2. **The preflight needs the pinned ngspice.** `run.sh` sources
+   `sim/preflight.sh`, whose OSDI check loads the `.osdi` binaries with the
+   local ngspice. These are the same binaries the request stages to the
+   fleet. They target OSDI v0.4 (ngspice-46, the `sim/pdk.json` pin). A host
+   with ngspice-42 ("only supports OSDI v0.3") fails the check, and
+   `run.sh` exits 3 before submitting anything. Run from a host with the
+   pinned ngspice-46.
+
+What *was* verified without the real run:
+
+- The client accepts both requests, including model staging and the
+  include closure.
+- The request mechanics were checked on a behavioural stand-in DUT with one
+  local corner. `alter` of `vdd`/`vinp` tracks as intended. `.meas ac` with
+  `at=1` and `when vdb(out)=0` produces the expected values. The tool's GBW
+  equals the linear-in-frequency interpolation and its phase equals the
+  harness's interpolation on the same sweep data. The OP `expr`
+  measurements and their limits grade as intended.
+- `compare.py` passes 31 offline tests, including negative controls for
+  reordered, missing, duplicate, extra and off-grid points, null and
+  non-finite values, perturbations outside tolerance, sanity disagreement
+  and a bound flip.
+- `run.sh` failure paths: missing PDK, missing OSDI, missing ngspice and
+  missing klt exit 3. A klt error, an errored corner or failed validation
+  exits 4 and writes nothing to `records/`. Repeated runs mint distinct
+  append-only records and leave the harness CSV byte-identical. These paths
+  were exercised with replayed envelopes, never real simulator output.
