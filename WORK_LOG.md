@@ -4,6 +4,7 @@
 
 ### 2026-10-09
 
+- **PR #130**: sim: input-noise bench as a klt sim request (Part of #96, first increment)
 - **PR #128**: spec: draft reproducible GDS bounding-box area definition for TBD-12
 - **PR #127**: post-layout: klt-sim-based measure command for item 7 (partial; run blocked by batch runner mismatch) (#86)
 - **PR #126**: signoff: post-layout pex harness for T1 item 7 (partial, #86)

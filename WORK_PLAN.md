@@ -25,7 +25,7 @@ Human-approved issues ready for implementation (`loom:issue`).
 
 Issues currently being built (`loom:building`).
 
-_None._
+- **#96**: sim: express the input-noise bench as a klt sim request (T1 item 5 coverage, follow-up to #85)
 
 ## PRs Awaiting Review
 
@@ -66,7 +66,7 @@ _None._
 | Operator merge-risk holds | 0 |
 | Operator priority | 0 |
 | Ready (`loom:issue`) | 1 |
-| In Progress (`loom:building`) | 0 |
+| In Progress (`loom:building`) | 1 |
 | PRs awaiting review | 1 |
 | Approved PRs awaiting merge | 0 |
 | Curated | 7 |
