@@ -19,6 +19,7 @@ register replaces.)
 bash signoff/regenerate.sh --dry-run      # render the report, write nothing
 bash signoff/regenerate.sh                # mint a new record under reports/
 python3 signoff/check_signoff.py          # offline: pins + record consistency
+python3 signoff/check_inventories.py      # offline: item 1/9/10 inventory entries
 python3 signoff/check_signoff.py --run-klt  # + re-grade and diff vs the record
 ```
 
@@ -155,6 +156,47 @@ bench. Refresh an envelope (and its manifest pin) whenever the inventory it
 names changes; `check_signoff.py` fails offline if the pin and the file
 disagree, and `--run-klt` fails with `stale_evidence` if only the inventory
 moved.
+
+**What CI re-checks in those inventories, and what stays a dated audit.**
+A hash binds the inventory *text*; it does not notice a cited record being
+deleted or a runner losing its executable bit while the text stands still.
+[`check_inventories.py`](check_inventories.py) (offline, stdlib-only, run in
+the offline half of the `signoff` job) reads the three inventories through a
+documented parseable subset of their existing format — `key: value` lines in
+`design-sources.txt` / `hygiene.txt`, `row | bench | command | record` lines
+in `testbenches.txt`; the grammar is in the script's docstring — and on every
+push and PR verifies:
+
+| Continuously checked (CI) | Inventory |
+|---|---|
+| schematic, symbol, committed netlist, `xschemrc` and sizing basis exist; `netlist-origin` names the listed schematic; the `regenerate` command's `cd`/`--rcfile`/`-o`/schematic arguments resolve to the listed `xschemrc`, netlist directory and schematic, and the netlist file name is the schematic stem + `.spice`; `design/README.md` has the "Running xschem / regenerating the netlist" heading; `sim/pdk.json` exists | `design-sources.txt` |
+| per row: bench dir exists; the cold-start runner lives in it, exists, has the executable mode, and parses with `bash -n`; every `${EXPERIMENT_DIR}/testbench/…` template it references exists; the bench README has a "Cold-start invocation" section that names the runner; the cited record exists under `<bench>/records/`, is non-empty and has its `.md` companion. Shared harness files exist (`.sh` ones parse); `sim/tools/build-osdi.sh` is executable; the stated PDK pin agrees with `sim/pdk.json`'s `source`/`release_tag` | `testbenches.txt` |
+| `README.md` has the "Why this block, on this PDK", "Target specification", "Reproducing the results" and "License" headings; `spec/target-spec.md` has a section 2 heading; every bench README has "Cold-start invocation"; `design/README.md`, `signoff/README.md`, `LICENSE` (with its Apache License 2.0 header) and the workflow exist; the workflow triggers on push and pull_request and runs `check_signoff.py`, `check_signoff.py --run-klt` and this validator | `hygiene.txt` |
+| in a git checkout: every path above is tracked, and every runner's *committed* mode is `100755` | all three |
+
+Negative controls ([`test_check_inventories.py`](test_check_inventories.py),
+also in the offline half) build a throwaway fixture tree from what the
+inventories name — never touching the real checkout — and assert the exact
+diagnostic for a deleted cited record, a runner without its executable bit
+(working tree and committed mode), invalid shell syntax, a missing design
+source, a missing hygiene artifact, a missing heading, template, shared
+harness file or workflow step, and a PDK pin that disagrees.
+
+**Still dated manual audits (2026-10-08), not machine-checked:** that the
+committed netlist is what `xschem` generates from the schematic (the
+regeneration diff needs xschem and the PDK; a path existing says nothing about
+equivalence); byte freshness of any source, record or README (only
+existence, headings and the cited command are checked — record *contents*
+for item 8 are pinned separately by `characterization/selection.json`); that
+any PVT/MC grid ran as recorded or would reproduce today; that the PDK v0.3.0
+install and OSDI build resolve (`build-osdi.sh --check` needs the PDK); and
+that README prose is accurate beyond carrying the named headings. Limits of
+the parse itself: a template whose path is built some other way than
+`${EXPERIMENT_DIR}/testbench/<name>` is not seen, and a `${var}` inside a
+template name is matched as a glob (at least one file must match). Changing an
+inventory's wording outside the documented subset fails this check rather
+than being skipped; changing it at all still needs the envelope, the
+`pinned-inputs.json`/manifest pin and a new signoff record refreshed together.
 
 Item 2 is still cited through the native `drc` envelope, which the grader
 accepts without being able to judge its relevance (`topic: not bound` in the
@@ -357,6 +399,8 @@ every push and every PR:
 | Check | Where | Needs |
 |---|---|---|
 | Manifest shape, pins vs. committed artifacts, record consistency, item 8 report reproduces | offline half of the `signoff` job, via `check_signoff.py` | python3 only |
+| Item 1/9/10 inventory entries still hold (paths, runner modes, `bash -n`, records, doc headings) | offline half of the `signoff` job, via `check_inventories.py` | python3 + bash (+ git for the tracked/mode checks) |
+| Inventory validator negative controls | offline half of the `signoff` job, `python3 -m unittest discover -s signoff -p 'test_check_inventories.py'` | python3 + bash + git |
 | Characterization report negative controls | offline half of the `signoff` job, `python3 -m unittest discover -s signoff/characterization` | python3 only |
 | Re-grade with the pinned `klt` and diff against the committed record | online half of the `signoff` job, via `check_signoff.py --run-klt` | network (installs `klt` at `klt-pin.txt`'s revision) |
 

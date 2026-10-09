@@ -46,6 +46,17 @@ jobs:
         # selects (no ngspice, no PDK) and must match the cited record.
         run: python3 signoff/check_signoff.py
 
+      - name: Item 1/9/10 inventory entries still hold (offline)
+        # The generic envelopes bind the inventories' bytes; this re-checks
+        # what the inventories *name*: source/artifact paths, bench runners
+        # (exist, executable, `bash -n`), templates, cited records, and the
+        # documentation headings. Static facts only -- not netlist
+        # equivalence, byte freshness, or a re-run of any bench.
+        run: python3 signoff/check_inventories.py
+
+      - name: Inventory validator negative controls (offline)
+        run: python3 -m unittest discover -s signoff -p 'test_check_inventories.py' -v
+
       - name: Integrator view is in step with the newest record (offline)
         # spec/integrator.json's maturity counts, source record and GDS path
         # are derived from the newest committed signoff record; a new report
