@@ -49,10 +49,27 @@ def _harness_rows():
         return list(csv.DictReader(f))
 
 
+REQUEST_AC = os.path.join(HERE, "openloop_ac.request.json")
+REQUEST_OP = os.path.join(HERE, "openloop_op.request.json")
+PHASE_MIN_RAD = -2.0 * math.pi / 3.0  # PM >= 60 deg under this bench's PM = 180 deg + phase
+
+
 def _status(value, kind, bound):
+    """Grade like klt sim's `limits`: kind "min"/"max", or "range" with bound (min, max)."""
     if bound is None:
         return "pass"
+    if kind == "range":
+        lo, hi = bound
+        return "pass" if lo <= value <= hi else "fail"
     return "pass" if C._passes(value, kind, bound) else "fail"
+
+
+def _wrap_rad(phi):
+    """ngspice vp(): phase wrapped to (-pi, pi]."""
+    w = math.fmod(phi + math.pi, 2.0 * math.pi)
+    if w <= 0.0:
+        w += 2.0 * math.pi
+    return w - math.pi
 
 
 def _envelope(kind, rows, bias):
@@ -65,8 +82,8 @@ def _envelope(kind, rows, bias):
             vals = [
                 ("av0_db", float(r["av0_db"]), "min", 37.8),
                 ("gbw_hz", float(r["gbw_hz"]) * (1 + bias[k]), "min", 4.74e6),
-                ("phase_at_ugf_rad", math.radians(float(r["pm_deg"]) - 180.0), "min",
-                 -2.0943951023931953),
+                ("phase_at_ugf_rad", math.radians(float(r["pm_deg"]) - 180.0), "range",
+                 (PHASE_MIN_RAD, 0.0)),
             ]
         else:
             vout, vd1, vd2, vtail = (float(r[c]) for c in ("vout_dc_v", "vd1_dc_v", "vd2_dc_v", "vtail_dc_v"))
@@ -353,10 +370,31 @@ class TestComparisonNegativeControls(Base):
         self.assertIn(f"{pid} op sanity", "\n".join(rep["out_of_tolerance"]))
 
     def test_bound_flip_within_tolerance_is_reported_as_explained(self):
-        # A tool Av0 of 37.81 dB at the harness's 37.7812 dB point is inside
-        # the 0.02 dB comparison tolerance but on the other side of the
-        # 37.8 dB bound: the disagreement must be REPORTED (never hidden),
-        # flagged as explained by tolerance, and the tool's verdict stands.
+        # A tool Av0 of 37.8005 dB at the harness's 37.7812 dB point is inside
+        # the 0.02 dB comparison tolerance (delta 0.0193 dB) but on the other
+        # side of the 37.8 dB bound: the disagreement must be REPORTED (never
+        # hidden), flagged as explained by tolerance, and the tool's verdict
+        # stands -- and the comparison as a whole still agrees.
+        ac, op = self.envs()
+        for c in ac["corners"]:
+            if (c["process"], c["temperature_c"], c["supply_v"]["vdd"]) == ("mos_fs", 125, 1.08):
+                for m in c["measurements"]:
+                    if m["name"] == "av0_db":
+                        m["value"], m["status"] = 37.8005, "pass"
+        rep = self.run_compare(ac, op)
+        pt = next(p for p in rep["points"] if p["point_id"] == "mos_fs_125C_1.08V")
+        self.assertTrue(pt["metrics"]["av0_db"]["within"], pt["metrics"]["av0_db"])
+        d = rep["bound_verdict_disagreements"]
+        self.assertEqual(len(d), 1)
+        self.assertEqual(d[0]["point"], "mos_fs_125C_1.08V")
+        self.assertTrue(d[0]["explained_by_tolerance"])
+        self.assertEqual(rep["unexplained_bound_verdict_disagreements"], 0)
+        self.assertEqual(rep["out_of_tolerance"], [])
+        self.assertEqual(rep["status"], "agree")
+
+    def test_bound_flip_beyond_tolerance_value_disagrees(self):
+        # The same flip with a value outside the 0.02 dB tolerance (37.81 dB,
+        # delta 0.0288 dB) is an out-of-tolerance point: the run disagrees.
         ac, op = self.envs()
         for c in ac["corners"]:
             if (c["process"], c["temperature_c"], c["supply_v"]["vdd"]) == ("mos_fs", 125, 1.08):
@@ -364,11 +402,10 @@ class TestComparisonNegativeControls(Base):
                     if m["name"] == "av0_db":
                         m["value"], m["status"] = 37.81, "pass"
         rep = self.run_compare(ac, op)
-        d = rep["bound_verdict_disagreements"]
-        self.assertEqual(len(d), 1)
-        self.assertEqual(d[0]["point"], "mos_fs_125C_1.08V")
-        self.assertTrue(d[0]["explained_by_tolerance"])
-        self.assertEqual(rep["unexplained_bound_verdict_disagreements"], 0)
+        pt = next(p for p in rep["points"] if p["point_id"] == "mos_fs_125C_1.08V")
+        self.assertFalse(pt["metrics"]["av0_db"]["within"])
+        self.assertIn("mos_fs_125C_1.08V av0_db", "\n".join(rep["out_of_tolerance"]))
+        self.assertEqual(rep["status"], "disagree")
 
     def test_bound_flip_outside_tolerance_is_unexplained(self):
         ac, op = self.envs()
@@ -378,6 +415,77 @@ class TestComparisonNegativeControls(Base):
                 m["status"] = "fail"  # status inconsistent with a value far above the bound
         rep = self.run_compare(ac, op)
         self.assertEqual(rep["unexplained_bound_verdict_disagreements"], 1)
+        self.assertEqual(rep["status"], "disagree")
+
+
+class TestPhaseWrap(Base):
+    """vp(out) is wrapped to (-pi, pi]; the harness's PM uses continuous phase.
+
+    The PM row is graded as phase_at_ugf_rad in [-2*pi/3, 0]. The max-0 bound
+    is what makes a wrapped unstable corner fail in the tool's OWN verdict;
+    the residual straddle case near PM ~ 0 is caught only by the comparison.
+    """
+
+    def _set_phase(self, ac, key, value):
+        for c in ac["corners"]:
+            if C.make_key(c["process"], c["temperature_c"], c["supply_v"]["vdd"]) == key:
+                for m in c["measurements"]:
+                    if m["name"] == "phase_at_ugf_rad":
+                        m["value"] = value
+                        m["status"] = _status(value, "range", (PHASE_MIN_RAD, 0.0))
+                c["status"] = "fail" if any(m["status"] == "fail" for m in c["measurements"]) else "pass"
+                return C.key_str(key)
+        raise AssertionError(key)
+
+    def test_request_limits_are_the_ratified_bounds(self):
+        with open(REQUEST_AC) as f:
+            ac_req = json.load(f)
+        with open(REQUEST_OP) as f:
+            op_req = json.load(f)
+        lim = {m["name"]: m.get("limits") for m in ac_req["measurements"] + op_req["measurements"]}
+        self.assertEqual(lim["av0_db"], {"min": 37.8})
+        self.assertEqual(lim["gbw_hz"], {"min": 4.74e6})
+        self.assertEqual(lim["ivdd_total_a"], {"max": 119.7e-6})
+        # Two-sided: min alone would pass a wrapped unstable corner.
+        self.assertEqual(set(lim["phase_at_ugf_rad"]), {"min", "max"})
+        self.assertAlmostEqual(lim["phase_at_ugf_rad"]["min"], PHASE_MIN_RAD, places=15)
+        self.assertEqual(lim["phase_at_ugf_rad"]["max"], 0.0)
+
+    def test_wrapped_unstable_corner_fails_the_tool_verdict(self):
+        # PM = -10 deg: continuous phase -190 deg, vp() reads +170 deg.
+        phi = _wrap_rad(math.radians(-10.0 - 180.0))
+        self.assertAlmostEqual(math.degrees(phi), 170.0, places=9)
+        self.assertEqual(_status(phi, "min", PHASE_MIN_RAD), "pass")  # the min-only hole
+        self.assertEqual(_status(phi, "range", (PHASE_MIN_RAD, 0.0)), "fail")
+        # The verdict equals PM >= 60 deg across PM in (-180, 180] deg.
+        for pm in [x * 0.5 for x in range(-359, 361)]:
+            got = _status(_wrap_rad(math.radians(pm - 180.0)), "range", (PHASE_MIN_RAD, 0.0)) == "pass"
+            self.assertEqual(got, pm >= 60.0, pm)
+
+    def test_wrapped_unstable_corner_is_flagged_by_the_comparison(self):
+        ac, op = self.envs()
+        k = C.expected_keys()[7]
+        pid = self._set_phase(ac, k, _wrap_rad(math.radians(-10.0 - 180.0)))
+        rep = self.run_compare(ac, op)
+        self.assertIn(f"{pid} pm_deg", "\n".join(rep["out_of_tolerance"]))
+        self.assertEqual(rep["status"], "disagree")
+
+    def test_straddle_interpolation_near_zero_pm_is_caught_by_the_comparison(self):
+        # Harness: PM 0.5 deg (continuous phase -179.5 deg, a fail). Tool: the
+        # bracketing points straddled the wrap and .meas interpolated to
+        # -100 deg, which passes [-120, 0]. The tool verdict alone is wrong;
+        # the comparison must name the point and refuse to agree.
+        ac, op = self.envs()
+        k = C.expected_keys()[3]
+        harness = copy.deepcopy(self.harness)
+        harness[k]["pm_deg"] = 0.5
+        pid = self._set_phase(ac, k, math.radians(-100.0))
+        rep = self.run_compare(ac, op, harness)
+        self.assertIn(f"{pid} pm_deg", "\n".join(rep["out_of_tolerance"]))
+        d = [x for x in rep["bound_verdict_disagreements"] if x["point"] == pid]
+        self.assertEqual(len(d), 1)
+        self.assertEqual(d[0]["row"], "phase_margin")
+        self.assertFalse(d[0]["explained_by_tolerance"])
         self.assertEqual(rep["status"], "disagree")
 
 

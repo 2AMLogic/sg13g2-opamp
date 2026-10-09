@@ -6,8 +6,14 @@
     "vinp sweeps WITH vdd by index (klt's supply_v semantics), so Vcm = VDD/2 at every corner, as in the harness.",
     "Each process corner is a bundle carrying the template's fixed cornerCAP.lib cap_typ section (the Miller cap is a cap_cmim MIM device).",
     "limits are the RATIFIED bounds of spec/target-spec.md section 2 [DR-2], unrounded: Av0 >= 37.8 dB, GBW >= 4.74 MHz, PM >= 60 deg.",
-    "PM is graded through its defining quantity: this bench defines PM = 180 deg + phase(v(out)) at the 0 dB crossing (README 'Sign convention'),",
-    "so phase_at_ugf_rad >= -2*pi/3 rad is exactly PM >= 60 deg, and its margin x 180/pi is PM - 60 deg. A `.meas` result is not",
+    "PM is graded through its defining quantity: this bench defines PM = 180 deg + phase(v(out)) at the 0 dB crossing (README 'Sign convention').",
+    "vp(out) is the WRAPPED phase, in (-pi, pi]; the harness's PM uses the continuous phase (cph). min -2*pi/3 alone is NOT PM >= 60 deg:",
+    "an unstable corner with PM -10 deg reads +170 deg and would pass. max 0 makes the tool verdict fail safe: phase at the UGF is negative",
+    "for this non-inverting bench, so a positive reading can only be a wrap. With both bounds, the verdict equals PM >= 60 deg for",
+    "PM in (-180, 180] deg (continuous phase at the UGF in (-360, 0] deg; more than 360 deg of lag at the UGF is implausible for this two-stage bench).",
+    "Residual edge case: near PM ~ 0 deg the bracketing sweep points can straddle the wrap and .meas can interpolate to an arbitrary value",
+    "in between (including inside [-2*pi/3, 0]); compare.py's 0.1 deg PM tolerance against the harness's continuous-phase PM catches that.",
+    "margin x 180/pi is PM - 60 deg while PM <= 120 deg (above that the max 0 bound is the nearer one). A `.meas` result is not",
     "visible to an `expr` in ngspice's control block (checked on ngspice-42), so the tool cannot add the 180 deg offset itself.",
     "Iq and the per-point DC operating-point sanity checks live in openloop_op.request.json: klt sim runs one analysis per corner",
     "(docs/cli/sim.md 'Still one analysis per corner'); compare.py joins the two envelopes on (process, temperature, vdd). See README.md.",
@@ -122,7 +128,8 @@
       "spice": ".meas ac phase_at_ugf_rad find vp(out) when vdb(out)=0",
       "unit": "rad",
       "limits": {
-        "min": -2.0943951023931953
+        "min": -2.0943951023931953,
+        "max": 0.0
       }
     }
   ],
