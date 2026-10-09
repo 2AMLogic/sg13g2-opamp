@@ -205,8 +205,22 @@ follow-up and is not done here.
 
 **Item 7 is uncited because the check has not been run.** `klt extract
 --parasitics` + post-layout re-simulation is its own piece of work and none
-has been done. Tracker:
-[#3](https://github.com/2AMLogic/sg13g2-opamp/issues/3).
+has not yet produced a committed report. Tracker:
+[#3](https://github.com/2AMLogic/sg13g2-opamp/issues/3),
+[#86](https://github.com/2AMLogic/sg13g2-opamp/issues/86).
+
+*What is in place (issue #86):* `layout/opamp_core/run_pex.sh` drives
+`klt pex --measure-command` over the committed GDS, measuring the schematic
+(`design/netlist/opamp_core.spice`) and the extracted netlist with
+`sim/post-layout/measure_openloop_ac.sh` -- the existing open-loop AC bench on
+the ratified 45-point PVT grid, four rows per corner (DC gain, GBW, phase
+margin, total Iq). `sim/post-layout/check_bounds.py` then grades every
+extracted value against the ratified `spec/target-spec.md` Sec 2 bounds (gain
+>= 37.8 dB, GBW >= 4.74 MHz, PM >= 60 deg, Iq <= 119.7 uA). **The report itself
+has not been generated**: the authoring host could not run the grid (see the
+PR for #86), so item 7 stays uncited and `unmet / no_evidence` -- no
+`pex_report.json`, manifest entry or pinned-input was added. The pinned klt
+(`klt-pin.txt`) already has `--measure-command`; no bump is needed.
 
 **Item 11 is the one compound citation, and what it does and does not
 prove.** T1 item 11 (power delivery, structural — klayout-tools#2025) is the
@@ -373,6 +387,14 @@ One honesty note still pending, from the issue that introduced this register:
   restated: an unexamined `body_bias` field is no statement that "every
   device body was biased"; here, today, the question has not been asked with
   the tool that answers it.
+  When the report lands, also restate its `extraction.model` (a lumped
+  quasi-static R/C per net: no skin effect or distributed lines, lateral
+  coupling only for `--critical-net` nets), say whether the undrawn
+  source/drain implants (klayout-tools#2580) affect extraction, and list the
+  ratified rows covered post-layout (the four AC rows: DC gain, GBW, phase
+  margin, quiescent current) against those not (slew rate, noise, offset,
+  CMRR, PSRR, output swing). The DRC deck is the curated starter deck, not
+  the foundry deck.
 
 ## How this is kept from rotting
 
