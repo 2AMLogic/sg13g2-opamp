@@ -36,6 +36,11 @@ class Repo:
         self.g("config", "user.email", "t@example.invalid")
         self.g("config", "user.name", "t")
         self.g("config", "commit.gpgsign", "false")
+        # No background gc/maintenance: a detached `git gc --auto` writing
+        # into .git races TemporaryDirectory cleanup (ENOTEMPTY flake).
+        self.g("config", "gc.auto", "0")
+        self.g("config", "maintenance.auto", "false")
+        self.g("config", "gc.autoDetach", "false")
 
     def g(self, *a):
         p = subprocess.run(["git", "-C", str(self.root), *a],
@@ -58,7 +63,7 @@ class Repo:
 
 class GateTest(unittest.TestCase):
     def setUp(self):
-        self._td = tempfile.TemporaryDirectory()
+        self._td = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.addCleanup(self._td.cleanup)
         self.r = Repo(self._td.name)
         for p in ALL:
@@ -169,7 +174,7 @@ class GateTest(unittest.TestCase):
         self.r.commit("second")
         self.r.write("sim/open-loop-ac/records/n.csv", "n\n")
         self.r.commit("third")
-        with tempfile.TemporaryDirectory() as td:
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
             dst = os.path.join(td, "shallow")
             subprocess.run(["git", "clone", "-q", "--depth", "1",
                             "file://" + str(self.r.root), dst],
