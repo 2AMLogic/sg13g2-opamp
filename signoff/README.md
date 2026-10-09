@@ -274,10 +274,17 @@ record append-only CSV + Markdown evidence against the PVT grid. But item 5
 accepts only a `klt sim` JSON envelope and item 6 only a `klt yield` one,
 and this repo's records are harness-native artifacts, not envelopes — so
 until either an envelope-producing bench lands or a wrapper is introduced
-upstream, both rows correctly render `no_evidence`. Item 6 additionally has
-a substantive gap: no Monte Carlo campaign exists at all yet (tracked in
-[#17](https://github.com/2AMLogic/sg13g2-opamp/issues/17) and
-[#26](https://github.com/2AMLogic/sg13g2-opamp/issues/26)).
+upstream, both rows correctly render `no_evidence`.
+
+Item 6: the Monte Carlo campaigns now exist (offset random half, issue #17,
+`sim/input-offset/records/mc-20260921-174056-0a509fb*`; mismatch-inclusive
+CMRR, issue #26, `sim/cmrr-mismatch/records/20260921-172304-65f5fb4.csv`),
+but no `klt yield` report is cited, for three recorded reasons: the spec
+ratifies no per-draw limit or `target_yield` for either row (#108), the CMRR
+record holds per-point summaries only, not per-draw samples (#107), and the
+offset draws need a reshape into a sample-set document
+([`yield-inputs/`](yield-inputs/README.md)). Item 6 stays `unmet`
+until those close.
 
 **Item 8 is cited through a `generic` envelope over a generated
 characterization report** — [`characterization/`](characterization/README.md).
