@@ -66,6 +66,12 @@ jobs:
       - name: Characterization report negative controls (offline)
         run: python3 -m unittest discover -s signoff/characterization -v
 
+      - name: Signoff checker negative controls (offline)
+        # Builds a throwaway fixture tree, applies one mutation per control
+        # and asserts the exact diagnostic from check_signoff.py and
+        # sync_integrator.py. Never touches the real checkout; no klt.
+        run: python3 -m unittest discover -s signoff -p 'test_check_signoff.py' -v
+
       - name: Install klt at the pinned revision
         # Pinned, not floating: the T1 item skeleton is parsed out of
         # klayout-tools' own docs/design-evidence-tiers.md at run time, so a
