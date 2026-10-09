@@ -1,0 +1,21 @@
+{
+  "kind": "generic",
+  "provenance": {
+    "deck": null,
+    "input": {
+      "content_hash": "sha256:bce605fa0b119d02b73fc9cf64c8c4483e1f28f3b13b9908fc2ef84608f7ecbc",
+      "path": {
+        "path": "signoff/characterization/reports/20261009-010537-3b553cb.json",
+        "scope": "repo"
+      }
+    },
+    "klayout_version": null,
+    "klt_version": "0.6.0",
+    "pdk": null
+  },
+  "schema_version": 1,
+  "source": "signoff/characterization/reports/20261009-010537-3b553cb.md",
+  "status": "fail",
+  "summary": "characterization report: overall FAIL, 8/12 ratified spec-row bounds PASS (raw values compared against the literal ratified bound) with full expected-grid coverage; per-row units, load, bound, decision record, binding point and source-record hash; aggregated offline from committed sim/ records (no re-simulation); not item 5/6 evidence",
+  "t1_item": 8
+}

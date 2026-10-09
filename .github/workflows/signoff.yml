@@ -41,7 +41,13 @@ jobs:
           python-version: '3.12'
 
       - name: Offline checks (manifest, pins, record consistency)
+        # Includes `signoff/characterization/generate.py --check`: the T1
+        # item 8 report is re-derived from the committed sim/ records it
+        # selects (no ngspice, no PDK) and must match the cited record.
         run: python3 signoff/check_signoff.py
+
+      - name: Characterization report negative controls (offline)
+        run: python3 -m unittest discover -s signoff/characterization -v
 
       - name: Install klt at the pinned revision
         # Pinned, not floating: the T1 item skeleton is parsed out of

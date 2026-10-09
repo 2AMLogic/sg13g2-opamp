@@ -54,9 +54,9 @@ A clean DRC, or any pre-layout corner sweep — however thorough — renders
 
 ## What the manifest cites, and what it deliberately does not
 
-**The manifest cites seven items: 1, 9 and 10 (the inventories below) and
-2 (Layout), 3 (DRC clean), 4 (LVS clean) and 11 (Power delivery,
-structural).** The layout items are about the same
+**The manifest cites eight items: 1, 9 and 10 (the inventories below),
+8 (the characterization report, below) and 2 (Layout), 3 (DRC clean),
+4 (LVS clean) and 11 (Power delivery, structural).** The layout items are about the same
 committed stream, `layout/opamp_core/opamp_core.gds`, and every one of them
 pins that stream's own sha256 — because a `drc`, `lvs` or `erc` envelope all
 record the sha256 of the layout they ran on in `provenance.input`:
@@ -67,8 +67,12 @@ record the sha256 of the layout they ran on in `provenance.input`:
 | 4 | `layout/opamp_core/lvs_report.json` | `layout/opamp_core/run_lvs.sh` |
 | 11 | **both** `layout/opamp_core/erc_report.json` *and* the same LVS report | `layout/opamp_core/run_erc.sh` (+ the LVS run above) |
 
-Items 5, 6, 7 and 8 still render `unmet` with reason `no_evidence`, which
-remains the honest graded result rather than a placeholder.
+Items 5, 6 and 7 still render `unmet` with reason `no_evidence`, which
+remains the honest graded result rather than a placeholder. Item 8 is cited
+but renders `unmet` with reason `check_failed`. Its envelope truthfully
+carries `status: "fail"`, because the characterization report it wraps grades
+four ratified rows FAIL (see below and
+[#101](https://github.com/2AMLogic/sg13g2-opamp/issues/101)).
 
 **Why a `drc` envelope is a legitimate citation for item 2, and not
 borrowed-green.** Item 2 has no `klt` verb of its own, so the grader scores it
@@ -233,11 +237,59 @@ a substantive gap: no Monte Carlo campaign exists at all yet (tracked in
 [#17](https://github.com/2AMLogic/sg13g2-opamp/issues/17) and
 [#26](https://github.com/2AMLogic/sg13g2-opamp/issues/26)).
 
-**Item 8 is uncited because no aggregated characterization report exists
-yet** — no single artifact summarizes per-spec-row performance across
-conditions with the evidence record behind each verdict. When one does, the
-correct citation is the opt-in `generic` envelope wrapper (`"kind":
-"generic"`), the evidence kind only item 8 accepts.
+**Item 8 is cited through a `generic` envelope over a generated
+characterization report** — [`characterization/`](characterization/README.md).
+`characterization/generate.py` reads an explicit, hash-pinned record selection
+(`characterization/selection.json`: the same records
+[`evidence/testbenches.txt`](evidence/testbenches.txt) maps, checked against
+it) and renders, for every claimed spec row, units, load and conditions, the
+ratified bound and its decision record, the measured worst case and binding
+point, the source record and its sha256, expected-versus-observed grid
+coverage and a verdict. Minted records under `characterization/reports/` are
+append-only; [`evidence/characterization.json`](evidence/characterization.json)
+(`"kind": "generic"`, `"t1_item": 8`) binds the newest JSON record by repo path
+and hash, and the manifest and `pinned-inputs.json` pin that same hash.
+Regenerating it needs no ngspice, no PDK and no network:
+
+```bash
+python3 signoff/characterization/generate.py          # render; writes nothing
+python3 signoff/characterization/generate.py --check  # cited record reproduces
+```
+
+That re-reads committed evidence; it is **not** a re-run of the simulations
+(each bench README's "Cold-start invocation" is). What the item 8 row does and
+does not mean:
+
+- The generator writes the envelope's `status`. It writes `"pass"` only when
+  the report's overall verdict is `PASS`: every ratified bound met, full valid
+  grid coverage on every selected record, no input in error. Otherwise it
+  writes `"fail"`, and klt then grades item 8 `unmet` (`check_failed`).
+  `check_signoff.py` re-derives the cited record from its selected evidence
+  (`generate.py --check`). A record that moved, or an envelope that no longer
+  matches the newest report and its verdict, fails offline.
+- **Bounds are compared literally, and the current report is FAIL.** Every raw
+  grid value must meet the ratified bound as written. No rounding or
+  precision convention is applied, because no ratification record defines
+  one. Four rows miss the literal bound: DC gain, integrated noise,
+  systematic offset and swing span, by 0.0188 dB, 0.049 µVrms, 0.027 mV and
+  0.042 mV respectively. Their raw worst cases come from the very records
+  DR-0002 cites, and only round onto the bounds it wrote. Whether to restate
+  those bounds or ratify a comparison convention is a spec decision for the
+  keys ([#101](https://github.com/2AMLogic/sg13g2-opamp/issues/101)), not
+  something this tooling settles. Until then item 8 stays `unmet`.
+- The first minted record, `characterization/reports/20261009-005750-622fb9c`,
+  and the verdict of record graded from it, `reports/20261009-005834-69b7b63`
+  (8/11, item 8 `met`), used a rounding rule that has since been withdrawn.
+  Both are kept unedited as append-only history, but they are superseded and
+  must not be read as the current verdict.
+- Unratified measured quantities (offset mismatch 3σ `[P]`, ICMR) are
+  reported in their own section with no pass/fail, the superseded systematic
+  CMRR floor is context only, and Area stays `PENDING`. The offset Monte
+  Carlo campaign's fixed 1.20 V supply is carried with its numbers.
+- **It is item 8 evidence only.** It is an offline aggregation of
+  harness-native records, not a `klt sim` / `klt yield` envelope, and is not
+  cited for item 5 or 6 — `check_signoff.py` fails if the manifest cites it
+  under any other item. Every number in it is pre-layout.
 
 ## Disclosures that travel with the current claim
 
@@ -280,11 +332,13 @@ recorded input hash. It never opens the repo artifact that hash is supposed
 to be the hash **of** — so a pin can go stale in a way the grader structurally
 cannot see. [`pinned-inputs.json`](pinned-inputs.json) names the artifact
 behind every pin and [`check_signoff.py`](check_signoff.py) re-hashes it,
-which closes that gap. Every current pin — including both parts of item 11's
+which closes that gap. Every layout pin — including both parts of item 11's
 compound citation, whose `pinned-inputs.json` entry is a list with one
 artifact per part — resolves to `layout/opamp_core/opamp_core.gds`, so
 regenerating the layout without also refreshing the DRC, LVS and ERC reports,
-every pin and the graded record fails the offline half of CI — by design. The
+every pin and the graded record fails the offline half of CI — by design.
+Item 8's pin resolves to the minted characterization record, and the same
+offline half re-derives that record from the `sim/` evidence it selects. The
 checker also enforces the converse: it gathers a row for every new pin, and
 rejects a `pinned-inputs.json` entry for an item the manifest does not cite.
 
@@ -302,7 +356,8 @@ every push and every PR:
 
 | Check | Where | Needs |
 |---|---|---|
-| Manifest shape, pins vs. committed artifacts, record consistency | offline half of the `signoff` job, via `check_signoff.py` | python3 only |
+| Manifest shape, pins vs. committed artifacts, record consistency, item 8 report reproduces | offline half of the `signoff` job, via `check_signoff.py` | python3 only |
+| Characterization report negative controls | offline half of the `signoff` job, `python3 -m unittest discover -s signoff/characterization` | python3 only |
 | Re-grade with the pinned `klt` and diff against the committed record | online half of the `signoff` job, via `check_signoff.py --run-klt` | network (installs `klt` at `klt-pin.txt`'s revision) |
 
 So a manifest citing an artifact that has since changed, a record that no
