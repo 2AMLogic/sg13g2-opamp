@@ -21,6 +21,7 @@ import tempfile
 import types
 import unittest
 from datetime import datetime, timezone
+from decimal import Decimal
 from pathlib import Path
 from unittest import mock
 
@@ -34,6 +35,20 @@ SELECTION = REPO / generate.SELECTION_REL
 
 # Every ratified bound spec/target-spec.md section 2 binds today ([DR-2] and
 # the CMRR row's [DR-4]); output swing carries three bounds in one row.
+# The four ratified rows whose committed raw worst case misses the literal
+# DR-0002 bound and only rounds onto it at the bound's written decimals
+# (spec question 2AMLogic/sg13g2-opamp#101). Compared literally, they FAIL.
+LITERAL_FAIL_IDS = ["dc_gain", "input_noise", "offset_systematic", "swing_span"]
+
+# (record, binding point, column, raw cell exactly AT the ratified bound once
+# scaled to the bound's unit) for each of the four rows above.
+AT_BOUND_CELLS = [
+    ("open-loop-ac", "mos_fs_125C_1.08V", "av0_db", "37.8"),           # >= 37.8 dB
+    ("input-noise", "mos_fs_125C_1.08V", "vni_int_vrms", "0.0001089"),  # <= 108.9 µVrms
+    ("input-offset", "mos_fs_125C_1.08V", "vos_null_v", "0.0219"),      # <= 21.9 mV (absmax)
+    ("output-swing", "mos_ss_125C_1.08V", "swing_span_v", "0.571"),     # >= 0.571 V
+]
+
 RATIFIED_IDS = {
     "dc_gain", "gbw", "phase_margin", "slew_rate", "input_noise",
     "offset_systematic", "cmrr_mismatch", "psrr", "swing_headroom_vdd",
@@ -100,6 +115,23 @@ class Fixture:
     def build(self) -> dict:
         return generate.build_content(self.root, self.selection_path)
 
+    def heal_precision_rows(self) -> None:
+        """Set the four literal-FAIL binding points exactly AT their bound.
+
+        Gives an all-PASS baseline (and is itself the exactly-at-bound
+        control), so a control below can show that ONE perturbation is what
+        moves a row or the report off PASS.
+        """
+        for key, pid, column, value in AT_BOUND_CELLS:
+            self.set_measurement(key, pid, column, value)
+
+    def set_measurement(self, key: str, point_id: str, column: str, value: str) -> None:
+        """set_cell, keeping a record's own derived columns consistent so the
+        perturbation reaches the bound comparison, not a definition check."""
+        self.set_cell(key, point_id, column, value)
+        if (key, column) == ("input-offset", "vos_null_v"):
+            self.set_cell(key, point_id, "vos_abs_v", value.lstrip("-"))
+
 
 class CommittedEvidence(unittest.TestCase):
     """The committed selection against the committed evidence."""
@@ -119,10 +151,13 @@ class CommittedEvidence(unittest.TestCase):
             self.assertTrue(row["source"]["csv_sha256"].startswith("sha256:"), rid)
             self.assertTrue(row["measured_worst"]["point"], rid)
             self.assertEqual(row["coverage"]["valid"], row["coverage"]["expected"], rid)
-            self.assertEqual(row["verdict"], "PASS", rid)
+            self.assertEqual(row["verdict"], "FAIL" if rid in LITERAL_FAIL_IDS else "PASS", rid)
 
-    def test_overall_pass_and_spec_and_inventory_fully_covered(self):
-        self.assertEqual(self.content["overall"]["verdict"], "PASS")
+    def test_overall_fail_and_spec_and_inventory_fully_covered(self):
+        # Literal comparison: the committed evidence misses four ratified
+        # bounds as written, so the report must not PASS.
+        self.assertEqual(self.content["overall"]["verdict"], "FAIL")
+        self.assertEqual(self.content["overall"]["ratified_pass"], len(RATIFIED_IDS) - len(LITERAL_FAIL_IDS))
         self.assertEqual(self.content["errors"], [])
         self.assertTrue(all(r["covered"] for r in self.content["spec_coverage"]))
         self.assertTrue(all(r["covered"] for r in self.content["inventory_coverage"]))
@@ -151,11 +186,28 @@ class CommittedEvidence(unittest.TestCase):
         self.assertEqual(rows["psrr"]["measured_worst"]["point"], "mos_ff_125C_1.32V")
         self.assertEqual(rows["quiescent_current"]["measured_worst"]["point"], "mos_ss_-40C_1.32V")
 
-    def test_strict_literal_exceptions_are_disclosed(self):
-        self.assertEqual(
-            self.content["overall"]["pass_only_at_bound_precision"],
-            ["dc_gain", "input_noise", "offset_systematic", "swing_span"],
-        )
+    def test_literal_failures_are_graded_fail_and_disclosed(self):
+        rows = rows_by_id(self.content)
+        self.assertEqual(self.content["overall"]["fail_only_beyond_written_decimals"], LITERAL_FAIL_IDS)
+        expected = {
+            "dc_gain": ("37.7812", "mos_fs_125C_1.08V"),
+            "input_noise": ("108.949", "mos_fs_125C_1.08V"),
+            "offset_systematic": ("21.9273527", "mos_fs_125C_1.08V"),
+            "swing_span": ("0.570957773", "mos_ss_125C_1.08V"),
+        }
+        for rid, (value, point) in expected.items():
+            row = rows[rid]
+            self.assertEqual(row["verdict"], "FAIL", rid)
+            self.assertFalse(row["meets_bound"], rid)
+            self.assertEqual(row["violating_points"], [point], rid)
+            self.assertEqual((row["measured_worst"]["value"], row["measured_worst"]["point"]), (value, point), rid)
+            self.assertTrue(row["measured_worst"]["raw_margin"].startswith("-"), rid)
+
+    def test_comparison_rule_is_literal(self):
+        rule = self.content["comparison_rule"]
+        self.assertIn("compared literally", rule)
+        self.assertIn("never gates a verdict", rule)
+        self.assertTrue(any("#101" in c for c in self.content["caveats"]))
 
     def test_reproduction_is_deterministic_apart_from_metadata(self):
         again = generate.build_content(REPO, SELECTION)
@@ -182,11 +234,56 @@ class NegativeControls(unittest.TestCase):
         self.fx.close()
 
     def test_fixture_reproduces_committed_verdict(self):
-        self.assertEqual(self.fx.build()["overall"]["verdict"], "PASS")
+        content = self.fx.build()
+        self.assertEqual(content["overall"]["verdict"], "FAIL")
+        self.assertEqual(sorted(r["id"] for r in content["rows"] if r["verdict"] == "FAIL"), LITERAL_FAIL_IDS)
+
+    def test_exactly_at_bound_passes(self):
+        # Each of the four binding points set exactly to its bound (both >=
+        # and <= ops, and the absmax offset row): equality meets the bound.
+        self.fx.heal_precision_rows()
+        content = self.fx.build()
+        rows = rows_by_id(content)
+        for rid in LITERAL_FAIL_IDS:
+            self.assertEqual(rows[rid]["verdict"], "PASS", rid)
+            self.assertEqual(Decimal(rows[rid]["measured_worst"]["raw_margin"]), 0, rid)
+        self.assertEqual(content["overall"]["verdict"], "PASS")
+        self.assertEqual(content["overall"]["fail_only_beyond_written_decimals"], [])
+
+    def test_edge_of_bound_values_fail_even_if_they_round_onto_the_bound(self):
+        # Values a hair past the bound -- including ones that round onto it at
+        # the bound's written decimals -- must FAIL, from an all-PASS baseline.
+        cases = [
+            ("phase_margin", "open-loop-ac", "mos_tt_27C_1.20V", "pm_deg", "59.9"),     # >= 60
+            ("phase_margin", "open-loop-ac", "mos_tt_27C_1.20V", "pm_deg", "59.5"),     # rounds to 60
+            ("phase_margin", "open-loop-ac", "mos_tt_27C_1.20V", "pm_deg", "59.9999"),
+            ("dc_gain", "open-loop-ac", "mos_tt_27C_1.20V", "av0_db", "37.79"),         # >= 37.8
+            ("dc_gain", "open-loop-ac", "mos_tt_27C_1.20V", "av0_db", "37.75"),         # rounds to 37.8
+            ("gbw", "open-loop-ac", "mos_tt_27C_1.20V", "gbw_hz", "4739999"),           # >= 4.74 MHz
+            ("input_noise", "input-noise", "mos_tt_27C_1.20V", "vni_int_vrms", "0.00010890001"),  # <= 108.9 µVrms
+            ("offset_systematic", "input-offset", "mos_tt_27C_1.20V", "vos_null_v", "-0.02190001"),  # |x| <= 21.9 mV
+            ("swing_span", "output-swing", "mos_tt_27C_1.20V", "swing_span_v", "0.5709999"),  # >= 0.571 V
+        ]
+        for rid, key, pid, column, value in cases:
+            with self.subTest(row=rid, value=value):
+                fx = Fixture()
+                try:
+                    fx.heal_precision_rows()
+                    self.assertEqual(rows_by_id(fx.build())[rid]["verdict"], "PASS")
+                    fx.set_measurement(key, pid, column, value)
+                    content = fx.build()
+                    row = rows_by_id(content)[rid]
+                    self.assertEqual(row["verdict"], "FAIL")
+                    self.assertTrue(row["coverage"]["complete"])
+                    self.assertEqual(row["violating_points"], [pid])
+                    self.assertEqual(content["overall"]["verdict"], "FAIL")
+                finally:
+                    fx.close()
 
     def test_removed_corner_is_incomplete_not_pass(self):
         # Drop every mos_ss point from the open-loop record: the remaining
         # points all still meet their bounds, so only completeness can catch it.
+        self.fx.heal_precision_rows()
         self.fx.rewrite_csv("open-loop-ac", lambda ls: [l for l in ls if not l.startswith("mos_ss_")])
         content = self.fx.build()
         row = rows_by_id(content)["dc_gain"]
@@ -197,6 +294,8 @@ class NegativeControls(unittest.TestCase):
         self.assertEqual(content["overall"]["verdict"], "INCOMPLETE")
 
     def test_injected_failing_point_is_fail_while_complete(self):
+        self.fx.heal_precision_rows()
+        self.assertEqual(self.fx.build()["overall"]["verdict"], "PASS")
         self.fx.set_cell("open-loop-ac", "mos_tt_27C_1.20V", "pm_deg", "55.0")
         content = self.fx.build()
         row = rows_by_id(content)["phase_margin"]
@@ -223,6 +322,7 @@ class NegativeControls(unittest.TestCase):
         self.assertFalse(row["coverage"]["complete"])
 
     def test_superseded_row_failure_does_not_fail_report(self):
+        self.fx.heal_precision_rows()
         self.fx.set_cell("cmrr-psrr", "mos_tt_27C_1.20V", "cmrr_db", "10.0")
         content = self.fx.build()
         self.assertEqual(rows_by_id(content)["cmrr_systematic"]["verdict"], "FAIL")
@@ -348,7 +448,17 @@ class NegativeControls(unittest.TestCase):
         self.assertEqual(content["overall"]["verdict"], "ERROR")
         self.assertTrue(any("Quiescent power" in e for e in content["errors"]))
 
+    def test_mint_of_failing_report_wraps_a_fail_envelope(self):
+        # The committed evidence (four literal FAILs) must never mint a pass.
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(generate.mint(self.fx.root, self.fx.selection_path), 0)
+            self.assertEqual(generate.check(self.fx.root, self.fx.selection_path, None), 0)
+        envelope = json.loads((self.fx.root / generate.ENVELOPE_REL).read_text(encoding="utf-8"))
+        self.assertEqual(envelope["status"], "fail")
+        self.assertIn("overall FAIL", envelope["summary"])
+
     def test_mint_is_append_only_and_check_detects_drift(self):
+        self.fx.heal_precision_rows()
         out = io.StringIO()
         with contextlib.redirect_stdout(out):
             self.assertEqual(generate.mint(self.fx.root, self.fx.selection_path), 0)

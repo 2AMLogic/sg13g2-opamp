@@ -40,7 +40,7 @@ and a verdict:
 
 | Verdict | Meaning |
 |---|---|
-| `PASS` | every expected point present and valid, and every point meets the ratified bound |
+| `PASS` | every expected point present and valid, and every point's raw value meets the ratified bound as written |
 | `FAIL` | at least one valid point violates the bound (reported even if the grid is also incomplete) |
 | `INCOMPLETE` | no violation seen, but expected points are missing or failed their bench's own validity flags — a failed point is never an extremum and can never turn into a pass |
 | `ERROR` | the evidence cannot be trusted as selected: missing record, hash differs from its pin, duplicate `point_id`, non-finite or non-numeric value, point outside the grid or mislabelled, mixed ngspice version, a different simulated netlist, a broken definition (e.g. CMRR not in the linear domain), or a bound that no longer matches the spec text / a record the item 9 inventory does not cite |
@@ -52,14 +52,30 @@ The report's overall verdict is `ERROR` > `FAIL` (ratified rows only) >
 and never fails the report. Separately, the generator refuses a selection that
 leaves any spec section 2 row or any item 9 inventory row uncovered.
 
-**Comparison precision.** Each bound is compared at the precision it was
-ratified at (the measured value is rounded half-to-even to the decimals
-written in the bound). DR-0002 set each bound *at* the measured worst case it
-cites, written to that precision; four rows (DC gain, noise, systematic
-offset, swing span) clear their bound only that way, and the report lists
-them and shows every row's raw margin and `strict_literal_pass` rather than
-hiding the difference. This report interprets no bound beyond that and relaxes
-none.
+**Comparison is literal.** Every valid grid point's raw value, scaled to the
+bound's unit, must satisfy the ratified bound exactly as written. `>= 37.8`
+means 37.7999 fails, and `>= 60` means 59.9 fails. No rounding, tolerance or
+precision convention is applied, because no ratification record defines one
+and choosing one is a spec decision, not this report's. Each row shows its raw
+margin, and also its worst value rounded to the bound's written decimals. The
+rounded value is **informational only and never gates a verdict**.
+
+With the committed evidence that makes the report **FAIL**. Four rows (DC gain
+>= 37.8 dB, integrated noise <= 108.9 µVrms, systematic offset <= 21.9 mV,
+swing span >= 0.571 V) miss the literal bound by 0.0188 dB, 0.049 µVrms,
+0.027 mV and 0.042 mV. Their raw worst cases (37.7812 dB, 108.949 µVrms,
+21.927 mV, 0.570958 V) come from the very records DR-0002 cites, and they only
+round onto the bounds DR-0002 wrote. The report lists them under
+`overall.fail_only_beyond_written_decimals`. Restating those bounds, or
+ratifying a comparison convention, is for the keys in a decision record:
+[#101](https://github.com/2AMLogic/sg13g2-opamp/issues/101). Until then, FAIL
+is the honest verdict, and the item 8 envelope carries `status: fail`.
+
+The first minted record, `reports/20261009-005750-622fb9c` (schema
+`characterization-report/1`), compared values after rounding them to the
+bound's decimals, and graded PASS. That rule has been withdrawn. The record is
+kept unedited as append-only history, but it is superseded and no longer
+cited. `--check` verifies only the newest record.
 
 **Offset is two pieces of evidence, kept apart.** The ratified bound is the
 systematic (nominal-device) half; the mismatch-driven 3σ half is measured

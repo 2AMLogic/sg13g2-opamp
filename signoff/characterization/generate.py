@@ -46,7 +46,7 @@ ENVELOPE_REL = "signoff/evidence/characterization.json"
 GENERATOR_REL = "signoff/characterization/generate.py"
 
 SELECTION_SCHEMA = "sg13g2-opamp/characterization-selection/1"
-REPORT_SCHEMA = "sg13g2-opamp/characterization-report/1"
+REPORT_SCHEMA = "sg13g2-opamp/characterization-report/2"
 RECORD_ID_RE = re.compile(r"^\d{8}-\d{6}-[0-9a-z]{4,40}$")
 NGSPICE_RE = re.compile(r"\bngspice-(\d+)\b")
 
@@ -60,17 +60,16 @@ BOUND_OPS = (">=", "<=")
 VALID_OPS = ("==", ">=", "==col")
 
 COMPARISON_RULE = (
-    "Each ratified bound is compared at the precision it was ratified at: the "
-    "measured value, scaled to the bound's unit, is rounded half-to-even to "
-    "the number of decimals written in the ratified bound (e.g. '37.8' -> 1 "
-    "decimal) and then compared. DR-0002 set every bound AT the measured "
-    "worst case it cites, written to that precision, so this is the reading "
-    "under which the ratifying record agrees with itself; it relaxes no "
-    "bound. The raw (unrounded) value is reported beside every verdict, and "
-    "`strict_literal_pass` states whether the raw value also clears the "
-    "literal decimal. A point that fails its record's validity flags never "
-    "contributes an extremum: it is counted as missing coverage, so a failed "
-    "simulation point can only make a row INCOMPLETE, never PASS."
+    "Each ratified bound is compared literally: every valid grid point's raw "
+    "measured value, scaled to the bound's unit, must satisfy the bound exactly "
+    "as written in spec/target-spec.md (e.g. >= 37.8 means 37.7999 fails). No "
+    "rounding, tolerance or precision convention is applied: no ratification "
+    "record defines one, and choosing one is a spec decision, not the "
+    "report's. The worst value rounded to the bound's written decimals is "
+    "shown for information only and never gates a verdict. A point that fails "
+    "its record's validity flags never contributes an extremum: it is counted "
+    "as missing coverage, so a failed simulation point can only make a row "
+    "INCOMPLETE, never PASS."
 )
 
 NOT_CLAIMED = [
@@ -632,19 +631,21 @@ def evaluate_row(row: dict, records: dict, spec_lines: list[str], inventory: dic
         violators = []
         for pid, value in values:
             magnitude = abs(value) if row["extremum"] == "absmax" else value
-            if not meets(magnitude.quantize(quantum, rounding=ROUND_HALF_EVEN), bound["op"], bound_value):
+            # The gate: the RAW value against the literal ratified bound.
+            if not meets(magnitude, bound["op"], bound_value):
                 violators.append(pid)
-        out["bound"] = {"op": bound["op"], "value": bound["value"], "unit": row.get("unit"), "compared_at_decimals": decimals}
+        out["bound"] = {"op": bound["op"], "value": bound["value"], "unit": row.get("unit"), "written_decimals": decimals}
         out["violating_points"] = sorted(violators)
         if worst:
             magnitude = abs(worst[1]) if row["extremum"] == "absmax" else worst[1]
-            rounded = magnitude.quantize(quantum, rounding=ROUND_HALF_EVEN)
-            out["measured_worst"]["compared_value"] = fmt(rounded)
             margin = magnitude - bound_value if bound["op"] == ">=" else bound_value - magnitude
             out["measured_worst"]["raw_margin"] = fmt(margin)
-            out["strict_literal_pass"] = meets(magnitude, bound["op"], bound_value)
+            # Informational only -- never consulted by the verdict above.
+            rounded = magnitude.quantize(quantum, rounding=ROUND_HALF_EVEN)
+            out["measured_worst"]["rounded_to_bound_decimals"] = fmt(rounded)
+            out["fails_only_beyond_written_decimals"] = bool(violators) and meets(rounded, bound["op"], bound_value)
         else:
-            out["strict_literal_pass"] = None
+            out["fails_only_beyond_written_decimals"] = None
         out["meets_bound"] = (not violators) if values else None
         if errors:
             out["verdict"] = "ERROR"
@@ -746,8 +747,11 @@ def build_content(repo: Path, selection_path: Path) -> dict:
     else:
         overall = "PASS"
     ratified = [row for row in rows if row["class"] == "ratified"]
-    literal_exceptions = sorted(
-        row["id"] for row in rows if row["class"] in ("ratified", "superseded") and row.get("strict_literal_pass") is False
+    # Disclosure, not a gate: binding rows that FAIL literally although their
+    # worst value rounds onto the bound at the decimals the bound is written
+    # to. Whether such a row should pass is a spec decision for the keys.
+    beyond_decimals = sorted(
+        row["id"] for row in ratified if row["verdict"] == "FAIL" and row.get("fails_only_beyond_written_decimals")
     )
 
     return {
@@ -777,7 +781,7 @@ def build_content(repo: Path, selection_path: Path) -> dict:
             "verdict": overall,
             "ratified_rows": len(ratified),
             "ratified_pass": sum(1 for row in ratified if row["verdict"] == "PASS"),
-            "pass_only_at_bound_precision": literal_exceptions,
+            "fail_only_beyond_written_decimals": beyond_decimals,
             "verdict_counts": dict(sorted(counts.items())),
             "rule": "ERROR if any input is in error; else FAIL if any ratified (binding) row fails its bound; else INCOMPLETE if any non-pending row lacks full valid grid coverage; else PASS. Superseded rows are context and never FAIL the report; measured rows carry no bound; Area is PENDING.",
         },
@@ -877,14 +881,15 @@ def render_markdown(report: dict) -> str:
     w(f"## Overall: **{overall['verdict']}**\n\n")
     w(f"{overall['ratified_pass']} of {overall['ratified_rows']} ratified (binding) bounds PASS. ")
     w("Verdict counts: " + ", ".join(f"{k} {v}" for k, v in overall["verdict_counts"].items()) + ".\n\n")
-    if overall["pass_only_at_bound_precision"]:
+    if overall.get("fail_only_beyond_written_decimals"):
         w(
-            "**Read with the comparison rule below:** "
-            + ", ".join(f"`{rid}`" for rid in overall["pass_only_at_bound_precision"])
-            + " clear their bound only at the precision the bound was ratified at; "
-            "the raw worst-case value sits beyond the literal decimal (see each row's raw margin). "
-            "That is how DR-0002 wrote those bounds (AT the cited worst case, rounded), "
-            "not a relaxation by this report.\n\n"
+            "**Bound precision:** "
+            + ", ".join(f"`{rid}`" for rid in overall["fail_only_beyond_written_decimals"])
+            + " FAIL their ratified bound as written, although the raw worst case rounds onto the "
+            "bound at the decimals the bound is written to (see each row's raw margin). No "
+            "ratification record defines a rounding convention, so this report compares literally "
+            "and does not pass them; whether those bounds or the comparison convention should be "
+            "restated is a spec decision for the keys (see the caveats below).\n\n"
         )
     w(f"Rule: {overall['rule']}\n\n")
     w(f"Comparison rule: {content['comparison_rule']}\n\n")
@@ -896,7 +901,7 @@ def render_markdown(report: dict) -> str:
 
     def table(rows, with_bound: bool):
         if with_bound:
-            w("| Row | Bound | Decision record | Load / conditions | Worst measured (binding point) | Compared at bound precision | Best measured | Grid coverage | Source record (sha256) | Verdict |\n")
+            w("| Row | Bound | Decision record | Load / conditions | Worst measured (binding point) | Raw margin to bound (worst rounded to bound decimals, informational) | Best measured | Grid coverage | Source record (sha256) | Verdict |\n")
             w("|---|---|---|---|---|---|---|---|---|---|\n")
         else:
             w("| Row | Status / tag | Load / conditions | Worst measured (point) | Best measured | Grid coverage | Source record (sha256) | Verdict |\n")
@@ -913,10 +918,9 @@ def render_markdown(report: dict) -> str:
             if with_bound:
                 bound = row["bound"]
                 bound_txt = f"{'≥' if bound['op'] == '>=' else '≤'} {bound['value']} {unit}"
-                compared = worst.get("compared_value")
-                comp_txt = "—" if compared is None else (
-                    f"{compared} {unit} (raw margin {worst.get('raw_margin')}; strict literal "
-                    f"{'pass' if row.get('strict_literal_pass') else 'FAIL'})"
+                margin = worst.get("raw_margin")
+                comp_txt = "—" if margin is None else (
+                    f"{margin} {unit} (rounded: {worst.get('rounded_to_bound_decimals')} {unit})"
                 )
                 w(
                     f"| {_cell(row['spec_row'])} | {_cell(bound_txt)} | `{row['decision_record']}` [{row['tag']}] "
@@ -1020,8 +1024,8 @@ def envelope_for(report_rel: str, report_hash: str, content: dict) -> dict:
         "t1_item": 8,
         "summary": (
             f"characterization report: overall {overall['verdict']}, "
-            f"{overall['ratified_pass']}/{overall['ratified_rows']} ratified spec-row bounds PASS (compared at "
-            "ratified precision) with full "
+            f"{overall['ratified_pass']}/{overall['ratified_rows']} ratified spec-row bounds PASS (raw values "
+            "compared against the literal ratified bound) with full "
             "expected-grid coverage; per-row units, load, bound, decision record, binding point and "
             "source-record hash; aggregated offline from committed sim/ records (no re-simulation); "
             "not item 5/6 evidence"
