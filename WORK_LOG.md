@@ -4,6 +4,10 @@
 
 ### 2026-10-09
 
+- **PR #128**: spec: draft reproducible GDS bounding-box area definition for TBD-12
+- **PR #127**: post-layout: klt-sim-based measure command for item 7 (partial; run blocked by batch runner mismatch) (#86)
+- **PR #126**: signoff: post-layout pex harness for T1 item 7 (partial, #86)
+- **PR #125**: ci: enforce append-only evidence against the previous Git tree
 - **PR #120**: ci: run sim/ offline tests and evidence checkers in signoff.yml
 - **PR #118**: sim: express the slew-rate bench as a klt sim request (T1 item 5, #95)
 - **PR #117**: spec: draft DR-0006 resolving the ICMR row (not ratified)
@@ -14,6 +18,8 @@
 - **PR #104**: feat(signoff): continuously validate the item 1/9/10 inventory entries
 - **PR #103**: integration: synchronize published GDS availability and graded maturity
 - **PR #94**: signoff: per-spec-row characterization report from committed evidence (T1 item 8)
+- **Issue #115** (closed): spec: select an area definition (resolve TBD-12) now that a DRC-clean routed GDS exists
+- **Issue #121** (closed): ci: enforce append-only evidence against the previous Git tree
 - **Issue #119** (closed): ci: run the sim/ offline tests and evidence checkers in signoff.yml
 - **Issue #114** (closed): spec: resolve the unratified ICMR row -- measured lower bound excludes mid-rail Vcm at 15 of 45 PVT points
 - **Issue #111** (closed): signoff: negative-control tests for check_signoff.py and sync_integrator.py

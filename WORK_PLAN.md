@@ -25,7 +25,7 @@ Human-approved issues ready for implementation (`loom:issue`).
 
 Issues currently being built (`loom:building`).
 
-- **#86**: signoff: first `klt pex` post-layout run on opamp_core.gds (T1 item 7)
+_None._
 
 ## PRs Awaiting Review
 
@@ -48,13 +48,12 @@ Issues carrying `loom:curated`.
 - **#85**: sim: express the open-loop AC bench as a `klt sim` request, the first gradable envelope toward T1 item 5 *(curated)*
 - **#86**: signoff: first `klt pex` post-layout run on opamp_core.gds (T1 item 7) *(curated)*
 - **#95**: sim: express the slew-rate bench as a klt sim request (T1 item 5 coverage, follow-up to #85) *(curated)*
+- **#96**: sim: express the input-noise bench as a klt sim request (T1 item 5 coverage, follow-up to #85) *(curated)*
 - **#105**: signoff: express the statistical rows as klt yield evidence for T1 item 6 (offset MC, mismatch CMRR) *(curated)*
 
 ## Proposed (Architect / Hermit)
 
 - **#105**: signoff: express the statistical rows as klt yield evidence for T1 item 6 (offset MC, mismatch CMRR) *(architect)*
-- **#115**: spec: select an area definition (resolve TBD-12) now that a DRC-clean routed GDS exists *(architect)*
-- **#121**: ci: enforce append-only evidence against the previous Git tree *(architect)*
 
 ## Epics
 
@@ -67,10 +66,10 @@ _None._
 | Operator merge-risk holds | 0 |
 | Operator priority | 0 |
 | Ready (`loom:issue`) | 1 |
-| In Progress (`loom:building`) | 1 |
+| In Progress (`loom:building`) | 0 |
 | PRs awaiting review | 1 |
 | Approved PRs awaiting merge | 0 |
-| Curated | 6 |
-| Architect / Hermit proposals | 3 |
+| Curated | 7 |
+| Architect / Hermit proposals | 1 |
 | Active epics | 0 |
 <!-- guide:plan-body:end -->
