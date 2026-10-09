@@ -41,6 +41,9 @@ The structure mirrors `2AMLogic/sg13g2-bandgap`'s: shared drawing modules at
 | `opamp_core/erc_supply_spec.json` | **The T1 item-11 supply spec.** The `klt erc` spec document declaring the two supplies, the conductor stackup/vias they are allowed to run on, and the two well/substrate ties — every entry carrying an inline justification (see ["The ERC supply verdict"](#the-erc-supply-verdict-opamp_corerc_reportjson)). |
 | `opamp_core/erc_report.json` | The committed `klt erc --deck sg13g2 --format json` envelope over the committed GDS against that spec. |
 | `opamp_core/run_erc.sh` | Regenerates `erc_report.json`. Runs from the repo root on purpose — `klt signoff` re-opens the spec path the envelope echoes, resolved against *its* cwd. |
+| `opamp_core/measure_area.py` | **Proposed** (not ratified, TBD-12) area measurement: the hierarchical geometry bounding box of the named `opamp_core` cell, read offline from the committed GDS with `klayout.db`. See ["Area measurement"](#area-measurement-proposed-tbd-12). |
+| `opamp_core/area_measurement.json` | Its committed, deterministic output (GDS sha256, integer-DBU box, µm and mm² area). |
+| `opamp_core/test_measure_area.py` | Synthetic-layout and negative-control tests for the extractor. |
 
 ## Regenerating
 
@@ -780,3 +783,37 @@ no klayout install of its own"), a materially larger and less-tested
 surface than this repo's other CI. The record of that decision, and the
 reasoning behind it, is
 [#50](https://github.com/2AMLogic/sg13g2-opamp/issues/50).
+
+## Area measurement (proposed, TBD-12)
+
+`opamp_core/measure_area.py` measures the **hierarchical geometry bounding
+box** of the cell named `opamp_core` (explicitly by name, never the first top
+cell) and writes `opamp_core/area_measurement.json`. Definition id
+`opamp-core-hier-bbox-v1`; the decision record is
+[`spec/decision-records/0007-area-definition.md`](../spec/decision-records/0007-area-definition.md),
+status **proposed — not ratified**. This does not resolve TBD-12, set an area
+target, or change the Area row or `spec/integrator.json`.
+
+Inclusion rules: recursive through instances including rotation, reflection
+and arrays; every layer/datatype with geometry (boxes, polygons, paths,
+boundary layers); **text labels are excluded**; only geometry under the named
+cell counts (sibling top cells and unreferenced cells do not). The box is in
+integer database units; area is integer width x integer height, converted to
+µm² (x dbu²) and mm² (/ 1 000 000) by exact decimal arithmetic, unrounded. The
+JSON has no timestamps or absolute paths, so repeat runs are byte-identical.
+It fails clearly on a missing cell, empty geometry, an unreadable file or a
+nonpositive dbu. A geometry bounding box is not a legal placement boundary, a
+pad-ring footprint, a keepout budget or an area target. Active/device and
+placed-cell area are deferred (separate definitions needed).
+
+```sh
+# From the repo root. Needs only the `klayout` python module (no PDK/klt/sim).
+python3 layout/opamp_core/measure_area.py            # print the measurement
+python3 layout/opamp_core/measure_area.py --write    # rewrite area_measurement.json
+python3 layout/opamp_core/measure_area.py --check    # re-derive + compare; never writes
+python3 -m unittest discover -s layout/opamp_core -p 'test_measure_area.py' -v
+```
+
+`--check` fails on GDS-hash, definition or value drift. If the GDS bytes change
+legitimately, regenerate the record (`--write`) in the same change as the
+signoff pins.
