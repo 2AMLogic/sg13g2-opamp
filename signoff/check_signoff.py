@@ -38,6 +38,12 @@ MANIFEST = SIGNOFF_DIR / "block-manifest.json"
 PINNED_INPUTS = SIGNOFF_DIR / "pinned-inputs.json"
 KLT_PIN = SIGNOFF_DIR / "klt-pin.txt"
 REPORTS_DIR = SIGNOFF_DIR / "reports"
+# The T1 item 8 characterization report (signoff/characterization/README.md):
+# its generic envelope, and the generator whose --check re-derives the cited
+# record from the committed sim/ evidence it selects.
+CHARACTERIZATION_ENVELOPE = "signoff/evidence/characterization.json"
+CHARACTERIZATION_GENERATOR = SIGNOFF_DIR / "characterization" / "generate.py"
+CHARACTERIZATION_ITEM = "8"
 
 BLOCK_KINDS = ("analog", "digital", "mixed-signal")
 # The T1 checklist item ids this repo's manifest may key on. 11 as of
@@ -396,6 +402,62 @@ def check_report(report_doc, manifest, manifest_evidence: dict, failures: Failur
     print(f"  ok  report renders {len(t1_ids)} T1 items, {met} met")
 
 
+def check_characterization(manifest_evidence: dict, failures: Failures) -> None:
+    """Item 8's report is cited for item 8 only, and still reproduces.
+
+    The characterization report aggregates harness-native records; it is not
+    a `klt sim` / `klt yield` envelope and must never stand in for items 5 or
+    6 (klt would render a generic citation there `wrong_kind`, but a
+    mis-keyed citation is exactly what this register exists to stop before
+    it reaches the grader). And because the envelope only binds the bytes of
+    one minted record, the record itself is re-derived from the evidence it
+    selects -- offline, no ngspice, no PDK -- so a selected record that moved
+    fails here rather than leaving a stale report cited.
+    """
+    for key, entry in manifest_evidence.items():
+        parts = entry if isinstance(entry, list) else [entry]
+        for part in parts:
+            cited = part.get("file") if isinstance(part, dict) else None
+            if (
+                isinstance(cited, str)
+                and (cited == CHARACTERIZATION_ENVELOPE or cited.startswith("signoff/characterization/"))
+                and key != CHARACTERIZATION_ITEM
+            ):
+                failures.add(
+                    f"manifest: evidence[{key!r}] cites the characterization report "
+                    f"({cited}); it is item {CHARACTERIZATION_ITEM} evidence only and "
+                    "must not be cited for any other item (in particular not 5 or 6)"
+                )
+    entry = manifest_evidence.get(CHARACTERIZATION_ITEM)
+    if entry is None:
+        return
+    if not isinstance(entry, dict) or entry.get("file") != CHARACTERIZATION_ENVELOPE:
+        failures.add(
+            f"manifest: evidence[{CHARACTERIZATION_ITEM!r}] must cite "
+            f"{CHARACTERIZATION_ENVELOPE} (the envelope generate.py --mint writes)"
+        )
+        return
+    try:
+        completed = subprocess.run(
+            [sys.executable, str(CHARACTERIZATION_GENERATOR), "--check"],
+            cwd=str(REPO_ROOT),
+            capture_output=True,
+            text=True,
+            timeout=600,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        failures.add(f"characterization: could not run {rel(CHARACTERIZATION_GENERATOR)} --check ({exc})")
+        return
+    for line in completed.stdout.splitlines():
+        print(f"  {line.strip()}")
+    if completed.returncode != 0:
+        failures.add(
+            "characterization: the cited report does not reproduce from its selected "
+            f"evidence (generate.py --check exited {completed.returncode})"
+            + (f"\n{completed.stderr.strip()}" if completed.stderr.strip() else "")
+        )
+
+
 def klt_pin() -> str | None:
     try:
         lines = KLT_PIN.read_text(encoding="utf-8").splitlines()
@@ -552,6 +614,9 @@ def main(argv: list[str]) -> int:
 
     print(f"== pinned inputs ({rel(PINNED_INPUTS)}) ==")
     check_pins(manifest_evidence, failures)
+
+    print("== characterization report (T1 item 8) ==")
+    check_characterization(manifest_evidence, failures)
 
     print(f"== verdict of record ({rel(REPORTS_DIR)}) ==")
     report_path = latest_report(failures)
