@@ -21,14 +21,15 @@
 # each extracted row still meets the ratified bound is a separate question,
 # answered by `python3 sim/post-layout/check_bounds.py layout/opamp_core/pex_report.json`.
 #
-# HOST RULE: the measure command is ~45 ngspice runs per leg (90 total). On a
-# shared dispatch worker (KLT_SIM_BACKEND=batch) it refuses to loop them
-# locally (exit 2 -> klt pex exit 1, no report is written). Run this on a host
-# without that variable, or set SG13G2_PEX_ALLOW_LOCAL_GRID=1 deliberately.
+# GRID: the measure command expresses each leg's 45-point PVT grid as `klt sim`
+# requests (AC + OP) and never launches ngspice itself, so on a shared dispatch
+# worker (KLT_SIM_BACKEND=batch) the corners go to the Spot batch fleet. If the
+# batch submit fails the run fails loudly (exit 1, no report); it does not fall
+# back to a local grid.
 #
-# Needs `klt` >= the revision in signoff/klt-pin.txt (--measure-command), ngspice
-# + built OSDI models (sim/tools/build-osdi.sh), and the ihp-sg13g2 PDK (found
-# via $PDK_ROOT, else the sim/env.sh candidate list).
+# Needs `klt` >= the revision in signoff/klt-pin.txt (--measure-command), a
+# reachable batch fleet whose runner matches the client klt version, and the
+# ihp-sg13g2 PDK (found via $PDK_ROOT, else the sim/env.sh candidate list).
 #
 # Exit codes mirror `klt pex`: 0 pass, 3 fail, 4 error rows; 1 application
 # error (no report written).
@@ -43,7 +44,7 @@ DRY_RUN=0
 for arg in "$@"; do
   case "${arg}" in
     --dry-run) DRY_RUN=1 ;;
-    -h|--help) sed -n '2,33p' "${BASH_SOURCE[0]}"; exit 0 ;;
+    -h|--help) sed -n "2,35p" "${BASH_SOURCE[0]}"; exit 0 ;;
     *) echo "unknown option: ${arg}" >&2; exit 1 ;;
   esac
 done
