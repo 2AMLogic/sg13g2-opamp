@@ -8,7 +8,7 @@ open-source xschem + ngspice flow.
 **Status: implementation and structural verification in progress.** The
 gm/ID sizing basis, schematic, simulation benches, routed layout, DRC, LVS,
 and structural power-delivery evidence are committed. The machine-graded
-signoff record currently marks 7 of 11 T1 items met; remaining gaps stay
+signoff record currently marks 8 of 11 T1 items met; remaining gaps stay
 tracked in the signoff manifest and issue backlog.
 
 **Built agent-native.** Every specification, decision record, testbench, and
@@ -53,8 +53,8 @@ for this block's current distance from a sim-validated design.
 
 **Where this block sits on the evidence ladder is graded, not asserted**:
 [`signoff/`](signoff/README.md) holds the `klt signoff --manifest` block
-manifest and the committed per-item T1 verdict it produces — 7 of 11 items
-`met` in the current record, with the remaining 4 `unmet`. That
+manifest and the committed per-item T1 verdict it produces — 8 of 11 items
+`met` in the current record, with the remaining 3 `unmet`. That
 record — not this paragraph, and not a hand-maintained checkbox list — is
 the verdict of record for the tracker above, and CI re-grades it so a claim
 resting on an artifact that has since changed fails instead of rotting.
@@ -87,6 +87,14 @@ committed netlist is regenerated from the schematic with the command in
 are described in [`layout/README.md`](layout/README.md), and the graded
 verdict is re-derived with `bash signoff/regenerate.sh`
 ([`signoff/README.md`](signoff/README.md)).
+
+The per-spec-row characterization report (every row's bound, worst case,
+binding point, grid coverage and source record) is regenerated from the
+committed records alone — no PDK, no ngspice — with
+`python3 signoff/characterization/generate.py` (`--check` verifies the
+committed record reproduces); see
+[`signoff/characterization/README.md`](signoff/characterization/README.md).
+That aggregates existing evidence; it does not re-run the benches above.
 
 ## License
 

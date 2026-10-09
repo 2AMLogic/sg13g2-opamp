@@ -21,6 +21,10 @@
       "kind": "lvs",
       "content_hash": "sha256:07fcb21698709178395cb2f04ba998c3752efb6eff24aace7626d9ffc10e553e"
     },
+    "8": {
+      "file": "signoff/evidence/characterization.json",
+      "content_hash": "sha256:a1dd231250152f12e3977a383eb7b573e664165b4704fbc59cd7da9d34fddd2b"
+    },
     "9": {
       "file": "signoff/evidence/testbenches.json",
       "content_hash": "sha256:6bf69ed2f5b8908dc99c489bed6e1a9f5093ffebaa9bac302c3bc66a91c206dc"

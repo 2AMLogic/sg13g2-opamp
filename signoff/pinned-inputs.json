@@ -41,13 +41,23 @@
         "envelope (`spec`) and hashed by newer klt in `provenance.spec`, but the",
         "revision pinned in klt-pin.txt predates that check, so editing the",
         "supply spec without re-running layout/opamp_core/run_erc.sh would not",
-        "be caught here. Re-run it whenever the spec changes."
+        "be caught here. Re-run it whenever the spec changes.",
+        "",
+        "Item 8 pins the minted characterization record (the JSON twin under",
+        "signoff/characterization/reports/) that the generic envelope",
+        "signoff/evidence/characterization.json binds via provenance.input",
+        "({path, scope: \"repo\"}). Re-minting with",
+        "signoff/characterization/generate.py --mint re-wraps that envelope; this",
+        "pin and the manifest's must then move to the new record together.",
+        "check_signoff.py additionally re-derives the record from the sim/",
+        "evidence it selects (generate.py --check)."
     ],
     "inputs": {
         "1": "signoff/evidence/design-sources.txt",
         "2": "layout/opamp_core/opamp_core.gds",
         "3": "layout/opamp_core/opamp_core.gds",
         "4": "layout/opamp_core/opamp_core.gds",
+        "8": "signoff/characterization/reports/20261009-005750-622fb9c.json",
         "9": "signoff/evidence/testbenches.txt",
         "10": "signoff/evidence/hygiene.txt",
         "11": [
