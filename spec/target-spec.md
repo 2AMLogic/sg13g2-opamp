@@ -45,7 +45,7 @@ the full PVT grid, and
 [`decision-records/0002-target-spec-ratification.md`](decision-records/0002-target-spec-ratification.md)
 ratified one bound per measured row (`[DR-2]` tags) via the two-key
 mechanism. The only row still carrying a `[TBD-#n]` tag is the one whose
-evidence does not exist yet (Area — no layout) — see the residual notes
+evidence is not yet ratified (Area — layout GDS committed, area definition and decision pending) — see the residual notes
 in §2 and 0002's residual register. (The CMRR/PSRR bench landed on `main`
 mid-pass, PR #25, and its rows are ratified with the caveats stated
 in-row.)
@@ -85,7 +85,7 @@ basis is committed but not yet measured — no row currently uses it, both
 of its former users having moved to the mismatch-measured value above);
 and `not ratifiable yet —
 <reason>` (a `[TBD-#n]` residual row whose evidence does not exist yet:
-Area, pending a layout).
+Area, pending an evidence-backed area definition and a ratification decision; a layout GDS is committed).
 The pre-ratification
 draft vocabulary (`not started`, `Measured (not yet ratified)`, `Measured,
 systematic only (not yet ratified; statistical basis outstanding)`)
@@ -128,17 +128,17 @@ applies to any future *pass/fail* verdict on these rows.
 | Input common-mode range (ICMR) | **0.6158–0.8690 V at the worst-span corner `mos_ss / 125 °C / 1.08 V`; span 0.2532 V worst / 0.6769 V best, lower bound worst 0.6401 V at `SS / −40 °C / 1.08 V`, upper bound worst 0.7954 V at `FS / 125 °C / 1.08 V` [P]** — measured `sim/input-cmr/records/20260921-174405-65f5fb4.csv`, the input stage's own saturation-limited bounds (lower: `v(tail) = Vdsat(M5)`, with the tail's saturation knee measured by a same-bias replica probe; upper: pair `Vds ≥ Vgs − Vth` with `Vth` per the gm/ID constant-current convention measured at the bound's true body bias — criterion-explicit, both mechanisms named per point: `m5_headroom` below, `pair_saturation` above, at all 45 points). **The measured envelope does not contain this design's own nominal `Vcm = VDD/2` bias point at the low rail**: 15 of 45 points (every 1.08 V corner except `ff` ×3 and `fs / 125 °C`, plus `ss` ×3 and `sf / −40 °C` at 1.20 V) sit *below* the measured lower bound at mid-rail, worst by 100 mV (`SS / −40 °C / 1.08 V`) — the tail-starvation sensitivity `sim/slew-rate/`'s dev-time study observed, quantified here; a usable 1.08 V design needs a higher-than-mid-rail input common mode, a re-biased tail, or explicit acceptance of a knee-region tail there. The closed-loop-buffer usable interval (intersection with `sim/output-swing/`'s measured reach) is a further-recorded column: worst 0.1612 V at `SS / 125 °C / 1.08 V`. These bounds pre-date ratification and are not part of [DR-2] | — | — (deterministic corner-worst-case; nominal matched devices only — threshold mismatch moves a real part's ICMR the same way it dominates the offset row's statistical half; a mismatch MC pass is the natural follow-on, sibling to #17/#26) | Predicted (lower bound): slow/cold/low-VDD per `design/opamp_sizing.md`'s "Headroom check" — **confirmed**: worst lower bound at `SS / −40 °C / 1.08 V`, and the paper chain is directionally right but ~23 mV optimistic at `TT / 27 °C / 1.08 V` and up to ~95 mV at the binding corner (the real `Vgs(M1)` is ≈ 0.43 V, not the 0.39 V assumed). No prediction existed for the upper bound; measured worst upper bound at **`FS / 125 °C / 1.08 V`** — the same corner family that binds DC gain, GBW, noise, systematic offset and CMRR. See `sim/input-cmr/README.md` "Measured vs. predicted binding corner" | Measured (not yet ratified) |
 | Output swing | **Ratified bound: headroom ≥ 251 mV from VDD and ≥ 141 mV from VSS worst-case, tracking span ≥ 0.571 V worst-case [DR-2]** — measured envelope span 0.571 V worst / 0.900 V best, `sim/output-swing/records/20260921-151759-707b34c.csv` at the **−6 dB incremental-gain** criterion that record's own README defines ("The swing criterion"); the worst-span point is `mos_ss / 125 °C / 1.08 V` (`Vout` 0.206–0.777 V), best `mos_ff / −40 °C / 1.32 V`; into `CL = 2 pF` [DR-1], no resistive load (an **upper bound** — a loaded-row decision is separate). Headroom per rail is the comparable-across-supplies form; absolute `Vout` bounds per point are in the record | — | — (deterministic corner-worst-case; no mismatch/MC deck — same nominal-device caveat as the offset row's systematic half) | Predicted: low VDD / worst output-stage headroom corner. **Confirmed on the supply axis, corrected on the process/temperature axis**: every worst figure (span, per-rail headroom) lands at 1.08 V, but no single process x temperature point binds both rails and the span — worst span at **SS / 125 °C** (hot), worst high-rail headroom at **FS / −40 °C** (251 mV), worst low-rail headroom at **FF / −40 °C** (141 mV). See `sim/output-swing/README.md` "Measured vs. predicted binding corner" | Ratified [DR-2] (unloaded; a loaded-row decision is separate) |
 | Quiescent power | **Ratified bound Iq ≤ 119.7 uA worst-case (total Vdd current, incl. the external 10 uA `ibias` reference) [DR-2]** — measured envelope 119.7 uA worst / 99.9 uA best, `sim/open-loop-ac/records/20260910-221601-22feaba.csv`; signal-path-only figures (excluding `ibias`) are ~10 uA lower per point, see that record's `ivdd_signal_path_a` column and `design/opamp_sizing.md`'s "Iq reporting note" | — | — (deterministic corner-worst-case) | Predicted: FF / 125 °C / 1.32 V (leakage + fastest devices) — matches `gf180-bandgap`'s ratified Iq binding-corner convention. **Measured worst case is instead SS / −40 °C / 1.32 V** — the coldest, slowest corner drew the most current in this design, opposite the leakage-dominated prediction (consistent with a bias point where lower `Vth`-headroom margin, not leakage, sets `Iq` at this corner) | Ratified [DR-2] |
-| Area | **[TBD-12]** | — | n/a (not a PVT line) | n/a | not ratifiable yet — Area is a post-layout property and no layout exists in this repo. Stays `[TBD-12]` (0002 residual register) |
+| Area | **[TBD-12]** | — | n/a (not a PVT line) | n/a | UNRATIFIED — Area is a post-layout property; a layout GDS (`layout/opamp_core/opamp_core.gds`) is now committed, but no area definition (bounding box, active, placed-cell) has been selected by a decision record, so no numeric area is set. Layout availability alone does not ratify a bound. Stays `[TBD-12]` (0002 residual register) |
 
 Every `[TBD-#n]` row above is deliberately left unset rather than guessed,
 per `CLAUDE.md`'s "no claim without a testbench" rule. After the DR-0002
 ratification pass, one row keeps that tag, with an explicit reason it
 cannot yet be ratified (see the Status column above and
 [0002](decision-records/0002-target-spec-ratification.md)'s residual
-register): Area, a post-layout property for which no layout exists. It
-stays unset — ratifying it now would be exactly the kind of evidence-free
+register): Area, a post-layout property. A layout GDS is now committed, but the
+row stays unset until a decision record selects an area definition — ratifying it now would be exactly the kind of evidence-free
 claim that rule forbids. It will be ratified by a future two-key
-ratification pass once a layout exists, amending 0002 rather than
+ratification pass once that definition is evidenced, amending 0002 rather than
 starting over — and likewise for the offset row's Monte Carlo statistical
 basis (#17), whose own future pass will supersede the corresponding
 ratified systematic half. The CMRR row's mismatch-inclusive term (#26) is

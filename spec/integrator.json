@@ -35,7 +35,7 @@
   "spec_rows_not_ratified": {
     "offset_mismatch_3sigma_mv": { "range": "26.4-27.4", "status": "measured [P], not yet re-ratified; worst single-PVT total |systematic| + 3sigma = 46.7 mV" },
     "input_common_mode_range_v": { "worst_span_envelope": [0.6158, 0.8690], "status": "measured [P], not yet ratified" },
-    "area": { "status": "TBD-12 - not ratifiable yet, no layout" }
+    "area": { "status": "TBD-12 - UNRATIFIED; layout/opamp_core/opamp_core.gds exists but no area definition (bounding box, active, placed-cell) has been selected by a decision record, so numeric area stays unset" }
   },
   "artifacts": {
     "schematic": "design/opamp_core.sch",
@@ -43,19 +43,19 @@
     "sizing_derivation": "design/opamp_sizing.md",
     "netlist": "design/netlist/opamp_core.spice",
     "netlist_note": "committed ngspice netlist (top-level, 9 devices: M1-M7, Mbias, Cc; .subckt wrapper line commented)",
-    "gds": null,
-    "gds_note": "not yet available - no layout, see https://github.com/2AMLogic/sg13g2-opamp/issues/29",
+    "gds": "layout/opamp_core/opamp_core.gds",
+    "gds_note": "committed layout GDS (top cell opamp_core); availability only - not a foundry-signoff claim and not an Area ratification (target-spec.md row TBD-12 stays unratified, area_mm2 unset); graded maturity is in 'maturity'",
     "simulation_evidence": "sim/ (append-only PVT records; see target-spec.md section 4 Sources for the per-row record map)"
   },
   "area_mm2": null,
-  "area_note": "TBD - no layout (target-spec.md row TBD-12; issue #29). Stated honestly rather than guessed.",
+  "area_note": "TBD-12 unratified, numeric area unset: a layout GDS is now committed, but an evidence-backed decision must still select the area definition (target-spec.md row TBD-12; issue #29). Stated honestly rather than guessed.",
   "maturity": {
     "framework": "klayout-tools design-evidence-tiers (docs/design-evidence-tiers.md)",
     "tier": null,
     "t1_items_total": 11,
-    "t1_items_met": 0,
-    "statement": "T1 ('sim-validated') rung: 0 of 11 checklist items met per the newest klt signoff record; not a hand-guessed tier.",
-    "source_record": "signoff/reports/20260921-171207-f990fd5.signoff.json (tracked by issue #3)"
+    "t1_items_met": 7,
+    "statement": "T1 ('sim-validated') rung: 7 of 11 checklist items met per the newest klt signoff record; not a hand-guessed tier.",
+    "source_record": "signoff/reports/20261009-010553-13ea3e8.signoff.json"
   },
   "consumers": [
     {
@@ -75,6 +75,6 @@
     "sg13g2_bandgap_commit": "2AMLogic/sg13g2-bandgap @ 463c1af",
     "sg13g2_ldo_commit": "2AMLogic/sg13g2-ldo @ 4fbfa18",
     "this_repo_commit": "2AMLogic/sg13g2-opamp @ 9d49d96",
-    "signoff_record": "signoff/reports/20260921-171207-f990fd5.signoff.json"
+    "signoff_record": "signoff/reports/20261009-010553-13ea3e8.signoff.json"
   }
 }

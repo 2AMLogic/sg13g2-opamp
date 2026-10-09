@@ -46,6 +46,12 @@ jobs:
         # selects (no ngspice, no PDK) and must match the cited record.
         run: python3 signoff/check_signoff.py
 
+      - name: Integrator view is in step with the newest record (offline)
+        # spec/integrator.json's maturity counts, source record and GDS path
+        # are derived from the newest committed signoff record; a new report
+        # without `python3 signoff/sync_integrator.py --update` fails here.
+        run: python3 signoff/sync_integrator.py --check
+
       - name: Characterization report negative controls (offline)
         run: python3 -m unittest discover -s signoff/characterization -v
 
