@@ -1,0 +1,503 @@
+#!/usr/bin/env python3
+"""Compare the slew-rate bench's `klt sim` envelope against the harness record.
+
+Usage:
+
+    compare.py validate <envelope.json>
+    compare.py compare --envelope <slew.sim.json> --harness-csv <records/<id>.csv> \
+        --harness-tran-dir <corners/<id>/> [--json-out <report.json>] \
+        [--provenance key=value ...]
+
+Offline and stdlib-only: it reads committed files and runs no simulator.
+
+`validate` is the gate sim/slew-rate/klt/run.sh applies to the envelope before
+it is allowed into records/: exactly the 45-point ratified grid, one corner per
+(process, temperature, VDD) point, Vcm = VDD/2 at every corner, every declared
+measurement present and finite at every corner, no corner `error` /
+`inconclusive`, and `coverage.nothing_checked` false with nothing skipped. An
+envelope that fails any of these is an incomplete run, not evidence.
+
+`compare` joins the envelope and the harness record
+(sim/slew-rate/records/20260918-210216-90844d2.csv) on the full
+(process, temperature, VDD) key, refuses anything but the same 45 unique points
+on both sides, and reports per corner and per metric the difference against a
+stated tolerance (TOLERANCES below). Exit status:
+
+    0  every comparison within tolerance and every verdict agrees
+    1  at least one comparison outside tolerance, or a bound verdict that
+       disagrees without being explained by the tolerance (report still
+       written -- an out-of-tolerance point is reported, never hidden)
+    2  inputs unusable: missing/duplicate/extra points, missing or
+       non-finite measurements, malformed envelope
+
+Comparison tolerances never touch a pass/fail limit. The ratified bound
+(SLEW_BOUND_V_PER_US) is graded by `klt sim` itself, once per edge; this script
+only reports whether the two measurement paths agree, and whether they agree
+about the bound.
+"""
+
+from __future__ import annotations
+
+import argparse
+import csv
+import hashlib
+import json
+import math
+import os
+import sys
+from typing import Dict, Iterable, List, Optional, Tuple
+
+# ---------------------------------------------------------------- the grid
+# spec/target-spec.md section 1 [DR-1]/[DR-2]: cornerMOSlv.lib's five
+# sections x {-40, 27, 125} C x {1.08, 1.20, 1.32} V.
+PROCESSES = ("mos_tt", "mos_ss", "mos_ff", "mos_sf", "mos_fs")
+TEMPERATURES = (-40, 27, 125)
+SUPPLIES = (1.08, 1.20, 1.32)
+
+Key = Tuple[str, int, float]
+
+
+def expected_keys() -> List[Key]:
+    return [(p, t, v) for p in PROCESSES for t in TEMPERATURES for v in SUPPLIES]
+
+
+def make_key(process: str, temp, vdd) -> Key:
+    return (str(process), int(round(float(temp))), round(float(vdd), 3))
+
+
+def key_str(k: Key) -> str:
+    """The harness's own point_id spelling, e.g. mos_fs_125C_1.08V."""
+    return f"{k[0]}_{k[1]}C_{k[2]:.2f}V"
+
+
+# ----------------------------------------------------------- measurements
+# Everything slew-rate/klt/slew.request.json reports. The tool's per-edge slew
+# measurements carry the ratified bound; the rest are either integrity checks
+# (graded by the tool, compared against the harness's own check flags) or
+# unlimited values joined against the harness CSV.
+MEASUREMENTS = (
+    "t_rise_outer_s", "t_fall_outer_s", "t_rise_inner_s", "t_fall_inner_s",
+    "sr_rise_v_per_us", "sr_fall_v_per_us",
+    "sr_rise_inner_v_per_us", "sr_fall_inner_v_per_us",
+    "lin_rise_ratio", "lin_fall_ratio",
+    "pre_rise_orel_v", "pre_fall_orel_v",
+    "vinn_max_v", "vinn_min_v", "vout_dc_v", "drive_pp_v", "drive_centre_err_v",
+    "vd1_dc_v", "vd2_dc_v", "vtail_dc_v", "vibias_dc_v",
+    "op_vout_offset_frac", "op_vout_rail_frac", "op_vd1_rail_frac",
+    "op_vd2_rail_frac", "op_vtail_rail_frac",
+)
+OP_SANITY = tuple(m for m in MEASUREMENTS if m.startswith("op_"))
+LINEARITY = ("lin_rise_ratio", "lin_fall_ratio")
+TRAVERSE = ("pre_rise_orel_v", "pre_fall_orel_v")
+DRIVE = ("drive_pp_v", "drive_centre_err_v")
+EDGE_MEASUREMENTS = ("sr_rise_v_per_us", "sr_fall_v_per_us")
+
+# The ratified row (spec/target-spec.md section 2, [DR-2]): slew rate into
+# CL = 2 pF >= 7.51 V/us, the WORSE of the rising and falling edge at each
+# point. Copied here only to check that the two paths AGREE about the bound;
+# the verdict of record is the envelope's. `min(rise, fall) >= B` is
+# `rise >= B and fall >= B`, so the row passes at a corner iff both edge
+# measurements (each carrying the same bound) pass there.
+SLEW_BOUND_V_PER_US = 7.51
+
+# ------------------------------------------------------------- tolerances
+# Per-metric comparison tolerance: |tool - harness| <= abs + rel * |harness|.
+#
+# Basis (README.md "Comparison tolerance" carries the full argument):
+#
+# * Same circuit, same drive, same ngspice default solver tolerance (DR-0005:
+#   no reltol/abstol/vntol override anywhere in sim/). The harness record was
+#   produced on macOS/aarch64 ngspice-46; the envelope is produced wherever
+#   `klt sim` runs it. DR-0005 measured a 9.9e-4 relative drain-current
+#   difference between that host and Linux/x86_64 default-tolerance records of
+#   this PDK; slew ~ Itail/Cc moves with the tail current, so ~1e-3 relative is
+#   the cross-host allowance, and 2e-3 is allowed. (Same-host, default vs a
+#   1e-6 reltol, DR-0005 found the slew columns move by <= 3.4e-6: the
+#   transient number is converged; the allowance is for host-dependent paths.)
+# * Measurement method: the harness reads the committed 1 ns wrdata waveform
+#   (`.options interp`) with a linear-interpolated crossing of Vcm +/- h inside
+#   the [T2,T3] / [T3,T_STOP] window; the request reads the same interpolated
+#   samples with `.meas trig/targ ... td=`. compare.py re-derives the `.meas`
+#   algorithm on the harness's own committed waveform for every point
+#   (method_check below) and requires it to equal the CSV value to
+#   METHOD_CHECK_REL; the observed max is 3.3e-6, the CSV's %.6g quantisation.
+# * DC node voltages: 1e-3 relative + 1 uV (reltol, vntol), as in sim/open-loop-ac.
+TOLERANCES = {
+    "sr_rise_v_per_us": {"abs": 0.0, "rel": 2e-3, "unit": "V/us"},
+    "sr_fall_v_per_us": {"abs": 0.0, "rel": 2e-3, "unit": "V/us"},
+    "sr_worst_v_per_us": {"abs": 0.0, "rel": 2e-3, "unit": "V/us"},
+    "sr_rise_inner_v_per_us": {"abs": 0.0, "rel": 2e-3, "unit": "V/us"},
+    "sr_fall_inner_v_per_us": {"abs": 0.0, "rel": 2e-3, "unit": "V/us"},
+    "vout_dc_v": {"abs": 1e-6, "rel": 1e-3, "unit": "V"},
+    "vd1_dc_v": {"abs": 1e-6, "rel": 1e-3, "unit": "V"},
+    "vd2_dc_v": {"abs": 1e-6, "rel": 1e-3, "unit": "V"},
+    "vtail_dc_v": {"abs": 1e-6, "rel": 1e-3, "unit": "V"},
+    "vibias_dc_v": {"abs": 1e-6, "rel": 1e-3, "unit": "V"},
+}
+# The `.meas` algorithm on the harness's own waveform vs the harness CSV.
+METHOD_CHECK_REL = 1e-5
+
+# The harness's step schedule (run_slew_sweep.sh): the edge under test starts
+# at T2 (rising) / T3 (falling); `td` in the request is 50 ns before each.
+T_RISE_TD_S = 250e-9
+T_FALL_TD_S = 500e-9
+WIN_OUTER = 0.15
+WIN_INNER = 0.075
+
+
+class InputError(Exception):
+    """Inputs cannot be compared at all (exit 2)."""
+
+
+def _finite(x) -> bool:
+    return isinstance(x, (int, float)) and not isinstance(x, bool) and math.isfinite(x)
+
+
+# --------------------------------------------------------------- envelopes
+def load_envelope(path: str) -> Tuple[dict, Dict[Key, Dict[str, object]]]:
+    """Validate the `klt sim` envelope and index its corners by grid key."""
+    try:
+        with open(path) as f:
+            env = json.load(f)
+    except (OSError, ValueError) as e:
+        raise InputError(f"{path}: unreadable envelope ({e})")
+    return env, index_envelope(env, path)
+
+
+def index_envelope(env: dict, label: str = "envelope") -> Dict[Key, Dict[str, object]]:
+    if not isinstance(env, dict):
+        raise InputError(f"{label}: not a JSON object")
+    if "error" in env:
+        raise InputError(f"{label}: klt error envelope: {env['error']}")
+    corners = env.get("corners")
+    if not isinstance(corners, list):
+        raise InputError(f"{label}: no corners[] array")
+    if env.get("corner_count") != len(corners):
+        raise InputError(f"{label}: corner_count {env.get('corner_count')} != len(corners) {len(corners)}")
+    cov = env.get("coverage")
+    if not isinstance(cov, dict):
+        raise InputError(f"{label}: no coverage block")
+    if cov.get("nothing_checked") is not False:
+        raise InputError(f"{label}: coverage.nothing_checked is {cov.get('nothing_checked')!r}, expected false")
+    if cov.get("skipped"):
+        raise InputError(f"{label}: coverage.skipped is non-empty ({len(cov['skipped'])} item(s)), e.g. {cov['skipped'][0]}")
+    if env.get("status") not in ("pass", "fail"):
+        raise InputError(f"{label}: aggregate status {env.get('status')!r} -- only a complete pass/fail run is evidence")
+
+    out: Dict[Key, Dict[str, object]] = {}
+    problems: List[str] = []
+    for c in corners:
+        cid = c.get("corner_id")
+        supply = c.get("supply_v") or {}
+        if "vdd" not in supply or "vinp" not in supply or c.get("process") is None:
+            problems.append(f"{cid}: missing process or supply_v.vdd/vinp")
+            continue
+        k = make_key(c["process"], c.get("temperature_c"), supply["vdd"])
+        if k in out:
+            problems.append(f"{key_str(k)}: duplicate corner")
+            continue
+        if not math.isclose(float(supply["vinp"]), float(supply["vdd"]) / 2, rel_tol=0, abs_tol=1e-9):
+            problems.append(f"{key_str(k)}: vinp {supply['vinp']} != vdd/2 ({supply['vdd']}/2)")
+        if c.get("status") not in ("pass", "fail"):
+            problems.append(f"{key_str(k)}: corner status {c.get('status')!r}")
+        vals: Dict[str, object] = {}
+        by_name = {}
+        for m in c.get("measurements") or []:
+            if m.get("name") in by_name:
+                problems.append(f"{key_str(k)}: measurement {m.get('name')} reported twice")
+            by_name[m.get("name")] = m
+        for n in MEASUREMENTS:
+            m = by_name.get(n)
+            if m is None:
+                problems.append(f"{key_str(k)}: measurement {n} missing")
+                continue
+            if not _finite(m.get("value")):
+                problems.append(f"{key_str(k)}: measurement {n} value {m.get('value')!r} is missing or non-finite")
+                continue
+            vals[n] = float(m["value"])
+            vals[n + "__status"] = m.get("status")
+        out[k] = vals
+    _check_grid(out.keys(), label, problems)
+    if problems:
+        raise InputError(f"{label}: " + "; ".join(problems))
+    return out
+
+
+def _check_grid(keys: Iterable[Key], label: str, problems: List[str]) -> None:
+    got = set(keys)
+    want = set(expected_keys())
+    for k in sorted(want - got):
+        problems.append(f"{key_str(k)}: missing from {label}")
+    for k in sorted(got - want):
+        problems.append(f"{key_str(k)}: not a point of the ratified grid")
+
+
+# ----------------------------------------------------------------- harness
+HARNESS_COLUMNS = ("vcm_v", "sr_rise_v_per_us", "sr_fall_v_per_us", "sr_worst_v_per_us",
+                   "sr_rise_inner_v_per_us", "sr_fall_inner_v_per_us", "vout_dc_v",
+                   "vd1_dc_v", "vd2_dc_v", "vtail_dc_v", "vibias_dc_v")
+HARNESS_FLAGS = ("op_pass", "linearity_pass", "traverse_pass", "drive_pass")
+
+
+def load_harness_csv(path: str) -> Dict[Key, Dict[str, object]]:
+    out: Dict[Key, Dict[str, object]] = {}
+    problems: List[str] = []
+    try:
+        f = open(path, newline="")
+    except OSError as e:
+        raise InputError(f"{path}: {e}")
+    with f:
+        for r in csv.DictReader(f):
+            k = make_key(r["corner"], r["temp_c"], r["vdd_v"])
+            if k in out:
+                problems.append(f"{key_str(k)}: duplicate row")
+                continue
+            if r.get("point_id") != key_str(k):
+                problems.append(f"{r.get('point_id')}: point_id disagrees with its corner/temp/vdd columns")
+            row: Dict[str, object] = {}
+            for col in HARNESS_COLUMNS:
+                raw = r.get(col)
+                try:
+                    v = float(raw)
+                except (TypeError, ValueError):
+                    v = float("nan")
+                if not math.isfinite(v):
+                    problems.append(f"{key_str(k)}: harness {col} {raw!r} is missing or non-finite")
+                row[col] = v
+            for col in HARNESS_FLAGS:
+                row[col] = str(r.get(col)).strip() == "1"
+            out[k] = row
+    _check_grid(out.keys(), "harness CSV", problems)
+    if problems:
+        raise InputError(f"{path}: " + "; ".join(problems))
+    return out
+
+
+def load_waveform(path: str) -> Tuple[List[float], List[float]]:
+    """The harness's committed wrdata waveform: (time, v(out)) per line."""
+    t: List[float] = []
+    v: List[float] = []
+    try:
+        with open(path) as f:
+            for line in f:
+                parts = line.split()
+                if len(parts) >= 2:
+                    t.append(float(parts[0]))
+                    v.append(float(parts[1]))
+    except (OSError, ValueError) as e:
+        raise InputError(f"{path}: unreadable waveform ({e})")
+    if len(t) < 3:
+        raise InputError(f"{path}: waveform has {len(t)} samples")
+    return t, v
+
+
+def meas_crossing(t: List[float], v: List[float], td: float, level: float, rising: bool) -> Optional[float]:
+    """First linearly interpolated crossing of `level` after `td`, the way
+    ngspice's `.meas ... val=<level> rise|fall=1 td=<td>` finds it."""
+    for i in range(1, len(t)):
+        if t[i] <= td:
+            continue
+        a, b = v[i - 1], v[i]
+        if (rising and a <= level < b) or ((not rising) and a >= level > b):
+            return t[i - 1] + (level - a) / (b - a) * (t[i] - t[i - 1])
+    return None
+
+
+def meas_style_slew(t: List[float], v: List[float], vcm: float, half: float, rising: bool) -> float:
+    """The request's slew (2*half / dt, V/us) computed on a waveform."""
+    td = T_RISE_TD_S if rising else T_FALL_TD_S
+    first = vcm - half if rising else vcm + half
+    second = vcm + half if rising else vcm - half
+    ta = meas_crossing(t, v, td, first, rising)
+    tb = meas_crossing(t, v, td, second, rising)
+    if ta is None or tb is None or tb == ta:
+        return float("nan")
+    return 2 * half / abs(tb - ta) / 1e6
+
+
+def method_check(tran_csv: str, vcm: float) -> Dict[str, float]:
+    """`.meas` algorithm on the harness's own waveform, per slew column."""
+    t, v = load_waveform(tran_csv)
+    return {
+        "sr_rise_v_per_us": meas_style_slew(t, v, vcm, WIN_OUTER, True),
+        "sr_fall_v_per_us": meas_style_slew(t, v, vcm, WIN_OUTER, False),
+        "sr_rise_inner_v_per_us": meas_style_slew(t, v, vcm, WIN_INNER, True),
+        "sr_fall_inner_v_per_us": meas_style_slew(t, v, vcm, WIN_INNER, False),
+    }
+
+
+# ----------------------------------------------------------------- compare
+def _tol(metric: str, ref: float) -> float:
+    t = TOLERANCES[metric]
+    return t["abs"] + t["rel"] * abs(ref)
+
+
+def _all_pass(vals: Dict[str, object], names: Iterable[str]) -> bool:
+    return all(vals.get(n + "__status") == "pass" for n in names)
+
+
+def compare(tool: Dict[Key, Dict[str, object]], harness: Dict[Key, Dict[str, object]],
+            methods: Optional[Dict[Key, Dict[str, float]]] = None,
+            env: Optional[dict] = None) -> dict:
+    problems: List[str] = []
+    for label, d in (("envelope", tool), ("harness CSV", harness)):
+        _check_grid(d.keys(), label, problems)
+    if problems:
+        raise InputError("; ".join(problems))
+
+    points = []
+    out_of_tol: List[str] = []
+    verdict_disagreements: List[dict] = []
+    method_failures: List[str] = []
+    for k in expected_keys():
+        h = harness[k]
+        t = tool[k]
+        tv_all = {
+            "sr_rise_v_per_us": t["sr_rise_v_per_us"],
+            "sr_fall_v_per_us": t["sr_fall_v_per_us"],
+            "sr_worst_v_per_us": min(t["sr_rise_v_per_us"], t["sr_fall_v_per_us"]),
+            "sr_rise_inner_v_per_us": t["sr_rise_inner_v_per_us"],
+            "sr_fall_inner_v_per_us": t["sr_fall_inner_v_per_us"],
+            "vout_dc_v": t["vout_dc_v"], "vd1_dc_v": t["vd1_dc_v"], "vd2_dc_v": t["vd2_dc_v"],
+            "vtail_dc_v": t["vtail_dc_v"], "vibias_dc_v": t["vibias_dc_v"],
+        }
+        metrics = {}
+        for m, tv in tv_all.items():
+            hv = float(h[m])
+            tol = _tol(m, hv)
+            delta = tv - hv
+            entry = {"harness": hv, "tool": tv, "delta": delta,
+                     "rel_delta": delta / hv if hv else None, "tolerance": tol,
+                     "unit": TOLERANCES[m]["unit"], "within": abs(delta) <= tol}
+            if methods is not None and m in methods[k]:
+                mc = methods[k][m]
+                entry["method_check"] = {"meas_style_on_harness_waveform": mc,
+                                         "rel_delta_vs_csv": (mc - hv) / hv if hv else None}
+                if not (abs(mc - hv) <= METHOD_CHECK_REL * abs(hv)):
+                    method_failures.append(f"{key_str(k)} {m}: .meas-style {mc:.9g} vs CSV {hv:.9g}")
+            if not entry["within"]:
+                out_of_tol.append(f"{key_str(k)} {m}: tool {tv:.9g} vs harness {hv:.9g} "
+                                  f"(delta {delta:.3g} {TOLERANCES[m]['unit']}, tolerance {tol:.3g})")
+            metrics[m] = entry
+
+        flags = {
+            "op_sanity": (h["op_pass"], _all_pass(t, OP_SANITY)),
+            "ramp_linearity": (h["linearity_pass"], _all_pass(t, LINEARITY)),
+            "full_swing_traverse": (h["traverse_pass"], _all_pass(t, TRAVERSE)),
+            "drive_integrity": (h["drive_pass"], _all_pass(t, DRIVE)),
+        }
+        flag_out = {}
+        for name, (hf, tf) in flags.items():
+            flag_out[name] = {"harness_pass": hf, "tool_pass": tf, "agree": hf == tf}
+            if hf != tf:
+                out_of_tol.append(f"{key_str(k)} {name}: harness pass={hf} vs tool pass={tf}")
+
+        # Ratified row: tool verdict = conjunction of the per-edge verdicts.
+        edge_status = {n: t.get(n + "__status") for n in EDGE_MEASUREMENTS}
+        tool_pass = all(s == "pass" for s in edge_status.values())
+        hv_worst = float(h["sr_worst_v_per_us"])
+        harness_pass = hv_worst >= SLEW_BOUND_V_PER_US
+        near = abs(hv_worst - SLEW_BOUND_V_PER_US) <= _tol("sr_worst_v_per_us", hv_worst)
+        row = {"tool_edge_status": edge_status, "tool_pass": tool_pass, "harness_pass": harness_pass,
+               "agree": tool_pass == harness_pass, "harness_within_tolerance_of_bound": near}
+        if tool_pass != harness_pass:
+            verdict_disagreements.append({"point": key_str(k), "row": "slew_rate", "harness": hv_worst,
+                                          "tool_edge_status": edge_status, "bound": SLEW_BOUND_V_PER_US,
+                                          "explained_by_tolerance": near})
+        points.append({"point_id": key_str(k), "process": k[0], "temperature_c": k[1], "vdd_v": k[2],
+                       "metrics": metrics, "integrity_checks": flag_out, "row": row})
+
+    unexplained = [d for d in verdict_disagreements if not d["explained_by_tolerance"]]
+    hvals = [(float(harness[k]["sr_worst_v_per_us"]), k) for k in expected_keys()]
+    hw = min(hvals)
+    summary = {"bound": {"min": SLEW_BOUND_V_PER_US},
+               "harness_worst": {"point": key_str(hw[1]), "value": hw[0],
+                                 "verdict": "pass" if hw[0] >= SLEW_BOUND_V_PER_US else "fail"}}
+    if env is not None:
+        summary["tool"] = {}
+        for m in env.get("measurements") or []:
+            if m.get("name") in EDGE_MEASUREMENTS:
+                summary["tool"][m["name"]] = {"status": m.get("status"), "limits": m.get("limits"),
+                                              "worst_case": m.get("worst_case")}
+    return {
+        "schema": "sg13g2-opamp/slew-rate/klt-compare/1",
+        "points_compared": len(points),
+        "tolerances": TOLERANCES,
+        "method_check_rel": METHOD_CHECK_REL,
+        "method_check_failures": method_failures,
+        "out_of_tolerance": out_of_tol,
+        "bound_verdict_disagreements": verdict_disagreements,
+        "unexplained_bound_verdict_disagreements": len(unexplained),
+        "row": summary,
+        "points": points,
+        "status": "agree" if not out_of_tol and not unexplained and not method_failures else "disagree",
+    }
+
+
+def _sha256(path: str) -> str:
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(1 << 16), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _text_summary(rep: dict) -> str:
+    r = rep["row"]
+    hw = r["harness_worst"]
+    lines = [f"compare: {rep['points_compared']} points, status {rep['status']}",
+             f"  slew_rate bound {r['bound']}: harness worst {hw['point']} = {hw['value']:.6g} ({hw['verdict']})"]
+    for n, e in (r.get("tool") or {}).items():
+        wc = e.get("worst_case") or {}
+        lines.append(f"    tool {n}: {e.get('status')} (worst {wc.get('corner_id')} = {wc.get('value')}, margin {wc.get('margin')})")
+    for line in rep["method_check_failures"]:
+        lines.append(f"  METHOD CHECK FAILS: {line}")
+    for line in rep["out_of_tolerance"]:
+        lines.append(f"  OUT OF TOLERANCE: {line}")
+    for d in rep["bound_verdict_disagreements"]:
+        lines.append(f"  VERDICT DISAGREES: {d}")
+    return "\n".join(lines)
+
+
+def main(argv: Optional[List[str]] = None) -> int:
+    ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
+    sub = ap.add_subparsers(dest="cmd", required=True)
+    v = sub.add_parser("validate", help="gate the envelope before it may enter records/")
+    v.add_argument("envelope")
+    c = sub.add_parser("compare", help="join the envelope with the harness record")
+    c.add_argument("--envelope", required=True)
+    c.add_argument("--harness-csv", required=True)
+    c.add_argument("--harness-tran-dir", required=True,
+                   help="the harness record's corners/<id>/ directory (raw *_tran.csv waveforms)")
+    c.add_argument("--json-out")
+    c.add_argument("--provenance", action="append", default=[], metavar="KEY=VALUE")
+    a = ap.parse_args(argv)
+
+    try:
+        if a.cmd == "validate":
+            env, idx = load_envelope(a.envelope)
+            print(f"validate: {a.envelope}: {len(idx)} corners, status {env.get('status')}, ok")
+            return 0
+        env, tool = load_envelope(a.envelope)
+        harness = load_harness_csv(a.harness_csv)
+        methods = {k: method_check(os.path.join(a.harness_tran_dir, f"{key_str(k)}_tran.csv"),
+                                   float(harness[k]["vcm_v"])) for k in expected_keys()}
+        rep = compare(tool, harness, methods, env)
+    except InputError as e:
+        print(f"compare.py: {e}", file=sys.stderr)
+        return 2
+
+    rep["inputs"] = {"envelope": {"path": a.envelope, "sha256": _sha256(a.envelope)},
+                     "harness_csv": {"path": a.harness_csv, "sha256": _sha256(a.harness_csv)},
+                     "harness_tran_dir": {"path": a.harness_tran_dir}}
+    rep["provenance"] = dict(kv.split("=", 1) for kv in a.provenance)
+    if a.json_out:
+        with open(a.json_out, "w") as f:
+            json.dump(rep, f, indent=2)
+            f.write("\n")
+    print(_text_summary(rep))
+    return 0 if rep["status"] == "agree" else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

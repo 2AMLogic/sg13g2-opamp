@@ -238,3 +238,185 @@ the slew estimate held up to within ~11 %, which is the accuracy the
 - **Not proof the input pair/output stage are in saturation at a
   device-by-device level** — see "Per-point sanity checks" above for the
   honest scope of what is actually checked.
+
+## The `klt sim` path (issue #95)
+
+[`klt/`](klt/) expresses this same bench as a `klt sim` request, because T1
+item 5 ("full corner verification vs a ratified spec") accepts only a `klt
+sim` envelope (see `signoff/README.md`, "Item 5 envelope coverage, per
+ratified row"). It is a second measurement path for the same circuit, not a
+new bench. It follows the pattern of `../open-loop-ac/klt/` (issue #85).
+
+| File | What it is |
+|---|---|
+| [`klt/tb_slew.body.spice`](klt/tb_slew.body.spice) | The test circuit as a `klt sim` circuit body: the circuit in `testbench/tb_slew.spice.tmpl` (flat DUT include, `Lbreak = 1e18 H`, `Cinj = 1 µF`, `CL = 2 pF`, 10 µA `ibias`, the same antiphase schedule, `.options interp`), with exactly one `.include` of `design/netlist/opamp_core.spice` and no `.control` block. One deliberate re-expression of the `inp` drive, below. |
+| [`klt/slew.request.json`](klt/slew.request.json) | The request: `tran 1n 800n 0 0.05n` (the template's own print step, stop time and max step) over the 45-point grid; one slew measurement per edge carrying the ratified bound, plus the harness's integrity checks as tool-graded measurements. |
+| [`klt/run.sh`](klt/run.sh) | Runs the request, gates the envelope, writes it unmodified to `klt/records/<UTC>-<sha>.sim.json`, then writes the comparison `klt/records/<UTC>-<sha>.compare.json`. |
+| [`klt/compare.py`](klt/compare.py) | The validation gate and the comparison against this bench's harness record; tests in [`klt/test_compare.py`](klt/test_compare.py). |
+
+### How the two paths relate, and which one is the record of evidence
+
+The harness record
+[`records/20260918-210216-90844d2.csv`](records/20260918-210216-90844d2.csv)
+stays the **record of evidence** for the slew-rate row. It is what DR-0002
+ratified the bound on, and nothing in `klt/` edits or replaces it. A `klt
+sim` envelope under `klt/records/` is the **gradable form** of the same
+measurement: the tool assigns the row's pass/fail verdict and binding corner
+against the ratified bound, and the `compare.json` written beside it ties the
+two together point by point. Where they disagree beyond the stated tolerance,
+the disagreement is reported in that file and must be explained here before
+the envelope is cited anywhere.
+
+**No envelope is committed yet.** The real 45-corner run is blocked; see
+"Status" below.
+
+### Grid encoding
+
+- Process: one `corners.process` bundle per `cornerMOSlv.lib` section
+  (`mos_tt/ss/ff/sf/fs`), each also selecting `cornerCAP.lib` `cap_typ`, as in
+  the template.
+- Supply: `corners.supply_v` sweeps `vdd` `{1.08, 1.20, 1.32}` and `vinp`
+  `{0.54, 0.60, 0.66}` together by index, so `Vcm = VDD/2` at every corner.
+  `compare.py validate` asserts it on every corner of the envelope.
+- Temperature: `.temp` per corner (−40, 27, 125 °C), `tnom = 27`.
+- Solver tolerance: ngspice defaults, no `reltol`/`abstol`/`vntol` override
+  (DR-0005). `options.ngspice_init` sets only `measureprec`/`numdgt`, the
+  digits ngspice prints. `options.fail_on_diagnostic` grades a corner that
+  needed gmin/source stepping `inconclusive`, never `pass`, mirroring the
+  harness's broken-simulation detector.
+
+### The one re-expression: the `inp` drive
+
+The template writes the `inp` drive as one pwl source whose levels are the
+literal `Vcm ± 0.3 V` of that corner. `klt sim` `alter`s a source's DC value
+per corner but cannot rewrite pwl levels (and refuses to `alter` a source that
+carries a waveform; klayout-tools#2964). The body therefore splits the source
+in series: `Vinp inp na dc <Vcm>` (altered per corner, tracking `VDD/2`) plus
+`Vdrvp na 0 pwl(...)` carrying only the corner-independent offsets
+`0 / −0.3 / +0.3 / −0.3 V` on the template's schedule. `v(inp) = Vcm +
+offset(t)` is the template's waveform sample for sample. The `inn`-side source
+(`Vstepn`) is corner-independent in the template and is copied verbatim.
+Because `Vcm` and the window centre are both `VDD/2`, the body also defines
+`orel = v(out) − VDD/2`, so one literal `.meas` level (±0.15 V, ±0.075 V)
+serves every corner.
+
+### How "the worse of two edges" is graded
+
+The ratified row is **≥ 7.51 V/µs, the worse of the rising and falling
+edge at each point**. The request carries one measurement per edge,
+`sr_rise_v_per_us` and `sr_fall_v_per_us`, **each with the same ratified
+bound** `min 7.51`. Since `min(rise, fall) ≥ B` holds if and only if `rise ≥ B`
+and `fall ≥ B`, the pair passes at a corner if and only if the worse edge
+passes there, and the row's verdict is the conjunction of the two measurement
+verdicts. No combined "worst" value is invented: a `.meas` result is not
+visible to an `expr` (checked while building #85; klayout-tools#2826), so the
+tool cannot compute `min(rise, fall)` itself. The worse edge at each corner is
+read off the two reported values, and `compare.py` reports
+`min(rise, fall)` against the harness's `sr_worst_v_per_us`. The tool's
+per-measurement `worst_case` is the binding corner of that edge; the row's
+binding corner is whichever edge has the smaller margin.
+
+### Measurement method
+
+| Quantity | Envelope measurement | Same as the harness? |
+|---|---|---|
+| Rising slew | `sr_rise_v_per_us`: `.meas tran … trig v(orel) val=-0.15 rise=1 td=250n targ v(orel) val=0.15 rise=1 td=250n`, then `param = 0.3 / dt · 1e-6` | Yes, in method. The harness takes the first linearly interpolated crossing of `Vcm ± 0.15 V` inside `[T2, T3]` of its committed 1 ns waveform. `td = 250 ns` starts the search 50 ns before the 300 ns edge (the output is parked below the window by then; the traverse check below asserts it). `.options interp` makes the `.meas` read the same uniform 1 ns samples. |
+| Falling slew | `sr_fall_v_per_us`: same with `fall=1`, `td=500n` | Yes (harness window `[T3, T_STOP]`, edge at 550 ns). |
+| Ramp linearity | `lin_{rise,fall}_ratio` = inner-window slew (±0.075 V) / outer-window slew, within `[0.98, 1.02]` | Yes. The harness's `close()` rule is `|inner − outer| ≤ 2 %` of the outer. |
+| Full-swing traverse | `pre_rise_orel_v ≤ −0.15` at 299 ns, `pre_fall_orel_v ≥ 0.15` at 549 ns | Yes. The harness checks `v(out)` one grid step before each edge. |
+| Drive integrity | `drive_pp_v` within `0.6 V ± 2 %`, `drive_centre_err_v ≤ 10 mV` (`inn` excursion vs the DC output) | Yes. Same rule on `max/min v(inn)`. |
+| DC sanity | `op_*` fractions at `t = 0` (the operating-point solution) | Yes. `|Vout − VDD/2| ≤ 0.15·VDD`; `Vout, Vd1, Vd2, Vtail` within `[0.02, 0.98]·VDD`. |
+
+**Method equivalence is checked, not assumed.** `compare.py` re-derives the
+`.meas` algorithm (first crossing after `td`, linear interpolation between
+samples) on the harness's own committed waveforms,
+`corners/20260918-210216-90844d2/*_tran.csv`, for all 45 points × 4 slew
+columns, and requires it to equal the CSV value to 1e-5 relative. The observed
+maximum is **3.3e-6**, which is the CSV's `%.6g` print quantisation. So any
+difference between the envelope and the harness is solver/host, not method.
+
+### Comparison tolerance
+
+Per-metric tolerances in `compare.py`'s `TOLERANCES`. A comparison tolerance
+never loosens a ratified bound or a solver tolerance. A tool verdict on the far
+side of the bound from the harness verdict is reported in
+`bound_verdict_disagreements` even when the two values agree within tolerance.
+
+| Metric | Tolerance | Why |
+|---|---|---|
+| `sr_*_v_per_us` (rise, fall, worst, inner windows) | 2e-3 relative | Slew ≈ `Itail/Cc` moves with the tail current. The harness ran on macOS/aarch64 ngspice-46 and the envelope runs wherever `klt sim` does; DR-0005 measured 9.9e-4 relative drain-current difference between that host and a Linux/x86_64 default-tolerance record of this PDK. 2e-3 is that figure doubled. Same host, default vs `reltol = 1e-6`, DR-0005 found the slew columns move by ≤ 3.4e-6: the transient number is converged, so the allowance is for host-dependent solver paths, not for this bench. |
+| DC node voltages | 1e-3 relative + 1 µV | Same basis (`reltol`, `vntol`). |
+| `.meas`-vs-harness method check | 1e-5 relative | The observed 3.3e-6 print quantisation, with margin. |
+
+Integrity flags (op sanity, linearity, traverse, drive) must agree exactly
+with the harness's own per-point flags.
+
+**Bound proximity, stated in advance:** the harness's worst is **7.51441 V/µs
+at `mos_ss_-40C_1.08V`**, 5.9e-4 relative above the 7.51 V/µs bound and
+inside the 2e-3 tolerance. A tool value just under 7.51 at that corner would
+therefore agree with the harness within tolerance yet flip the verdict.
+`compare.py` lists such a flip as an *explained* disagreement; it does not
+hide it, and the verdict of record is the envelope's, unrounded. The rising
+edge at that corner (7.538 V/µs) is 3.7e-3 clear.
+
+### Transient length vs `options.timeout_s`
+
+`timeout_s` is 300 s per corner. The template's 800 ns window at a 0.05 ns
+maximum step is at least 16 000 timepoints, and the harness ran the whole
+45-point grid in roughly 8 minutes (about 10 s per corner), so 300 s is about
+30× headroom. `klt sim --fail-fast-probe` applies to the `local` backends only;
+on the batch fleet the per-corner timeout is the guard, and a timed-out corner
+is graded `error`, which `run.sh` and `compare.py` refuse as evidence.
+
+### Status (2026-10-09): the real run is blocked
+
+Two independent blockers, both shared with
+[`../open-loop-ac/README.md`](../open-loop-ac/README.md) → "The `klt sim`
+path". Neither is solved by running the grid locally on a shared dispatch
+host, and that is not done.
+
+1. **The batch fleet runner is older than the client.** The fleet image pins
+   klt **0.5.0** (2AMLogic/2am#2193). A submission of `slew.request.json` with
+   klt `0.7.0+g4cbdfa769875` launched job `klt-sim-994a710c60f3`
+   (c7i.4xlarge spot). The job exited 87, `batch_runner_version_mismatch`:
+   "the fleet runner runs klt 0.5.0 but the submitting client is
+   0.7.0+g4cbdfa769875 -- the request was not run". All 45 corners came back
+   `error`; nothing simulated. The request also needs features 0.5.0 lacks
+   (`options.osdi_preload` with `stage_model_inputs`, per-section corner
+   libraries, `ngspice_init`, `fail_on_diagnostic`), so pinning the client back
+   to 0.5.0 does not work. After the runner bump, run with a client whose
+   `klt --version` equals the runner's, for example
+   `KLT="uvx --from klayout-tools==X.Y.Z klt" sim/slew-rate/klt/run.sh`.
+2. **The preflight needs the pinned ngspice.** `run.sh` sources
+   `sim/preflight.sh`, whose OSDI check loads the `.osdi` binaries with the
+   local ngspice. They target OSDI v0.4 (ngspice-46, the `sim/pdk.json` pin).
+   A host with ngspice-42 fails the check and `run.sh` exits 3 before
+   submitting anything (verified on this host).
+
+What *was* verified without the real run:
+
+- The client accepts the request, including model staging and the include
+  closure (the submission above reached the fleet).
+- The request mechanics were checked on a behavioural stand-in DUT (a
+  slew-limited gm stage with rail clamps) over three supply corners, locally,
+  one temperature. `alter` of `vdd`/`vinp` tracks (`Vcm = VDD/2`); the series
+  `Vinp`/`Vdrvp` split reproduces the drive (`inn` excursion exactly 0.6 V
+  peak-to-peak); every `.meas` card, including the `param` cards that read an
+  earlier measurement, evaluates; each limit grades as intended; edge slews
+  land at the stand-in's `I/CL` (about 9.95 V/µs for 20 µA into 2 pF).
+  This is mechanics only, not evidence about this circuit.
+- `compare.py`'s `.meas`-style algorithm reproduces the committed harness
+  record from its own waveforms (3.3e-6, above).
+- `compare.py` passes 35 offline tests, including negative controls for
+  reordered, missing, duplicate, extra and off-grid points, null and
+  non-finite values, errored/inconclusive/not-checked/skipped coverage, a
+  mis-biased `Vcm`, perturbations outside tolerance, each integrity-flag
+  disagreement, a method-check failure, and bound flips on either edge
+  (explained inside the tolerance, unexplained outside it).
+- `run.sh` exits 3 on a failed preflight (verified), and by construction
+  writes nothing to `records/` unless the envelope passes `validate`.
+
+Not verified, and only the real run can: that the PSP-based DUT's transient
+converges at default tolerance under `klt sim`'s generated deck at all 45
+corners (DR-0005 found it does under the harness's deck), the slew values
+themselves, and the tool's binding corner.
