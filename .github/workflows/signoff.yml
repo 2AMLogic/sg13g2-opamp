@@ -72,6 +72,30 @@ jobs:
         # sync_integrator.py. Never touches the real checkout; no klt.
         run: python3 -m unittest discover -s signoff -p 'test_check_signoff.py' -v
 
+      - name: Bench negative controls and evidence checkers (offline)
+        # Every sim/ directory holding a test_*.py is run on its own
+        # (`unittest discover -s <dir>`): bench dirs have hyphens and are not
+        # packages, so one top-level discover from sim/ cannot import them.
+        # New bench tests are picked up with no workflow edit. Currently:
+        # input-cmr, post-layout, slew-rate/klt. Then the grid-guard refusal
+        # controls and the offline ICMR evidence checker. Deliberately NOT
+        # run: sim/post-layout/check_bounds.py (needs a pex report argument
+        # produced by a layout/PEX run, so it is not an offline checker; its
+        # logic is covered by test_post_layout.py). No klt, ngspice or PDK.
+        run: |
+          set -euo pipefail
+          n=0
+          while IFS= read -r d; do
+            echo "== unittest: ${d}"
+            python3 -m unittest discover -s "${d}" -p 'test_*.py' -v
+            n=$((n + 1))
+          done < <(find sim -name 'test_*.py' -printf '%h\n' | sort -u)
+          [ "${n}" -gt 0 ] || { echo "no sim/ test dirs found" >&2; exit 1; }
+          echo "== grid-guard refusal controls"
+          bash sim/tools/test-grid-guard.sh
+          echo "== ICMR evidence checker"
+          python3 sim/input-cmr/check_icmr_evidence.py
+
       - name: Install klt at the pinned revision
         # Pinned, not floating: the T1 item skeleton is parsed out of
         # klayout-tools' own docs/design-evidence-tiers.md at run time, so a
