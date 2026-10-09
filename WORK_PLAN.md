@@ -19,19 +19,19 @@ _None._
 
 Human-approved issues ready for implementation (`loom:issue`).
 
-_None._
+- **#85**: sim: express the open-loop AC bench as a `klt sim` request, the first gradable envelope toward T1 item 5
 
 ## In Progress
 
 Issues currently being built (`loom:building`).
 
-_None._
+- **#86**: signoff: first `klt pex` post-layout run on opamp_core.gds (T1 item 7)
 
 ## PRs Awaiting Review
 
 PRs waiting on Judge (`loom:review-requested`).
 
-_None._
+- **#102**: sim: open-loop AC bench as klt sim AC + OP requests with a harness comparison (no envelope yet: fleet runner klt 0.5.0)
 
 ## Approved (Awaiting Merge)
 
@@ -46,12 +46,15 @@ Issues carrying `loom:curated`.
 - **#3**: Track the gap to T1 sim-validated / bronze (klayout-tools design-evidence tiers) *(curated)*
 - **#43**: README: embed the fleet burndown chart (one line) *(curated)*
 - **#85**: sim: express the open-loop AC bench as a `klt sim` request, the first gradable envelope toward T1 item 5 *(curated)*
+- **#86**: signoff: first `klt pex` post-layout run on opamp_core.gds (T1 item 7) *(curated)*
+- **#95**: sim: express the slew-rate bench as a klt sim request (T1 item 5 coverage, follow-up to #85) *(curated)*
+- **#105**: signoff: express the statistical rows as klt yield evidence for T1 item 6 (offset MC, mismatch CMRR) *(curated)*
 
 ## Proposed (Architect / Hermit)
 
-- **#90**: characterization: generate a reproducible per-row report from committed evidence *(architect)*
-- **#91**: integration: synchronize published GDS availability and graded maturity *(architect)*
-- **#92**: signoff: continuously validate the static audit inventory entries *(architect)*
+- **#105**: signoff: express the statistical rows as klt yield evidence for T1 item 6 (offset MC, mismatch CMRR) *(architect)*
+- **#115**: spec: select an area definition (resolve TBD-12) now that a DRC-clean routed GDS exists *(architect)*
+- **#121**: ci: enforce append-only evidence against the previous Git tree *(architect)*
 
 ## Epics
 
@@ -63,11 +66,11 @@ _None._
 |------|-------|
 | Operator merge-risk holds | 0 |
 | Operator priority | 0 |
-| Ready (`loom:issue`) | 0 |
-| In Progress (`loom:building`) | 0 |
-| PRs awaiting review | 0 |
+| Ready (`loom:issue`) | 1 |
+| In Progress (`loom:building`) | 1 |
+| PRs awaiting review | 1 |
 | Approved PRs awaiting merge | 0 |
-| Curated | 3 |
+| Curated | 6 |
 | Architect / Hermit proposals | 3 |
 | Active epics | 0 |
 <!-- guide:plan-body:end -->
