@@ -81,6 +81,10 @@
 # continued instead of restarted. A fresh invocation with no RECORD_ID
 # mints a new one and starts clean; a resumed run truncates only its own
 # record-id's partial sample files, never another record's evidence.
+# Only an INCOMPLETE campaign can be resumed: once records/<id>.csv or
+# records/<id>.md exists the record is finalized and a resume refuses
+# (exit 3) rather than rewriting it; a fresh id that collides with an
+# existing one refuses too (issue #140, see sim/record-paths.sh).
 set -euo pipefail
 
 ALLOW_LOCAL_GRID=0
