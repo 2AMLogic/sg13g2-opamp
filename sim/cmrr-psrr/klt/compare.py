@@ -40,9 +40,8 @@ Exit status:
 
 from __future__ import annotations
 
-import argparse
 import csv
-import json
+import functools
 import math
 import os
 import sys
@@ -97,11 +96,6 @@ TOLERANCES = {
 # --------------------------------------------------------------- envelopes
 # Measurement statuses whose value is unusable whatever its number.
 REJECT_STATUSES = ("skipped", "error", "inconclusive", "not_checked")
-
-
-def load_envelope(path: str) -> Tuple[dict, Dict[Key, Dict[str, object]]]:
-    env = E.read_envelope(path)
-    return env, index_envelope(env, path)
 
 
 def index_envelope(env: dict, label: str = "envelope") -> Dict[Key, Dict[str, object]]:
@@ -159,9 +153,7 @@ def load_openloop_csv(path: str) -> Dict[Key, Dict[str, float]]:
 
 
 # ----------------------------------------------------------------- compare
-def _tol(metric: str, ref: float) -> float:
-    t = TOLERANCES[metric]
-    return t["abs"] + t["rel"] * abs(ref)
+_tol = functools.partial(E.tol, TOLERANCES)
 
 
 def compare(tool: Dict[Key, Dict[str, object]], harness: Dict[Key, Dict[str, float]],
@@ -278,47 +270,20 @@ def _text_summary(rep: dict) -> str:
              f"{r['harness_worst']['point']} = {r['harness_worst']['value']:.6g} ({r['harness_worst']['verdict']})"]
     for line in rep["join_inconsistencies"]:
         lines.append(f"  JOIN INCONSISTENT: {line}")
-    for line in rep["out_of_tolerance"]:
-        lines.append(f"  OUT OF TOLERANCE: {line}")
-    for d in rep["bound_verdict_disagreements"]:
-        lines.append(f"  VERDICT DISAGREES: {d}")
-    return "\n".join(lines)
+    return "\n".join(E.summary_tail(lines, rep))
 
+
+def _run(a, tool: Dict[Key, Dict[str, object]], env: dict) -> dict:
+    return compare(tool, load_harness_csv(a.harness_csv), load_openloop_csv(a.openloop_csv), env)
 
 def main(argv: Optional[List[str]] = None) -> int:
-    ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    sub = ap.add_subparsers(dest="cmd", required=True)
-    v = sub.add_parser("validate", help="gate the envelope before it may enter records/")
-    v.add_argument("envelope")
-    c = sub.add_parser("compare", help="join the envelope with the harness records")
-    c.add_argument("--envelope", required=True)
-    c.add_argument("--harness-csv", required=True)
-    c.add_argument("--openloop-csv", required=True)
-    c.add_argument("--json-out")
-    c.add_argument("--provenance", action="append", default=[], metavar="KEY=VALUE")
-    a = ap.parse_args(argv)
-
-    try:
-        if a.cmd == "validate":
-            env, idx = load_envelope(a.envelope)
-            print(f"validate: {a.envelope}: {len(idx)} corners, status {env.get('status')}, ok")
-            return 0
-        env, tool = load_envelope(a.envelope)
-        rep = compare(tool, load_harness_csv(a.harness_csv), load_openloop_csv(a.openloop_csv), env)
-    except InputError as e:
-        print(f"compare.py: {e}", file=sys.stderr)
-        return 2
-
-    rep["inputs"] = {"envelope": {"path": a.envelope, "sha256": E.sha256_file(a.envelope)},
-                     "harness_csv": {"path": a.harness_csv, "sha256": E.sha256_file(a.harness_csv)},
-                     "openloop_csv": {"path": a.openloop_csv, "sha256": E.sha256_file(a.openloop_csv)}}
-    rep["provenance"] = dict(kv.split("=", 1) for kv in a.provenance)
-    if a.json_out:
-        with open(a.json_out, "w") as f:
-            json.dump(rep, f, indent=2)
-            f.write("\n")
-    print(_text_summary(rep))
-    return 0 if rep["status"] == "agree" else 1
+    return E.run_cli(
+        argv, description=__doc__.split("\n\n")[0], compare_help="join the envelope with the harness records",
+        harness_args=(("--harness-csv", {"required": True}), ("--openloop-csv", {"required": True})),
+        index_fn=index_envelope,
+        run=_run,
+        inputs=(("harness_csv", "harness_csv", True), ("openloop_csv", "openloop_csv", True)),
+        summary=_text_summary)
 
 
 if __name__ == "__main__":

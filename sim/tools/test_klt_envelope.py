@@ -10,7 +10,9 @@ shared behaviour once -- in particular the exact message strings, since
 compare.py's stderr and exit status are what the bench runners act on.
 """
 
+import contextlib
 import copy
+import io
 import json
 import os
 import sys
@@ -187,6 +189,79 @@ class TestReadEnvelope(unittest.TestCase):
             self.assertTrue(str(cm.exception).startswith(f"{bad}: unreadable envelope ("))
             with self.assertRaises(E.InputError):
                 E.read_envelope(os.path.join(d, "absent.json"))
+
+
+class TestCliScaffold(unittest.TestCase):
+    TABLE = {"m": {"abs": 0.5, "rel": 0.1}}
+
+    def test_tol(self):
+        self.assertEqual(E.tol(self.TABLE, "m", -10.0), 0.5 + 0.1 * 10.0)
+        with self.assertRaises(KeyError):
+            E.tol(self.TABLE, "x", 1.0)
+
+    def test_summary_tail(self):
+        rep = {"out_of_tolerance": ["p1", "p2"], "bound_verdict_disagreements": [{"k": 1}]}
+        self.assertEqual(E.summary_tail(["head"], rep),
+                         ["head", "  OUT OF TOLERANCE: p1", "  OUT OF TOLERANCE: p2",
+                          "  VERDICT DISAGREES: {'k': 1}"])
+        self.assertEqual(E.summary_tail([], {"out_of_tolerance": [], "bound_verdict_disagreements": []}), [])
+
+    def _index(self, env, label):
+        return E.index_envelope(env, label, MEAS)
+
+    def _cli(self, argv, status="agree"):
+        def run(a, tool, env):
+            if a.extra == "boom":
+                raise E.InputError("boom")
+            return {"status": status}
+        out, err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            rc = E.run_cli(argv, description="d", compare_help="h",
+                           harness_args=(("--extra", {"required": True}),),
+                           index_fn=self._index, run=run,
+                           inputs=(("extra", "extra", False),),
+                           summary=lambda rep: f"S {rep['status']}")
+        return rc, out.getvalue(), err.getvalue()
+
+    def _good(self, d):
+        good = os.path.join(d, "good.json")
+        with open(good, "w") as f:
+            json.dump(_envelope(), f)
+        return good
+
+    def test_load_envelope(self):
+        with tempfile.TemporaryDirectory() as d:
+            env, idx = E.load_envelope(self._good(d), self._index)
+            self.assertEqual(env["corner_count"], 45)
+            self.assertEqual(len(idx), 45)
+
+    def test_validate_and_compare(self):
+        with tempfile.TemporaryDirectory() as d:
+            good = self._good(d)
+            rc, out, _ = self._cli(["validate", good])
+            self.assertEqual((rc, out), (0, f"validate: {good}: 45 corners, status {_envelope().get('status')}, ok\n"))
+            rep_path = os.path.join(d, "r.json")
+            argv = ["compare", "--envelope", good, "--extra", "x"]
+            rc, out, _ = self._cli(argv + ["--json-out", rep_path, "--provenance", "k=v", "--provenance", "a=b=c"])
+            self.assertEqual((rc, out), (0, "S agree\n"))
+            with open(rep_path) as f:
+                text = f.read()
+            rep = json.loads(text)
+            self.assertEqual(text, json.dumps(rep, indent=2) + "\n")
+            self.assertEqual(rep["provenance"], {"k": "v", "a": "b=c"})
+            self.assertEqual(list(rep["inputs"]), ["envelope", "extra"])
+            self.assertEqual(rep["inputs"]["envelope"], {"path": good, "sha256": E.sha256_file(good)})
+            self.assertEqual(rep["inputs"]["extra"], {"path": "x"})
+            self.assertEqual(self._cli(argv, status="disagree")[0], 1)
+
+    def test_input_error_exits_2(self):
+        with tempfile.TemporaryDirectory() as d:
+            rc, out, err = self._cli(["compare", "--envelope", self._good(d), "--extra", "boom"])
+            self.assertEqual((rc, out, err), (2, "", "compare.py: boom\n"))
+            absent = os.path.join(d, "absent.json")
+            rc, out, err = self._cli(["validate", absent])
+            self.assertEqual((rc, out), (2, ""))
+            self.assertTrue(err.startswith(f"compare.py: {absent}: unreadable envelope ("))
 
 
 if __name__ == "__main__":

@@ -38,9 +38,8 @@ about the bound.
 
 from __future__ import annotations
 
-import argparse
 import csv
-import json
+import functools
 import math
 import os
 import sys
@@ -133,12 +132,6 @@ WIN_INNER = 0.075
 
 
 # --------------------------------------------------------------- envelopes
-def load_envelope(path: str) -> Tuple[dict, Dict[Key, Dict[str, object]]]:
-    """Validate the `klt sim` envelope and index its corners by grid key."""
-    env = E.read_envelope(path)
-    return env, index_envelope(env, path)
-
-
 def index_envelope(env: dict, label: str = "envelope") -> Dict[Key, Dict[str, object]]:
     """The shared envelope gate (klt_envelope.index_envelope); no bench-specific
     per-corner checks beyond every MEASUREMENTS entry present and finite."""
@@ -240,9 +233,7 @@ def method_check(tran_csv: str, vcm: float) -> Dict[str, float]:
 
 
 # ----------------------------------------------------------------- compare
-def _tol(metric: str, ref: float) -> float:
-    t = TOLERANCES[metric]
-    return t["abs"] + t["rel"] * abs(ref)
+_tol = functools.partial(E.tol, TOLERANCES)
 
 
 def _all_pass(vals: Dict[str, object], names: Iterable[str]) -> bool:
@@ -357,51 +348,25 @@ def _text_summary(rep: dict) -> str:
         lines.append(f"    tool {n}: {e.get('status')} (worst {wc.get('corner_id')} = {wc.get('value')}, margin {wc.get('margin')})")
     for line in rep["method_check_failures"]:
         lines.append(f"  METHOD CHECK FAILS: {line}")
-    for line in rep["out_of_tolerance"]:
-        lines.append(f"  OUT OF TOLERANCE: {line}")
-    for d in rep["bound_verdict_disagreements"]:
-        lines.append(f"  VERDICT DISAGREES: {d}")
-    return "\n".join(lines)
+    return "\n".join(E.summary_tail(lines, rep))
 
+
+def _run(a, tool: Dict[Key, Dict[str, object]], env: dict) -> dict:
+    harness = load_harness_csv(a.harness_csv)
+    methods = {k: method_check(os.path.join(a.harness_tran_dir, f"{key_str(k)}_tran.csv"),
+                               float(harness[k]["vcm_v"])) for k in expected_keys()}
+    return compare(tool, harness, methods, env)
 
 def main(argv: Optional[List[str]] = None) -> int:
-    ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    sub = ap.add_subparsers(dest="cmd", required=True)
-    v = sub.add_parser("validate", help="gate the envelope before it may enter records/")
-    v.add_argument("envelope")
-    c = sub.add_parser("compare", help="join the envelope with the harness record")
-    c.add_argument("--envelope", required=True)
-    c.add_argument("--harness-csv", required=True)
-    c.add_argument("--harness-tran-dir", required=True,
-                   help="the harness record's corners/<id>/ directory (raw *_tran.csv waveforms)")
-    c.add_argument("--json-out")
-    c.add_argument("--provenance", action="append", default=[], metavar="KEY=VALUE")
-    a = ap.parse_args(argv)
-
-    try:
-        if a.cmd == "validate":
-            env, idx = load_envelope(a.envelope)
-            print(f"validate: {a.envelope}: {len(idx)} corners, status {env.get('status')}, ok")
-            return 0
-        env, tool = load_envelope(a.envelope)
-        harness = load_harness_csv(a.harness_csv)
-        methods = {k: method_check(os.path.join(a.harness_tran_dir, f"{key_str(k)}_tran.csv"),
-                                   float(harness[k]["vcm_v"])) for k in expected_keys()}
-        rep = compare(tool, harness, methods, env)
-    except InputError as e:
-        print(f"compare.py: {e}", file=sys.stderr)
-        return 2
-
-    rep["inputs"] = {"envelope": {"path": a.envelope, "sha256": E.sha256_file(a.envelope)},
-                     "harness_csv": {"path": a.harness_csv, "sha256": E.sha256_file(a.harness_csv)},
-                     "harness_tran_dir": {"path": a.harness_tran_dir}}
-    rep["provenance"] = dict(kv.split("=", 1) for kv in a.provenance)
-    if a.json_out:
-        with open(a.json_out, "w") as f:
-            json.dump(rep, f, indent=2)
-            f.write("\n")
-    print(_text_summary(rep))
-    return 0 if rep["status"] == "agree" else 1
+    return E.run_cli(
+        argv, description=__doc__.split("\n\n")[0], compare_help="join the envelope with the harness record",
+        harness_args=(("--harness-csv", {"required": True}),
+                      ("--harness-tran-dir", {"required": True,
+                                              "help": "the harness record's corners/<id>/ directory (raw *_tran.csv waveforms)"})),
+        index_fn=index_envelope,
+        run=_run,
+        inputs=(("harness_csv", "harness_csv", True), ("harness_tran_dir", "harness_tran_dir", False)),
+        summary=_text_summary)
 
 
 if __name__ == "__main__":

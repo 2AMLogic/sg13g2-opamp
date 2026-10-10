@@ -13,7 +13,11 @@ What lives here (issue #142; previously copy-pasted into each compare.py):
 * read_envelope / index_envelope / check_grid -- the envelope gate the bench
   runners (sim/*/klt/run.sh) apply via `compare.py validate` before an envelope
   may enter records/;
-* finite / sha256_file.
+* finite / sha256_file;
+* the CLI scaffold above them (issue #146): tol / load_envelope / summary_tail /
+  run_cli -- the validate subcommand, --json-out, --provenance KEY=VALUE, the
+  InputError -> stderr -> exit 2 path, the inputs sha256 stanza and the
+  exit-0-iff-agree rule.
 
 key_str is shared on purpose: every bench joins its envelope against a harness
 CSV whose `point_id` column uses the same `<process>_<T>C_<VDD>V` spelling, so
@@ -30,9 +34,11 @@ pins the strings.
 
 from __future__ import annotations
 
+import argparse
 import hashlib
 import json
 import math
+import sys
 from typing import Callable, Dict, Iterable, List, Optional, Sequence, Tuple
 
 # ---------------------------------------------------------------- the grid
@@ -175,3 +181,81 @@ def index_envelope(env: dict, label: str, measurements: Sequence[str], *,
     if problems:
         raise InputError(f"{label}: " + "; ".join(problems))
     return out
+
+
+# ------------------------------------------------------------ CLI scaffold
+def tol(table: Dict[str, Dict[str, float]], metric: str, ref: float) -> float:
+    """Absolute + relative tolerance for `metric` at reference value `ref`."""
+    t = table[metric]
+    return t["abs"] + t["rel"] * abs(ref)
+
+
+def load_envelope(path: str, index_fn: Callable[[dict, str], dict]) -> Tuple[dict, dict]:
+    """Read the `klt sim` envelope and index its corners with the bench's gate."""
+    env = read_envelope(path)
+    return env, index_fn(env, path)
+
+
+def summary_tail(lines: List[str], rep: dict) -> List[str]:
+    """Append the OUT OF TOLERANCE / VERDICT DISAGREES lines every bench's
+    _text_summary ends with; returns `lines`."""
+    for line in rep["out_of_tolerance"]:
+        lines.append(f"  OUT OF TOLERANCE: {line}")
+    for d in rep["bound_verdict_disagreements"]:
+        lines.append(f"  VERDICT DISAGREES: {d}")
+    return lines
+
+
+def run_cli(argv: Optional[List[str]], *, description: str, compare_help: str,
+            harness_args: Sequence[Tuple[str, dict]],
+            index_fn: Callable[[dict, str], dict],
+            run: Callable[[argparse.Namespace, dict, dict], dict],
+            inputs: Sequence[Tuple[str, str, bool]],
+            summary: Callable[[dict], str]) -> int:
+    """The compare.py command line shared by every bench.
+
+    harness_args: (flag, add_argument kwargs) for the bench's harness files, added
+        between --envelope and --json-out.
+    index_fn(env, label): the bench's envelope gate.
+    run(args, tool, env) -> report: loads the harness files named by `args` and
+        compares; may raise InputError (exit 2).
+    inputs: (report key, argparse dest, hash it) for each harness file; the
+        envelope is always first and always hashed.
+    summary(report) -> the stdout text.
+    Exit 0 iff the report's status is "agree", 1 otherwise, 2 on InputError.
+    """
+    ap = argparse.ArgumentParser(description=description)
+    sub = ap.add_subparsers(dest="cmd", required=True)
+    v = sub.add_parser("validate", help="gate the envelope before it may enter records/")
+    v.add_argument("envelope")
+    c = sub.add_parser("compare", help=compare_help)
+    c.add_argument("--envelope", required=True)
+    for flag, kw in harness_args:
+        c.add_argument(flag, **kw)
+    c.add_argument("--json-out")
+    c.add_argument("--provenance", action="append", default=[], metavar="KEY=VALUE")
+    a = ap.parse_args(argv)
+
+    try:
+        if a.cmd == "validate":
+            env, idx = load_envelope(a.envelope, index_fn)
+            print(f"validate: {a.envelope}: {len(idx)} corners, status {env.get('status')}, ok")
+            return 0
+        env, tool_idx = load_envelope(a.envelope, index_fn)
+        rep = run(a, tool_idx, env)
+    except InputError as e:
+        print(f"compare.py: {e}", file=sys.stderr)
+        return 2
+
+    stanza = {"envelope": {"path": a.envelope, "sha256": sha256_file(a.envelope)}}
+    for key, dest, hashed in inputs:
+        path = getattr(a, dest)
+        stanza[key] = {"path": path, "sha256": sha256_file(path)} if hashed else {"path": path}
+    rep["inputs"] = stanza
+    rep["provenance"] = dict(kv.split("=", 1) for kv in a.provenance)
+    if a.json_out:
+        with open(a.json_out, "w") as f:
+            json.dump(rep, f, indent=2)
+            f.write("\n")
+    print(summary(rep))
+    return 0 if rep["status"] == "agree" else 1
