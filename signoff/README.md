@@ -447,13 +447,13 @@ offline half re-derives that record from the `sim/` evidence it selects. The
 checker also enforces the converse: it gathers a row for every new pin, and
 rejects a `pinned-inputs.json` entry for an item the manifest does not cite.
 
-One gap this does **not** close, stated because it is real: the ERC *supply
-spec* is a second document the `klt erc` envelope merely names. Newer `klt`
-hashes it into `provenance.spec` and `klt signoff` verifies it
-(klayout-tools#2508), but the revision pinned in `klt-pin.txt` predates that,
-so editing `erc_supply_spec.json` without re-running `run_erc.sh` would not
-fail a build here. Re-run it whenever the spec changes; a klt-pin bump past
-#2508 retires this caveat.
+The ERC *supply spec* is a second document the `klt erc` envelope merely
+names (`spec`) and hashes into `provenance.spec.content_hash`. The checker
+resolves the item-11 part of kind `erc`, requires a repo-contained readable
+spec and a well-formed recorded hash, and re-hashes the spec; a missing or
+malformed hash, an escaping path or a changed `erc_supply_spec.json` fails the
+offline build with a pointer to re-run `layout/opamp_core/run_erc.sh` and
+`signoff/regenerate.sh`.
 
 CI runs both halves
 ([`.github/workflows/signoff.yml`](../.github/workflows/signoff.yml)), on
