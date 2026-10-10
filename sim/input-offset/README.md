@@ -315,6 +315,19 @@ crossing, comfortably inside the ±100 mV window) fail the draw, not the
 campaign; a point with any failed draw carries `status=FAIL` in the
 digest.
 
+The per-draw sweep parsing lives in `offset_sweep.py` (`classify_sweep`),
+which `run_offset_mc.sh` loads, so the production logic is unit-tested
+offline. Malformed numeric tokens (`malformed_sweep_token`), NaN/+-inf in
+either sweep column (`nonfinite_sweep_data`) and a non-finite interpolated
+offset (`nonfinite_offset`) are explicit FAIL reasons with `vos=nan`, never
+PASS and never an abort: later draws keep scanning. Absent/empty output
+(`no_sweep_file`), crossing count (`crossings=N`) and `vos_outside_window`
+are unchanged, as is the reported offset of valid draws. This matches the
+downstream `offset_draws_to_sampleset.py`, which refuses non-finite PASS
+values. Tests (no PDK or ngspice):
+`python3 -m unittest discover -s sim/input-offset -p 'test_*.py'`; CI's
+bench-test discovery picks them up automatically.
+
 **Hard gates, every run** (all three must pass or no record is written —
 and the seed-determinism gate is what caught this campaign's own first
 draft, whose seed line never reached the draws):
