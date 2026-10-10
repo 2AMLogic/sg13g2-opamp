@@ -68,7 +68,7 @@
 # sequence is a pure function of (corner, temp, vdd, section, seed, N).
 #
 # Writes append-only evidence under netlist-snapshots/<record-id>/,
-# corners/<record-id>/ and records/<record-id>.{csv,md} -- same fleet
+# corners/<record-id>/ and records/<record-id>.{csv,md,-draws.csv} -- same fleet
 # convention as sim/open-loop-ac/, sim/cmrr-psrr/ and the other benches
 # in this tree. Raw per-point solver stdout (corners/<id>/<point>_*.log)
 # is retained only for points that failed a check; passing points keep
@@ -612,6 +612,23 @@ header="point_id,corner,temp_c,vdd_v,vcm_v,av0_db,sys_acm0_db,sys_cmrr_db,mc_n,m
 n_written=$(($(wc -l < "${CSV_OUT}") - 1))
 if [[ "${n_written}" -ne "${NP}" ]]; then
   echo "run_cmrr_mismatch_mc.sh: WARNING -- ${n_written} rows written, expected ${NP}" >&2
+fi
+
+# Per-draw table (issue #107): ${RECORD_ID}-draws.csv through the SAME
+# post-processor that regenerates it for pre-existing records
+# (make_draws_csv.sh), which also round-trips the per-point statistics
+# above against the draws and refuses to publish on any mismatch. The
+# draws file is data for a future per-draw yield ingest; it asserts no
+# per-draw limit (the DR-0004 bound is a +3 sigma-of-Acm aggregate).
+DRAWS_CSV="${RECORDS_DIR}/${RECORD_ID}-draws.csv"
+if [[ -e "${DRAWS_CSV}" ]]; then
+  echo "run_cmrr_mismatch_mc.sh: ${DRAWS_CSV} already exists -- evidence is append-only" >&2
+  exit 3
+fi
+if ! "${SCRIPT_DIR}/make_draws_csv.sh" --record-csv "${CSV_OUT}" \
+     --samples-dir "${CORNERS_OUT}" --out "${DRAWS_CSV}" --seed-base "${MC_SEED_BASE}"; then
+  echo "run_cmrr_mismatch_mc.sh: per-draw CSV failed its round-trip against ${CSV_OUT}" >&2
+  exit 1
 fi
 
 # Grid summary + controls digest for the record .md.
