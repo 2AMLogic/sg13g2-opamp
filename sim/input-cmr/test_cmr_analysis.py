@@ -1,6 +1,6 @@
 """Offline tests for cmr_analysis (no ngspice, no PDK).
 
-  python3 -m unittest sim/input-cmr/test_cmr_analysis.py
+  python3 -m unittest discover -s sim/input-cmr -p 'test_cmr_analysis.py'
 
 Committed raw curves pin the exact output lines the runner reads (the
 values in records/20260921-174405-65f5fb4.csv); synthetic curves pin the
