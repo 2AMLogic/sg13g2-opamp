@@ -3,7 +3,8 @@
 Stdlib only, offline: reads committed files and runs no simulator. Each bench's
 compare.py imports this module (it puts sim/tools on sys.path itself) and keeps
 only what is genuinely per bench: its MEASUREMENTS tuple, any extra per-corner
-checks, the harness-record loader and the comparison itself.
+checks, its harness column tuple and the comparison itself. The harness CSV
+loader is shared too (load_harness_csv_rows, issue #181).
 
 What lives here (issue #142; previously copy-pasted into each compare.py):
 
@@ -41,6 +42,7 @@ pins the strings.
 from __future__ import annotations
 
 import argparse
+import csv
 import hashlib
 import json
 import math
@@ -215,6 +217,67 @@ def index_envelope(env: dict, label: str, measurements: Sequence[str], *,
     check_grid(out.keys(), label, problems, points)
     if problems:
         raise InputError(f"{label}: " + "; ".join(problems))
+    return out
+
+
+# ------------------------------------------------------------- harness CSV
+def load_harness_csv_rows(path: str, columns: Iterable[str], label: str, *,
+                          points: Optional[Sequence[Key]] = None,
+                          flag_columns: Iterable[str] = ()) -> Dict[Key, Dict[str, object]]:
+    """Read a harness record CSV (issue #181; previously four per-bench loaders).
+
+    Every row is keyed by its corner/temp_c/vdd_v columns (a malformed or short
+    row is a problem, not a traceback), must be unique, must carry the
+    `point_id` that key_str spells for that key, and must hold every name in
+    `columns` as a finite float. `flag_columns` are read as booleans (cell
+    "1"). The key set must be the ratified grid, or `points` when given: for a
+    `points` set other than the full grid the rows outside it are parsed and
+    checked like any other but then ignored (they are not under comparison).
+    `label` names the file in messages. Any problem raises InputError naming
+    all of them.
+    """
+    try:
+        with open(path, newline="") as f:
+            rows = list(csv.DictReader(f))
+    except (OSError, csv.Error, UnicodeDecodeError) as e:
+        raise InputError(f"{path}: unreadable {label} ({e})")
+    columns = tuple(columns)
+    flag_columns = tuple(flag_columns)
+    problems: List[str] = []
+    out: Dict[Key, Dict[str, object]] = {}
+    for r in rows:
+        try:
+            k = make_key(r["corner"], r["temp_c"], r["vdd_v"])
+        except (KeyError, TypeError, ValueError, OverflowError):
+            problems.append(f"unparsable row {r!r}")
+            continue
+        if k in out:
+            problems.append(f"{key_str(k)}: duplicate row")
+            continue
+        if r.get("point_id") != key_str(k):
+            problems.append(f"{r.get('point_id')}: point_id disagrees with its corner/temp/vdd columns")
+        row: Dict[str, object] = {}
+        for col in columns:
+            raw = r.get(col)
+            try:
+                v = float(raw)
+            except (TypeError, ValueError):
+                v = float("nan")
+            if not math.isfinite(v):
+                problems.append(f"{key_str(k)}: {label} {col} {raw!r} is missing or non-finite")
+                continue
+            row[col] = v
+        for col in flag_columns:
+            row[col] = str(r.get(col)).strip() == "1"
+        out[k] = row
+    full = set(expected_keys())
+    if points is not None and set(points) != full:
+        out = {k: v for k, v in out.items() if k in set(points)}
+        check_grid(out.keys(), label, problems, points)
+    else:
+        check_grid(out.keys(), label, problems)
+    if problems:
+        raise InputError(f"{path}: " + "; ".join(problems))
     return out
 
 

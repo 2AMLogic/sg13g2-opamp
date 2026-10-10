@@ -212,6 +212,23 @@ class TestHarnessInputs(Base):
             with self.assertRaisesRegex(C.InputError, "missing from harness CSV"):
                 C.load_harness_csv(p)
 
+    def test_short_or_malformed_row_is_input_error(self):
+        """A truncated row or an unparsable temp_c is exit-2 material (an
+        InputError), never a raw KeyError/ValueError (issue #181)."""
+        with open(HARNESS_CSV) as f:
+            lines = f.read().splitlines()
+        short = lines[0] + "\n" + lines[1].split(",")[0] + "\n" + "\n".join(lines[2:]) + "\n"
+        cells = lines[1].split(",")
+        cells[lines[0].split(",").index("temp_c")] = "hot"
+        malformed = "\n".join([lines[0], ",".join(cells)] + lines[2:]) + "\n"
+        for text in (short, malformed):
+            with tempfile.TemporaryDirectory() as d:
+                p = os.path.join(d, "h.csv")
+                with open(p, "w") as f:
+                    f.write(text)
+                with self.assertRaises(C.InputError):
+                    C.load_harness_csv(p)
+
 
 class TestBaselineControl(Base):
     def test_identical_numbers_agree(self):

@@ -390,7 +390,7 @@ class TestHarnessCsv(Base):
         rows[1] = dict(rows[0])
         with self.assertRaises(C.InputError) as cm:
             C.load_harness_csv(self.write(rows))
-        self.assertIn("duplicate harness row", str(cm.exception))
+        self.assertIn("duplicate row", str(cm.exception))
 
     def test_extra_row_for_grid(self):
         rows = _rows()
@@ -398,7 +398,7 @@ class TestHarnessCsv(Base):
         extra["vdd_v"], extra["point_id"] = "1.50", "mos_tt_-40C_1.50V"
         with self.assertRaises(C.InputError) as cm:
             C.load_harness_csv(self.write(rows + [extra]))
-        self.assertIn("unexpected point in harness CSV", str(cm.exception))
+        self.assertIn("not a point of the ratified grid", str(cm.exception))
 
     def test_nonfinite_and_blank(self):
         for bad in ("nan", "inf", ""):
@@ -412,6 +412,24 @@ class TestHarnessCsv(Base):
         with self.assertRaises(C.InputError) as cm:
             C.load_harness_csv(self.write(rows))
         self.assertIn("headroom_lo_v", str(cm.exception))
+
+    def test_short_or_malformed_row_is_input_error(self):
+        """A truncated row or an unparsable temp_c is exit-2 material (an
+        InputError), never a raw KeyError/ValueError (issue #181)."""
+        with open(HARNESS_CSV) as f:
+            lines = f.read().splitlines()
+        short = lines[0] + "\n" + lines[1].split(",")[0] + "\n" + "\n".join(lines[2:]) + "\n"
+        cells = lines[1].split(",")
+        cells[lines[0].split(",").index("temp_c")] = "hot"
+        malformed = "\n".join([lines[0], ",".join(cells)] + lines[2:]) + "\n"
+        for text in (short, malformed):
+            with tempfile.TemporaryDirectory() as d:
+                p = os.path.join(d, "h.csv")
+                with open(p, "w") as f:
+                    f.write(text)
+                with self.assertRaises(C.InputError):
+                    C.load_harness_csv(p)
+
 
     def test_nominal_ignores_other_rows(self):
         h = C.load_harness_csv(HARNESS_CSV, NOM)

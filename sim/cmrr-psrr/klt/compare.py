@@ -40,7 +40,6 @@ Exit status:
 
 from __future__ import annotations
 
-import csv
 import functools
 import math
 import os
@@ -110,39 +109,7 @@ def index_envelope(env: dict, label: str = "envelope") -> Dict[Key, Dict[str, ob
 
 # ------------------------------------------------------------- CSV records
 def _load_csv(path: str, columns: Iterable[str], label: str) -> Dict[Key, Dict[str, float]]:
-    out: Dict[Key, Dict[str, float]] = {}
-    problems: List[str] = []
-    try:
-        f = open(path, newline="")
-    except OSError as e:
-        raise InputError(f"{path}: {e}")
-    with f:
-        for r in csv.DictReader(f):
-            try:
-                k = make_key(r["corner"], r["temp_c"], r["vdd_v"])
-            except (KeyError, TypeError, ValueError):
-                problems.append(f"unparsable row {r!r}")
-                continue
-            if k in out:
-                problems.append(f"{key_str(k)}: duplicate row")
-                continue
-            if r.get("point_id") != key_str(k):
-                problems.append(f"{r.get('point_id')}: point_id disagrees with its corner/temp/vdd columns")
-            row: Dict[str, float] = {}
-            for col in columns:
-                raw = r.get(col)
-                try:
-                    v = float(raw)
-                except (TypeError, ValueError):
-                    v = float("nan")
-                if not math.isfinite(v):
-                    problems.append(f"{key_str(k)}: {label} {col} {raw!r} is missing or non-finite")
-                row[col] = v
-            out[k] = row
-    E.check_grid(out.keys(), label, problems)
-    if problems:
-        raise InputError(f"{path}: " + "; ".join(problems))
-    return out
+    return E.load_harness_csv_rows(path, columns, label)  # type: ignore[return-value]
 
 
 def load_harness_csv(path: str) -> Dict[Key, Dict[str, float]]:

@@ -52,8 +52,6 @@ harness's literal verdict for the per-row agreement check. Exit status:
 
 from __future__ import annotations
 
-import csv
-import math
 import os
 import sys
 from typing import Dict, List, Optional, Sequence, Tuple
@@ -199,48 +197,9 @@ def index_envelope(env: dict, label: str = "envelope",
 
 # ----------------------------------------------------------- harness CSV
 def load_harness_csv(path: str, points: Sequence[Key] = POINT_SETS["grid"]) -> Dict[Key, Dict[str, object]]:
-    """Read the harness record's rows needed by the join; refuse duplicates,
-    non-finite numbers, and a key set other than `points` PLUS (for the grid)
-    nothing else. A one-point join still requires the harness row for that
-    point and ignores the other 44 (they are not under comparison)."""
-    try:
-        with open(path, newline="") as f:
-            rows = list(csv.DictReader(f))
-    except OSError as e:
-        raise InputError(f"{path}: unreadable harness CSV ({e})")
-    problems: List[str] = []
-    out: Dict[Key, Dict[str, object]] = {}
-    for r in rows:
-        try:
-            k = make_key(r["corner"], r["temp_c"], r["vdd_v"])
-        except (KeyError, ValueError, TypeError):
-            problems.append(f"malformed row {r!r}")
-            continue
-        if k in out:
-            problems.append(f"{key_str(k)}: duplicate harness row")
-            continue
-        if r.get("point_id") != key_str(k):
-            problems.append(f"{key_str(k)}: point_id {r.get('point_id')!r} disagrees with its corner/temp/vdd")
-        vals: Dict[str, object] = {}
-        for c in HARNESS_COLUMNS:
-            try:
-                x = float(r[c])
-            except (KeyError, ValueError, TypeError):
-                problems.append(f"{key_str(k)}: column {c} missing or not a number ({r.get(c)!r})")
-                continue
-            if not math.isfinite(x):
-                problems.append(f"{key_str(k)}: column {c} is non-finite ({r.get(c)!r})")
-                continue
-            vals[c] = x
-        out[k] = vals
-    for k in sorted(set(points) - set(out)):
-        problems.append(f"{key_str(k)}: missing from harness CSV")
-    if set(points) == set(POINT_SETS["grid"]):
-        for k in sorted(set(out) - set(points)):
-            problems.append(f"{key_str(k)}: unexpected point in harness CSV")
-    if problems:
-        raise InputError(f"{path}: " + "; ".join(problems))
-    return out
+    """The harness record's rows for `points` (a one-point join requires that
+    point's row and ignores the other 44; the full grid allows nothing else)."""
+    return E.load_harness_csv_rows(path, HARNESS_COLUMNS, "harness CSV", points=points)
 
 
 # ------------------------------------------------------------- comparison
