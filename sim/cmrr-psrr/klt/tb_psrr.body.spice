@@ -1,0 +1,47 @@
+* sg13g2-opamp -- PSRR (supply-gain) bench as a `klt sim` circuit body (issue #99)
+*
+* The SAME test circuit as ../testbench/tb_psrr.spice.tmpl (the harness path,
+* sim/cmrr-psrr/run_cmrr_psrr_sweep.sh), re-expressed in the shape `klt sim`
+* requires: a circuit body with no .control/.end of its own (klayout-tools
+* docs/cli/sim.md, "Netlist convention"). klt generates the per-corner
+* wrapper deck around this file and adds, per corner: the process `.lib`
+* cards (cornerMOSlv.lib mos_<corner> plus cornerCAP.lib cap_typ), `.temp`,
+* `alter vdd=<V>` and `alter vinp=<V/2>` (swept together by index, so
+* Vcm = VDD/2 exactly as the harness's `vcm = vdd/2`), `pre_osdi` for the
+* four OSDI libraries, and the one analysis the request declares
+* (`ac dec 20 10m 1g` -- the template's own sweep).
+*
+* Element-for-element the template's circuit: flat DUT include (no X
+* instance), Lbreak = 1e18 H from inn to out (DC loop break; open at AC),
+* CL = 2 pF [DR-1], the 10 uA external ibias sunk from vdd (zero ac value, so
+* supply ripple does not ride into the bias reference), Vss = ground.
+*
+* The excitation is the SUPPLY: Vdd carries `ac 1`, so vdb(out) IS the
+* supply-to-output gain Avs(f) in dB. Vinp carries no ac value (input
+* AC-quiet). The same source is both the swept supply (`alter vdd`) and the
+* AC stimulus. Whether `alter vdd=<V>` preserves the `ac 1` magnitude is a
+* property of the generated deck that the one-corner prototype must confirm
+* (sim/cmrr-psrr/README.md, "The `klt sim` path"); it is not assumed.
+*
+* This body measures Avs ONLY. PSRR = Av0 / Avs needs the differential gain
+* Av0 of the same point, a different AC excitation (Vinp ac 1, Vdd quiet);
+* one AC solve cannot carry both, so compare.py joins Av0 offline from the
+* committed open-loop harness record on (process, temperature, VDD) -- the
+* very join the harness itself makes. See the README.
+*
+* No solver option is set (DR-0005: ngspice default tolerance).
+*
+* Exactly one .include, of the committed DUT netlist, by a path relative to
+* this file (ngspice resolves a nested .include against the including file's
+* directory; klt's off-host backends stage the same closure).
+
+.include ../../../design/netlist/opamp_core.spice
+
+.options tnom=27
+
+Vdd vdd 0 dc 1.2 ac 1
+Vss vss 0 dc 0
+Iibias vdd ibias dc 10u
+Vinp inp 0 dc 0.6
+Lbreak inn out 1e18
+Cload out vss 2e-12

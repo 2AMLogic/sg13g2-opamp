@@ -1,0 +1,146 @@
+{
+  "_comment": [
+    "sim/cmrr-psrr PSRR as a `klt sim` request (issue #99): the supply-gain half of the PSRR row. REQUEST COVERAGE ONLY -- no envelope has been committed from this request.",
+    "Circuit: tb_psrr.body.spice -- the same test circuit as ../testbench/tb_psrr.spice.tmpl (Vdd carries ac 1; the signal input is AC-quiet).",
+    "Grid: cornerMOSlv.lib mos_tt/ss/ff/sf/fs [DR-1] x {-40, 27, 125} C x VDD {1.08, 1.20, 1.32} V = 45 corners.",
+    "vinp sweeps WITH vdd by index (klt's supply_v semantics), so Vcm = VDD/2 at every corner, as in the harness.",
+    "Each process corner is a bundle carrying the template's fixed cornerCAP.lib cap_typ section (the Miller cap is a cap_cmim MIM device).",
+    "Analysis: ac dec 20 10m 1g = the template's sweep. The DC shelf is read at 10 mHz (below the ~1.5 Hz supply zero), as in the harness.",
+    "Ratified row: PSRR+ (DC shelf) >= 1.87 dB worst-case [DR-2] (spec/target-spec.md section 2), PSRR = Av0 - Avs0 in dB at the same point.",
+    "ENCODING OF THE BOUND: PSRR is a ratio of two different AC excitations (Av0: Vinp ac 1; Avs: Vdd ac 1). One AC solve cannot carry both, and `limits` are per measurement of THIS request, so the bound is NOT a `limits` entry here.",
+    "This request reports avs0_db (and avs_1khz_db) only. compare.py joins the same-point Av0 from sim/open-loop-ac/records/20260910-221601-22feaba.csv (harness evidence, not a `klt sim` Av0 envelope) and applies PSRR >= 1.87 dB offline.",
+    "That offline verdict is NOT a klt verdict. Do not describe this request as a single-solve PSRR ratio.",
+    "A bound expressed per corner as avs0_db <= Av0(corner) - 1.87 would need a per-corner limit, which the request schema does not have; a single corner-independent substitute would change the bound's meaning, so none is used.",
+    "Checked limit that makes coverage.nothing_checked false: the harness's own plateau guard (|Avs(10 mHz) - Avs(0.1 Hz)| <= 0.05 dB, flat-shelf check). The harness record documents one point (mos_ss_-40C_1.08V) at 0.066 dB; a miss there is a result, not hidden (compare.py cross-checks it against the harness flag).",
+    "Solver tolerance: ngspice default, no .options reltol/abstol/vntol (DR-0005).",
+    "ngspice_init raises the printed digits only (measureprec for .meas, numdgt for expr); it changes no solver setting.",
+    "keep_artifacts is false so the committed envelope carries no host-absolute artifact paths."
+  ],
+  "netlist": "tb_psrr.body.spice",
+  "netlist_source": "schematic",
+  "engine": "ngspice",
+  "backend": "batch",
+  "models": {
+    "pdk": "ihp-sg13g2",
+    "lib": "libs.tech/ngspice/models/cornerMOSlv.lib"
+  },
+  "corners": {
+    "process": [
+      {
+        "name": "mos_tt",
+        "sections": [
+          "mos_tt",
+          {
+            "lib": "libs.tech/ngspice/models/cornerCAP.lib",
+            "section": "cap_typ"
+          }
+        ]
+      },
+      {
+        "name": "mos_ss",
+        "sections": [
+          "mos_ss",
+          {
+            "lib": "libs.tech/ngspice/models/cornerCAP.lib",
+            "section": "cap_typ"
+          }
+        ]
+      },
+      {
+        "name": "mos_ff",
+        "sections": [
+          "mos_ff",
+          {
+            "lib": "libs.tech/ngspice/models/cornerCAP.lib",
+            "section": "cap_typ"
+          }
+        ]
+      },
+      {
+        "name": "mos_sf",
+        "sections": [
+          "mos_sf",
+          {
+            "lib": "libs.tech/ngspice/models/cornerCAP.lib",
+            "section": "cap_typ"
+          }
+        ]
+      },
+      {
+        "name": "mos_fs",
+        "sections": [
+          "mos_fs",
+          {
+            "lib": "libs.tech/ngspice/models/cornerCAP.lib",
+            "section": "cap_typ"
+          }
+        ]
+      }
+    ],
+    "supply_v": {
+      "vdd": [
+        1.08,
+        1.2,
+        1.32
+      ],
+      "vinp": [
+        0.54,
+        0.6,
+        0.66
+      ]
+    },
+    "temperature_c": [
+      -40,
+      27,
+      125
+    ]
+  },
+  "analysis": {
+    "kind": "ac",
+    "args": "dec 20 10m 1g"
+  },
+  "measurements": [
+    {
+      "name": "avs0_db",
+      "spice": ".meas ac avs0_db find vdb(out) at=0.01",
+      "unit": "dB"
+    },
+    {
+      "name": "avs_plateau_db",
+      "spice": ".meas ac avs_plateau_db find vdb(out) at=0.1",
+      "unit": "dB"
+    },
+    {
+      "name": "avs_plateau_delta_db",
+      "spice": ".meas ac avs_plateau_delta_db param='abs(avs_plateau_db-avs0_db)'",
+      "unit": "dB",
+      "limits": {
+        "max": 0.05
+      }
+    },
+    {
+      "name": "avs_1khz_db",
+      "spice": ".meas ac avs_1khz_db find vdb(out) at=1000",
+      "unit": "dB"
+    }
+  ],
+  "options": {
+    "timeout_s": 300,
+    "keep_artifacts": false,
+    "osdi_preload": [
+      "$PDK_ROOT/ihp-sg13g2/libs.tech/ngspice/osdi/psp103.osdi",
+      "$PDK_ROOT/ihp-sg13g2/libs.tech/ngspice/osdi/psp103_nqs.osdi",
+      "$PDK_ROOT/ihp-sg13g2/libs.tech/ngspice/osdi/mosvar.osdi",
+      "$PDK_ROOT/ihp-sg13g2/libs.tech/ngspice/osdi/r3_cmc.osdi"
+    ],
+    "stage_model_inputs": true,
+    "fail_on_diagnostic": [
+      "singular_matrix",
+      "nonconvergence"
+    ],
+    "ngspice_init": [
+      "set measureprec=12",
+      "set numdgt=12"
+    ]
+  }
+}

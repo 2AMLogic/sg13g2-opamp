@@ -376,16 +376,16 @@ uncited, and the manifest has no item 5 entry. Per row, today:
 | Input-referred noise ≤ 108.9 µVrms | `sim/input-noise/` | yes, `sim/input-noise/klt/` (request, runner and comparator delivered; one-corner DUT prototype `mos_tt`/27 °C/1.20 V run locally, not evidence) | **no**: real run pending | [#96](https://github.com/2AMLogic/sg13g2-opamp/issues/96) |
 | Offset (systematic) ≤ +21.9 mV | `sim/input-offset/` | no | no | [#97](https://github.com/2AMLogic/sg13g2-opamp/issues/97) |
 | CMRR ≥ 26.68 dB (mismatch-inclusive [DR-4]) | `sim/cmrr-mismatch/` | no | no | [#98](https://github.com/2AMLogic/sg13g2-opamp/issues/98) |
-| PSRR ≥ 1.87 dB (DC shelf) | `sim/cmrr-psrr/` | no | no | [#99](https://github.com/2AMLogic/sg13g2-opamp/issues/99) |
+| PSRR ≥ 1.87 dB (DC shelf) | `sim/cmrr-psrr/` | partial, `sim/cmrr-psrr/klt/` (supply-gain request, runner and comparator delivered; Av0 is joined offline from the open-loop harness record, so the PSRR verdict is not a `klt sim` verdict; one-corner prototypes only, not evidence) | **no**: real run pending | [#99](https://github.com/2AMLogic/sg13g2-opamp/issues/99) |
 | Output swing (headroom ≥ 251/141 mV, span ≥ 0.571 V) | `sim/output-swing/` | no | no | [#100](https://github.com/2AMLogic/sg13g2-opamp/issues/100) |
 
-Six of ten rows have a `klt sim` request. **None has a committed envelope
+Six of ten rows have a complete `klt sim` request, and a seventh (PSRR) has a partial one: request coverage is not delivered evidence. **None has a committed envelope
 yet.** The open-loop and slew-rate requests were submitted to the batch fleet and rejected before
 simulating, because the fleet runner's klt (0.5.0) is older than the client
 (`batch_runner_version_mismatch`, exit 87; 2AMLogic/2am#2193). The slew-rate
 submission was job `klt-sim-994a710c60f3`. `sim/slew-rate/README.md` → "The
 `klt sim` path" has the exact error, the second (host ngspice-46 for the
-preflight) blocker and how to run once both clear. The input-noise request has not been submitted. The request, runner and comparator are delivered, and one DUT corner was run locally to check the encoding. That corner is a prototype, not an envelope, and it does not count toward coverage (`sim/input-noise/README.md` → "One-corner DUT prototype"). When an envelope lands, it
+preflight) blocker and how to run once both clear. The PSRR request (`sim/cmrr-psrr/klt/`, #99) measures the supply gain only; its same-point Av0 comes from the open-loop harness record, so even a committed envelope will not fully cover that row as a `klt sim` verdict until the join uses an open-loop envelope. It has not been submitted. The input-noise request has not been submitted. The request, runner and comparator are delivered, and one DUT corner was run locally to check the encoding. That corner is a prototype, not an envelope, and it does not count toward coverage (`sim/input-noise/README.md` → "One-corner DUT prototype"). When an envelope lands, it
 moves its rows to "yes" here. It still does not touch the manifest.
 
 ## Disclosures that travel with the current claim
