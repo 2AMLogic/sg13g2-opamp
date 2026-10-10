@@ -158,6 +158,31 @@ per-sample artifacts and controls under
 rendered per-point netlists with their seeds under
 [`netlist-snapshots/20260921-172304-65f5fb4/`](netlist-snapshots/20260921-172304-65f5fb4/).
 
+### Per-draw table (`-draws.csv`)
+
+[`records/20260921-172304-65f5fb4-draws.csv`](records/20260921-172304-65f5fb4-draws.csv)
+holds one row per draw (45 points x 300 = 13,500 rows):
+`point_id,corner,temp_c,vdd_v,draw_index,draw_seed,status,fail_reason,acm10m_db,acm1k_db,av0_db,cmrr_db`.
+It is a pure post-processing of the committed `corners/<id>/*_mc_samples.txt`
+echo files by [`make_draws_csv.sh`](make_draws_csv.sh) (no simulation; nothing
+is reconstructed from mean and sigma). `status`/`fail_reason` apply the same
+per-draw gates as the per-point statistics, so an excluded draw is visible
+(this record has none). `draw_seed` is the point's `setseed`
+(`MC_SEED_BASE` + grid index; every draw of a point shares it, `draw_index`
+is the sample). `av0_db` is the point's joined systematic `Av0`, repeated per
+row (not re-measured per draw), and `cmrr_db = av0_db - acm10m_db`. The
+script recomputes `mc_n`, `mc_n_ok`, exclusions, `acm_lin_mean`,
+`acm_lin_sigma`, `cmrr_3sigma_db` and `cmrr_db_min` from the draws and exits
+non-zero unless they equal the summary CSV at its printed precision; the
+worst single draw is 25.94 dB at `mos_ss_-40C_1.08V`. Future runs of
+`run_cmrr_mismatch_mc.sh` emit `<id>-draws.csv` through the same script.
+Offline controls: `sim/tools/test_make_draws_csv.py`.
+
+**Caveat (DR-0004).** The ratified bound (>= 26.68 dB) is a +3 sigma-of-Acm
+aggregate, not a per-draw pass/fail limit. This file does not discharge it,
+and no per-draw yield limit or `target_yield` is asserted here (that needs
+its own ratification, #108).
+
 ### Reading these numbers honestly
 
 - **Mismatch makes the binding corner worse *and* moves it.** The
