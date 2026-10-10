@@ -137,6 +137,17 @@ jobs:
           echo "== ICMR evidence checker"
           python3 sim/input-cmr/check_icmr_evidence.py
 
+      - name: Offset yield-input sample-set reproduces and converter tests pass (offline)
+        # signoff/yield-inputs: --check fails if the committed sample-set no
+        # longer reproduces byte for byte from the committed draws CSV (even
+        # when the CSV is unchanged); the tests cover duplicate/missing draw
+        # indices, conflicting metadata, unknown status/mode and non-finite
+        # PASS values. Stdlib only; no PDK, ngspice or klt.
+        run: |
+          set -euo pipefail
+          python3 -I signoff/yield-inputs/offset_draws_to_sampleset.py --check
+          python3 -I -m unittest discover -s signoff/yield-inputs -p 'test_offset_draws_to_sampleset.py' -v
+
       - name: Install klt at the pinned revision
         # Pinned, not floating: the T1 item skeleton is parsed out of
         # klayout-tools' own docs/design-evidence-tiers.md at run time, so a

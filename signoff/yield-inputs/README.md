@@ -31,7 +31,11 @@ needs a degraded population).
 (`vos_v` in draw order, non-PASS draws as `null`, the `negctrl` point
 dropped). It declares **no limits and no target_yield**. It is deterministic;
 `--check` verifies the committed `offset-mc-*.sampleset.json` reproduces from
-the committed CSV. Ingestion was verified with a throwaway `klt yield` using a
+the committed CSV. The converter validates the CSV against the campaign summary
+(`sim/input-offset/records/mc-*.csv`: expected points, metadata, seeds, draw
+counts) and refuses duplicate/missing draws, conflicting metadata, unknown
+mode/status and non-finite PASS values with row/point diagnostics; it emits
+strict JSON. CI runs `--check` and `test_offset_draws_to_sampleset.py`. Ingestion was verified with a throwaway `klt yield` using a
 scratch limits file that is deliberately not committed (a limit chosen by an
 agent would be an invented bound). The need for this converter is reported
 upstream as 2AMLogic/klayout-tools#2931.
