@@ -369,8 +369,55 @@ local corner, request kept outside the repo. After `noise v(out) Vin dec 20
 divider's gain 1/2 implies; 81 points; 100/1000 Hz). Unqualified
 `inoise_spectrum[20]` / `frequency[20]` do not resolve, so the request uses
 plot-qualified names (`noise1.`, `noise2.`). No klayout-tools friction issue
-was needed for this. **This does not validate the DUT corner**: the units,
-the integrated value at a DUT corner and the OSDI models are untested.
+was needed for this. The toy run alone did not validate the DUT corner; the
+one-corner DUT prototype below does.
+
+### One-corner DUT prototype (2026-10-10)
+
+One local corner of the real request, on a host that passes
+`sim/preflight.sh` (ngspice-46, the four OSDI libraries load, PDK at
+`$PDK_ROOT/ihp-sg13g2`, `.fetched-version` 0.3.0). This is a probe of the
+encoding, **not signoff evidence and not a grid**: one point of 45.
+
+- Request: `klt/noise.prototype-tt27-1v20.request.json`, `noise.request.json`
+  reduced to `mos_tt` (with its `cap_typ` bundle), 27 °C, VDD 1.20 V / Vinp
+  0.60 V, `"backend": "local"`; analysis, band, measurements, limits, OSDI
+  preload and options unchanged. Committed byte-identical to what ran
+  (sha256 `f63435b9…10581`).
+- Command (from the repo root, after `source sim/env.sh`):
+  `klt sim sim/input-noise/klt/noise.prototype-tt27-1v20.request.json --backend local --format json`.
+  Client `klt 0.7.0+g5e5b55992a7f`, ngspice-46. Exit 0, empty stderr,
+  0.17 s for the corner.
+- Envelope, unmodified: `klt/prototype/20261010-053635-c0c112a.tt27-1v20.sim.json`
+  (`status: pass`, 1 corner, no diagnostics, 12 measurements, 7 limits
+  checked). It is outside `klt/records/` on purpose: `records/` holds only
+  envelopes that pass `compare.py validate` (45 unique points), and
+  `compare.py compare` refuses this one (44 points missing, exit 2), as it
+  should.
+- Plot and vector: after `noise`, `noise2.inoise_total` is the integrated
+  input-referred RMS in volts over 100 Hz – 1 MHz, and
+  `noise1.inoise_spectrum[k]` the density in V/√Hz. The band checks read back
+  81 points, 100 Hz, 1 kHz, 10 kHz, 100 kHz and 1 MHz.
+
+Against the harness row `mos_tt_27C_1.20V` of
+`records/20260918-203850-90844d2.csv` (macOS/aarch64 ngspice-46):
+
+| Measurement | `klt sim` (this host) | Harness CSV | \|rel. diff\| |
+|---|---|---|---|
+| `inoise_int_vrms` (V) | 8.729302e-05 | 8.7293E-05 | 1.9e-07 |
+| `inoise_100hz_v_rthz` (V/√Hz) | 2.786727e-06 | 2.78673e-06 | 1.2e-06 |
+| `inoise_1khz_v_rthz` | 8.814771e-07 | 8.81477e-07 | 6.8e-08 |
+| `inoise_10khz_v_rthz` | 2.794952e-07 | 2.79495e-07 | 6.7e-07 |
+| `inoise_100khz_v_rthz` | 9.071780e-08 | 9.07178e-08 | 1.6e-08 |
+| `inoise_1mhz_v_rthz` | 3.535270e-08 | 3.53527e-08 | 1.2e-07 |
+
+Every difference is below the harness CSV's printing resolution (5 to 6
+significant digits), so the units and the integrated band agree with the
+harness at this corner. The integrated value is reachable through `klt`;
+no klayout-tools friction issue was filed. **One typical corner does not
+justify the comparison tolerance.** The provisional 2×10⁻³ below stays until
+the full-grid comparison measures it, especially at the slow/hot corners and
+at `mos_fs_125C_1.08V`, which sits 4.5×10⁻⁴ above the bound.
 
 ### Not reproduced from the harness
 
@@ -408,15 +455,15 @@ point, null/NaN, mis-biased Vcm, wrong band/point count/spot frequency,
 errored/inconclusive/skipped coverage, bound flips). They are not evidence
 about the circuit.
 
-### Status (2026-10-09): what is and is not done
+### Status (2026-10-10): what is and is not done
 
-- Delivered: request, body, runner, comparator, tests, this section.
-- **Not done: prototype of a DUT corner.** `klt/run.sh` on the dispatch host
-  (ngspice-42) fails `sim/preflight.sh`'s OSDI check (`Unknown model type
-  pspnqs103va`, exit 3) before anything is submitted: the OSDI binaries
-  target OSDI v0.4 (ngspice-46, the `sim/pdk.json` pin). Prototype validation
-  of the DUT, and therefore the units/value at a real corner, is pending a host
-  that passes the preflight.
+- Delivered (2026-10-09): request, body, runner, comparator, tests, this
+  section.
+- Delivered (2026-10-10): the one-corner DUT prototype above (`mos_tt`,
+  27 °C, 1.20 V). On 2026-10-09 the dispatch host then in use had ngspice-42
+  and failed `sim/preflight.sh`'s OSDI check (`Unknown model type
+  pspnqs103va`, exit 3). The 2026-10-10 host passes it. The prototype is an
+  encoding check at one point, not envelope evidence.
 - **Not done: the real 45-corner envelope and the measured comparison.** The
   fleet submission depends on 2AMLogic/2am#2193 (runner image klt version) or
   a verified compatible sharded bridge; deployed runner/client compatibility

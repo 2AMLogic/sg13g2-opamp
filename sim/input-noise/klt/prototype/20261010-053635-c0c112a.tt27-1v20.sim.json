@@ -1,0 +1,416 @@
+{
+  "schema_version": 3,
+  "netlist": {
+    "path": "sim/input-noise/klt/tb_noise.body.spice",
+    "scope": "repo"
+  },
+  "status": "pass",
+  "corner_count": 1,
+  "passed": 1,
+  "failed": 0,
+  "errored": 0,
+  "inconclusive": 0,
+  "diagnostic_counts": {
+    "by_code": {},
+    "by_severity": {},
+    "corners_with_diagnostics": 0
+  },
+  "metrics": {
+    "sim__corner__count": 1,
+    "sim__corner__passed_count": 1,
+    "sim__corner__failed_count": 0,
+    "sim__corner__errored_count": 0,
+    "sim__corner__inconclusive_count": 0
+  },
+  "environment": {
+    "engine": "ngspice",
+    "engine_version": "46",
+    "ngspice_binary": "/home/ubuntu/.local/bin/ngspice",
+    "models_lib": {
+      "path": null,
+      "scope": "external"
+    },
+    "models_lib_sha256": "03d505847c880d233b341be115a1e5460edf4d8e9b3e8a7df791a52fa4455d67",
+    "netlist_sha256": "20789691be7a11a265ad2ab47df5b2eb06de7fb2ac82a2ddff841857c9771837",
+    "netlist_closure": [
+      {
+        "path": "sim/input-noise/klt/tb_noise.body.spice",
+        "scope": "repo",
+        "sha256": "20789691be7a11a265ad2ab47df5b2eb06de7fb2ac82a2ddff841857c9771837"
+      },
+      {
+        "path": "design/netlist/opamp_core.spice",
+        "scope": "repo",
+        "sha256": "4cddebec6a043f682bb74a463ac3e72112f33ad341d19575a0606f276e18db37"
+      }
+    ],
+    "netlist_source": "schematic",
+    "osdi_preload": [
+      {
+        "name": "psp103.osdi",
+        "path": null,
+        "scope": "external",
+        "sha256": "2e4299c4683997e26469410dc1ab36b02ced924b1ac0972d6c4eae360e1fc796"
+      },
+      {
+        "name": "psp103_nqs.osdi",
+        "path": null,
+        "scope": "external",
+        "sha256": "839b164483205601c09032951f6c41d3580f15e506dc40a7202950d3afbdfc7d"
+      },
+      {
+        "name": "mosvar.osdi",
+        "path": null,
+        "scope": "external",
+        "sha256": "25e64a374ab523dbfeb7ffed75dcb8b086ee10f06120a9074bd68b92d7b0fb41"
+      },
+      {
+        "name": "r3_cmc.osdi",
+        "path": null,
+        "scope": "external",
+        "sha256": "4fead17bc2e9cbfe3df6f106e9dbd6f2cdcd48c002af9c56c2ca0b0712fce350"
+      }
+    ],
+    "corner_section_libs": [
+      {
+        "name": "cornerCAP.lib",
+        "path": null,
+        "scope": "external",
+        "sha256": "4fc4a0f17ca2aef66ca38c2d2e7cead3307b69508d304ed073129565ec1c3e56"
+      }
+    ]
+  },
+  "coverage": {
+    "corners_simulated": 1,
+    "measurements_declared": 12,
+    "measurements_with_limits": 7,
+    "unrecognized_limit_keys": [],
+    "schema_version": 1,
+    "known": true,
+    "checked": [
+      "limit:[0,\"mos_tt/vdd=1.200_vinp=0.600V/27C\",\"band_f_first_hz\",\"max\"]",
+      "limit:[0,\"mos_tt/vdd=1.200_vinp=0.600V/27C\",\"band_f_first_hz\",\"min\"]",
+      "limit:[0,\"mos_tt/vdd=1.200_vinp=0.600V/27C\",\"band_f_last_hz\",\"max\"]",
+      "limit:[0,\"mos_tt/vdd=1.200_vinp=0.600V/27C\",\"band_f_last_hz\",\"min\"]",
+      "limit:[0,\"mos_tt/vdd=1.200_vinp=0.600V/27C\",\"band_points\",\"max\"]",
+      "limit:[0,\"mos_tt/vdd=1.200_vinp=0.600V/27C\",\"band_points\",\"min\"]",
+      "limit:[0,\"mos_tt/vdd=1.200_vinp=0.600V/27C\",\"inoise_int_vrms\",\"max\"]",
+      "limit:[0,\"mos_tt/vdd=1.200_vinp=0.600V/27C\",\"spot_f_100khz_hz\",\"max\"]",
+      "limit:[0,\"mos_tt/vdd=1.200_vinp=0.600V/27C\",\"spot_f_100khz_hz\",\"min\"]",
+      "limit:[0,\"mos_tt/vdd=1.200_vinp=0.600V/27C\",\"spot_f_10khz_hz\",\"max\"]",
+      "limit:[0,\"mos_tt/vdd=1.200_vinp=0.600V/27C\",\"spot_f_10khz_hz\",\"min\"]",
+      "limit:[0,\"mos_tt/vdd=1.200_vinp=0.600V/27C\",\"spot_f_1khz_hz\",\"max\"]",
+      "limit:[0,\"mos_tt/vdd=1.200_vinp=0.600V/27C\",\"spot_f_1khz_hz\",\"min\"]",
+      "measurement:[0,\"mos_tt/vdd=1.200_vinp=0.600V/27C\",\"inoise_100hz_v_rthz\"]/observation",
+      "measurement:[0,\"mos_tt/vdd=1.200_vinp=0.600V/27C\",\"inoise_100khz_v_rthz\"]/observation",
+      "measurement:[0,\"mos_tt/vdd=1.200_vinp=0.600V/27C\",\"inoise_10khz_v_rthz\"]/observation",
+      "measurement:[0,\"mos_tt/vdd=1.200_vinp=0.600V/27C\",\"inoise_1khz_v_rthz\"]/observation",
+      "measurement:[0,\"mos_tt/vdd=1.200_vinp=0.600V/27C\",\"inoise_1mhz_v_rthz\"]/observation"
+    ],
+    "skipped": [],
+    "inapplicable": [
+      {
+        "id": "measurement:[0,\"mos_tt/vdd=1.200_vinp=0.600V/27C\",\"inoise_100hz_v_rthz\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[0,\"mos_tt/vdd=1.200_vinp=0.600V/27C\",\"inoise_100khz_v_rthz\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[0,\"mos_tt/vdd=1.200_vinp=0.600V/27C\",\"inoise_10khz_v_rthz\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[0,\"mos_tt/vdd=1.200_vinp=0.600V/27C\",\"inoise_1khz_v_rthz\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[0,\"mos_tt/vdd=1.200_vinp=0.600V/27C\",\"inoise_1mhz_v_rthz\"]/limits",
+        "reason": "characterization_without_limits"
+      }
+    ],
+    "unknown": [],
+    "nothing_checked": false,
+    "nothing_checked_reasons": []
+  },
+  "provenance": {
+    "klt_version": "0.7.0+g5e5b55992a7f",
+    "klayout_version": "0.30.12",
+    "pdk": {
+      "name": "ihp-sg13g2",
+      "source": "PDK_ROOT environment variable",
+      "version": null
+    },
+    "deck": {
+      "name": "cornerMOSlv.lib",
+      "content_hash": "sha256:03d505847c880d233b341be115a1e5460edf4d8e9b3e8a7df791a52fa4455d67",
+      "released": false
+    },
+    "input": {
+      "content_hash": "sha256:20789691be7a11a265ad2ab47df5b2eb06de7fb2ac82a2ddff841857c9771837",
+      "role": "netlist"
+    }
+  },
+  "measurements": [
+    {
+      "name": "inoise_int_vrms",
+      "unit": "V",
+      "limits": {
+        "max": 0.0001089
+      },
+      "status": "pass",
+      "worst_case": {
+        "corner_id": "mos_tt/vdd=1.200_vinp=0.600V/27C",
+        "value": 8.729301696786e-05,
+        "margin": 2.1606983032140006e-05
+      }
+    },
+    {
+      "name": "inoise_100hz_v_rthz",
+      "unit": "V/rtHz",
+      "limits": null,
+      "status": "pass",
+      "worst_case": {
+        "corner_id": "mos_tt/vdd=1.200_vinp=0.600V/27C",
+        "value": 2.786726543735e-06,
+        "margin": null
+      }
+    },
+    {
+      "name": "inoise_1khz_v_rthz",
+      "unit": "V/rtHz",
+      "limits": null,
+      "status": "pass",
+      "worst_case": {
+        "corner_id": "mos_tt/vdd=1.200_vinp=0.600V/27C",
+        "value": 8.814770596384e-07,
+        "margin": null
+      }
+    },
+    {
+      "name": "inoise_10khz_v_rthz",
+      "unit": "V/rtHz",
+      "limits": null,
+      "status": "pass",
+      "worst_case": {
+        "corner_id": "mos_tt/vdd=1.200_vinp=0.600V/27C",
+        "value": 2.794951874091e-07,
+        "margin": null
+      }
+    },
+    {
+      "name": "inoise_100khz_v_rthz",
+      "unit": "V/rtHz",
+      "limits": null,
+      "status": "pass",
+      "worst_case": {
+        "corner_id": "mos_tt/vdd=1.200_vinp=0.600V/27C",
+        "value": 9.071780145166e-08,
+        "margin": null
+      }
+    },
+    {
+      "name": "inoise_1mhz_v_rthz",
+      "unit": "V/rtHz",
+      "limits": null,
+      "status": "pass",
+      "worst_case": {
+        "corner_id": "mos_tt/vdd=1.200_vinp=0.600V/27C",
+        "value": 3.535270430622e-08,
+        "margin": null
+      }
+    },
+    {
+      "name": "band_points",
+      "unit": null,
+      "limits": {
+        "min": 81,
+        "max": 81
+      },
+      "status": "pass",
+      "worst_case": {
+        "corner_id": "mos_tt/vdd=1.200_vinp=0.600V/27C",
+        "value": 81.0,
+        "margin": 0.0
+      }
+    },
+    {
+      "name": "band_f_first_hz",
+      "unit": "Hz",
+      "limits": {
+        "min": 99.9999,
+        "max": 100.0001
+      },
+      "status": "pass",
+      "worst_case": {
+        "corner_id": "mos_tt/vdd=1.200_vinp=0.600V/27C",
+        "value": 100.0,
+        "margin": 0.00010000000000331966
+      }
+    },
+    {
+      "name": "band_f_last_hz",
+      "unit": "Hz",
+      "limits": {
+        "min": 999999,
+        "max": 1000001
+      },
+      "status": "pass",
+      "worst_case": {
+        "corner_id": "mos_tt/vdd=1.200_vinp=0.600V/27C",
+        "value": 1000000.0,
+        "margin": 1.0
+      }
+    },
+    {
+      "name": "spot_f_1khz_hz",
+      "unit": "Hz",
+      "limits": {
+        "min": 999.999,
+        "max": 1000.001
+      },
+      "status": "pass",
+      "worst_case": {
+        "corner_id": "mos_tt/vdd=1.200_vinp=0.600V/27C",
+        "value": 1000.0,
+        "margin": 0.0009999999999763531
+      }
+    },
+    {
+      "name": "spot_f_10khz_hz",
+      "unit": "Hz",
+      "limits": {
+        "min": 9999.99,
+        "max": 10000.01
+      },
+      "status": "pass",
+      "worst_case": {
+        "corner_id": "mos_tt/vdd=1.200_vinp=0.600V/27C",
+        "value": 10000.0,
+        "margin": 0.010000000000218279
+      }
+    },
+    {
+      "name": "spot_f_100khz_hz",
+      "unit": "Hz",
+      "limits": {
+        "min": 99999.9,
+        "max": 100000.1
+      },
+      "status": "pass",
+      "worst_case": {
+        "corner_id": "mos_tt/vdd=1.200_vinp=0.600V/27C",
+        "value": 100000.0,
+        "margin": 0.10000000000582077
+      }
+    }
+  ],
+  "corners": [
+    {
+      "corner_id": "mos_tt/vdd=1.200_vinp=0.600V/27C",
+      "process": "mos_tt",
+      "supply_v": {
+        "vdd": 1.2,
+        "vinp": 0.6
+      },
+      "temperature_c": 27,
+      "status": "pass",
+      "runtime_s": 0.166,
+      "measurements": [
+        {
+          "name": "inoise_int_vrms",
+          "value": 8.729301696786e-05,
+          "unit": "V",
+          "status": "pass",
+          "margin": 2.1606983032140006e-05
+        },
+        {
+          "name": "inoise_100hz_v_rthz",
+          "value": 2.786726543735e-06,
+          "unit": "V/rtHz",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "inoise_1khz_v_rthz",
+          "value": 8.814770596384e-07,
+          "unit": "V/rtHz",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "inoise_10khz_v_rthz",
+          "value": 2.794951874091e-07,
+          "unit": "V/rtHz",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "inoise_100khz_v_rthz",
+          "value": 9.071780145166e-08,
+          "unit": "V/rtHz",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "inoise_1mhz_v_rthz",
+          "value": 3.535270430622e-08,
+          "unit": "V/rtHz",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "band_points",
+          "value": 81.0,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.0
+        },
+        {
+          "name": "band_f_first_hz",
+          "value": 100.0,
+          "unit": "Hz",
+          "status": "pass",
+          "margin": 0.00010000000000331966
+        },
+        {
+          "name": "band_f_last_hz",
+          "value": 1000000.0,
+          "unit": "Hz",
+          "status": "pass",
+          "margin": 1.0
+        },
+        {
+          "name": "spot_f_1khz_hz",
+          "value": 1000.0,
+          "unit": "Hz",
+          "status": "pass",
+          "margin": 0.0009999999999763531
+        },
+        {
+          "name": "spot_f_10khz_hz",
+          "value": 10000.0,
+          "unit": "Hz",
+          "status": "pass",
+          "margin": 0.010000000000218279
+        },
+        {
+          "name": "spot_f_100khz_hz",
+          "value": 100000.0,
+          "unit": "Hz",
+          "status": "pass",
+          "margin": 0.10000000000582077
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    }
+  ]
+}

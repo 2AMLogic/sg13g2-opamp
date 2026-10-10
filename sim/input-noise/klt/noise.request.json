@@ -10,7 +10,7 @@
     "Integrated figure: `noise2.inoise_total` -- ngspice's already-square-rooted RMS volts over the swept band, the vector the harness reads (setplot noise2). Reached with an `expr`; no `.meas` is needed.",
     "Spot densities: noise1.inoise_spectrum[0/20/40/60/80] = 100 Hz / 1 kHz / 10 kHz / 100 kHz / 1 MHz (V/sqrt(Hz)); the band_* / spot_f_* measurements assert the frequencies and the 81-point length, as the harness does, so index arithmetic is never trusted silently.",
     "The harness's DC operating-point sanity and closed-loop-gain guard need a second analysis (op / ac) in the same corner; klt sim runs ONE analysis per corner, so they are not reproduced here and compare.py does not compare them.",
-    "Prototype status: the `expr` forms were exercised ONLY on a toy resistor divider (ngspice-42, klt 0.7.0): all 12 resolved to scalars. NOT run against the DUT: the OSDI preflight needs ngspice-46. See ../README.md.",
+    "Prototype status: the `expr` forms were first exercised on a toy resistor divider (ngspice-42, klt 0.7.0), then on ONE DUT corner (noise.prototype-tt27-1v20.request.json: mos_tt, 27 C, 1.20 V; ngspice-46, klt 0.7.0, local): all 12 resolved, matching the harness row to its printed precision. One corner is a prototype, not an envelope. See ../README.md.",
     "options.timeout_s = 300 s per corner: the harness noise deck (op + two noise sweeps + ac) is seconds per point; this deck runs one 81-point noise sweep.",
     "Solver tolerance: ngspice default, no .options reltol/abstol/vntol (DR-0005).",
     "ngspice_init raises the printed digits only (measureprec for .meas, numdgt for expr); it changes no solver setting.",
