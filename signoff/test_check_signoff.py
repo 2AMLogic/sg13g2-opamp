@@ -48,13 +48,18 @@ class FixtureCase(unittest.TestCase):
         for name, text in (("a", "alpha"), ("erc", "e"), ("lvs", "l")):
             (self.root / "art").mkdir(exist_ok=True)
             (self.root / "art" / f"{name}.txt").write_text(text)
-        for name in ("e1", "e11a", "e11b"):
+        for name in ("e1", "e11b"):
             _dump(self.root / "signoff" / "evidence" / f"{name}.json", {"n": name})
+        # The ERC envelope names its supply spec and records that spec's hash.
+        self.spec_path = self.root / "art" / "supply_spec.json"
+        _dump(self.spec_path, {"supplies": ["vdd", "vss"]})
+        self.erc_env = self.root / "signoff" / "evidence" / "e11a.json"
+        self.write_erc_envelope()
 
         def entry(env: str, artifact: str) -> dict:
             return {
                 "file": f"signoff/evidence/{env}.json",
-                "kind": "sim",
+                "kind": "erc" if env == "e11a" else "sim",
                 "content_hash": ck.sha256_file(self.root / artifact),
             }
 
@@ -127,6 +132,14 @@ class FixtureCase(unittest.TestCase):
             self.addCleanup(p.stop)
 
     # -- helpers ---------------------------------------------------------
+    def write_erc_envelope(self, **overrides) -> None:
+        doc = {
+            "spec": "art/supply_spec.json",
+            "provenance": {"spec": {"content_hash": ck.sha256_file(self.spec_path)}},
+        }
+        doc.update(overrides)
+        _dump(self.erc_env, doc)
+
     def write(self) -> None:
         _dump(self.root / "signoff" / "block-manifest.json", self.manifest)
         _dump(self.root / "signoff" / "pinned-inputs.json", self.pins)
@@ -140,6 +153,7 @@ class FixtureCase(unittest.TestCase):
             manifest = ck.load_json(ck.MANIFEST, failures, "manifest")
             evidence = ck.check_manifest(manifest, failures)
             ck.check_pins(evidence, failures)
+            ck.check_erc_spec_binding(evidence, failures)
             ck.check_lvs_reference(evidence, failures)
             ck.check_characterization(evidence, failures)
             path = ck.latest_report(failures)
@@ -286,6 +300,54 @@ class PinsTest(FixtureCase):
     def test_compound_pin_list_wrong_length(self):
         self.pins["inputs"]["11"] = [ITEM_11_PARTS[0]]
         self.assertFails("must be a list of 2 artifact path(s)")
+
+
+class ErcSpecBindingTest(FixtureCase):
+    def test_unchanged_spec_passes(self):
+        self.assertEqual(self.run_checks(), [])
+
+    def test_changed_supply_declaration(self):
+        _dump(self.spec_path, {"supplies": ["vdd", "vss", "vdd2"]})
+        self.assertFails("supply spec art/supply_spec.json has changed")
+        self.assertFails("re-run the ERC check")
+
+    def test_missing_spec_file(self):
+        self.spec_path.unlink()
+        self.assertFails("which is missing or unreadable")
+
+    def test_missing_spec_field(self):
+        self.write_erc_envelope(spec=None)
+        self.assertFails("names no supply `spec` path")
+
+    def test_missing_hash(self):
+        self.write_erc_envelope(provenance={})
+        self.assertFails("records no `provenance.spec.content_hash`")
+
+    def test_malformed_hash(self):
+        self.write_erc_envelope(provenance={"spec": {"content_hash": "sha256:xyz"}})
+        self.assertFails("malformed `provenance.spec.content_hash`")
+
+    def test_non_string_hash(self):
+        self.write_erc_envelope(provenance={"spec": {"content_hash": 7}})
+        self.assertFails("malformed `provenance.spec.content_hash`")
+
+    def test_escaping_relative_path(self):
+        outside = self.root.parent / "outside_spec.json"
+        outside.write_text("{}")
+        self.addCleanup(outside.unlink)
+        self.write_erc_envelope(
+            spec="../outside_spec.json",
+            provenance={"spec": {"content_hash": ck.sha256_file(outside)}},
+        )
+        self.assertFails("outside the repository")
+
+    def test_escaping_absolute_path(self):
+        self.write_erc_envelope(spec=str(self.spec_path.parent.parent.parent / "x"))
+        self.assertFails("outside the repository")
+
+    def test_no_erc_part_in_compound_item(self):
+        self.manifest["evidence"]["11"][0]["kind"] = "sim"
+        self.assertFails("has no part of kind `erc`")
 
 
 class ReportTest(FixtureCase):
