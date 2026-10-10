@@ -36,6 +36,17 @@ treats 3 as failure cannot run on a block that is not already finished.
   [`klt-pin.txt`](klt-pin.txt) — floating `main` would make the committed
   record disagree with a re-run for reasons unrelated to this block's evidence.
 
+**How `check_signoff.py --run-klt` picks its `klt`.** By default it always runs
+the pinned revision via `uvx --from git+https://github.com/2AMLogic/klayout-tools@<pin> klt`,
+**even if a global `klt` is on `PATH`** (a different revision would grade a
+different checklist). If `uvx` (or the pin) is unavailable it refuses with a
+setup message; it never falls back to an unverified global `klt`. The first run
+may need network access to populate the uv cache. `KLT_SIGNOFF_CMD` (space
+separated command) overrides this for controlled environments; whoever sets it
+owns revision correctness. CI sets `KLT_SIGNOFF_CMD=klt` because the preceding
+step installs the pinned revision with pip. Selection is covered offline by
+`KltCommandTest` in `test_check_signoff.py`.
+
 ## Block kind: `analog`
 
 Confirmed against the block, not assumed: this repository is the plain-CMOS

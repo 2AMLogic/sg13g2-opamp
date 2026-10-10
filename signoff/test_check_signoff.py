@@ -472,5 +472,64 @@ class IntegratorTest(FixtureCase):
         )
 
 
+class KltCommandTest(unittest.TestCase):
+    """Command selection for the local re-grade; offline, nothing is executed."""
+
+    PIN = "a" * 40
+
+    def select(self, *, binaries=(), override=None, pin=PIN):
+        env = {} if override is None else {"KLT_SIGNOFF_CMD": override}
+        with (
+            mock.patch.dict(ck.os.environ, env, clear=False),
+            mock.patch.object(ck, "klt_pin", return_value=pin),
+            mock.patch.object(
+                ck, "_which", side_effect=lambda b: f"/bin/{b}" if b in binaries else None
+            ),
+        ):
+            if override is None:
+                ck.os.environ.pop("KLT_SIGNOFF_CMD", None)
+            return ck.klt_command()
+
+    def pinned(self):
+        return [
+            "uvx",
+            "--from",
+            f"git+https://github.com/2AMLogic/klayout-tools@{self.PIN}",
+            "klt",
+        ]
+
+    def test_both_present_uses_pin(self):
+        self.assertEqual(self.select(binaries=("uvx", "klt")), self.pinned())
+
+    def test_uvx_only_uses_pin(self):
+        self.assertEqual(self.select(binaries=("uvx",)), self.pinned())
+
+    def test_only_global_klt_refuses(self):
+        with self.assertRaises(ck.KltSetupError) as cm:
+            self.select(binaries=("klt",))
+        self.assertIn("uvx not found", str(cm.exception))
+        self.assertIn("KLT_SIGNOFF_CMD", str(cm.exception))
+
+    def test_nothing_present_refuses(self):
+        with self.assertRaises(ck.KltSetupError):
+            self.select()
+
+    def test_missing_pin_refuses(self):
+        with self.assertRaises(ck.KltSetupError):
+            self.select(binaries=("uvx",), pin=None)
+
+    def test_override_wins_without_any_binary(self):
+        self.assertEqual(self.select(override="my klt --x"), ["my", "klt", "--x"])
+
+    def test_override_wins_over_both_present(self):
+        self.assertEqual(self.select(binaries=("uvx", "klt"), override="klt"), ["klt"])
+
+    def test_run_klt_reports_setup_failure(self):
+        failures = ck.Failures()
+        with mock.patch.object(ck, "klt_command", side_effect=ck.KltSetupError("no uvx")):
+            ck.run_klt({}, failures)
+        self.assertTrue(any("klt re-grade: no uvx" in f for f in failures.messages), failures.messages)
+
+
 if __name__ == "__main__":
     unittest.main()

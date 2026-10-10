@@ -192,4 +192,9 @@ jobs:
         # which is this block's current state and not an error --
         # check_signoff.py knows that, and fails only on a real error or on
         # any drift between the fresh grade and the committed record.
+        # KLT_SIGNOFF_CMD: the install step above put the pinned revision on
+        # PATH; the default (uvx at the pin) is for local use, and setting the
+        # override here makes CI's "I own the revision" explicit.
+        env:
+          KLT_SIGNOFF_CMD: klt
         run: python3 signoff/check_signoff.py --run-klt

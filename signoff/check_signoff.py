@@ -636,28 +636,40 @@ def klt_pin() -> str | None:
     return None
 
 
-def klt_command() -> list[str]:
-    """How to invoke `klt`, pinned.
+class KltSetupError(RuntimeError):
+    """The pinned klt launcher cannot be assembled; the message says how to fix it."""
 
-    `$KLT_SIGNOFF_CMD` (shell-style, space separated) overrides. Otherwise a
-    `klt` on PATH is used when present, and failing that `uvx` runs the pinned
-    revision in a throwaway environment -- the same revision CI installs, so a
-    local re-grade and a CI re-grade compare the same checklist.
+
+def klt_command() -> list[str]:
+    """How to invoke `klt`, always at the committed pin.
+
+    `$KLT_SIGNOFF_CMD` (shell-style, space separated) overrides; whoever sets
+    it owns revision correctness (CI does, after installing the pin). Otherwise
+    `uvx` runs the revision in `signoff/klt-pin.txt` in a throwaway environment,
+    *regardless of any `klt` on PATH* -- a global install of another revision
+    would grade a different checklist. If the pin or `uvx` is unavailable this
+    raises KltSetupError rather than falling back to an unverified `klt`.
     """
     override = os.environ.get("KLT_SIGNOFF_CMD", "").strip()
     if override:
         return override.split()
-    if _which("klt"):
-        return ["klt"]
     pin = klt_pin()
-    if pin and _which("uvx"):
-        return [
-            "uvx",
-            "--from",
-            f"git+https://github.com/2AMLogic/klayout-tools@{pin}",
-            "klt",
-        ]
-    return ["klt"]
+    if not pin:
+        raise KltSetupError(f"{rel(KLT_PIN)} names no klayout-tools revision")
+    if not _which("uvx"):
+        raise KltSetupError(
+            "uvx not found, so the pinned klt revision "
+            f"({pin}) cannot be run. Install uv (https://docs.astral.sh/uv/), "
+            "or set KLT_SIGNOFF_CMD to a command that runs that revision "
+            "(you then own revision correctness). A global `klt` on PATH is "
+            "deliberately not used."
+        )
+    return [
+        "uvx",
+        "--from",
+        f"git+https://github.com/2AMLogic/klayout-tools@{pin}",
+        "klt",
+    ]
 
 
 def _which(binary: str) -> str | None:
@@ -670,7 +682,12 @@ def _which(binary: str) -> str | None:
 
 def run_klt(report_doc, failures: Failures) -> None:
     """Re-grade the manifest with klt and diff against the committed report."""
-    command = klt_command() + [
+    try:
+        base = klt_command()
+    except KltSetupError as exc:
+        failures.add(f"klt re-grade: {exc}")
+        return
+    command = base + [
         "signoff",
         "--manifest",
         str(MANIFEST.relative_to(REPO_ROOT)),
