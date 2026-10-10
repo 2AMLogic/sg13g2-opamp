@@ -85,6 +85,18 @@
 # records/<id>.md exists the record is finalized and a resume refuses
 # (exit 3) rather than rewriting it; a fresh id that collides with an
 # existing one refuses too (issue #140, see sim/record-paths.sh).
+#
+# Resume is bound to the campaign's original inputs (issue #163): a fresh
+# run publishes the immutable corners/<id>/campaign.manifest (DUT and
+# snapshot bytes, template bytes, joined-record paths + bytes, grid, load,
+# seeds, sampling knobs, tolerances, ngspice version, PDK model-library
+# digest) before its first simulation, and a resume re-renders it from the
+# current inputs and refuses (exit 3, naming every differing key) before
+# any sample, the snapshot or the pilot is touched. A resume joins the
+# records the manifest names, not the newest ones, and restores the saved
+# pilot sigma into the final report. A campaign without a manifest
+# (begun before #163) is refused with instructions to start a new id.
+# See campaign-guard.sh / campaign_manifest.py and README.md "Resuming".
 set -euo pipefail
 
 ALLOW_LOCAL_GRID=0
@@ -118,35 +130,35 @@ fi
 # av0_db out of sim/open-loop-ac/ (joined, not re-measured), exactly as
 # sim/cmrr-psrr/ does; the negative control additionally asserts equality
 # with #25's committed per-point systematic acm0/vout/vibias/cmrr.
-if [[ -z "${AC_RECORD_CSV:-}" ]]; then
-  AC_RECORD_CSV="$(sg13g2_latest_record_csv "${SIM_DIR}/open-loop-ac/records")"
+#
+# A fresh campaign joins AC_RECORD_CSV / CMRR_RECORD_CSV when set, else the
+# newest committed record of each; the choice (path AND bytes) is then
+# bound in the campaign manifest. A RESUMED campaign joins the records its
+# manifest names (cmrr_mc_campaign_guard below), never "the newest" -- a
+# record committed after the campaign began must not change the join.
+AC_LATEST_CSV="$(sg13g2_latest_record_csv "${SIM_DIR}/open-loop-ac/records")"
+CMRR_LATEST_CSV="$(sg13g2_latest_record_csv "${SIM_DIR}/cmrr-psrr/records")"
+if [[ -z "${RECORD_ID:-}" ]]; then
+  # Definitely a fresh run: fail before the record id is reserved.
+  _ac="${AC_RECORD_CSV:-${AC_LATEST_CSV}}"
+  if [[ -z "${_ac}" || ! -s "${_ac}" ]]; then
+    echo "run_cmrr_mismatch_mc.sh: no sim/open-loop-ac/records/*.csv found -- this experiment's CMRR" >&2
+    echo "run_cmrr_mismatch_mc.sh: needs that record's per-point av0_db column." >&2
+    exit 3
+  fi
+  _cm="${CMRR_RECORD_CSV:-${CMRR_LATEST_CSV}}"
+  if [[ -z "${_cm}" || ! -s "${_cm}" ]]; then
+    echo "run_cmrr_mismatch_mc.sh: no sim/cmrr-psrr/records/*.csv found -- the negative control" >&2
+    echo "run_cmrr_mismatch_mc.sh: asserts against issue #14's committed systematic record." >&2
+    exit 3
+  fi
 fi
-if [[ -z "${AC_RECORD_CSV:-}" || ! -s "${AC_RECORD_CSV}" ]]; then
-  echo "run_cmrr_mismatch_mc.sh: no sim/open-loop-ac/records/*.csv found -- this experiment's CMRR" >&2
-  echo "run_cmrr_mismatch_mc.sh: needs that record's per-point av0_db column." >&2
-  exit 3
-fi
-AC_RECORD_ID="$(basename "${AC_RECORD_CSV}" .csv)"
-
-if [[ -z "${CMRR_RECORD_CSV:-}" ]]; then
-  CMRR_RECORD_CSV="$(sg13g2_latest_record_csv "${SIM_DIR}/cmrr-psrr/records")"
-fi
-if [[ -z "${CMRR_RECORD_CSV:-}" || ! -s "${CMRR_RECORD_CSV}" ]]; then
-  echo "run_cmrr_mismatch_mc.sh: no sim/cmrr-psrr/records/*.csv found -- the negative control" >&2
-  echo "run_cmrr_mismatch_mc.sh: asserts against issue #14's committed systematic record." >&2
-  exit 3
-fi
-CMRR_RECORD_ID="$(basename "${CMRR_RECORD_CSV}" .csv)"
 
 OSDI_DIR="${SG13G2_OSDI_DIR}"
-sg13g2_preflight_record_paths --resumable
-
-DUT_NETLIST_SNAPSHOT="${SNAPSHOTS_OUT}/opamp_core.spice"
-if [[ ! -s "${DUT_NETLIST_SNAPSHOT}" ]]; then
-  cp "${DUT_NETLIST_SRC}" "${DUT_NETLIST_SNAPSHOT}"
-fi
 
 # --- Knobs -----------------------------------------------------------------
+# Every knob below is bound in the campaign manifest; changing one under a
+# replayed RECORD_ID refuses the resume.
 MC_N_FLOOR="${MC_N_FLOOR:-300}"                 # spec-row wording: "mismatch MC N>=300"
 MC_TARGET_SIGMA_RE="${MC_TARGET_SIGMA_RE:-0.05}"  # target rel. sampling error of the linear sigma
 MC_NEGCTL_N="${MC_NEGCTL_N:-3}"
@@ -195,6 +207,22 @@ find_point_index() { # <point_id>
 
 PILOT_A_IDX="$(find_point_index mos_tt_27C_1.20V)"
 PILOT_B_IDX="$(find_point_index mos_fs_125C_1.08V)"
+
+# --- Record id, campaign manifest (issue #163) -------------------------------
+# Reserve (fresh) or reopen (resume) the record id, then bind the campaign
+# to its inputs BEFORE any artifact is created or reused: a fresh run
+# snapshots the DUT and publishes corners/<id>/campaign.manifest before the
+# first simulation; a resume refuses on any input difference (or a missing
+# manifest) and restores the saved pilot (mc_n_effective and the pilot
+# sigma) when there is one. See campaign-guard.sh.
+sg13g2_preflight_record_paths --resumable
+# shellcheck disable=SC2034  # consumed by campaign-guard.sh and sg13g2_render_netlist
+DUT_NETLIST_SNAPSHOT="${SNAPSHOTS_OUT}/opamp_core.spice"
+pilot_sigma_lin="unset"
+MC_N_EFFECTIVE="${MC_N_FLOOR}"
+# shellcheck source=/dev/null
+source "${SCRIPT_DIR}/campaign-guard.sh"
+cmrr_mc_campaign_guard
 
 # --------------------------------------------------------------------------- 
 # Per-point sample extraction + per-sample sanity + per-point statistics.
@@ -406,9 +434,8 @@ run_deck() { # <point_index> <section> <n> <tag> [seed-override]
 # files are committed alongside the grid ones.
 #   SE(sigma_hat)/sigma ~ 1/sqrt(2N)  ->  N_req = ceil(1/(2*MC_TARGET_SIGMA_RE^2))
 # ---------------------------------------------------------------------------
-pilot_sigma_lin="unset"
-MC_N_EFFECTIVE="${MC_N_FLOOR}"
-if [[ ! -s "${RECORDS_DIR}/${RECORD_ID}.pilot.txt" ]]; then
+PILOT_TXT="${RECORDS_DIR}/${RECORD_ID}.pilot.txt"
+if [[ "${PILOT_RESTORED}" != "1" ]]; then
   echo "run_cmrr_mismatch_mc.sh: pilot phase -- points: ${PILOT_A_IDX} ${point_ids[$PILOT_A_IDX]}, ${PILOT_B_IDX} ${point_ids[$PILOT_B_IDX]} at N=${MC_N_FLOOR}" >&2
   run_deck "${PILOT_A_IDX}" "${point_corners[$PILOT_A_IDX]}_mismatch" "${MC_N_FLOOR}" "pilot"
   run_deck "${PILOT_B_IDX}" "${point_corners[$PILOT_B_IDX]}_mismatch" "${MC_N_FLOOR}" "pilot"
@@ -463,10 +490,13 @@ PYEOF
     echo "seed_base: ${MC_SEED_BASE}"
     echo "seed_formula: seed = MC_SEED_BASE + grid_index (corner-major, 0-based)"
     echo "mismatch_section_formula: corner + '_mismatch' (cornerMOSlv.lib per-corner sections)"
-  } > "${RECORDS_DIR}/${RECORD_ID}.pilot.txt"
+  } > "${PILOT_TXT}.tmp"
+  # Published whole or not at all: a kill mid-write must not leave a
+  # truncated pilot that a resume would then restore.
+  mv "${PILOT_TXT}.tmp" "${PILOT_TXT}"
 else
-  MC_N_EFFECTIVE="$(sed -n 's/^mc_n_effective: //p' "${RECORDS_DIR}/${RECORD_ID}.pilot.txt")"
-  echo "run_cmrr_mismatch_mc.sh: resume -- pilot already derived (mc_n_effective=${MC_N_EFFECTIVE})" >&2
+  # Restored (and checked against this invocation) by cmrr_mc_campaign_guard.
+  echo "run_cmrr_mismatch_mc.sh: resume -- pilot already derived (mc_n_effective=${MC_N_EFFECTIVE}, pilot linear sigma ${pilot_sigma_lin} V/V)" >&2
 fi
 
 # ---------------------------------------------------------------------------

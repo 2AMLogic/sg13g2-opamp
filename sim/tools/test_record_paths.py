@@ -45,6 +45,7 @@ fi
 source "${RECORD_PATHS}"
 sg13g2_preflight_record_paths "$@"
 echo "RECORD_ID=${RECORD_ID}"
+echo "RECORD_RESUMED=${RECORD_RESUMED}"
 [[ -n "${NO_WRITE:-}" ]] && exit 0
 echo "snapshot ${tag}" > "${SNAPSHOTS_OUT}/opamp_core.spice"
 echo "log ${tag}" > "${CORNERS_OUT}/p0.log"
@@ -207,6 +208,8 @@ class ResumableCampaign(unittest.TestCase):
             r = fx.run("resume", "--resumable", RECORD_ID=RID, NO_WRITE="1")
             self.assertEqual(r.returncode, 0, r.stderr)
             self.assertIn(f"RECORD_ID={RID}", r.stdout)
+            # issue #163: the cmrr-mismatch manifest check keys on this
+            self.assertIn("RECORD_RESUMED=1", r.stdout)
             self.assertEqual(
                 (fx.bench / "corners" / RID / "p0_mc_samples.txt")
                 .read_text(), "partial\n")
@@ -241,6 +244,16 @@ class ResumableCampaign(unittest.TestCase):
             r = fx.run("fresh", "--resumable")
             self.assertEqual(r.returncode, 0, r.stderr)
             self.assertIn(f"RECORD_ID={RID}", r.stdout)
+            self.assertIn("RECORD_RESUMED=0", r.stdout)
+
+    def test_resumable_with_unused_record_id_is_fresh(self):
+        # Nothing on disk for the id yet: reserved like a fresh run, so the
+        # cmrr-mismatch runner publishes a manifest rather than demanding one.
+        with tempfile.TemporaryDirectory() as d:
+            fx = Fixture(d)
+            r = fx.run("fresh", "--resumable", RECORD_ID=RID, NO_WRITE="1")
+            self.assertEqual(r.returncode, 0, r.stderr)
+            self.assertIn("RECORD_RESUMED=0", r.stdout)
 
     def test_non_resumable_caller_ignores_env_record_id(self):
         # Without --resumable an inherited RECORD_ID is not honored (as
