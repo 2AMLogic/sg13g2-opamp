@@ -173,6 +173,69 @@ class TestIndexEnvelope(unittest.TestCase):
         _corner(env)["measurements"][0]["value"] = 2.0
         self.fails(env, "lbl: mos_tt_27C_1.20V: a too big", corner_check=check)
 
+    def test_accept_statuses(self):
+        env = _envelope()
+        _corner(env)["measurements"][0]["status"] = None
+        self.assertIsNone(self.index(env)[TT]["a__status"])
+        self.fails(env, "lbl: mos_tt_27C_1.20V: measurement a status None", accept_statuses=("pass", "fail"))
+        _corner(env)["measurements"][0]["status"] = "fail"
+        self.assertEqual(self.index(env, accept_statuses=("pass", "fail"))[TT]["a__status"], "fail")
+
+    def test_supply_key(self):
+        env = _envelope()
+        for c in env["corners"]:
+            c["supply_v"]["vcm"] = c["supply_v"].pop("vinp")
+        self.assertEqual(len(self.index(env, supply_key="vcm")), 45)
+        _corner(env)["supply_v"]["vcm"] = 0.5
+        self.fails(env, "lbl: mos_tt_27C_1.20V: vcm 0.5 != vdd/2 (1.2/2)", supply_key="vcm")
+        del _corner(env)["supply_v"]["vcm"]
+        self.fails(env, "lbl: mos_tt/vdd=1.200/27C: missing process or supply_v.vdd/vcm; "
+                        "mos_tt_27C_1.20V: missing from lbl", supply_key="vcm")
+
+    def test_points(self):
+        nominal = [TT]
+        self.assertEqual(list(self.index(_envelope(nominal), points=nominal)), nominal)
+        self.fails(_envelope(), "lbl: " + "; ".join(
+            f"{E.key_str(k)}: unexpected point (not in the requested point set)"
+            for k in sorted(set(E.expected_keys()) - {TT})), points=nominal)
+        self.fails(_envelope([]), "lbl: mos_tt_27C_1.20V: missing from lbl", points=nominal)
+
+    def test_envelope_check_hook(self):
+        def check(env, label, problems):
+            if env.get("x") == "raise":
+                raise E.InputError(f"{label}: x raised")
+            if env.get("x"):
+                problems.append(f"x is {env['x']}")
+
+        env = _envelope()
+        self.assertEqual(len(self.index(env, envelope_check=check)), 45)
+        env["x"] = "raise"
+        self.fails(env, "lbl: x raised", envelope_check=check)
+        # Appended problems come before every per-corner problem.
+        env["x"] = "set"
+        _corner(env)["status"] = "error"
+        self.fails(env, "lbl: x is set; mos_tt_27C_1.20V: corner status 'error'", envelope_check=check)
+
+    def test_measurement_check_hook(self):
+        seen = []
+
+        def check(k, n, m, v, problems):
+            seen.append((k, n, v))
+            if v > 1:
+                problems.append(f"{E.key_str(k)}: {n} too big")
+                return False
+            return True
+
+        self.index(_envelope(), measurement_check=check)
+        self.assertEqual(len(seen), 90)
+        env = _envelope()
+        c = _corner(env)
+        c["measurements"][0]["value"] = 2.0
+        c["measurements"][1]["value"] = float("nan")  # finiteness is checked before the hook
+        self.fails(env, "lbl: mos_tt_27C_1.20V: a too big; "
+                        "mos_tt_27C_1.20V: measurement b value nan is missing or non-finite",
+                   measurement_check=check)
+
 
 class TestReadEnvelope(unittest.TestCase):
     def test_read_and_unreadable(self):
@@ -262,6 +325,30 @@ class TestCliScaffold(unittest.TestCase):
             rc, out, err = self._cli(["validate", absent])
             self.assertEqual((rc, out), (2, ""))
             self.assertTrue(err.startswith(f"compare.py: {absent}: unreadable envelope ("))
+
+    def test_common_args_reach_both_subcommands_and_the_gate(self):
+        sets = {"all": None, "tt": [TT]}
+
+        def index(env, label, points):
+            return E.index_envelope(env, label, MEAS, points=sets[points])
+
+        def cli(argv):
+            out, err = io.StringIO(), io.StringIO()
+            with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+                rc = E.run_cli(argv, description="d", compare_help="h",
+                               harness_args=(("--extra", {"required": True}),),
+                               common_args=(("--points", {"choices": sorted(sets), "default": "all"}),),
+                               index_fn=index, run=lambda a, tool, env: {"status": "agree", "n": len(tool)},
+                               inputs=(), summary=lambda rep: f"S {rep['n']}", validate_noun="corner(s)")
+            return rc, out.getvalue(), err.getvalue()
+
+        with tempfile.TemporaryDirectory() as d:
+            one = os.path.join(d, "one.json")
+            with open(one, "w") as f:
+                json.dump(_envelope([TT]), f)
+            self.assertEqual(cli(["validate", one, "--points", "tt"])[:2], (0, f"validate: {one}: 1 corner(s), status pass, ok\n"))
+            self.assertEqual(cli(["validate", one])[0], 2)
+            self.assertEqual(cli(["compare", "--envelope", one, "--extra", "x", "--points", "tt"])[:2], (0, "S 1\n"))
 
 
 if __name__ == "__main__":
