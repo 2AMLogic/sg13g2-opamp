@@ -242,6 +242,13 @@ shipped 0.10), `AC_RECORD_CSV` / `SWING_RECORD_CSV` (sibling-record
 joins). Any override mints a NEW record directory (append-only
 convention); it never rewrites the committed one.
 
+The raw-curve bound locators (coarse bounds, fixed-point re-locate,
+fine lo, fine hi and its verification) live in `cmr_analysis.py`; the
+fine hi bound and its verification share one crossing function. They
+are covered offline, against the committed raw curves and synthetic
+controls, by `python3 -m unittest sim/input-cmr/test_cmr_analysis.py`
+(no ngspice or PDK).
+
 ## What was actually measured (this repo's committed record)
 
 Record `records/20260921-174405-65f5fb4.{csv,md}` — 45/45 points

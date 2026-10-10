@@ -74,6 +74,10 @@ source "${SIM_DIR}/preflight.sh"
 # the 10 sim/*/run_*.sh callers that needs it, so it stays here rather than
 # in the shared sim/preflight.sh; see issue #47's "Verified Corrections").
 command -v python3 >/dev/null 2>&1 || { echo "run_cmr_sweep.sh: python3 not on PATH." >&2; exit 3; }
+# Raw-curve bound locators (sample reader + the fine hi-bound crossing
+# shared by the bound and its verification): cmr_analysis.py, offline-tested
+# by test_cmr_analysis.py.
+CMR_ANALYSIS=(python3 -I "${SCRIPT_DIR}/cmr_analysis.py")
 sg13g2_preflight_require_netlist
 
 # --- Committed sibling-record cross-references ---------------------------
@@ -373,46 +377,7 @@ PYEOF
       #   lo: vtail(vcm) falls through vdsat5 as Vcm drops.
       #   hi: the pair condition rearranges to vd1 - Xcm >= -Vth, so the
       #       crossing of (vd1 - vcm) through -Vth as Vcm rises.
-      read -r lo_prelim hi_prelim hi_vsb_seed lo_unique hi_unique < <(python3 - "${coarse_csv}" "${vdsat5}" "${vth_cc_c}" <<'PYEOF'
-import sys
-path, level5, vth1 = sys.argv[1], float(sys.argv[2]), float(sys.argv[3])
-if sys.argv[2] == "nan" or sys.argv[3] == "nan":
-    print("nan nan nan 0 0"); raise SystemExit(0)
-vcm_v, vtail_v, vds1_v = [], [], []
-for line in open(path):
-    p = line.split()
-    if len(p) < 12:
-        continue
-    vcm_v.append(float(p[0]))
-    vtail_v.append(float(p[3]))
-    vds1_v.append(float(p[5]))
-
-def crossing(xs, ys, level, side):
-    # interpolated x where ys crosses `level`, scanning outward from the
-    # window centre; `side` is -1 (toward lo) or +1 (toward hi). The
-    # scan stops at its first crossing -- the innermost one -- so a
-    # degenerate re-entry closer to the rail cannot widen the bound.
-    idx = range(len(xs) - 1, 0, -1) if side < 0 else range(1, len(xs))
-    for i in idx:
-        a, b = ys[i - 1] - level, ys[i] - level
-        if (a > 0 >= b) or (a < 0 <= b):
-            frac = a / (a - b)
-            return xs[i - 1] + frac * (xs[i] - xs[i - 1]), i
-    return None, None
-
-lo_x, lo_i = crossing(vcm_v, vtail_v, level5, -1)
-y_hi = [vds1_v[k] - vcm_v[k] for k in range(len(vcm_v))]
-hi_x, hi_i = crossing(vcm_v, y_hi, -vth1, +1)
-
-def fmt(x):
-    return "%g" % x if x is not None else "nan"
-# hi_vsb_seed: v(tail) at the in-range-adjacent coarse sample of the
-# provisional hi crossing (the sample pair's in-range side), the fixed
-# point's body-bias seed.
-vsb = vtail_v[hi_i] if hi_i is not None else float("nan")
-print(f"{fmt(lo_x)} {fmt(hi_x)} {vsb:.9g} {1 if lo_x else 0} {1 if hi_x else 0}")
-PYEOF
-)
+      read -r lo_prelim hi_prelim hi_vsb_seed lo_unique hi_unique < <("${CMR_ANALYSIS[@]}" coarse-bounds "${coarse_csv}" "${vdsat5}" "${vth_cc_c}")
 
       # --- pass 2b: bounded fixed-point loop for the hi bound's pair ------
       # requirement. Round 1's centre-bias Vth located a provisional hi
@@ -453,28 +418,7 @@ PYEOF
         fi
         # Re-locate with this round's Vth; also read the crossing's own
         # tail bias (the next round's seed).
-        read -r hi_x vsb_x uniq_x < <(python3 - "${coarse_csv}" "${vth_r}" <<'PYEOF'
-import sys
-path, vth1 = sys.argv[1], float(sys.argv[2])
-if sys.argv[2] == "nan":
-    print("nan nan 0"); raise SystemExit(0)
-vcm_v, vds1_v, vtail_v = [], [], []
-for line in open(path):
-    p = line.split()
-    if len(p) < 12:
-        continue
-    vcm_v.append(float(p[0]))
-    vtail_v.append(float(p[3]))
-    vds1_v.append(float(p[5]))
-for i in range(1, len(vcm_v)):
-    a, b = vds1_v[i - 1] - vcm_v[i - 1] + vth1, vds1_v[i] - vcm_v[i] + vth1
-    if (a > 0 >= b) or (a < 0 <= b):
-        frac = a / (a - b)
-        print(f"{vcm_v[i - 1] + frac * (vcm_v[i] - vcm_v[i - 1]):.9g} {vtail_v[i - 1]:.9g} 1")
-        raise SystemExit(0)
-print("nan nan 0")
-PYEOF
-)
+        read -r hi_x vsb_x uniq_x < <("${CMR_ANALYSIS[@]}" fp-relocate "${coarse_csv}" "${vth_r}")
         if [[ "${hi_x}" == "nan" ]]; then
           echo "run_cmr_sweep.sh: ANALYSIS FAILED ${point_id} -- round ${fp_round} re-locate failed on the coarse curve" >&2
           sim_fail_points+=("${point_id}:fp-relocate")
@@ -535,76 +479,10 @@ PYEOF
       fi
 
       # --- resolve the lo bound on the fine curve -------------------------
-      read -r icmr_lo vtail_lo vds1_lo vds2_lo ivdd_lo lo_in_window < <(python3 - "${finelo_csv}" "${vdsat5}" <<'PYEOF'
-import sys
-path, level = sys.argv[1], float(sys.argv[2])
-if sys.argv[2] == "nan":
-    print("nan nan nan nan nan 0"); raise SystemExit(0)
-vcm_v, vtail_v, vd1_v, vd2_v, ivdd_v = [], [], [], [], []
-for line in open(path):
-    p = line.split()
-    if len(p) < 12:
-        continue
-    vcm_v.append(float(p[0]))
-    vtail_v.append(float(p[3]))
-    vd1_v.append(float(p[5]))
-    vd2_v.append(float(p[7]))
-    ivdd_v.append(float(p[11]))
-# The curve is stored in ascending Vcm; scan from the window's hi end
-# (the in-range side) DOWN so a degenerate re-entry cannot widen the
-# bound. vtail falls through the saturation level only once on this side.
-bound = None
-for i in range(len(vcm_v) - 1, 0, -1):
-    a, b = vtail_v[i] - level, vtail_v[i - 1] - level
-    if (a >= 0 > b):
-        frac = a / (a - b)
-        bound = vcm_v[i] + frac * (vcm_v[i - 1] - vcm_v[i])
-        s = i
-        break
-if bound is None:
-    print("nan nan nan nan nan 0"); raise SystemExit(0)
-in_window = 1 if (vcm_v[0] < bound < vcm_v[-1]) else 0
-# State at the in-range-adjacent sample (index s: the last sample at or
-# above the saturation edge -- unmodified ngspice output, same convention
-# as sim/input-offset/'s *_sample_* columns).
-print(f"{bound:.9g} {vtail_v[s]:.9g} {vd1_v[s] - vtail_v[s]:.9g} {vd2_v[s] - vtail_v[s]:.9g} {ivdd_v[s]:.9g} {in_window}")
-PYEOF
-)
+      read -r icmr_lo vtail_lo vds1_lo vds2_lo ivdd_lo lo_in_window < <("${CMR_ANALYSIS[@]}" fine-lo "${finelo_csv}" "${vdsat5}")
 
       # --- resolve the hi bound on the fine curve (bound-setting probe) --
-      read -r icmr_hi vtail_hi vgs1_hi vsb1_hi vds1_hi vds2_hi ivdd_hi hi_in_window < <(python3 - "${finehi_csv}" "${vth_pair_cc}" <<'PYEOF'
-import sys
-path, vth1 = sys.argv[1], float(sys.argv[2])
-if sys.argv[2] == "nan":
-    print("nan nan nan nan nan nan nan 0"); raise SystemExit(0)
-vcm_v, vtail_v, vd1_v, vd2_v, ivdd_v = [], [], [], [], []
-for line in open(path):
-    p = line.split()
-    if len(p) < 12:
-        continue
-    vcm_v.append(float(p[0]))
-    vtail_v.append(float(p[3]))
-    vd1_v.append(float(p[5]))
-    vd2_v.append(float(p[7]))
-    ivdd_v.append(float(p[11]))
-# y = vd1 - vcm falls through -vth1 as vcm rises; scan ascending (from
-# the in-range/lo side) so a degenerate re-entry cannot widen the bound.
-bound = None
-for i in range(0, len(vcm_v) - 1):
-    a = vd1_v[i] - vcm_v[i] + vth1
-    b = vd1_v[i + 1] - vcm_v[i + 1] + vth1
-    if (a >= 0 > b):
-        frac = a / (a - b)
-        bound = vcm_v[i] + frac * (vcm_v[i + 1] - vcm_v[i])
-        s = i
-        break
-if bound is None:
-    print("nan nan nan nan nan nan nan 0"); raise SystemExit(0)
-in_window = 1 if (vcm_v[0] < bound < vcm_v[-1]) else 0
-# State at the in-range-adjacent sample (index s).
-print(f"{bound:.9g} {vtail_v[s]:.9g} {vcm_v[s] - vtail_v[s]:.9g} {vtail_v[s]:.9g} {vd1_v[s] - vtail_v[s]:.9g} {vd2_v[s] - vtail_v[s]:.9g} {ivdd_v[s]:.9g} {in_window}")
-PYEOF
-)
+      read -r icmr_hi vtail_hi vgs1_hi vsb1_hi vds1_hi vds2_hi ivdd_hi hi_in_window < <("${CMR_ANALYSIS[@]}" fine-hi "${finehi_csv}" "${vth_pair_cc}")
 
       # --- pass 4: verification probe at the recorded bound's body bias --
       if ! run_probe "${mech3_net}" "${mech3_log}" "${mech3_p_csv}" "${mech_m5_csv}" \
@@ -617,33 +495,7 @@ PYEOF
 
       # --- fixed-point verification: re-read the bound with the verifying
       # Vth on the SAME fine curve; the shift must close within resolution.
-      read -r hi_bound_verify hi_converged hi_shift < <(python3 - "${finehi_csv}" "${vth_cc_verify}" "${icmr_hi}" "${FINE_STEP}" <<'PYEOF'
-import sys
-path, vth1, rec_bound, step = sys.argv[1], float(sys.argv[2]), float(sys.argv[3]), float(sys.argv[4])
-if sys.argv[2] == "nan" or sys.argv[3] == "nan":
-    print("nan 0 nan"); raise SystemExit(0)
-vcm_v, vd1_v = [], []
-for line in open(path):
-    p = line.split()
-    if len(p) < 12:
-        continue
-    vcm_v.append(float(p[0]))
-    vd1_v.append(float(p[5]))
-bound = None
-for i in range(0, len(vcm_v) - 1):
-    a = vd1_v[i] - vcm_v[i] + vth1
-    b = vd1_v[i + 1] - vcm_v[i + 1] + vth1
-    if (a >= 0 > b):
-        frac = a / (a - b)
-        bound = vcm_v[i] + frac * (vcm_v[i + 1] - vcm_v[i])
-        break
-if bound is None:
-    print("nan 0 nan"); raise SystemExit(0)
-shift = abs(bound - rec_bound)
-converged = 1 if shift <= 2 * step else 0
-print(f"{bound:.9g} {converged} {shift:.9g}")
-PYEOF
-)
+      read -r hi_bound_verify hi_converged hi_shift < <("${CMR_ANALYSIS[@]}" fine-hi-verify "${finehi_csv}" "${vth_cc_verify}" "${icmr_hi}" "${FINE_STEP}")
 
       # --- sibling-record cross-reference inputs -------------------------
       ac_vtail="$(sg13g2_csv_lookup "${AC_RECORD_CSV}" vtail_dc_v "${point_id}")"
