@@ -42,9 +42,7 @@ re-justified from the first real comparison before it is cited.
 
 from __future__ import annotations
 
-import csv
 import functools
-import math
 import os
 import sys
 from typing import Dict, List, Optional, Tuple
@@ -135,35 +133,7 @@ HARNESS_COLUMNS = ("vcm_v", "vni_int_vrms") + tuple(SPOTS.values())
 
 
 def load_harness_csv(path: str) -> Dict[Key, Dict[str, object]]:
-    out: Dict[Key, Dict[str, object]] = {}
-    problems: List[str] = []
-    try:
-        f = open(path, newline="")
-    except OSError as e:
-        raise InputError(f"{path}: {e}")
-    with f:
-        for r in csv.DictReader(f):
-            k = make_key(r["corner"], r["temp_c"], r["vdd_v"])
-            if k in out:
-                problems.append(f"{key_str(k)}: duplicate row")
-                continue
-            if r.get("point_id") != key_str(k):
-                problems.append(f"{r.get('point_id')}: point_id disagrees with its corner/temp/vdd columns")
-            row: Dict[str, object] = {}
-            for col in HARNESS_COLUMNS:
-                raw = r.get(col)
-                try:
-                    v = float(raw)
-                except (TypeError, ValueError):
-                    v = float("nan")
-                if not math.isfinite(v):
-                    problems.append(f"{key_str(k)}: harness {col} {raw!r} is missing or non-finite")
-                row[col] = v
-            out[k] = row
-    E.check_grid(out.keys(), "harness CSV", problems)
-    if problems:
-        raise InputError(f"{path}: " + "; ".join(problems))
-    return out
+    return E.load_harness_csv_rows(path, HARNESS_COLUMNS, "harness CSV")
 
 
 # ----------------------------------------------------------------- compare
