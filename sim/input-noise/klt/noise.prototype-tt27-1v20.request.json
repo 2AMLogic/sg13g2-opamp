@@ -1,0 +1,149 @@
+{
+  "_comment": [
+    "PROTOTYPE (issue #96): one corner of noise.request.json (mos_tt, 27 C, VDD 1.20 V), everything else identical. Not signoff evidence."
+  ],
+  "netlist": "tb_noise.body.spice",
+  "netlist_source": "schematic",
+  "engine": "ngspice",
+  "backend": "local",
+  "models": {
+    "pdk": "ihp-sg13g2",
+    "lib": "libs.tech/ngspice/models/cornerMOSlv.lib"
+  },
+  "corners": {
+    "process": [
+      {
+        "name": "mos_tt",
+        "sections": [
+          "mos_tt",
+          {
+            "lib": "libs.tech/ngspice/models/cornerCAP.lib",
+            "section": "cap_typ"
+          }
+        ]
+      }
+    ],
+    "supply_v": {
+      "vdd": [
+        1.2
+      ],
+      "vinp": [
+        0.6
+      ]
+    },
+    "temperature_c": [
+      27
+    ]
+  },
+  "analysis": {
+    "kind": "noise",
+    "args": "v(out) Vinp dec 20 100 1meg"
+  },
+  "measurements": [
+    {
+      "name": "inoise_int_vrms",
+      "expr": "noise2.inoise_total",
+      "unit": "V",
+      "limits": {
+        "max": 0.0001089
+      }
+    },
+    {
+      "name": "inoise_100hz_v_rthz",
+      "expr": "noise1.inoise_spectrum[0]",
+      "unit": "V/rtHz"
+    },
+    {
+      "name": "inoise_1khz_v_rthz",
+      "expr": "noise1.inoise_spectrum[20]",
+      "unit": "V/rtHz"
+    },
+    {
+      "name": "inoise_10khz_v_rthz",
+      "expr": "noise1.inoise_spectrum[40]",
+      "unit": "V/rtHz"
+    },
+    {
+      "name": "inoise_100khz_v_rthz",
+      "expr": "noise1.inoise_spectrum[60]",
+      "unit": "V/rtHz"
+    },
+    {
+      "name": "inoise_1mhz_v_rthz",
+      "expr": "noise1.inoise_spectrum[80]",
+      "unit": "V/rtHz"
+    },
+    {
+      "name": "band_points",
+      "expr": "length(noise1.inoise_spectrum)",
+      "limits": {
+        "min": 81,
+        "max": 81
+      }
+    },
+    {
+      "name": "band_f_first_hz",
+      "expr": "noise1.frequency[0]",
+      "unit": "Hz",
+      "limits": {
+        "min": 99.9999,
+        "max": 100.0001
+      }
+    },
+    {
+      "name": "band_f_last_hz",
+      "expr": "noise1.frequency[80]",
+      "unit": "Hz",
+      "limits": {
+        "min": 999999,
+        "max": 1000001
+      }
+    },
+    {
+      "name": "spot_f_1khz_hz",
+      "expr": "noise1.frequency[20]",
+      "unit": "Hz",
+      "limits": {
+        "min": 999.999,
+        "max": 1000.001
+      }
+    },
+    {
+      "name": "spot_f_10khz_hz",
+      "expr": "noise1.frequency[40]",
+      "unit": "Hz",
+      "limits": {
+        "min": 9999.99,
+        "max": 10000.01
+      }
+    },
+    {
+      "name": "spot_f_100khz_hz",
+      "expr": "noise1.frequency[60]",
+      "unit": "Hz",
+      "limits": {
+        "min": 99999.9,
+        "max": 100000.1
+      }
+    }
+  ],
+  "options": {
+    "timeout_s": 300,
+    "keep_artifacts": false,
+    "osdi_preload": [
+      "$PDK_ROOT/ihp-sg13g2/libs.tech/ngspice/osdi/psp103.osdi",
+      "$PDK_ROOT/ihp-sg13g2/libs.tech/ngspice/osdi/psp103_nqs.osdi",
+      "$PDK_ROOT/ihp-sg13g2/libs.tech/ngspice/osdi/mosvar.osdi",
+      "$PDK_ROOT/ihp-sg13g2/libs.tech/ngspice/osdi/r3_cmc.osdi"
+    ],
+    "stage_model_inputs": true,
+    "fail_on_diagnostic": [
+      "singular_matrix",
+      "nonconvergence"
+    ],
+    "ngspice_init": [
+      "set measureprec=12",
+      "set numdgt=12"
+    ]
+  }
+}
