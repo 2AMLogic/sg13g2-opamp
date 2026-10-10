@@ -282,10 +282,15 @@ for spec in "${POINT_SPECS[@]}"; do
   # through the environment rather than argv keeps the positional unpack
   # below unchanged. `grep -E` and Python's `re` agree on this pattern: it
   # uses only literal text and `|`.
-  SG13G2_NGSPICE_ERR_RE="${SG13G2_NGSPICE_ERR_RE}" \
+  SG13G2_NGSPICE_ERR_RE="${SG13G2_NGSPICE_ERR_RE}" OFFSET_SWEEP_DIR="${SCRIPT_DIR}" \
   python3 - "${SCRATCH_DIR}" "${DRAWS_CSV}" "${pid}" "${mode}" "${corner}" \
     "${section}" "${temp}" "${VDD}" "${SEED}" "${N}" "${VCM}" <<'PYEOF'
-import os, re, sys
+import importlib.util, os, re, sys
+_spec = importlib.util.spec_from_file_location(
+    "offset_sweep", os.path.join(os.environ["OFFSET_SWEEP_DIR"], "offset_sweep.py"))
+_mod = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_mod)
+classify_sweep = _mod.classify_sweep
 scratch, draws_csv, pid, mode, corner, section, temp, vdd, seed, n, vcm = sys.argv[1:12]
 n, seed, target = int(n), int(seed), float(vcm)
 err_re = re.compile(os.environ["SG13G2_NGSPICE_ERR_RE"], re.I)
@@ -310,30 +315,7 @@ with open(draws_csv, "a") as out:
             if err_re.search(log_text):
                 reason = "sim_error_in_log"
             else:
-                vid, vout = [], []
-                try:
-                    for line in open(sweep):
-                        p = line.split()
-                        if len(p) < 2:
-                            continue
-                        vid.append(float(p[0])); vout.append(float(p[1]))
-                except OSError:
-                    vid, vout = [], []
-                if not vid:
-                    reason = "no_sweep_file"
-                else:
-                    crossings = []
-                    for i in range(1, len(vid)):
-                        a, b = vout[i - 1] - target, vout[i] - target
-                        if (a <= 0 < b) or (a >= 0 > b):
-                            frac = (target - vout[i - 1]) / (vout[i] - vout[i - 1])
-                            crossings.append(vid[i - 1] + frac * (vid[i] - vid[i - 1]))
-                    if len(crossings) != 1:
-                        reason = "crossings=%d" % len(crossings)
-                    elif abs(crossings[0]) >= 0.9 * 0.1:
-                        reason = "vos_outside_window"
-                    else:
-                        status, vos = "PASS", "%.9g" % crossings[0]
+                status, reason, vos = classify_sweep(sweep, target)
         out.write("%s,%s,%s,%s,%s,%s,%d,%d,%s,%s,%s\n"
                   % (pid, mode, corner, section, temp, vdd, idx, draw_seed,
                      status, reason, vos))
