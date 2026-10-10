@@ -76,6 +76,11 @@ jobs:
       - name: Append-only gate negative controls (offline)
         run: python3 -m unittest discover -s sim/tools -p 'test_check_append_only_evidence.py' -v
 
+      - name: Shared klt envelope gate negative controls (offline)
+        # sim/tools/klt_envelope.py: the validation core every
+        # sim/*/klt/compare.py imports. Stdlib only; no ngspice, PDK or klt.
+        run: python3 -m unittest discover -s sim/tools -p 'test_klt_envelope.py' -v
+
       - name: Offline checks (manifest, pins, record consistency)
         # Includes `signoff/characterization/generate.py --check`: the T1
         # item 8 report is re-derived from the committed sim/ records it

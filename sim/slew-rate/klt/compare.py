@@ -40,34 +40,21 @@ from __future__ import annotations
 
 import argparse
 import csv
-import hashlib
 import json
 import math
 import os
 import sys
 from typing import Dict, Iterable, List, Optional, Tuple
 
-# ---------------------------------------------------------------- the grid
-# spec/target-spec.md section 1 [DR-1]/[DR-2]: cornerMOSlv.lib's five
-# sections x {-40, 27, 125} C x {1.08, 1.20, 1.32} V.
-PROCESSES = ("mos_tt", "mos_ss", "mos_ff", "mos_sf", "mos_fs")
-TEMPERATURES = (-40, 27, 125)
-SUPPLIES = (1.08, 1.20, 1.32)
-
-Key = Tuple[str, int, float]
-
-
-def expected_keys() -> List[Key]:
-    return [(p, t, v) for p in PROCESSES for t in TEMPERATURES for v in SUPPLIES]
-
-
-def make_key(process: str, temp, vdd) -> Key:
-    return (str(process), int(round(float(temp))), round(float(vdd), 3))
-
-
-def key_str(k: Key) -> str:
-    """The harness's own point_id spelling, e.g. mos_fs_125C_1.08V."""
-    return f"{k[0]}_{k[1]}C_{k[2]:.2f}V"
+# The grid, the key helpers, InputError and the envelope gate are shared by
+# every sim/*/klt/compare.py: sim/tools/klt_envelope.py (issue #142).
+_TOOLS = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "tools"))
+if _TOOLS not in sys.path:
+    sys.path.insert(0, _TOOLS)
+import klt_envelope as E  # noqa: E402
+from klt_envelope import (  # noqa: E402,F401  (re-exported: tests and callers use C.<name>)
+    PROCESSES, TEMPERATURES, SUPPLIES, Key, InputError, expected_keys, make_key, key_str,
+)
 
 
 # ----------------------------------------------------------- measurements
@@ -145,91 +132,17 @@ WIN_OUTER = 0.15
 WIN_INNER = 0.075
 
 
-class InputError(Exception):
-    """Inputs cannot be compared at all (exit 2)."""
-
-
-def _finite(x) -> bool:
-    return isinstance(x, (int, float)) and not isinstance(x, bool) and math.isfinite(x)
-
-
 # --------------------------------------------------------------- envelopes
 def load_envelope(path: str) -> Tuple[dict, Dict[Key, Dict[str, object]]]:
     """Validate the `klt sim` envelope and index its corners by grid key."""
-    try:
-        with open(path) as f:
-            env = json.load(f)
-    except (OSError, ValueError) as e:
-        raise InputError(f"{path}: unreadable envelope ({e})")
+    env = E.read_envelope(path)
     return env, index_envelope(env, path)
 
 
 def index_envelope(env: dict, label: str = "envelope") -> Dict[Key, Dict[str, object]]:
-    if not isinstance(env, dict):
-        raise InputError(f"{label}: not a JSON object")
-    if "error" in env:
-        raise InputError(f"{label}: klt error envelope: {env['error']}")
-    corners = env.get("corners")
-    if not isinstance(corners, list):
-        raise InputError(f"{label}: no corners[] array")
-    if env.get("corner_count") != len(corners):
-        raise InputError(f"{label}: corner_count {env.get('corner_count')} != len(corners) {len(corners)}")
-    cov = env.get("coverage")
-    if not isinstance(cov, dict):
-        raise InputError(f"{label}: no coverage block")
-    if cov.get("nothing_checked") is not False:
-        raise InputError(f"{label}: coverage.nothing_checked is {cov.get('nothing_checked')!r}, expected false")
-    if cov.get("skipped"):
-        raise InputError(f"{label}: coverage.skipped is non-empty ({len(cov['skipped'])} item(s)), e.g. {cov['skipped'][0]}")
-    if env.get("status") not in ("pass", "fail"):
-        raise InputError(f"{label}: aggregate status {env.get('status')!r} -- only a complete pass/fail run is evidence")
-
-    out: Dict[Key, Dict[str, object]] = {}
-    problems: List[str] = []
-    for c in corners:
-        cid = c.get("corner_id")
-        supply = c.get("supply_v") or {}
-        if "vdd" not in supply or "vinp" not in supply or c.get("process") is None:
-            problems.append(f"{cid}: missing process or supply_v.vdd/vinp")
-            continue
-        k = make_key(c["process"], c.get("temperature_c"), supply["vdd"])
-        if k in out:
-            problems.append(f"{key_str(k)}: duplicate corner")
-            continue
-        if not math.isclose(float(supply["vinp"]), float(supply["vdd"]) / 2, rel_tol=0, abs_tol=1e-9):
-            problems.append(f"{key_str(k)}: vinp {supply['vinp']} != vdd/2 ({supply['vdd']}/2)")
-        if c.get("status") not in ("pass", "fail"):
-            problems.append(f"{key_str(k)}: corner status {c.get('status')!r}")
-        vals: Dict[str, object] = {}
-        by_name = {}
-        for m in c.get("measurements") or []:
-            if m.get("name") in by_name:
-                problems.append(f"{key_str(k)}: measurement {m.get('name')} reported twice")
-            by_name[m.get("name")] = m
-        for n in MEASUREMENTS:
-            m = by_name.get(n)
-            if m is None:
-                problems.append(f"{key_str(k)}: measurement {n} missing")
-                continue
-            if not _finite(m.get("value")):
-                problems.append(f"{key_str(k)}: measurement {n} value {m.get('value')!r} is missing or non-finite")
-                continue
-            vals[n] = float(m["value"])
-            vals[n + "__status"] = m.get("status")
-        out[k] = vals
-    _check_grid(out.keys(), label, problems)
-    if problems:
-        raise InputError(f"{label}: " + "; ".join(problems))
-    return out
-
-
-def _check_grid(keys: Iterable[Key], label: str, problems: List[str]) -> None:
-    got = set(keys)
-    want = set(expected_keys())
-    for k in sorted(want - got):
-        problems.append(f"{key_str(k)}: missing from {label}")
-    for k in sorted(got - want):
-        problems.append(f"{key_str(k)}: not a point of the ratified grid")
+    """The shared envelope gate (klt_envelope.index_envelope); no bench-specific
+    per-corner checks beyond every MEASUREMENTS entry present and finite."""
+    return E.index_envelope(env, label, MEASUREMENTS)
 
 
 # ----------------------------------------------------------------- harness
@@ -267,7 +180,7 @@ def load_harness_csv(path: str) -> Dict[Key, Dict[str, object]]:
             for col in HARNESS_FLAGS:
                 row[col] = str(r.get(col)).strip() == "1"
             out[k] = row
-    _check_grid(out.keys(), "harness CSV", problems)
+    E.check_grid(out.keys(), "harness CSV", problems)
     if problems:
         raise InputError(f"{path}: " + "; ".join(problems))
     return out
@@ -341,7 +254,7 @@ def compare(tool: Dict[Key, Dict[str, object]], harness: Dict[Key, Dict[str, obj
             env: Optional[dict] = None) -> dict:
     problems: List[str] = []
     for label, d in (("envelope", tool), ("harness CSV", harness)):
-        _check_grid(d.keys(), label, problems)
+        E.check_grid(d.keys(), label, problems)
     if problems:
         raise InputError("; ".join(problems))
 
@@ -434,14 +347,6 @@ def compare(tool: Dict[Key, Dict[str, object]], harness: Dict[Key, Dict[str, obj
     }
 
 
-def _sha256(path: str) -> str:
-    h = hashlib.sha256()
-    with open(path, "rb") as f:
-        for chunk in iter(lambda: f.read(1 << 16), b""):
-            h.update(chunk)
-    return h.hexdigest()
-
-
 def _text_summary(rep: dict) -> str:
     r = rep["row"]
     hw = r["harness_worst"]
@@ -487,8 +392,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         print(f"compare.py: {e}", file=sys.stderr)
         return 2
 
-    rep["inputs"] = {"envelope": {"path": a.envelope, "sha256": _sha256(a.envelope)},
-                     "harness_csv": {"path": a.harness_csv, "sha256": _sha256(a.harness_csv)},
+    rep["inputs"] = {"envelope": {"path": a.envelope, "sha256": E.sha256_file(a.envelope)},
+                     "harness_csv": {"path": a.harness_csv, "sha256": E.sha256_file(a.harness_csv)},
                      "harness_tran_dir": {"path": a.harness_tran_dir}}
     rep["provenance"] = dict(kv.split("=", 1) for kv in a.provenance)
     if a.json_out:

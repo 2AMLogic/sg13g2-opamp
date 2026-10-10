@@ -1,0 +1,193 @@
+"""Negative controls for klt_envelope.py, the shared envelope gate (offline).
+
+    python3 -m unittest discover -s sim/tools -p 'test_klt_envelope.py' -v
+
+The fixtures are minimal synthetic `klt sim`-shaped envelopes on the ratified
+grid; nothing here is evidence about the circuit. Each bench's own
+sim/*/klt/test_compare.py still drives this gate through its compare.py with
+fixtures built from that bench's committed harness record; this file pins the
+shared behaviour once -- in particular the exact message strings, since
+compare.py's stderr and exit status are what the bench runners act on.
+"""
+
+import copy
+import json
+import os
+import sys
+import tempfile
+import unittest
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import klt_envelope as E  # noqa: E402
+
+MEAS = ("a", "b")
+
+
+def _envelope(keys=None, values=None):
+    corners = []
+    for p, t, v in keys if keys is not None else E.expected_keys():
+        corners.append({
+            "corner_id": f"{p}/vdd={v:.3f}/{t}C", "process": p, "temperature_c": float(t),
+            "supply_v": {"vdd": v, "vinp": v / 2}, "status": "pass",
+            "measurements": [{"name": n, "value": (values or {}).get(n, 1.0), "status": "pass"}
+                             for n in MEAS],
+        })
+    return {"status": "pass", "corner_count": len(corners), "corners": corners,
+            "coverage": {"nothing_checked": False, "skipped": []}}
+
+
+TT = ("mos_tt", 27, 1.2)
+
+
+def _corner(env, key=TT):
+    for c in env["corners"]:
+        if E.make_key(c["process"], c["temperature_c"], c["supply_v"]["vdd"]) == key:
+            return c
+    raise KeyError(key)
+
+
+class TestGrid(unittest.TestCase):
+    def test_grid_is_45_unique_points(self):
+        keys = E.expected_keys()
+        self.assertEqual(len(keys), 45)
+        self.assertEqual(len(set(keys)), 45)
+        self.assertEqual(keys[0], ("mos_tt", -40, 1.08))
+
+    def test_make_key_normalises(self):
+        self.assertEqual(E.make_key("mos_ss", "-40.0", "1.0800000001"), ("mos_ss", -40, 1.08))
+        self.assertEqual(E.make_key("mos_ff", 124.6, 1.32), ("mos_ff", 125, 1.32))
+
+    def test_key_str_is_the_harness_point_id(self):
+        self.assertEqual(E.key_str(("mos_fs", 125, 1.08)), "mos_fs_125C_1.08V")
+        self.assertEqual(E.key_str(("mos_ss", -40, 1.2)), "mos_ss_-40C_1.20V")
+
+    def test_check_grid_names_missing_and_extra(self):
+        keys = [k for k in E.expected_keys() if k != TT] + [("mos_xx", 27, 1.2)]
+        problems = []
+        E.check_grid(keys, "lbl", problems)
+        self.assertEqual(problems, ["mos_tt_27C_1.20V: missing from lbl",
+                                    "mos_xx_27C_1.20V: not a point of the ratified grid"])
+
+    def test_finite(self):
+        self.assertTrue(E.finite(1) and E.finite(-2.5))
+        for x in (None, True, False, float("nan"), float("inf"), "1.0"):
+            self.assertFalse(E.finite(x), x)
+
+    def test_sha256_file(self):
+        with tempfile.NamedTemporaryFile("wb", delete=False) as f:
+            f.write(b"abc")
+        self.addCleanup(os.unlink, f.name)
+        self.assertEqual(E.sha256_file(f.name),
+                         "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad")
+
+
+class TestIndexEnvelope(unittest.TestCase):
+    def index(self, env, **kw):
+        return E.index_envelope(env, "lbl", MEAS, **kw)
+
+    def fails(self, env, msg, **kw):
+        with self.assertRaises(E.InputError) as cm:
+            self.index(env, **kw)
+        self.assertEqual(str(cm.exception), msg)
+
+    def test_baseline_indexes_every_point(self):
+        out = self.index(_envelope())
+        self.assertEqual(set(out), set(E.expected_keys()))
+        self.assertEqual(out[TT], {"a": 1.0, "a__status": "pass", "b": 1.0, "b__status": "pass"})
+
+    def test_reordered_is_equivalent(self):
+        env = _envelope()
+        env["corners"].reverse()
+        self.assertEqual(self.index(env), self.index(_envelope()))
+
+    def test_envelope_level_refusals(self):
+        self.fails([], "lbl: not a JSON object")
+        env = _envelope(); env["error"] = "boom"
+        self.fails(env, "lbl: klt error envelope: boom")
+        env = _envelope(); del env["corners"]
+        self.fails(env, "lbl: no corners[] array")
+        env = _envelope(); env["corner_count"] = 44
+        self.fails(env, "lbl: corner_count 44 != len(corners) 45")
+        env = _envelope(); del env["coverage"]
+        self.fails(env, "lbl: no coverage block")
+        env = _envelope(); env["coverage"]["nothing_checked"] = None
+        self.fails(env, "lbl: coverage.nothing_checked is None, expected false")
+        env = _envelope(); env["coverage"]["skipped"] = ["x", "y"]
+        self.fails(env, "lbl: coverage.skipped is non-empty (2 item(s)), e.g. x")
+        env = _envelope(); env["status"] = "inconclusive"
+        self.fails(env, "lbl: aggregate status 'inconclusive' -- only a complete pass/fail run is evidence")
+
+    def test_missing_duplicate_extra_point(self):
+        env = _envelope([k for k in E.expected_keys() if k != TT])
+        self.fails(env, "lbl: mos_tt_27C_1.20V: missing from lbl")
+        env = _envelope(E.expected_keys() + [TT])
+        self.fails(env, "lbl: mos_tt_27C_1.20V: duplicate corner")
+        env = _envelope(E.expected_keys() + [("mos_tt", 27, 1.5)])
+        self.fails(env, "lbl: mos_tt_27C_1.50V: not a point of the ratified grid")
+
+    def test_corner_level_refusals_are_collected_in_order(self):
+        env = _envelope()
+        c = _corner(env)
+        c["supply_v"]["vinp"] = 0.5
+        c["status"] = "error"
+        c["measurements"][1]["value"] = float("nan")
+        c["measurements"].append(copy.deepcopy(c["measurements"][0]))
+        self.fails(env, "lbl: mos_tt_27C_1.20V: vinp 0.5 != vdd/2 (1.2/2); "
+                        "mos_tt_27C_1.20V: corner status 'error'; "
+                        "mos_tt_27C_1.20V: measurement a reported twice; "
+                        "mos_tt_27C_1.20V: measurement b value nan is missing or non-finite")
+
+    def test_missing_supply_and_measurement(self):
+        env = _envelope()
+        del _corner(env)["supply_v"]["vinp"]
+        self.fails(env, "lbl: mos_tt/vdd=1.200/27C: missing process or supply_v.vdd/vinp; "
+                        "mos_tt_27C_1.20V: missing from lbl")
+        env = _envelope()
+        _corner(env)["measurements"].pop()
+        self.fails(env, "lbl: mos_tt_27C_1.20V: measurement b missing")
+        env = _envelope()
+        _corner(env)["measurements"][0]["value"] = None
+        self.fails(env, "lbl: mos_tt_27C_1.20V: measurement a value None is missing or non-finite")
+
+    def test_reject_statuses_hook(self):
+        env = _envelope()
+        _corner(env)["measurements"][0]["status"] = "skipped"
+        # Without the hook a finite value with any status is indexed as-is.
+        self.assertEqual(self.index(env)[TT]["a__status"], "skipped")
+        self.fails(env, "lbl: mos_tt_27C_1.20V: measurement a status 'skipped'",
+                   reject_statuses=("skipped", "error"))
+
+    def test_corner_check_hook(self):
+        seen = []
+
+        def check(k, vals, problems):
+            seen.append(k)
+            if vals.get("a", 0) > 1:
+                problems.append(f"{E.key_str(k)}: a too big")
+
+        self.index(_envelope(), corner_check=check)
+        self.assertEqual(len(seen), 45)
+        env = _envelope()
+        _corner(env)["measurements"][0]["value"] = 2.0
+        self.fails(env, "lbl: mos_tt_27C_1.20V: a too big", corner_check=check)
+
+
+class TestReadEnvelope(unittest.TestCase):
+    def test_read_and_unreadable(self):
+        with tempfile.TemporaryDirectory() as d:
+            good = os.path.join(d, "good.json")
+            with open(good, "w") as f:
+                json.dump(_envelope(), f)
+            self.assertEqual(E.read_envelope(good)["corner_count"], 45)
+            bad = os.path.join(d, "bad.json")
+            with open(bad, "w") as f:
+                f.write("{")
+            with self.assertRaises(E.InputError) as cm:
+                E.read_envelope(bad)
+            self.assertTrue(str(cm.exception).startswith(f"{bad}: unreadable envelope ("))
+            with self.assertRaises(E.InputError):
+                E.read_envelope(os.path.join(d, "absent.json"))
+
+
+if __name__ == "__main__":
+    unittest.main()

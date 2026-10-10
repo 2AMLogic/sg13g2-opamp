@@ -34,6 +34,17 @@ corrected record and regenerate the dependent reports as new appended records.
 The original stays in the tree as history; explain why it was superseded in the
 new record's README/PR text.
 
+## Shared `klt sim` envelope gate
+
+Every `sim/<bench>/klt/compare.py` imports its grid (`PROCESSES` x
+`TEMPERATURES` x `SUPPLIES`), key helpers (`make_key` / `key_str`),
+`InputError` and envelope gate (`read_envelope` / `index_envelope` /
+`check_grid`) from [`tools/klt_envelope.py`](tools/klt_envelope.py) (stdlib
+only; negative controls in `tools/test_klt_envelope.py`). A bench keeps only its
+`MEASUREMENTS`, any per-corner check (passed as `corner_check=` or
+`reject_statuses=`), its harness loader and its comparison. A new `klt sim`
+bench imports this module instead of copying an existing `compare.py`.
+
 ## PDK pin
 
 Every record in this tree is generated against the PDK revision pinned in
