@@ -7,7 +7,7 @@ This roadmap is generated from the repository's current GitHub label state.
 
 Judge-approved PRs stuck under a `loom:operator` merge-risk hold — implementation work is done, only a human merge decision is missing.
 
-_None._
+- **#164**: ci: protect nested klt record trees with the append-only evidence gate
 
 ## Operator Priority
 
@@ -37,7 +37,7 @@ PRs waiting on Judge (`loom:review-requested`).
 
 PRs that passed review and are queued for Champion auto-merge (`loom:pr`).
 
-_None._
+- **#164**: ci: protect nested klt record trees with the append-only evidence gate
 
 ## Proposed
 
@@ -53,13 +53,12 @@ Issues carrying `loom:curated`.
 - **#99**: sim: express the PSRR bench as a klt sim request (T1 item 5 coverage, follow-up to #85) *(curated)*
 - **#100**: sim: express the output-swing bench as a klt sim request (T1 item 5 coverage, follow-up to #85) *(curated)*
 - **#105**: signoff: express the statistical rows as klt yield evidence for T1 item 6 (offset MC, mismatch CMRR) *(curated)*
-- **#107**: cmrr-mismatch: persist per-draw samples so T1 item 6 can be evidenced with klt yield *(curated)*
 
 ## Proposed (Architect / Hermit)
 
 - **#105**: signoff: express the statistical rows as klt yield evidence for T1 item 6 (offset MC, mismatch CMRR) *(architect)*
-- **#141**: yield-inputs: validate offset draw identities and gate sample-set reproducibility in CI *(architect)*
-- **#146**: Dedup the compare.py CLI scaffold left after #142 (main/_tol/load_envelope x3) *(hermit)*
+- **#171**: sim: reserve klt wrapper record destinations before submitting runs *(architect)*
+- **#174**: cmrr-mismatch: validate raw sample finiteness and unique OP/AC pairs *(architect)*
 
 ## Epics
 
@@ -69,13 +68,13 @@ _None._
 
 | Tier | Count |
 |------|-------|
-| Operator merge-risk holds | 0 |
+| Operator merge-risk holds | 1 |
 | Operator priority | 0 |
 | Ready (`loom:issue`) | 1 |
 | In Progress (`loom:building`) | 1 |
 | PRs awaiting review | 1 |
-| Approved PRs awaiting merge | 0 |
-| Curated | 11 |
+| Approved PRs awaiting merge | 1 |
+| Curated | 10 |
 | Architect / Hermit proposals | 3 |
 | Active epics | 0 |
 <!-- guide:plan-body:end -->
