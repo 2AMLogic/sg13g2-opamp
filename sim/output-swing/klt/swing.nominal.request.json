@@ -1,0 +1,145 @@
+{
+  "_comment": [
+    "sim/output-swing as a `klt sim` request: ONE-POINT NATIVE-CAPABILITY PROTOTYPE (issue #100, startable subset). Not an envelope for T1 item 5.",
+    "Point: mos_tt (+ cornerCAP.lib cap_typ) / 27 C / VDD 1.20 V, Vcm = VDD/2 = 0.60 V. The 45-point grid is deliberately NOT declared here (deferred work, sim/output-swing/README.md).",
+    "Circuit: tb_swing.body.spice, the same test circuit as ../testbench/tb_swing.spice.tmpl (one .include of design/netlist/opamp_core.spice).",
+    "vcm sweeps WITH vdd by index (klt supply_v semantics), so Vcm = VDD/2 at every corner, as in the harness.",
+    "Ratified row (spec/target-spec.md section 2, [DR-2]): headroom >= 251 mV from VDD, >= 141 mV from VSS, tracking span >= 0.571 V, -6 dB incremental-gain criterion, CL = 2 pF, unloaded.",
+    "The three ratified numbers are three independent `expr` measurements carrying the LITERAL bounds as `limits`: headroom_hi_v, headroom_lo_v, swing_span_v.",
+    "Estimator = the harness's sampled definition (run_swing_sweep.sh): segment gain g[i] = dVout/dVid between adjacent samples; peak = first max; the tracking region is the contiguous run of segments around the peak with g >= 0.5*peak; the bounds are the extreme Vout over the region's endpoint samples (segments lo..hi -> samples lo..hi+1).",
+    "In ngspice vector algebra, inside klt's own expr path: G = (v(out)[1,5000]-v(out)[0,4999])/(v(id)[1,5000]-v(id)[0,4999]) (5000 segments of the 5001-sample sweep); pk_idx = first index of vecmax(G); lo_idx = 1 + last index < pk_idx with G < 0.5*gpk (0 if none); hi_idx = (first index > pk_idx with G < 0.5*gpk) - 1 (4999 if none). Comparisons are written `lt`/`gt` because `<`/`>` are I/O redirection in ngspice's command line. Scalars (not vectors) are the only thing klt can print, so each stage is reduced to a scalar and referenced by name by the next expr.",
+    "lo_idx >= 1 and hi_idx <= 4998 reproduce the harness's 'linear region touches the window edge' rejection (len(g)-1 = 4999) as graded limits; gpk_vv >= 10 V/V is its 'plausible peak gain' rule; mono_min_dv_v >= -1e-9 V is its monotonic-curve rule. These are integrity checks, not ratified rows.",
+    "KNOWN DIFFERENCE FROM THE HARNESS: the harness centres the +-25 mV fine window on the interpolated Vout = Vcm crossing found by a coarse pass. A klt request cannot centre a sweep on a measured value (analysis.args are literal), so this request sweeps a FIXED window Vid = -10 mV .. +40 mV at 10 uV (5001 samples). The harness record's crossings span 11.4-21.9 mV over the whole grid, so a fixed window centred at 15 mV keeps every crossing >= 18 mV inside both edges; the coarse pass (clip levels, crossing) is not part of any ratified row and is not reproduced.",
+    "Solver tolerance: ngspice default, no .options reltol/abstol/vntol (DR-0005). ngspice_init raises printed digits only.",
+    "backend: local -- a single operating point. The shared dispatch host does not run grids; the 45-point work is deferred and must use the batch backend."
+  ],
+  "netlist": "tb_swing.body.spice",
+  "netlist_source": "schematic",
+  "engine": "ngspice",
+  "backend": "local",
+  "models": {
+    "pdk": "ihp-sg13g2",
+    "lib": "libs.tech/ngspice/models/cornerMOSlv.lib"
+  },
+  "corners": {
+    "process": [
+      {
+        "name": "mos_tt",
+        "sections": [
+          "mos_tt",
+          {
+            "lib": "libs.tech/ngspice/models/cornerCAP.lib",
+            "section": "cap_typ"
+          }
+        ]
+      }
+    ],
+    "supply_v": {
+      "vdd": [
+        1.2
+      ],
+      "vcm": [
+        0.6
+      ]
+    },
+    "temperature_c": [
+      27
+    ]
+  },
+  "analysis": {
+    "kind": "dc",
+    "args": "Vid -0.01 0.04 10u"
+  },
+  "measurements": [
+    {
+      "name": "gpk_vv",
+      "expr": "vecmax(((v(out)[1,5000]-v(out)[0,4999])/(v(id)[1,5000]-v(id)[0,4999])))",
+      "unit": "V/V",
+      "limits": {
+        "min": 10.0
+      }
+    },
+    {
+      "name": "mono_min_dv_v",
+      "expr": "vecmin(v(out)[1,5000]-v(out)[0,4999])",
+      "unit": "V",
+      "limits": {
+        "min": -1e-09
+      }
+    },
+    {
+      "name": "pk_idx",
+      "expr": "vecmin(vector(5000)+5000*(((v(out)[1,5000]-v(out)[0,4999])/(v(id)[1,5000]-v(id)[0,4999])) lt gpk_vv))",
+      "unit": "index"
+    },
+    {
+      "name": "lo_idx",
+      "expr": "vecmax((vector(5000) lt pk_idx)*(((v(out)[1,5000]-v(out)[0,4999])/(v(id)[1,5000]-v(id)[0,4999])) lt 0.5*gpk_vv)*(vector(5000)+1))",
+      "unit": "index",
+      "limits": {
+        "min": 1
+      }
+    },
+    {
+      "name": "hi_idx",
+      "expr": "vecmin(vector(5000)+5000*(1-(vector(5000) gt pk_idx)*(((v(out)[1,5000]-v(out)[0,4999])/(v(id)[1,5000]-v(id)[0,4999])) lt 0.5*gpk_vv)))-1",
+      "unit": "index",
+      "limits": {
+        "max": 4998
+      }
+    },
+    {
+      "name": "vmax_track_v",
+      "expr": "vecmax(v(out)[lo_idx,hi_idx+1])",
+      "unit": "V"
+    },
+    {
+      "name": "vmin_track_v",
+      "expr": "vecmin(v(out)[lo_idx,hi_idx+1])",
+      "unit": "V"
+    },
+    {
+      "name": "headroom_hi_v",
+      "expr": "v(vdd)[0]-vmax_track_v",
+      "unit": "V",
+      "limits": {
+        "min": 0.251
+      }
+    },
+    {
+      "name": "headroom_lo_v",
+      "expr": "vmin_track_v-v(vss)[0]",
+      "unit": "V",
+      "limits": {
+        "min": 0.141
+      }
+    },
+    {
+      "name": "swing_span_v",
+      "expr": "vmax_track_v-vmin_track_v",
+      "unit": "V",
+      "limits": {
+        "min": 0.571
+      }
+    }
+  ],
+  "options": {
+    "timeout_s": 300,
+    "keep_artifacts": false,
+    "osdi_preload": [
+      "$PDK_ROOT/ihp-sg13g2/libs.tech/ngspice/osdi/psp103.osdi",
+      "$PDK_ROOT/ihp-sg13g2/libs.tech/ngspice/osdi/psp103_nqs.osdi",
+      "$PDK_ROOT/ihp-sg13g2/libs.tech/ngspice/osdi/mosvar.osdi",
+      "$PDK_ROOT/ihp-sg13g2/libs.tech/ngspice/osdi/r3_cmc.osdi"
+    ],
+    "stage_model_inputs": true,
+    "fail_on_diagnostic": [
+      "singular_matrix",
+      "nonconvergence"
+    ],
+    "ngspice_init": [
+      "set measureprec=12",
+      "set numdgt=12"
+    ]
+  }
+}

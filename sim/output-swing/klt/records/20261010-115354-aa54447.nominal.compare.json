@@ -1,0 +1,164 @@
+{
+  "schema": "sg13g2-opamp/output-swing/klt-compare/1",
+  "points_compared": 1,
+  "point_set": [
+    "mos_tt_27C_1.20V"
+  ],
+  "tolerance_basis": {
+    "vid_step_v": 1e-05,
+    "rel_cross_host": 0.001,
+    "abs_floor_v": 1e-06,
+    "boundaries": {
+      "vmax_track_v": 1,
+      "vmin_track_v": 1,
+      "headroom_hi_v": 1,
+      "headroom_lo_v": 1,
+      "swing_span_v": 2
+    }
+  },
+  "out_of_tolerance": [],
+  "bound_verdict_disagreements": [],
+  "unexplained_bound_verdict_disagreements": 0,
+  "row": {
+    "ratified_limits": {
+      "headroom_hi_v": {
+        "min": 0.251
+      },
+      "headroom_lo_v": {
+        "min": 0.141
+      },
+      "swing_span_v": {
+        "min": 0.571
+      }
+    },
+    "tool": {
+      "headroom_hi_v": {
+        "status": "pass",
+        "limits": {
+          "min": 0.251
+        },
+        "worst_case": {
+          "corner_id": "mos_tt/vcm=0.600_vdd=1.200V/27C",
+          "value": 0.281470750898,
+          "margin": 0.030470750898
+        }
+      },
+      "headroom_lo_v": {
+        "status": "pass",
+        "limits": {
+          "min": 0.141
+        },
+        "worst_case": {
+          "corner_id": "mos_tt/vcm=0.600_vdd=1.200V/27C",
+          "value": 0.1727920472244,
+          "margin": 0.031792047224400016
+        }
+      },
+      "swing_span_v": {
+        "status": "pass",
+        "limits": {
+          "min": 0.571
+        },
+        "worst_case": {
+          "corner_id": "mos_tt/vcm=0.600_vdd=1.200V/27C",
+          "value": 0.7457372018776,
+          "margin": 0.1747372018776
+        }
+      }
+    }
+  },
+  "points": [
+    {
+      "point_id": "mos_tt_27C_1.20V",
+      "process": "mos_tt",
+      "temperature_c": 27,
+      "vdd_v": 1.2,
+      "harness_peak_gain_v_v": 140.8559,
+      "metrics": {
+        "vmax_track_v": {
+          "harness": 0.91881399,
+          "tool": 0.918529249102,
+          "delta": -0.00028474089800001323,
+          "tolerance": 0.00232837299,
+          "within": true,
+          "unit": "V"
+        },
+        "vmin_track_v": {
+          "harness": 0.173082167,
+          "tool": 0.1727920472244,
+          "delta": -0.00029011977560000624,
+          "tolerance": 0.0015826411669999998,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_hi_v": {
+          "harness": 0.28118601,
+          "tool": 0.281470750898,
+          "delta": 0.00028474089800001323,
+          "tolerance": 0.00169074501,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_lo_v": {
+          "harness": 0.173082167,
+          "tool": 0.1727920472244,
+          "delta": -0.00029011977560000624,
+          "tolerance": 0.0015826411669999998,
+          "within": true,
+          "unit": "V"
+        },
+        "swing_span_v": {
+          "harness": 0.745731823,
+          "tool": 0.7457372018776,
+          "delta": 5.378877599993004e-06,
+          "tolerance": 0.003563849823,
+          "within": true,
+          "unit": "V"
+        }
+      },
+      "rows": {
+        "headroom_hi_v": {
+          "bound_min": 0.251,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "headroom_lo_v": {
+          "bound_min": 0.141,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "swing_span_v": {
+          "bound_min": 0.571,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        }
+      }
+    }
+  ],
+  "status": "agree",
+  "inputs": {
+    "envelope": {
+      "path": "sim/output-swing/klt/records/20261010-115354-aa54447.nominal.sim.json",
+      "sha256": "f2a1767274cbfc4bb42fb870056d061f90b41268563723cf78f6d66afe44ffb4"
+    },
+    "harness_csv": {
+      "path": "sim/output-swing/records/20260921-151759-707b34c.csv",
+      "sha256": "d84349f59b65c83576e75a8a8b26123f14c79737f6aadd6680f6fdb0addee172"
+    }
+  },
+  "provenance": {
+    "record_id": "20261010-115354-aa54447",
+    "repo_git_sha": "aa54447",
+    "klt_client_version": "klt 0.7.0+gf03eb675fa81",
+    "host_ngspice": "ngspice-46",
+    "command": "klt sim swing.nominal.request.json --backend local --format json",
+    "request_sha256": "8e8127165ae2e52236fe706848f76a864f3ed93c04a8145fe556721efd51830f",
+    "pdk": "ihp-sg13g2 0.3.0"
+  }
+}

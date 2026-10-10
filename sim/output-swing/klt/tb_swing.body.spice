@@ -1,0 +1,27 @@
+* sg13g2-opamp -- output-swing bench as a `klt sim` circuit body (issue #100, prototype)
+*
+* The SAME test circuit as ../testbench/tb_swing.spice.tmpl (the harness path,
+* sim/output-swing/run_swing_sweep.sh), re-expressed in the shape `klt sim`
+* requires: a circuit body with no .control/.end of its own. klt adds, per
+* corner: the process `.lib` cards, `.temp`, `alter vdd=<V>` / `alter vcm=<V/2>`
+* (swept together by index so Vcm = VDD/2 as in the harness), `pre_osdi`, and
+* the one analysis the request declares (`dc Vid ...`).
+*
+* Element-for-element the template's circuit: flat DUT include (no X
+* instance), Vid differential drive about Vcm
+*     V(inp) = Vcm + Vid/2      V(inn) = Vcm - Vid/2
+* 10 uA external ibias sunk from vdd, CL = 2 pF [DR-1] at out, no resistive
+* load, no feedback.  Exactly one .include, by a path relative to this file.
+
+.include ../../../design/netlist/opamp_core.spice
+
+.options tnom=27
+
+Vdd vdd 0 dc 1.2
+Vss vss 0 dc 0
+Iibias vdd ibias dc 10u
+Vcm cm 0 dc 0.6
+Vid id 0 dc 0
+Binp inp 0 v = v(cm) + v(id)/2
+Binn inn 0 v = v(cm) - v(id)/2
+Cload out vss 2e-12

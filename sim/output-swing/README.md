@@ -280,3 +280,93 @@ measurement now shows to be mixed.
   and re-runnable, but it *is* the number's definition — see "The
   swing criterion"; quoting these figures without it is not a testable
   claim.
+
+## The `klt sim` path (issue #100): one-point prototype, not evidence
+
+T1 item 5 ("full corner verification vs a ratified spec") accepts only a `klt
+sim` envelope (`signoff/README.md`, "Item 5 envelope coverage, per ratified
+row"). [`klt/`](klt/) is the **startable first slice** of expressing this bench
+that way: a one-point capability probe plus the offline comparator and its
+negative controls. It is **not** the 45-point envelope, it is not accepted
+evidence, and `signoff/block-manifest.json` is unchanged.
+
+| File | Role |
+|---|---|
+| [`klt/tb_swing.body.spice`](klt/tb_swing.body.spice) | The test circuit of `testbench/tb_swing.spice.tmpl` as a `klt sim` circuit body (flat DUT include, `Vid` about `Vcm`, 10 µA `ibias`, `CL = 2 pF`, no resistive load, no feedback; exactly one `.include`). |
+| [`klt/swing.nominal.request.json`](klt/swing.nominal.request.json) | The request: `mos_tt` + `cornerCAP.lib cap_typ` / 27 °C / 1.20 V only (`vcm` swept with `vdd`), `dc Vid -0.01 0.04 10u`, local backend, OSDI preload, default solver tolerance (DR-0005). |
+| [`klt/run.sh`](klt/run.sh) | Runs the request (always `--backend local`), gates the envelope, writes it unmodified to `klt/records/<UTC>-<sha>.nominal.sim.json`, then the comparison `...nominal.compare.json`. |
+| [`klt/compare.py`](klt/compare.py), [`klt/test_compare.py`](klt/test_compare.py) | The validation gate and harness comparison (stdlib, offline) and its 44 focused tests. |
+
+### Prototype result: the criterion is expressible natively
+
+The three ratified numbers are three independent measurements in the tool's
+own `expr` path (`headroom_hi_v`, `headroom_lo_v`, `swing_span_v`), each
+carrying the literal bound as `limits` (0.251 V, 0.141 V, 0.571 V) and graded by
+`klt sim`. The sampled definition of "The swing criterion" is reproduced
+exactly: segment gain between adjacent samples, peak = first maximum, the
+contiguous run of segments around the peak with gain ≥ 0.5 × peak, bounds =
+extreme `Vout` over that run's endpoint samples. ngspice vector algebra does it
+with no loop (`request._comment` spells out the index arithmetic): slices for
+the segment gains, `lt`/`gt` masks for the qualifying and non-qualifying
+segments, `vecmax`/`vecmin` over index vectors for the run's ends, and each
+stage reduced to a scalar that the next `expr` names. Four more tool-graded
+checks reproduce the harness's sanity rules (run clear of both window edges,
+monotonic curve, peak gain ≥ 10 V/V). No external calculation touches the
+verdicts.
+
+Recorded run, `klt/records/20261010-115354-aa54447.nominal.{sim,compare}.json`:
+
+- Tools: `klt 0.7.0+gf03eb675fa81` (`~/.local/bin/klt`), `ngspice-46` (OSDI preflight `sim/tools/build-osdi.sh --check`: all four models loadable).
+- Command: `sim/output-swing/klt/run.sh`, i.e. `klt sim swing.nominal.request.json --backend local --format json` (exit 0, status `pass`, `coverage.nothing_checked` false, nothing skipped).
+- Inputs: request sha256 and PDK version are in the compare record's `provenance`; the envelope's `environment` carries the netlist closure and model hashes.
+
+| Quantity | Harness record | `klt sim` | Delta | Allowed |
+|---|---|---|---|---|
+| headroom from VDD | 0.281186 V | 0.281471 V | +0.285 mV | 1.69 mV |
+| headroom from VSS | 0.173082 V | 0.172792 V | −0.290 mV | 1.58 mV |
+| tracking span | 0.745732 V | 0.745737 V | +0.005 mV | 3.56 mV |
+
+All three rows PASS their literal bounds in both paths at this point (it is
+not the binding corner; the harness's literal span miss is at `mos_ss / 125 °C
+/ 1.08 V`, and nothing here changes it).
+
+### Comparison tolerance (not a limit)
+
+`compare.py` keeps the literal ratified bounds (`RATIFIED_LIMITS`) apart from the
+comparison tolerance. The tolerance only says whether the two measurement paths
+agree; it never moves a pass/fail. Its basis, per point and per boundary:
+
+- **Estimator offset.** Both paths use the same sampled definition at the same 10 µV step, but the harness centres its ±25 mV fine window on the coarse crossing and the request sweeps a fixed window, so the sample grids are offset by a fraction of a step. A boundary sample can land one step away, and `Vout` moves by at most (peak incremental gain × step) over one step: `10 µV × peak_inc_gain_v_v` (harness column) per boundary, twice that for the span.
+- **Cross-host numerics.** DR-0005 measured 9.9e-4 relative drain-current difference between the host that produced the harness record and Linux/x86_64 default-tolerance runs; 1e-3 relative plus 1 µV is allowed on every value.
+
+The allowance is analytic, not fitted; the prototype's single observation is
+about a sixth of it. The 45-point run must confirm it per point and explain any
+exceedance rather than widen it.
+
+### What the comparator rejects
+
+`validate` (the gate before anything enters `records/`) and `compare` refuse:
+missing, duplicate and unexpected points (the requested set is `--points grid`,
+the 45 ratified points, or `--points nominal`); missing, null or non-finite
+measurements; a wrong or absent unit; per-measurement or per-corner status
+`error`/`inconclusive`/`not_checked`; a non-zero errored/inconclusive count;
+`coverage.nothing_checked` not false; anything in `coverage.skipped`; `limits`
+that differ from the literal bounds (a relaxed or absent bound is not evidence);
+a verdict that contradicts its value against the literal bound; a failed
+integrity check (the tracking bounds would be a window artifact); `Vcm ≠ VDD/2`;
+and a malformed, duplicated or non-finite harness CSV. A complete envelope
+whose ratified row **fails** its literal bound (e.g. span 0.570999 V) is valid
+evidence and stays a FAIL even when the comparison tolerance passes; both are
+tested.
+
+Run the tests (offline, no simulator):
+`python3 -m unittest discover -s sim/output-swing/klt -p 'test_*.py'`.
+
+### Prototype vs accepted evidence, and deferred work
+
+Not done here, and not claimed:
+
+- **The 45-point envelope** (the full grid on the batch fleet), the per-point harness comparison with every out-of-tolerance or verdict-disagreement point explained, and the `signoff/README.md` coverage-table row. The table row stays "no" until an envelope exists; the manifest does not cite item 5 until all ten ratified rows have envelopes. The literal span miss at `mos_ss / 125 °C / 1.08 V` stays a FAIL (precision decision: #101).
+- **Fixed sweep window.** The request cannot centre its fine window on a measured crossing (`analysis.args` is literal). The harness record's crossings span 11.4–21.9 mV, so a fixed `Vid` window of −10…+40 mV keeps every one of them at least 18 mV from both edges; the grid request should keep that window and the edge-guard limits (`lo_idx ≥ 1`, `hi_idx ≤ 4998`) will reject any point where it is wrong. Tracked upstream: 2AMLogic/klayout-tools#3055 (also covers naming ungraded vector intermediates; the expressions here repeat the slope vector instead). `<`/`>` are I/O redirection in `expr`, hence `lt`/`gt` (2AMLogic/klayout-tools#2940).
+- **Estimator checks on synthetic curves** (absent crossing, weak peak, disconnected qualifying regions, window-edge truncation) exercised through ngspice rather than only through the comparator; the prototype shows the expressions on one real curve.
+- **Fleet prerequisites.** The batch runner image pin (2AMLogic/2am#2193) and the `batch` backend were not touched: nothing was submitted, and `run.sh` forces `--backend local`.
