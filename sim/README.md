@@ -61,8 +61,22 @@ instantiate it through an OSDI-compiled shared library, and the pinned
 IHP-Open-PDK v0.3.0 release ships the Verilog-A *sources* only (no prebuilt
 `.osdi`). `sim/tools/build-osdi.sh` compiles the PDK's own sources with a
 checksum-pinned OpenVAF-Reloaded release (see that script's header for full
-provenance); `--check` verifies the models are present and loadable without
-rebuilding. Every experiment's `run_*.sh` preflights this before simulating.
+provenance). A successful build also publishes a versioned build manifest,
+`$PDK_ROOT/$PDK/libs.tech/ngspice/osdi/.build-manifest` (local PDK install,
+not tracked in Git), binding the compiler pin (tag, platform asset and sha256,
+libLLVM deb sha256), the compile flags, a hash of every Verilog-A file under
+each model's source directory (so an edited included file is detected), and
+the sha256 of each `.osdi`. `--check` is read-only: it requires the manifest
+to match the current inputs (missing, stale, malformed or unknown-schema
+manifests, edited sources, changed pins/flags and replaced binaries all fail
+with a rebuild instruction), then runs the ngspice load probe. A normal build
+reuses existing binaries only when the manifest is fresh and the probe passes;
+`--force` always rebuilds. The manifest is removed before compiling and
+written only after all models compile and the probe passes, so a failed build
+never certifies a partial set. **One-time rebuild:** installs built before the
+manifest existed have none, so run `sim/tools/build-osdi.sh` once. Every
+experiment's `run_*.sh` preflights this before simulating. Offline tests:
+`sim/tools/test_build_osdi_manifest.py` (stub compiler and ngspice).
 
 ## Solver tolerance convention
 

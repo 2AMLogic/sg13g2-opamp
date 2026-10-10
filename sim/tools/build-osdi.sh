@@ -6,7 +6,16 @@
 #   export PDK_ROOT=/path/to/ihp-open-pdk   # parent dir containing ihp-sg13g2/
 #   export PDK=ihp-sg13g2
 #   sim/tools/build-osdi.sh                 # fetch compiler + compile models
-#   sim/tools/build-osdi.sh --check         # verify only: models present + loadable
+#   sim/tools/build-osdi.sh --check         # verify only (read-only): build manifest
+#                                           # fresh for the CURRENT inputs + models loadable
+#   sim/tools/build-osdi.sh --force         # rebuild even if the manifest is fresh
+#
+# BUILD MANIFEST: a successful build publishes
+# $OSDI_DIR/.build-manifest (key=value, schema-versioned) binding the
+# compiler pin (tag, platform asset + sha256, libLLVM deb sha256), the
+# compile flags, a hash of every Verilog-A input file per model, and the
+# sha256 of every produced .osdi. Reuse and --check require it to match the
+# current inputs; a missing/stale/malformed manifest means "rebuild".
 #
 # WHAT THIS DOES AND WHY
 #
@@ -246,31 +255,127 @@ check_models() {
   return 0
 }
 
-if [[ ${CHECK_ONLY} -eq 1 ]]; then
-  check_models
-  exit $?
-fi
-
-if [[ ${FORCE} -eq 0 ]] && check_models >/dev/null 2>&1; then
-  echo "build-osdi.sh: models already built and loadable in ${OSDI_DIR} (use --force to rebuild)."
-  exit 0
-fi
-
 # --------------------------------------------------------------------------
-# Resolve the platform asset.
+# Resolve the platform asset (needed by the build AND by manifest freshness,
+# which must work without downloading the compiler). An unsupported platform
+# is only fatal when a build is actually required (see require_platform).
 # --------------------------------------------------------------------------
 uname_s="$(uname -s)"
 uname_m="$(uname -m)"
+asset=""; sha=""
 case "${uname_s}/${uname_m}" in
   Darwin/arm64)  asset="${OPENVAF_ASSET_macos_aarch64}"; sha="${OPENVAF_SHA_macos_aarch64}" ;;
   Darwin/x86_64) asset="${OPENVAF_ASSET_macos_x86_64}";  sha="${OPENVAF_SHA_macos_x86_64}" ;;
   Linux/x86_64)  asset="${OPENVAF_ASSET_linux_x86_64}";  sha="${OPENVAF_SHA_linux_x86_64}" ;;
-  *)
+esac
+
+require_platform() {
+  if [[ -z "${asset}" ]]; then
     echo "build-osdi.sh: no pinned OpenVAF-Reloaded ${OPENVAF_TAG} asset for ${uname_s}/${uname_m}." >&2
     echo "build-osdi.sh: see ${OPENVAF_BASE_URL} for the asset list; add the pin above once verified." >&2
     exit 3
-    ;;
-esac
+  fi
+}
+
+# Compile flags, mirroring the PDK's own openvaf-compile-va.sh. Part of the
+# manifest: changing them invalidates existing builds.
+COMPILE_FLAGS="-D__NGSPICE__"
+
+# --------------------------------------------------------------------------
+# Build manifest (issue #182). Rendered from the script's pinned constants and
+# the files on disk -- never from the cached compiler tarball -- so freshness
+# can be judged offline and read-only.
+# --------------------------------------------------------------------------
+MANIFEST_SCHEMA=1
+MANIFEST="${OSDI_DIR}/.build-manifest"
+
+# Hash of one model's compiler input closure: the compiler runs with cwd set
+# to the model's subdir and every `include` resolves inside it, so every file
+# under that subdir (name + sha256, sorted) is a conservative superset of the
+# closure. psp103 and psp103_nqs share a subdir.
+model_inputs_hash() {
+  local dir="${VA_DIR}/$1" f rel
+  if [[ ! -d "${dir}" ]]; then echo "MISSING"; return 0; fi
+  while IFS= read -r f; do
+    rel="${f#"${dir}"/}"
+    echo "${rel} $(sha256_of "${f}")"
+  done < <(find "${dir}" -type f | LC_ALL=C sort) | sha256_stdin
+}
+
+sha256_stdin() {
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum | awk '{print $1}'
+  else
+    shasum -a 256 | awk '{print $1}'
+  fi
+}
+
+render_manifest() {
+  local entry model subdir out
+  echo "schema=${MANIFEST_SCHEMA}"
+  echo "openvaf_tag=${OPENVAF_TAG}"
+  echo "platform=${uname_s}/${uname_m}"
+  echo "asset=${asset:-unsupported}"
+  echo "asset_sha256=${sha:-unsupported}"
+  if [[ "${uname_s}/${uname_m}" == "Linux/x86_64" ]]; then
+    echo "libllvm_deb_sha256=${LIBLLVM21_DEB_SHA256}"
+  else
+    echo "libllvm_deb_sha256=none"
+  fi
+  echo "flags=${COMPILE_FLAGS}"
+  echo "models=${MODELS[*]}"
+  for entry in "${MODELS[@]}"; do
+    model="${entry%%:*}"; subdir="${entry##*:}"
+    echo "input.${model}=$(model_inputs_hash "${subdir}")"
+  done
+  for entry in "${MODELS[@]}"; do
+    model="${entry%%:*}"
+    out="${OSDI_DIR}/${model}.osdi"
+    if [[ -f "${out}" ]]; then echo "output.${model}.osdi=$(sha256_of "${out}")"
+    else echo "output.${model}.osdi=MISSING"; fi
+  done
+}
+
+# Read-only. Returns 0 iff the manifest matches the current inputs/outputs.
+manifest_fresh() {
+  local rebuild="run sim/tools/build-osdi.sh to rebuild"
+  if [[ ! -f "${MANIFEST}" ]]; then
+    echo "build-osdi.sh: STALE: no build manifest at ${MANIFEST} (existing install, or never built) -- ${rebuild}." >&2
+    return 1
+  fi
+  if ! grep -qx "schema=${MANIFEST_SCHEMA}" "${MANIFEST}" 2>/dev/null; then
+    echo "build-osdi.sh: STALE: ${MANIFEST} is malformed or has an unknown schema version -- ${rebuild}." >&2
+    return 1
+  fi
+  local want diffout keys
+  want="$(render_manifest)"
+  if diffout="$(diff <(printf '%s\n' "${want}") "${MANIFEST}" 2>&1)"; then
+    return 0
+  fi
+  keys="$(printf '%s\n' "${diffout}" | sed -n 's/^[<>] \([^=]*\)=.*/\1/p' | LC_ALL=C sort -u | tr '\n' ' ')"
+  echo "build-osdi.sh: STALE: build manifest does not match current inputs (${keys:-malformed content}) -- ${rebuild}." >&2
+  return 1
+}
+
+if [[ ${CHECK_ONLY} -eq 1 ]]; then
+  manifest_fresh || exit 1
+  check_models
+  exit $?
+fi
+
+if [[ ${FORCE} -eq 0 ]]; then
+  if manifest_fresh 2>/dev/null && check_models >/dev/null 2>&1; then
+    echo "build-osdi.sh: models already built from current inputs and loadable in ${OSDI_DIR} (use --force to rebuild)."
+    exit 0
+  fi
+  echo "build-osdi.sh: no fresh, loadable build in ${OSDI_DIR} -- rebuilding." >&2
+fi
+
+require_platform
+
+# From here on a build is in progress: drop any old manifest so a failed or
+# partial build can never leave metadata certifying the previous binaries.
+rm -f "${MANIFEST}"
 
 # Persistent cache, NOT /tmp: this repo has already lost a PDK install to a
 # /tmp sweep between sessions, and re-downloading a ~60 MB compiler every
@@ -280,6 +385,13 @@ mkdir -p "${CACHE_DIR}"
 tarball="${CACHE_DIR}/${asset}"
 prefix="${CACHE_DIR}/${asset%.tar.gz}"
 
+# TEST HOOK (offline fixture tests only): use this compiler as-is, skipping
+# the fetch, checksum verification and libLLVM steps. Manifest contents still
+# come from the pins above.
+if [[ -n "${SG13G2_OSDI_TEST_COMPILER:-}" ]]; then
+  OPENVAF="${SG13G2_OSDI_TEST_COMPILER}"
+  OPENVAF_EXTRA_LD_LIBRARY_PATH=""
+else
 if [[ ! -f "${tarball}" ]]; then
   echo "build-osdi.sh: fetching ${OPENVAF_BASE_URL}/${asset}"
   curl -fsSL -o "${tarball}.part" "${OPENVAF_BASE_URL}/${asset}"
@@ -332,6 +444,7 @@ if [[ "${uname_s}/${uname_m}" == "Linux/x86_64" ]]; then
   OPENVAF_EXTRA_LD_LIBRARY_PATH="$(ensure_libllvm21)"
   echo "build-osdi.sh: libLLVM.so.21 resolved via ${OPENVAF_EXTRA_LD_LIBRARY_PATH} (apt.llvm.org libllvm21, issue #31)"
 fi
+fi  # SG13G2_OSDI_TEST_COMPILER
 
 run_openvaf() {
   if [[ -n "${OPENVAF_EXTRA_LD_LIBRARY_PATH}" ]]; then
@@ -353,8 +466,16 @@ for entry in "${MODELS[@]}"; do
   # -D__NGSPICE__ and the model list mirror the PDK's own
   # libs.tech/verilog-a/openvaf-compile-va.sh, so what lands here is what
   # the PDK intends ngspice to load -- not a locally invented build.
-  ( cd "${VA_DIR}/${subdir}" && run_openvaf -D__NGSPICE__ -o "${OSDI_DIR}/${model}.osdi" "${model}.va" )
+  ( cd "${VA_DIR}/${subdir}" && run_openvaf ${COMPILE_FLAGS} -o "${OSDI_DIR}/${model}.osdi" "${model}.va" )
 done
 
 echo
-check_models
+if ! check_models; then
+  echo "build-osdi.sh: load probe failed -- build manifest NOT published." >&2
+  exit 1
+fi
+# Publish atomically, only after every compilation and the probe succeeded.
+mtmp="$(mktemp "${OSDI_DIR}/.build-manifest.XXXXXX")"
+render_manifest > "${mtmp}"
+mv "${mtmp}" "${MANIFEST}"
+echo "build-osdi.sh: published build manifest ${MANIFEST}"
