@@ -89,8 +89,12 @@ PLATEAU_LIMIT_DB = 0.05
 #   same `ac dec 20 10m 1g` sweep (ngspice `.meas find ... at=` interpolates in
 #   the swept grid; the harness reads the wrdata sample). The one-corner
 #   prototype on this host agreed with the CSV to its 6 significant digits.
-#   The tolerance is PROVISIONAL until a real 45-point envelope quantifies the
-#   per-point spread; it never touches a pass/fail limit.
+#   MEASURED (records/20261010-094256-469573d.compare.json, real 45-point
+#   fleet envelope): the largest |tool - harness| is 4.96e-5 dB on avs0_db/psrr_db,
+#   4.93e-5 dB on avs_1khz_db and 8.8e-8 dB on the plateau delta, i.e. the harness
+#   CSV's own print precision. The tolerances below are kept at their argued,
+#   conservative values (about 400x the measured spread); they never touch a
+#   pass/fail limit.
 # * The plateau delta is a difference of two nearly equal numbers: 0.005 dB abs.
 # * psrr_db = av0 - avs0 where av0 is the SAME committed number on both sides, so
 #   it carries the avs0 tolerance exactly.
