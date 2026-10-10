@@ -19,6 +19,12 @@ What lives here (issue #142; previously copy-pasted into each compare.py):
   InputError -> stderr -> exit 2 path, the inputs sha256 stanza and the
   exit-0-iff-agree rule.
 
+The output-swing bench (issue #176) needs a selectable point set, a `vcm`
+supply key and extra envelope- and measurement-level rules; those are the
+points= / supply_key= / accept_statuses= parameters, the envelope_check and
+measurement_check hooks and run_cli's common_args / validate_noun. Their
+defaults reproduce the behaviour every other bench already relied on.
+
 key_str is shared on purpose: every bench joins its envelope against a harness
 CSV whose `point_id` column uses the same `<process>_<T>C_<VDD>V` spelling, so
 the per-bench copies were byte-identical and must stay so. A bench whose harness
@@ -54,6 +60,16 @@ Key = Tuple[str, int, float]
 # bench-specific problem for the corner to `problems`; runs after the declared
 # measurements are indexed and before the corner is stored.
 CornerCheck = Callable[[Key, Dict[str, object], List[str]], None]
+
+# Envelope-level hook: (env, label, problems) -> None. Runs once, after the
+# aggregate checks and before the corners are walked; may raise InputError
+# (stop at once) or append problems (collected with the per-corner ones).
+EnvelopeCheck = Callable[[dict, str, List[str]], None]
+
+# Per-measurement hook: (key, name, measurement dict, finite value, problems)
+# -> keep. Runs after the status and finiteness checks on each declared
+# measurement; returning False drops the value (the hook appended why).
+MeasurementCheck = Callable[[Key, str, dict, float, List[str]], bool]
 
 
 def expected_keys() -> List[Key]:
@@ -95,27 +111,40 @@ def read_envelope(path: str) -> dict:
         raise InputError(f"{path}: unreadable envelope ({e})")
 
 
-def check_grid(keys: Iterable[Key], label: str, problems: List[str]) -> None:
-    """Append a problem for every ratified point missing from, and every
-    non-grid point present in, `keys`."""
+def check_grid(keys: Iterable[Key], label: str, problems: List[str],
+               points: Optional[Iterable[Key]] = None) -> None:
+    """Append a problem for every expected point missing from, and every
+    unexpected point present in, `keys`. Expected is the ratified grid, or the
+    caller's requested point set `points` when given."""
     got = set(keys)
-    want = set(expected_keys())
+    want = set(expected_keys() if points is None else points)
+    extra = "not a point of the ratified grid" if points is None else \
+        "unexpected point (not in the requested point set)"
     for k in sorted(want - got):
         problems.append(f"{key_str(k)}: missing from {label}")
     for k in sorted(got - want):
-        problems.append(f"{key_str(k)}: not a point of the ratified grid")
+        problems.append(f"{key_str(k)}: {extra}")
 
 
 def index_envelope(env: dict, label: str, measurements: Sequence[str], *,
                    reject_statuses: Sequence[str] = (),
-                   corner_check: Optional[CornerCheck] = None) -> Dict[Key, Dict[str, object]]:
+                   accept_statuses: Optional[Sequence[str]] = None,
+                   supply_key: str = "vinp",
+                   points: Optional[Sequence[Key]] = None,
+                   envelope_check: Optional[EnvelopeCheck] = None,
+                   corner_check: Optional[CornerCheck] = None,
+                   measurement_check: Optional[MeasurementCheck] = None) -> Dict[Key, Dict[str, object]]:
     """Validate a `klt sim` envelope and index its corners by grid key.
 
     Every corner must sit on the ratified grid exactly once with Vcm = VDD/2, a
     pass/fail status, and each name in `measurements` reported once with a
     finite value. `reject_statuses`: measurement statuses that make the value
-    unusable regardless of its number (checked before finiteness).
-    `corner_check`: optional per-bench hook, see CornerCheck.
+    unusable regardless of its number (checked before finiteness);
+    `accept_statuses`, when given, rejects every other status the same way.
+    `supply_key`: the supply_v entry that carries Vcm ("vinp" or "vcm").
+    `points`: the exact key set required instead of the ratified grid (see
+    check_grid). Hooks: envelope_check, corner_check, measurement_check (see
+    EnvelopeCheck / CornerCheck / MeasurementCheck).
 
     Returns {key: {name: value, name + "__status": status}}; raises InputError
     naming every problem found.
@@ -139,20 +168,22 @@ def index_envelope(env: dict, label: str, measurements: Sequence[str], *,
     if env.get("status") not in ("pass", "fail"):
         raise InputError(f"{label}: aggregate status {env.get('status')!r} -- only a complete pass/fail run is evidence")
 
-    out: Dict[Key, Dict[str, object]] = {}
     problems: List[str] = []
+    if envelope_check is not None:
+        envelope_check(env, label, problems)
+    out: Dict[Key, Dict[str, object]] = {}
     for c in corners:
         cid = c.get("corner_id")
         supply = c.get("supply_v") or {}
-        if "vdd" not in supply or "vinp" not in supply or c.get("process") is None:
-            problems.append(f"{cid}: missing process or supply_v.vdd/vinp")
+        if "vdd" not in supply or supply_key not in supply or c.get("process") is None:
+            problems.append(f"{cid}: missing process or supply_v.vdd/{supply_key}")
             continue
         k = make_key(c["process"], c.get("temperature_c"), supply["vdd"])
         if k in out:
             problems.append(f"{key_str(k)}: duplicate corner")
             continue
-        if not math.isclose(float(supply["vinp"]), float(supply["vdd"]) / 2, rel_tol=0, abs_tol=1e-9):
-            problems.append(f"{key_str(k)}: vinp {supply['vinp']} != vdd/2 ({supply['vdd']}/2)")
+        if not math.isclose(float(supply[supply_key]), float(supply["vdd"]) / 2, rel_tol=0, abs_tol=1e-9):
+            problems.append(f"{key_str(k)}: {supply_key} {supply[supply_key]} != vdd/2 ({supply['vdd']}/2)")
         if c.get("status") not in ("pass", "fail"):
             problems.append(f"{key_str(k)}: corner status {c.get('status')!r}")
         vals: Dict[str, object] = {}
@@ -166,18 +197,22 @@ def index_envelope(env: dict, label: str, measurements: Sequence[str], *,
             if m is None:
                 problems.append(f"{key_str(k)}: measurement {n} missing")
                 continue
-            if m.get("status") in reject_statuses:
+            status = m.get("status")
+            if status in reject_statuses or (accept_statuses is not None and status not in accept_statuses):
                 problems.append(f"{key_str(k)}: measurement {n} status {m.get('status')!r}")
                 continue
             if not finite(m.get("value")):
                 problems.append(f"{key_str(k)}: measurement {n} value {m.get('value')!r} is missing or non-finite")
                 continue
-            vals[n] = float(m["value"])
-            vals[n + "__status"] = m.get("status")
+            v = float(m["value"])
+            if measurement_check is not None and not measurement_check(k, n, m, v, problems):
+                continue
+            vals[n] = v
+            vals[n + "__status"] = status
         if corner_check is not None:
             corner_check(k, vals, problems)
         out[k] = vals
-    check_grid(out.keys(), label, problems)
+    check_grid(out.keys(), label, problems, points)
     if problems:
         raise InputError(f"{label}: " + "; ".join(problems))
     return out
@@ -190,10 +225,11 @@ def tol(table: Dict[str, Dict[str, float]], metric: str, ref: float) -> float:
     return t["abs"] + t["rel"] * abs(ref)
 
 
-def load_envelope(path: str, index_fn: Callable[[dict, str], dict]) -> Tuple[dict, dict]:
-    """Read the `klt sim` envelope and index its corners with the bench's gate."""
+def load_envelope(path: str, index_fn: Callable[..., dict], **kw) -> Tuple[dict, dict]:
+    """Read the `klt sim` envelope and index its corners with the bench's gate
+    (`kw` is passed through to it)."""
     env = read_envelope(path)
-    return env, index_fn(env, path)
+    return env, index_fn(env, path, **kw)
 
 
 def summary_tail(lines: List[str], rep: dict) -> List[str]:
@@ -211,7 +247,9 @@ def run_cli(argv: Optional[List[str]], *, description: str, compare_help: str,
             index_fn: Callable[[dict, str], dict],
             run: Callable[[argparse.Namespace, dict, dict], dict],
             inputs: Sequence[Tuple[str, str, bool]],
-            summary: Callable[[dict], str]) -> int:
+            summary: Callable[[dict], str],
+            common_args: Sequence[Tuple[str, dict]] = (),
+            validate_noun: str = "corners") -> int:
     """The compare.py command line shared by every bench.
 
     harness_args: (flag, add_argument kwargs) for the bench's harness files, added
@@ -222,26 +260,34 @@ def run_cli(argv: Optional[List[str]], *, description: str, compare_help: str,
     inputs: (report key, argparse dest, hash it) for each harness file; the
         envelope is always first and always hashed.
     summary(report) -> the stdout text.
+    common_args: (flag, add_argument kwargs) added to BOTH subcommands; each
+        parsed value is also passed to index_fn as a keyword argument named by
+        its argparse dest.
+    validate_noun: the word after the corner count in the validate line.
     Exit 0 iff the report's status is "agree", 1 otherwise, 2 on InputError.
     """
     ap = argparse.ArgumentParser(description=description)
     sub = ap.add_subparsers(dest="cmd", required=True)
     v = sub.add_parser("validate", help="gate the envelope before it may enter records/")
     v.add_argument("envelope")
+    dests = [v.add_argument(flag, **kw).dest for flag, kw in common_args]
     c = sub.add_parser("compare", help=compare_help)
     c.add_argument("--envelope", required=True)
     for flag, kw in harness_args:
         c.add_argument(flag, **kw)
+    for flag, kw in common_args:
+        c.add_argument(flag, **kw)
     c.add_argument("--json-out")
     c.add_argument("--provenance", action="append", default=[], metavar="KEY=VALUE")
     a = ap.parse_args(argv)
+    index_kw = {d: getattr(a, d) for d in dests}
 
     try:
         if a.cmd == "validate":
-            env, idx = load_envelope(a.envelope, index_fn)
-            print(f"validate: {a.envelope}: {len(idx)} corners, status {env.get('status')}, ok")
+            env, idx = load_envelope(a.envelope, index_fn, **index_kw)
+            print(f"validate: {a.envelope}: {len(idx)} {validate_noun}, status {env.get('status')}, ok")
             return 0
-        env, tool_idx = load_envelope(a.envelope, index_fn)
+        env, tool_idx = load_envelope(a.envelope, index_fn, **index_kw)
         rep = run(a, tool_idx, env)
     except InputError as e:
         print(f"compare.py: {e}", file=sys.stderr)

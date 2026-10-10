@@ -52,9 +52,7 @@ harness's literal verdict for the per-row agreement check. Exit status:
 
 from __future__ import annotations
 
-import argparse
 import csv
-import json
 import math
 import os
 import sys
@@ -158,103 +156,45 @@ def literal_verdict(value: float, limits: Dict[str, float]) -> str:
 
 
 # --------------------------------------------------------------- envelopes
-def _status_ok(s) -> bool:
-    return s in ("pass", "fail")
-
-
-def index_envelope(env: dict, label: str = "envelope",
-                   points: Sequence[Key] = POINT_SETS["grid"]) -> Dict[Key, Dict[str, object]]:
-    """Validate a `klt sim` envelope and index its corners by key.
-
-    Returns {key: {name: value, name + "__status": status}}; raises InputError
-    naming every problem found. See the module docstring for the rules.
-    """
-    if not isinstance(env, dict):
-        raise InputError(f"{label}: not a JSON object")
-    if "error" in env:
-        raise InputError(f"{label}: klt error envelope: {env['error']}")
-    corners = env.get("corners")
-    if not isinstance(corners, list):
-        raise InputError(f"{label}: no corners[] array")
-    if env.get("corner_count") != len(corners):
-        raise InputError(f"{label}: corner_count {env.get('corner_count')} != len(corners) {len(corners)}")
-    cov = env.get("coverage")
-    if not isinstance(cov, dict):
-        raise InputError(f"{label}: no coverage block")
-    if cov.get("nothing_checked") is not False:
-        raise InputError(f"{label}: coverage.nothing_checked is {cov.get('nothing_checked')!r}, expected false")
-    if cov.get("skipped"):
-        raise InputError(f"{label}: coverage.skipped is non-empty ({len(cov['skipped'])} item(s)), e.g. {cov['skipped'][0]}")
-    if env.get("status") not in ("pass", "fail"):
-        raise InputError(f"{label}: aggregate status {env.get('status')!r} -- only a complete pass/fail run is evidence")
+def _check_envelope(env: dict, label: str, problems: List[str]) -> None:
+    """Envelope-level rules beyond the shared gate: nothing errored or
+    inconclusive, and the ratified rows carry exactly the literal bounds."""
     for field in ("errored", "inconclusive"):
         if env.get(field) not in (0, None):
             raise InputError(f"{label}: {field} = {env.get(field)!r}, expected 0")
-
-    # The ratified rows must carry exactly the literal bounds at envelope level.
     top = {m.get("name"): m for m in env.get("measurements") or [] if isinstance(m, dict)}
-    problems: List[str] = []
     for n, lim in RATIFIED_LIMITS.items():
         got = (top.get(n) or {}).get("limits")
         if got != lim:
             problems.append(f"{n}: envelope limits {got!r} != literal ratified bound {lim!r}")
 
-    out: Dict[Key, Dict[str, object]] = {}
-    for c in corners:
-        cid = c.get("corner_id")
-        supply = c.get("supply_v") or {}
-        if "vdd" not in supply or "vcm" not in supply or c.get("process") is None:
-            problems.append(f"{cid}: missing process or supply_v.vdd/vcm")
-            continue
-        k = make_key(c["process"], c.get("temperature_c"), supply["vdd"])
-        if k in out:
-            problems.append(f"{key_str(k)}: duplicate corner")
-            continue
-        if not math.isclose(float(supply["vcm"]), float(supply["vdd"]) / 2, rel_tol=0, abs_tol=1e-9):
-            problems.append(f"{key_str(k)}: vcm {supply['vcm']} != vdd/2 ({supply['vdd']}/2)")
-        if not _status_ok(c.get("status")):
-            problems.append(f"{key_str(k)}: corner status {c.get('status')!r}")
-        vals: Dict[str, object] = {}
-        by_name: Dict[object, dict] = {}
-        for m in c.get("measurements") or []:
-            if m.get("name") in by_name:
-                problems.append(f"{key_str(k)}: measurement {m.get('name')} reported twice")
-            by_name[m.get("name")] = m
-        for n in MEASUREMENTS:
-            m = by_name.get(n)
-            if m is None:
-                problems.append(f"{key_str(k)}: measurement {n} missing")
-                continue
-            if not _status_ok(m.get("status")):
-                problems.append(f"{key_str(k)}: measurement {n} status {m.get('status')!r}")
-                continue
-            if not finite(m.get("value")):
-                problems.append(f"{key_str(k)}: measurement {n} value {m.get('value')!r} is missing or non-finite")
-                continue
-            if m.get("unit") != MEASUREMENT_UNITS[n]:
-                problems.append(f"{key_str(k)}: measurement {n} unit {m.get('unit')!r} != {MEASUREMENT_UNITS[n]!r}")
-                continue
-            v = float(m["value"])
-            if n in RATIFIED_LIMITS and m["status"] != literal_verdict(v, RATIFIED_LIMITS[n]):
-                problems.append(f"{key_str(k)}: measurement {n} status {m['status']!r} contradicts value {v!r} "
-                                f"against the literal bound {RATIFIED_LIMITS[n]!r}")
-                continue
-            if n in INTEGRITY and m["status"] != "pass":
-                problems.append(f"{key_str(k)}: integrity measurement {n} = {v!r} failed -- the tracking bounds "
-                                "are a window/curve artifact at this point, not evidence")
-                continue
-            vals[n] = v
-            vals[n + "__status"] = m["status"]
-        out[k] = vals
 
-    want, got = set(points), set(out)
-    for k in sorted(want - got):
-        problems.append(f"{key_str(k)}: missing from {label}")
-    for k in sorted(got - want):
-        problems.append(f"{key_str(k)}: unexpected point (not in the requested point set)")
-    if problems:
-        raise InputError(f"{label}: " + "; ".join(problems))
-    return out
+def _check_measurement(k: Key, n: str, m: dict, v: float, problems: List[str]) -> bool:
+    """Per-measurement rules beyond the shared gate: the unit, a ratified
+    row's verdict against its literal bound, and an integrity measurement's
+    pass. Returns whether the value may be kept."""
+    if m.get("unit") != MEASUREMENT_UNITS[n]:
+        problems.append(f"{key_str(k)}: measurement {n} unit {m.get('unit')!r} != {MEASUREMENT_UNITS[n]!r}")
+        return False
+    if n in RATIFIED_LIMITS and m["status"] != literal_verdict(v, RATIFIED_LIMITS[n]):
+        problems.append(f"{key_str(k)}: measurement {n} status {m['status']!r} contradicts value {v!r} "
+                        f"against the literal bound {RATIFIED_LIMITS[n]!r}")
+        return False
+    if n in INTEGRITY and m["status"] != "pass":
+        problems.append(f"{key_str(k)}: integrity measurement {n} = {v!r} failed -- the tracking bounds "
+                        "are a window/curve artifact at this point, not evidence")
+        return False
+    return True
+
+
+def index_envelope(env: dict, label: str = "envelope",
+                   points: Sequence[Key] = POINT_SETS["grid"]) -> Dict[Key, Dict[str, object]]:
+    """The shared envelope gate (klt_envelope.index_envelope) on the vcm
+    supply key and the requested point set, plus _check_envelope and
+    _check_measurement. See the module docstring for the rules."""
+    return E.index_envelope(env, label, MEASUREMENTS, accept_statuses=("pass", "fail"), supply_key="vcm",
+                            points=points, envelope_check=_check_envelope,
+                            measurement_check=_check_measurement)
 
 
 # ----------------------------------------------------------- harness CSV
@@ -389,41 +329,18 @@ def _text_summary(rep: dict) -> str:
 
 
 def main(argv: Optional[List[str]] = None) -> int:
-    ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    sub = ap.add_subparsers(dest="cmd", required=True)
-    v = sub.add_parser("validate", help="gate the envelope before it may enter records/")
-    v.add_argument("envelope")
-    v.add_argument("--points", choices=sorted(POINT_SETS), default="grid")
-    c = sub.add_parser("compare", help="join the envelope with the harness record")
-    c.add_argument("--envelope", required=True)
-    c.add_argument("--harness-csv", required=True)
-    c.add_argument("--points", choices=sorted(POINT_SETS), default="grid")
-    c.add_argument("--json-out")
-    c.add_argument("--provenance", action="append", default=[], metavar="KEY=VALUE")
-    a = ap.parse_args(argv)
-    points = POINT_SETS[a.points]
+    def run(a, tool_idx, env):
+        points = POINT_SETS[a.points]
+        return compare(tool_idx, load_harness_csv(a.harness_csv, points), points, env)
 
-    try:
-        env = E.read_envelope(a.envelope)
-        tool_idx = index_envelope(env, a.envelope, points)
-        if a.cmd == "validate":
-            print(f"validate: {a.envelope}: {len(tool_idx)} corner(s), status {env.get('status')}, ok")
-            return 0
-        harness = load_harness_csv(a.harness_csv, points)
-        rep = compare(tool_idx, harness, points, env)
-    except InputError as e:
-        print(f"compare.py: {e}", file=sys.stderr)
-        return 2
-
-    rep["inputs"] = {"envelope": {"path": a.envelope, "sha256": E.sha256_file(a.envelope)},
-                     "harness_csv": {"path": a.harness_csv, "sha256": E.sha256_file(a.harness_csv)}}
-    rep["provenance"] = dict(kv.split("=", 1) for kv in a.provenance)
-    if a.json_out:
-        with open(a.json_out, "w") as f:
-            json.dump(rep, f, indent=2)
-            f.write("\n")
-    print(_text_summary(rep))
-    return 0 if rep["status"] == "agree" else 1
+    return E.run_cli(
+        argv, description=__doc__.split("\n\n")[0],
+        compare_help="join the envelope with the harness record",
+        harness_args=[("--harness-csv", {"required": True})],
+        common_args=[("--points", {"choices": sorted(POINT_SETS), "default": "grid"})],
+        index_fn=lambda env, label, points: index_envelope(env, label, POINT_SETS[points]),
+        run=run, inputs=[("harness_csv", "harness_csv", True)],
+        summary=_text_summary, validate_noun="corner(s)")
 
 
 if __name__ == "__main__":
