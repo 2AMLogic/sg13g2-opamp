@@ -4,6 +4,33 @@
 
 ### 2026-10-10
 
+- **Issue #141** (closed): yield-inputs: validate offset draw identities and gate sample-set reproducibility in CI
+- **Issue #107** (closed): cmrr-mismatch: persist per-draw samples so T1 item 6 can be evidenced with klt yield
+- **Issue #146** (closed): Dedup the compare.py CLI scaffold left after #142 (main/_tol/load_envelope x3)
+- **Issue #151** (closed): Consolidate duplicated klt run.sh and compare.py across sim benches
+- **Issue #157** (closed): signoff: honor the committed klt pin in local re-grading
+- **Issue #158** (closed): signoff: publish verdict records atomically only after successful grading
+- **Issue #162** (closed): integration: validate published port order and ratified bounds against their sources
+- **Issue #135** (closed): Auditor guard telemetry: retain literal body path protection
+- **Issue #155** (closed): characterization: validate the complete ratified bound instead of numeric substrings
+- **Issue #166** (closed): input-offset: reject non-finite and malformed Monte Carlo sweep data
+- **Issue #163** (closed): cmrr-mismatch: bind resumed campaigns to their original inputs
+- **Issue #167** (closed): Auditor guard telemetry: scoped staging cleanup flagged inside source edit
+- **PR #148**: yield-inputs: validate offset draw identities and gate sample-set reproduction in CI
+- **PR #149**: sim: per-draw CMRR draws CSV from committed samples (Closes #107)
+- **PR #150**: sim: share the compare.py CLI scaffold in klt_envelope (Closes #146)
+- **PR #152**: sim: PSRR supply-gain 45-corner fleet envelope, shard bridge, measured comparison (Part of #99)
+- **PR #153**: sim: output-swing one-point klt sim prototype, offline comparator and negative controls
+- **PR #156**: sim: share the klt run.sh wrapper steps (Closes #151)
+- **PR #159**: signoff: honor the committed klt pin in local re-grading
+- **PR #160**: signoff: publish verdict records atomically only after successful grading
+- **PR #165**: signoff: validate integrator ports and ratified bounds against their sources
+- **PR #168**: characterization: validate complete ratified bound against cited clause
+- **PR #172**: input-offset: reject non-finite and malformed MC sweep data
+- **PR #173**: cmrr-mismatch: bind resumed campaigns to their original inputs
+
+### 2026-10-10
+
 - **Issue #142** (closed): Dedup the copy-pasted envelope validation core across sim/*/klt/compare.py
 - **PR #145**: sim: share the klt envelope gate across sim/*/klt/compare.py
 - **Issue #140** (closed): sim: reserve record IDs atomically and refuse overwriting finalized evidence
