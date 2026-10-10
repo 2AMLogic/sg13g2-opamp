@@ -61,10 +61,12 @@ fi
 
 tmp="${out}.tmp.$$"; trap 'rm -f "${tmp}"' EXIT
 python3 -I - "${record_csv}" "${samples_dir}" "${tmp}" "${seed_base}" \
-  "${OP_RAIL_FRAC:-0.02}" "${OP_MID_FRAC:-0.15}" "${PLATEAU_TOL_DB:-0.05}" <<'PYEOF'
+  "${OP_RAIL_FRAC:-0.02}" "${OP_MID_FRAC:-0.15}" "${PLATEAU_TOL_DB:-0.05}" "${here}" <<'PYEOF'
 import csv, math, os, sys
 
-rec, sdir, out, seed_base, rail_frac, mid_frac, plateau_tol = sys.argv[1:8]
+rec, sdir, out, seed_base, rail_frac, mid_frac, plateau_tol, lib_dir = sys.argv[1:9]
+sys.path.insert(0, lib_dir)
+import mc_samples  # strict shared parser (issue #174), also used by run_cmrr_mismatch_mc.sh
 seed_base = int(seed_base)
 rail_frac, mid_frac, plateau_tol = float(rail_frac), float(mid_frac), float(plateau_tol)
 
@@ -72,20 +74,11 @@ def g6(x):
     return f"{x:.6g}"
 
 def read_samples(path):
-    ops, acs = {}, {}
-    with open(path) as f:
-        for line in f:
-            p = line.split()
-            if not p:
-                continue
-            if p[0] == "OP" and len(p) >= 8:
-                ops[int(p[1])] = [float(x) for x in p[2:8]]
-            elif p[0] == "AC" and len(p) >= 5:
-                acs[int(p[1])] = (p[2], p[3], p[4])
-    n = max(ops) + 1 if ops else 0
-    if n == 0 or set(ops) != set(range(n)) or set(acs) != set(range(n)):
-        raise SystemExit(f"make_draws_csv.sh: TRUNCATED/empty sample file {path}")
-    return n, ops, acs
+    try:
+        n, ops, acs, toks = mc_samples.read_samples_raw(path)
+    except (mc_samples.SampleError, OSError) as e:
+        raise SystemExit(f"make_draws_csv.sh: INVALID SAMPLES {e}")
+    return n, ops, acs, toks
 
 errors = []
 rows_out = []
@@ -95,13 +88,13 @@ header = ["point_id", "corner", "temp_c", "vdd_v", "draw_index", "draw_seed",
 for pidx, r in enumerate(csv.DictReader(open(rec))):
     pid = r["point_id"]
     vdd = float(r["vdd_v"]); vcm = float(r["vcm_v"]); av0_db = float(r["av0_db"])
-    n, ops, acs = read_samples(os.path.join(sdir, f"{pid}_mc_samples.txt"))
+    n, ops, acs, toks = read_samples(os.path.join(sdir, f"{pid}_mc_samples.txt"))
     rail_lo, rail_hi = rail_frac * vdd, vdd - rail_frac * vdd
     lin, cm = [], []
     op_fail = plateau_fail = 0
     for k in range(n):
         vout, vd1, vd2, vtail = ops[k][:4]
-        a10, a01, a1k = (float(x) for x in acs[k])
+        a10, a01, a1k = acs[k]
         ok = abs(vout - vcm) <= mid_frac * vdd
         for node in (vout, vd1, vd2, vtail):
             if not (rail_lo <= node <= rail_hi):
@@ -116,7 +109,7 @@ for pidx, r in enumerate(csv.DictReader(open(rec))):
             lin.append(10 ** (a10 / 20.0)); cm.append(cmrr)
         rows_out.append([pid, r["corner"], r["temp_c"], r["vdd_v"], k, seed_base + pidx,
                          "EXCLUDED" if reason else "PASS", reason,
-                         acs[k][0], acs[k][2], r["av0_db"], g6(cmrr)])
+                         toks[k][0], toks[k][2], r["av0_db"], g6(cmrr)])
     n_ok = len(lin)
     if n_ok < 2:
         errors.append(f"{pid}: fewer than 2 passing draws"); continue

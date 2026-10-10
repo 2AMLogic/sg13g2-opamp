@@ -237,6 +237,19 @@ worst single draw is 25.94 dB at `mos_ss_-40C_1.08V`. Future runs of
 `run_cmrr_mismatch_mc.sh` emit `<id>-draws.csv` through the same script.
 Offline controls: `sim/tools/test_make_draws_csv.py`.
 
+**Strict sample validation (#174).** The campaign's `stat_point` and
+`make_draws_csv.sh` read the raw echo files through one shared parser,
+[`mc_samples.py`](mc_samples.py). It requires exactly one `OP` record (8
+tokens) and one `AC` record (5 tokens) per draw index `0..n-1`, and rejects
+unknown record types, short/long records, malformed or non-finite numeric
+tokens (`nan`, `inf`, overflow such as `1e999`), malformed or duplicate
+indices and missing pairs. Without this, a NaN 0.1 Hz plateau partner made
+`abs(a10 - a01) > tol` false and the draw silently PASS. Malformed input is a
+point failure (`INVALID <point>: <file>:<line>: draw <k>: ... field <name>`;
+no record is written) in the campaign, and a conversion failure (exit 1, no
+draws CSV published) in the converter. Finite OP and plateau exclusions are
+unchanged, and the committed 13,500-row table still reproduces byte for byte.
+
 **Caveat (DR-0004).** The ratified bound (>= 26.68 dB) is a +3 sigma-of-Acm
 aggregate, not a per-draw pass/fail limit. This file does not discharge it,
 and no per-draw yield limit or `target_yield` is asserted here (that needs
