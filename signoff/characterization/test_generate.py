@@ -426,6 +426,41 @@ class NegativeControls(unittest.TestCase):
         self.fx.save_selection()
         self.assertEqual(rows_by_id(self.fx.build())["gbw"]["verdict"], "ERROR")
 
+    def _verdict_after(self, rid, **changes):
+        row = next(r for r in self.fx.selection["rows"] if r["id"] == rid)
+        for key, val in changes.items():
+            (row["bound"] if key in ("op", "value") else row)[key] = val
+        self.fx.save_selection()
+        return rows_by_id(self.fx.build())[rid]
+
+    def test_bound_substring_of_ratified_number_is_error(self):
+        row = self._verdict_after("gbw", value="4.7")  # substring of 4.74
+        self.assertEqual(row["verdict"], "ERROR")
+        self.assertTrue(any("whole numeric token" in e for e in row["errors"]))
+
+    def test_flipped_operator_is_error(self):
+        row = self._verdict_after("gbw", op="<=")
+        self.assertEqual(row["verdict"], "ERROR")
+        self.assertTrue(any("operator" in e for e in row["errors"]))
+
+    def test_conflicting_unit_is_error(self):
+        row = self._verdict_after("gbw", unit="kHz")
+        self.assertEqual(row["verdict"], "ERROR")
+        self.assertTrue(any("unit" in e for e in row["errors"]))
+
+    def test_ambiguous_or_unsupported_clause_is_error(self):
+        self.assertIsNotNone(generate.parse_bound_clause("no bound here")[1])
+        self.assertIsNotNone(generate.parse_bound_clause("\u2265 1 V and \u2264 2 V")[1])
+        self.assertIsNotNone(generate.parse_bound_clause("\u2265 5 furlongs")[1])
+
+    def test_valid_clauses_parse_to_selection_bounds(self):
+        for r in self.fx.selection["rows"]:
+            if r.get("bound"):
+                text = r["spec_check"]["text"]
+                parsed, problem = generate.parse_bound_clause(text)
+                self.assertIsNone(problem, r["id"])
+                self.assertEqual(parsed[:2], (r["bound"]["op"], r["bound"]["value"]), r["id"])
+
     def test_spec_text_drift_is_error(self):
         spec = self.fx.root / self.fx.selection["spec"]
         spec.write_text(spec.read_text(encoding="utf-8").replace("≥ 4.74 MHz", "≥ 4.50 MHz"), encoding="utf-8")
