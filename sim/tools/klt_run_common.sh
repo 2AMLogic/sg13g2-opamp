@@ -29,12 +29,39 @@
 #   klt_compare_and_finish <compare args>...
 #                                          -> compare; exit 0 / 5
 #
+# Reservation (issue #171). klt_begin_record claims the record destinations
+# BEFORE klt is invoked, with the same primitive as sim/record-paths.sh
+# (#140): an un-`-p` mkdir, which is atomic and fails on an existing path, so
+# of any number of overlapping starts with the same <id><suffix> exactly one
+# owns it. The reservation is the empty hidden directory
+#
+#   records/.reserve-<id><suffix>/
+#
+# (empty, so never tracked by git). The owner then refuses -- releasing the
+# reservation and exiting 3, before any klt call -- if records/<id><suffix>
+# .sim.json, .compare.json or .shards already exists, so a comparison-only
+# leftover is protected too. Files are published by klt_publish_noclobber
+# (copy to a hidden temp in records/, then `ln`, which fails on an existing
+# destination, then unlink the temp): a destination is never truncated or
+# replaced. compare.py writes its report to scratch and it is published the
+# same way.
+#
+# Cleanup/retention: an EXIT trap rmdirs the reservation on every normal exit
+# (0, 3, 4, 5). A failed or incomplete run therefore leaves no reservation,
+# only its raw output in ${SCRATCH} (exit 4); nothing was published, so a
+# fresh invocation may reuse the id. Published evidence is never removed.
+# Only a hard kill (SIGKILL, power loss) can strand the reservation; it is
+# empty and harmless to other ids, and a later start with that same
+# second+commit refuses naming it. Recover by confirming no run is live and
+# `rmdir`-ing that directory (rmdir refuses a non-empty dir).
+#
 # <record-suffix> (default empty) goes between the record id and `.sim.json` /
 # `.compare.json`, e.g. ".nominal". KLT_OK_NOTE overrides the exit-0 message
 # parenthetical. Exit statuses are those documented in each run.sh header:
 # 3 preflight, 4 no gradable envelope, 5 compare disagreed or could not join.
 
 incomplete=0
+KLT_RESERVATION=""
 RECORD_SUFFIX=""
 KLT_OK_NOTE="all points within tolerance"
 KLT_PROVENANCE_EXTRA=()
@@ -58,13 +85,51 @@ klt_begin_record() {
   RECORD_ID="$(date -u +%Y%m%d-%H%M%S)-${REPO_GIT_SHA}"
   RECORDS_DIR="${SCRIPT_DIR}/records"
   mkdir -p "${RECORDS_DIR}"
-  if [[ -e "${RECORDS_DIR}/${RECORD_ID}${RECORD_SUFFIX}.sim.json" ]]; then
-    echo "run.sh: ${RECORDS_DIR}/${RECORD_ID}${RECORD_SUFFIX}.sim.json already exists -- records are append-only." >&2
+  local rec="${RECORD_ID}${RECORD_SUFFIX}"
+  KLT_RESERVATION="${RECORDS_DIR}/.reserve-${rec}"
+  if ! mkdir "${KLT_RESERVATION}" 2>/dev/null; then
+    echo "run.sh: record ${rec} is reserved by another run (${KLT_RESERVATION}) -- nothing written." >&2
+    echo "run.sh: if no run is live (killed earlier), rmdir that empty directory; otherwise re-run to mint a new id." >&2
+    KLT_RESERVATION=""
+    exit 3
+  fi
+  trap klt_release_reservation EXIT
+  local taken=() f
+  for f in "${RECORDS_DIR}/${rec}.sim.json" "${RECORDS_DIR}/${rec}.compare.json" "${RECORDS_DIR}/${rec}.shards"; do
+    [[ -e "${f}" || -L "${f}" ]] && taken+=("${f}")
+  done
+  if [[ "${#taken[@]}" -gt 0 ]]; then
+    echo "run.sh: refusing record ${rec} -- records are append-only; already exists:" >&2
+    printf 'run.sh:   %s\n' "${taken[@]}" >&2
     exit 3
   fi
   # klt reports netlist/model paths relative to the invoking repo; run from its root.
   cd "${REPO_ROOT}" || exit
   SCRATCH="$(mktemp -d "${TMPDIR:-/tmp}/${scratch_prefix}-klt-${RECORD_ID}.XXXXXX")"
+}
+
+klt_release_reservation() {
+  if [[ -n "${KLT_RESERVATION:-}" ]]; then
+    rmdir "${KLT_RESERVATION}" 2>/dev/null || true
+    KLT_RESERVATION=""
+  fi
+}
+
+# klt_publish_noclobber <src> <dest>: put a copy of <src> at <dest> without
+# ever replacing or truncating an existing <dest>. Returns 1 if it exists.
+klt_publish_noclobber() {
+  local src="$1" dest="$2" tmp rc=0
+  tmp="$(mktemp "$(dirname "${dest}")/.publish.XXXXXX")" || return 1
+  if cp "${src}" "${tmp}"; then
+    ln "${tmp}" "${dest}" 2>/dev/null || rc=1
+  else
+    rc=1
+  fi
+  unlink "${tmp}" 2>/dev/null || true
+  if [[ "${rc}" -ne 0 ]]; then
+    echo "run.sh: could not publish ${dest} (already exists?) -- not replaced; records are append-only." >&2
+  fi
+  return "${rc}"
 }
 
 klt_run_request() {
@@ -99,7 +164,7 @@ klt_require_complete() {
 }
 
 klt_write_envelope() {
-  cp "$1" "${RECORDS_DIR}/${RECORD_ID}${RECORD_SUFFIX}.sim.json"
+  klt_publish_noclobber "$1" "${RECORDS_DIR}/${RECORD_ID}${RECORD_SUFFIX}.sim.json" || exit 4
 }
 
 klt_compare_and_finish() {
@@ -109,7 +174,7 @@ klt_compare_and_finish() {
   local cmp_rc=0
   python3 "${rel}/compare.py" compare "$@" \
     --envelope "${rel}/records/${rec}.sim.json" \
-    --json-out "${rel}/records/${rec}.compare.json" \
+    --json-out "${SCRATCH}/${rec}.compare.json" \
     --provenance "record_id=${RECORD_ID}" \
     --provenance "repo_git_sha=${REPO_GIT_SHA}" \
     --provenance "klt_client_version=${KLT_VERSION}" \
@@ -118,6 +183,12 @@ klt_compare_and_finish() {
     --provenance "pdk=${PDK} $(cat "${PDK_ROOT}/${PDK}/.fetched-version" 2>/dev/null || echo unknown-version)" \
     || cmp_rc=$?
 
+  # compare.py wrote into scratch; publish without replacing (issue #171).
+  if [[ -e "${SCRATCH}/${rec}.compare.json" ]] &&
+     ! klt_publish_noclobber "${SCRATCH}/${rec}.compare.json" "${RECORDS_DIR}/${rec}.compare.json"; then
+    echo "run.sh: comparison not written; raw copy kept in ${SCRATCH}" >&2
+    exit 5
+  fi
   rm -rf "${SCRATCH}"
   case "${cmp_rc}" in
     0) echo "run.sh: wrote records/${rec}.compare.json (${KLT_OK_NOTE})" ;;
