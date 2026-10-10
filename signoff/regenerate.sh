@@ -16,7 +16,10 @@
 # <UTC yyyymmdd>-<UTC HHMMSS>-<short sha of HEAD>, so the record says which
 # commit's artifacts it graded.
 #
-# Exit codes: 0 report written (or printed), 1 klt failed.
+# The record is graded into a staging file, validated, then hard-linked into
+# place: a failed or malformed run publishes nothing (issue #158).
+#
+# Exit codes: 0 report written (or printed), 1 klt failed / record refused.
 
 set -euo pipefail
 
@@ -72,12 +75,55 @@ fi
 RECORD_ID="$(date -u +%Y%m%d-%H%M%S)-$(git rev-parse --short=7 HEAD)"
 OUT="signoff/reports/${RECORD_ID}.signoff.json"
 mkdir -p signoff/reports
+# Fast-fail only; the atomic refusal is the hard link below.
 if [ -e "${OUT}" ]; then
   echo "refusing to overwrite existing record ${OUT}" >&2
   exit 1
 fi
 
-run_klt signoff --manifest signoff/block-manifest.json --format json >"${OUT}"
+# Grade into a staging file the checker's *.signoff.json glob can never match,
+# validate it, and only then publish it. A failed or malformed JSON pass leaves
+# signoff/reports/ untouched, and `ln` (EEXIST on an existing destination)
+# makes publication atomic and non-clobbering even against a concurrent run
+# that picked the same record id.
+TMP="$(mktemp "signoff/reports/.staging.XXXXXX")"
+trap 'rm -f -- "${TMP}"' EXIT
+trap 'exit 1' INT TERM
+
+rc=0
+"${KLT[@]}" signoff --manifest signoff/block-manifest.json --format json >"${TMP}" || rc=$?
+if [ "${rc}" -ne 0 ] && [ "${rc}" -ne 3 ]; then
+  echo "klt signoff --format json failed (exit ${rc}); no record written" >&2
+  exit 1
+fi
+
+if ! python3 -I - "${TMP}" <<'PY'
+import json, sys
+try:
+    with open(sys.argv[1], encoding="utf-8") as f:
+        d = json.load(f)
+except (OSError, ValueError) as e:
+    sys.exit(f"invalid JSON report: {e}")
+n = d.get("t1_item_count") if isinstance(d, dict) else None
+ok = (
+    isinstance(d, dict)
+    and "block" in d
+    and "kind" in d
+    and isinstance(d.get("items"), list) and len(d["items"]) > 0
+    and isinstance(n, int) and not isinstance(n, bool)
+)
+if not ok:
+    sys.exit("report lacks block/kind/non-empty items/integer t1_item_count")
+PY
+then
+  echo "klt signoff JSON failed validation; no record written" >&2
+  exit 1
+fi
+
+if ! ln "${TMP}" "${OUT}" 2>/dev/null; then
+  echo "refusing to overwrite existing record ${OUT}" >&2
+  exit 1
+fi
 echo
 echo "wrote ${OUT}"
 echo "next: python3 signoff/check_signoff.py --run-klt"
