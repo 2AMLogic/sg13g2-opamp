@@ -28,6 +28,13 @@ only at full T1 — both mean the report rendered. Exit 1/2 mean no report was
 produced. The scripts above encode that distinction; a caller of `klt` that
 treats 3 as failure cannot run on a block that is not already finished.
 
+`regenerate.sh` publishes atomically: the JSON pass is written to a hidden
+`reports/.staging.*` file (never matching `*.signoff.json`), validated, and
+hard-linked into place only if klt exited 0/3 and the document parses. A failed
+or malformed run, or a concurrent run with the same record id, never leaves a
+partial verdict that `check_signoff.py` would pick as the latest report.
+Offline tests: `python3 -m unittest discover -s signoff -p 'test_regenerate.py'`.
+
 - **Checklist** (the item skeleton, parsed at run time):
   `klayout-tools/docs/design-evidence-tiers.md`
 - **Grader contract** (manifest shape, reasons, what is and is not graded):
