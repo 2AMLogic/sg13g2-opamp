@@ -276,6 +276,94 @@ def check_one_pin(pinned, artifact, label: str, failures: Failures) -> None:
         print(f"  ok  evidence[{label}] pin matches {artifact}")
 
 
+SPEC_HASH_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
+
+
+def check_erc_spec_binding(manifest_evidence: dict, failures: Failures) -> None:
+    """Item 11's ERC supply spec still matches the hash its envelope recorded.
+
+    `check_pins` binds the GDS both item-11 parts ran on, but the ERC run has
+    a second input -- the supply spec the envelope names in `spec` -- whose
+    bytes the envelope hashes into `provenance.spec.content_hash`. Without
+    this check, editing the supply declarations leaves the structural
+    power-delivery evidence looking fresh. The ERC part is found by its
+    `kind`, not by list position or report filename.
+    """
+    for key, entry in manifest_evidence.items():
+        if not isinstance(entry, list):
+            continue
+        for index, part in enumerate(entry):
+            if isinstance(part, dict) and part.get("kind") == "erc":
+                check_erc_part_spec(part, f"{key}[{index}]", failures)
+        if not any(isinstance(p, dict) and p.get("kind") == "erc" for p in entry):
+            failures.add(
+                f"erc-spec: evidence[{key!r}] has no part of kind `erc`, so the "
+                "supply-spec bytes cannot be bound"
+            )
+
+
+def check_erc_part_spec(part: dict, label: str, failures: Failures) -> None:
+    rerun = (
+        "  -> re-run the ERC check (layout/opamp_core/run_erc.sh), then "
+        "re-run signoff/regenerate.sh"
+    )
+    cited = part.get("file")
+    if not isinstance(cited, str) or not (REPO_ROOT / cited).is_file():
+        return  # already reported by check_manifest
+    try:
+        with (REPO_ROOT / cited).open(encoding="utf-8") as handle:
+            envelope = json.load(handle)
+    except (OSError, ValueError):
+        return  # already reported by check_manifest
+    where = f"erc-spec: evidence[{label!r}] ({cited})"
+    if not isinstance(envelope, dict):
+        failures.add(f"{where} is not a JSON object\n{rerun}")
+        return
+
+    spec = envelope.get("spec")
+    if not isinstance(spec, str) or not spec:
+        failures.add(f"{where} names no supply `spec` path\n{rerun}")
+        return
+    root = REPO_ROOT.resolve()
+    spec_path = (root / spec).resolve()
+    try:
+        spec_path.relative_to(root)
+    except ValueError:
+        failures.add(f"{where} names spec {spec!r}, which is outside the repository")
+        return
+    if not spec_path.is_file():
+        failures.add(f"{where} names spec {spec!r}, which is missing or unreadable\n{rerun}")
+        return
+
+    provenance = envelope.get("provenance")
+    spec_prov = provenance.get("spec") if isinstance(provenance, dict) else None
+    recorded = spec_prov.get("content_hash") if isinstance(spec_prov, dict) else None
+    if recorded is None:
+        failures.add(
+            f"{where} records no `provenance.spec.content_hash` -- the supply "
+            f"spec is unbound (envelope predates spec hashing?)\n{rerun}"
+        )
+        return
+    if not isinstance(recorded, str) or not SPEC_HASH_RE.match(recorded):
+        failures.add(
+            f"{where} has a malformed `provenance.spec.content_hash` "
+            f"({recorded!r}; expected sha256:<64 hex>)\n{rerun}"
+        )
+        return
+    try:
+        actual = sha256_file(spec_path)
+    except OSError as exc:
+        failures.add(f"{where} spec {spec!r} is unreadable ({exc})\n{rerun}")
+        return
+    if actual != recorded:
+        failures.add(
+            f"{where}: supply spec {spec} has changed since the ERC report was "
+            f"produced\n  recorded: {recorded}\n  actual:   {actual}\n{rerun}"
+        )
+    else:
+        print(f"  ok  evidence[{label}] ERC spec hash matches {spec}")
+
+
 def latest_report(failures: Failures) -> Path | None:
     if not REPORTS_DIR.is_dir():
         failures.add(f"no report directory at {rel(REPORTS_DIR)}")
@@ -614,6 +702,7 @@ def main(argv: list[str]) -> int:
 
     print(f"== pinned inputs ({rel(PINNED_INPUTS)}) ==")
     check_pins(manifest_evidence, failures)
+    check_erc_spec_binding(manifest_evidence, failures)
 
     print("== characterization report (T1 item 8) ==")
     check_characterization(manifest_evidence, failures)
