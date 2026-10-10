@@ -55,7 +55,7 @@ if [[ -z "${PDK_ROOT:-}" || ! -d "${PDK_ROOT}/${PDK}/libs.tech/ngspice" ]]; then
 fi
 
 if ! "${SIM_DIR}/tools/build-osdi.sh" --check >/dev/null 2>&1; then
-  echo "${_sg13g2_preflight_self}: OSDI models missing/unloadable -- run sim/tools/build-osdi.sh first:" >&2
+  echo "${_sg13g2_preflight_self}: OSDI models missing/stale/unloadable -- run sim/tools/build-osdi.sh first:" >&2
   "${SIM_DIR}/tools/build-osdi.sh" --check || true
   exit 3
 fi
