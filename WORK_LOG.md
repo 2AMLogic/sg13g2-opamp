@@ -4,6 +4,21 @@
 
 ### 2026-10-10
 
+- **PR #186**: input-cmr: consolidate raw-curve reader and fine hi-bound crossing into cmr_analysis.py
+- **Issue #183** (closed): input-cmr: consolidate repeated raw-curve readers and fine upper-bound crossing
+- **PR #185**: sim: bind OSDI build reuse to source and compiler provenance
+- **Issue #182** (closed): sim: bind OSDI build reuse to source and compiler provenance
+- **PR #184**: Consolidate harness CSV loader across four klt compare.py benches
+- **Issue #181** (closed): Consolidate harness CSV loader duplicated across four klt compare.py scripts
+- **PR #178**: output-swing: move compare.py onto shared klt_envelope gate and run_cli
+- **Issue #176** (closed): Finish #142: move output-swing compare.py onto shared klt_envelope gate and run_cli
+- **PR #179**: cmrr-mismatch: validate raw sample finiteness and unique OP/AC pairs
+- **Issue #174** (closed): cmrr-mismatch: validate raw sample finiteness and unique OP/AC pairs
+- **PR #177**: sim: reserve klt wrapper record destinations before submitting runs
+- **Issue #171** (closed): sim: reserve klt wrapper record destinations before submitting runs
+
+### 2026-10-10
+
 - **Issue #141** (closed): yield-inputs: validate offset draw identities and gate sample-set reproducibility in CI
 - **Issue #107** (closed): cmrr-mismatch: persist per-draw samples so T1 item 6 can be evidenced with klt yield
 - **Issue #146** (closed): Dedup the compare.py CLI scaffold left after #142 (main/_tol/load_envelope x3)
