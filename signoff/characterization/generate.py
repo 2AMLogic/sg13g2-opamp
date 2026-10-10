@@ -522,6 +522,49 @@ def meets(value: Decimal, op: str, bound: Decimal) -> bool:
     return value >= bound if op == ">=" else value <= bound
 
 
+# The spec states each ratified bound as `<op> <number> <unit>` inside a cited
+# clause. Only this narrow grammar is understood; anything else is an ERROR
+# rather than a guess. A leading `+` (the offset row's "+21.9 mV") is a
+# magnitude cap, graded as `<=` against the absolute value.
+_CLAUSE_OPS = {"\u2265": ">=", "\u2264": "<=", "+": "<="}
+_CLAUSE_UNITS = r"(?:V/\u00b5s|\u00b5Vrms|MHz|dB|mV|uA|\u00b5A|\u00b0|V)"
+_CLAUSE_RE = re.compile(
+    r"(?P<op>[\u2265\u2264+])\s*(?P<num>\d+(?:\.\d+)?)\s*(?P<unit>" + _CLAUSE_UNITS + r")(?![\w/\u00b5])"
+)
+_UNIT_CANON = {"uA": "\u00b5A", "\u00b0": "deg"}
+
+
+def parse_bound_clause(text: str) -> tuple[tuple[str, str, str] | None, str | None]:
+    """(op, numeric token as written, unit) from a cited clause, or an error."""
+    hits = list(_CLAUSE_RE.finditer(text))
+    if len(hits) != 1:
+        return None, (
+            f"cited spec clause {text!r} holds {len(hits)} `<op> <number> <unit>` bounds "
+            "(need exactly 1; narrow the cited text to the clause being graded)"
+        )
+    hit = hits[0]
+    return (_CLAUSE_OPS[hit["op"]], hit["num"], _UNIT_CANON.get(hit["unit"], hit["unit"])), None
+
+
+def check_bound_against_clause(bound: dict, unit: str | None, text: str) -> list[str]:
+    """Validate the whole selected comparison (op, number, unit) against the clause."""
+    parsed, problem = parse_bound_clause(text)
+    if problem:
+        return [problem]
+    op, num, clause_unit = parsed
+    errs = []
+    if bound.get("op") != op:
+        errs.append(f"bound operator {bound.get('op')!r} disagrees with the spec clause {text!r} (reads {op!r})")
+    if bound.get("value") != num:
+        errs.append(
+            f"bound value {bound.get('value')!r} is not the whole numeric token {num!r} of the spec "
+            f"clause {text!r} -- bounds are copied from the spec, never typed in"
+        )
+    if _UNIT_CANON.get(unit or "", unit) != clause_unit:
+        errs.append(f"selected unit {unit!r} disagrees with the spec clause unit {clause_unit!r} in {text!r}")
+    return errs
+
+
 def evaluate_row(row: dict, records: dict, spec_lines: list[str], inventory: dict, selection: dict) -> dict:
     out = {
         "id": row["id"],
@@ -545,11 +588,8 @@ def evaluate_row(row: dict, records: dict, spec_lines: list[str], inventory: dic
             f"{check.get('text')!r} -- the selection disagrees with the ratified spec"
         )
     bound = row.get("bound")
-    if bound and bound["value"] not in (check.get("text") or ""):
-        errors.append(
-            f"bound {bound['value']} does not appear in the spec text this row checks "
-            f"({check.get('text')!r}) -- bounds are copied from the spec, never typed in"
-        )
+    if bound:
+        errors.extend(check_bound_against_clause(bound, row.get("unit"), check.get("text") or ""))
 
     if row["class"] == "pending":
         out["pending_reason"] = row.get("pending_reason")
