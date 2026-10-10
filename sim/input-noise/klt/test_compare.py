@@ -29,6 +29,8 @@ import unittest
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
+# compare.py imports the shared envelope core from sim/tools (issue #142).
+sys.path.insert(0, os.path.normpath(os.path.join(HERE, "..", "..", "tools")))
 import compare as C  # noqa: E402
 
 BENCH = os.path.dirname(HERE)
