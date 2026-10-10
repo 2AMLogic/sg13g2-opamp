@@ -104,6 +104,17 @@ jobs:
         # without `python3 signoff/sync_integrator.py --update` fails here.
         run: python3 signoff/sync_integrator.py --check
 
+      - name: Integrator ports and ratified bounds match their sources (offline)
+        # Read-only contract check (signoff/check_integrator_contract.py):
+        # spec/integrator.json ports against design/opamp_core.sym and every
+        # spec_rows_ratified number against its anchored bound in
+        # spec/target-spec.md. Separate from the managed-field sync above,
+        # which never touches ports or ratified rows. Stdlib only.
+        run: |
+          set -euo pipefail
+          python3 -I signoff/check_integrator_contract.py
+          python3 -m unittest discover -s signoff -p 'test_check_integrator_contract.py' -v
+
       - name: Characterization report negative controls (offline)
         run: python3 -m unittest discover -s signoff/characterization -v
 
