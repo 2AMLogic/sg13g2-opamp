@@ -4,6 +4,18 @@
 
 ### 2026-10-10
 
+- **Issue #142** (closed): Dedup the copy-pasted envelope validation core across sim/*/klt/compare.py
+- **PR #145**: sim: share the klt envelope gate across sim/*/klt/compare.py
+- **Issue #140** (closed): sim: reserve record IDs atomically and refuse overwriting finalized evidence
+- **PR #144**: sim: reserve record IDs atomically and refuse overwriting finalized evidence
+- **Issue #106** (closed): Install ratification/ee-key and ratification/market-key reviewer trees (product#151)
+- **PR #143**: ratification: install ee-key and market-key reviewer trees (#106)
+- **Issue #136** (closed): signoff: enforce LVS reference freshness from schematic netlist to recorded match
+- **PR #138**: signoff: enforce LVS reference freshness from schematic netlist to recorded match
+- **PR #139**: sim: PSRR supply-gain klt sim request, runner and comparator (first increment)
+- **Issue #134** (closed): signoff: bind ERC supply-spec bytes to the structural power-delivery evidence
+- **PR #137**: signoff: bind ERC supply-spec bytes to item-11 evidence
+- **PR #133**: sim: one-corner DUT prototype of the input-noise klt sim request (Part of #96)
 - **Issue #98** (closed): sim: express the ratified mismatch-inclusive CMRR row as klt sim evidence (T1 item 5 coverage, follow-up to #85)
 - **Issue #123** (closed): Auditor guard review: temporary scratch variables blocked by worktree confinement
 
