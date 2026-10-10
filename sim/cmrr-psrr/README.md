@@ -268,21 +268,24 @@ sanity checks and record format, differing only in the injection source.
   measurement runs at one fixed `Vcm = VDD/2` per grid point, per the
   fleet's bench convention (input common-mode range is its own issue, #21).
 
-## The `klt sim` path (`klt/`, issue #99): request delivered, no evidence yet
+## The `klt sim` path (`klt/`, issue #99): 45-corner envelope committed
 
 `klt/` expresses the **PSRR+** half of this bench as a `klt sim` request, for
 T1 item 5 (`signoff/README.md`, "Item 5 envelope coverage, per ratified
-row"). **Status: first increment. The request, runner and comparator are
-delivered; no envelope has been committed and no measured comparison
-exists.** Only the harness record above is evidence for PSRR today. The CMRR
-bench is a separate ratified row (`sim/cmrr-mismatch/`, #98) and is not in
-`klt/`.
+row"). **Status: evidence increment. A real 45-corner supply-gain envelope
+was run through the batch fleet and is committed unmodified
+(`klt/records/20261010-094256-469573d.sim.json`), with its measured comparison
+against the harness record (`.compare.json`).** The PSRR verdict is still an
+offline join with the harness open-loop Av0 (below), so this is not yet a
+fully `klt sim`-graded PSRR row. The CMRR bench is a separate ratified row
+(`sim/cmrr-mismatch/`, #98) and is not in `klt/`.
 
 | File | Role |
 |---|---|
-| `klt/psrr.request.json` | 45-point grid (`mos_tt/ss/ff/sf/fs` × −40/27/125 °C × 1.08/1.20/1.32 V; each process corner a bundle with `cornerCAP.lib cap_typ`; `vinp` swept with `vdd` so Vcm = VDD/2), `ac dec 20 10m 1g`, OSDI preload + `stage_model_inputs`, default solver tolerance (DR-0005) |
+| `klt/psrr.request.json` | 45-point grid (`mos_tt/ss/ff/sf/fs` × −40/27/125 °C × 1.08/1.20/1.32 V; each process corner a bundle with `cornerCAP.lib cap_typ`; `vinp` swept with `vdd` so Vcm = VDD/2), `ac dec 20 10m 1g`, OSDI preload + `stage_model_inputs` (the single-request form; the sharded form below replaces both), default solver tolerance (DR-0005) |
 | `klt/tb_psrr.body.spice` | the template's circuit as a body: exactly one DUT `.include`, no `.control`; `Vdd` carries `ac 1`, `Vinp` carries none |
-| `klt/run.sh` | sources `sim/preflight.sh` (which sources `sim/env.sh`); submits to the batch backend; writes the envelope **unmodified** to `klt/records/<UTC>-<sha>.sim.json` only after `compare.py validate` passes (45 unique points, no errored/inconclusive corner, `coverage.nothing_checked` false, nothing skipped) |
+| `klt/run.sh` | sources `sim/preflight.sh` (which sources `sim/env.sh`); submits to the batch backend (`PSRR_KLT_MODE=shard`, the default, or `single`); writes the envelope **unmodified** to `klt/records/<UTC>-<sha>.sim.json` only after `compare.py validate` passes (45 unique points, no errored/inconclusive corner, `coverage.nothing_checked` false, nothing skipped); in shard mode also keeps the raw per-shard requests, bodies and reports in `<id>.shards/` |
+| `klt/shard.py`, `klt/test_shard.py` | the per-process shard bridge for the klt 0.5.0 fleet runner, and its validation-gated merge; tests with negative controls (below) |
 | `klt/compare.py`, `klt/test_compare.py` | grid join and tolerance report; offline stdlib-only; tests with negative controls |
 
 ### Which encoding: Avs in the tool, Av0 joined offline
@@ -312,6 +315,109 @@ bound (≥ 1.87 dB, DC shelf) **offline**. Consequences, stated plainly:
   tool/harness verdict difference at that corner is therefore reported as
   "explained by tolerance", and must not be read as agreement.
 
+### The shard bridge (why the committed envelope was not one request)
+
+The fleet runner image still pins klt 0.5.0 (2AMLogic/2am#2193). On it,
+`psrr.request.json` cannot run as one request: the `{"lib","section"}` object
+form of the per-process bundle (the fixed `cornerCAP.lib cap_typ` section),
+`options.osdi_preload`/`stage_model_inputs`, and `ngspice_init` are not
+carried (the runner drops or rejects them), a 0.7.0 client is refused
+(`batch_runner_version_mismatch`, exit 87), and a 0.5.0 client has no `batch`
+backend. The proven route (sg13g2-bandgap `sim/harness/README.md`) is the
+client `klayout-tools==0.6.0` (`KLT="uvx --from klayout-tools==0.6.0 klt"`; it
+submits, and the runner accepts it) with one request per process corner.
+`klt/shard.py gen` derives the five requests from the master request:
+
+| Master request | Each shard (`mos_xx`, 9 corners) |
+|---|---|
+| `corners.process` bundle `[mos_xx, {cornerCAP.lib, cap_typ}]` | `models.lib` = `cornerMOSlv.lib`, `corners.process` = `["mos_xx"]`; the cap section becomes a body-level selection card `.lib ".../cornerCAP.lib" cap_typ` against the image's baked PDK root (`/opt/pdk`) |
+| `options.osdi_preload`, `stage_model_inputs` | a body `.control` block of four `pre_osdi` cards (the documented deviation from the netlist-body contract) |
+| `options.ngspice_init` (`set measureprec/numdgt=12`) | the same two `set` cards in that `.control` block |
+| body `.include` of the DUT netlist | the DUT netlist inlined (its `.end` dropped); the 0.6.0 client uploads the body file only |
+| everything else | identical: measurements, the one limit, `ac dec 20 10m 1g`, temperature and supply axes, default solver tolerance (DR-0005) |
+
+`shard.py merge` is a pure transform: it concatenates the five reports in
+canonical grid order and recomputes the aggregates (counts, `metrics`, the
+`measurements[]` worst-case rollup, by klt's own rule); no corner or
+measurement is edited, and shard-specific fields (netlist hash, fleet job) move
+into per-shard arrays under `environment`/`provenance` instead of standing for
+the grid. It refuses, exit 2, and the tests (`klt/test_shard.py`) hold each
+refusal: a missing, duplicate or unexpected shard; a shard whose submitted
+request digest differs from the manifest's (and an absent digest); a corner that
+belongs to another process; a missing, duplicate or wrong-VDD point; a shard
+whose coverage is dirty (`nothing_checked`, skipped); a klt error report. The
+positive control shows the merge is exactly the 45 unique ratified points, edits
+no corner, is independent of shard order, and passes `compare.py validate`; an
+errored corner survives the merge and is then refused by the gate. The five shards
+are proved to partition the grid by `check_manifest`, which `gen` and `merge`
+both run.
+
+The committed envelope was minted by `run.sh` (shard mode) across several
+invocations, because the fleet was repeatedly full (`no capacity in any of
+the 30 pools`, `8 instance(s) already running ... exceeds
+BATCH_MAX_CONCURRENT_INSTANCES=8`): `PSRR_KLT_RESUME_DIR` reuses a prior shard
+report only when its request is byte-identical to the one just generated, and
+`PSRR_KLT_SUBMIT_TRIES` re-submits a capacity refusal a bounded number of
+times (never locally). The five shard requests, bodies and reports are kept
+beside the envelope in `klt/records/20261010-094256-469573d.shards/`; the five
+fleet jobs are `klt-sim-8b0cf80b0eea` (`mos_tt`), `klt-sim-a5c104a8e55f`
+(`mos_ss`), `klt-sim-a03984cc4e7f` (`mos_ff`), `klt-sim-eba6cbaf121d`
+(`mos_sf`) and `klt-sim-7a549124cc61` (`mos_fs`), all on the baked image
+`ami-0e40e3245f1923ac8` (ngspice 46). When the runner image is bumped, use
+`PSRR_KLT_MODE=single` with a client whose `klt --version` equals the
+runner's.
+
+### Measured comparison: `klt sim` envelope vs the harness record
+
+`klt/records/20261010-094256-469573d.{sim,compare}.json`, from client klt
+0.6.0, host preflight ngspice-46 + OSDI check passing, joined on (process,
+temperature, VDD) against `records/20260921-151815-707b34c.csv` (Avs) and
+`sim/open-loop-ac/records/20260910-221601-22feaba.csv` (Av0). The envelope has
+exactly the 45 unique ratified points, no errored or inconclusive corner,
+`coverage.nothing_checked` false and nothing skipped.
+
+- **No joined point is out of tolerance.** Over all 45 points the largest
+  |tool − harness| is 4.96e-5 dB on `avs0_db` and on the derived `psrr_db`
+  (`mos_fs` / 27 °C / 1.08 V; median 2.2e-5 dB), 4.93e-5 dB on `avs_1khz_db`
+  (`mos_sf` / −40 °C / 1.32 V) and 8.8e-8 dB on the plateau delta. That is the
+  harness CSV's own print precision (four decimals, half-unit 5e-5 dB), not a
+  method difference: the shelf is read at 10 mHz in both paths from the same
+  `ac dec 20 10m 1g` sweep, and a Linux/x86_64 fleet instance reproduces a
+  macOS/aarch64 harness record to the digits it printed, so DR-0005's
+  cross-host figure is not visible at this precision. The comparator's
+  tolerances (0.02 dB; 0.005 dB for the plateau delta) are therefore about
+  400x and 57,000x wider than the measured spread. They are left as they were
+  argued, deliberately conservative, because they never touch a pass/fail
+  limit.
+- **The ratified bound is met, with the same razor margin the harness
+  reports.** Offline PSRR = Av0 − Avs0: worst point `mos_ff` / 125 °C / 1.32 V,
+  1.870894 dB against the ≥ 1.87 dB bound (margin 0.0009 dB; harness 1.8709 dB
+  at the same point). The next worst are `mos_ff` / 125 °C / 1.20 V (2.5244 dB)
+  and `mos_sf` / 125 °C / 1.32 V (2.9570 dB). Tool and harness agree on the
+  binding corner and the verdict, so no verdict difference needs explaining by
+  tolerance. This is an offline verdict (Av0 is harness evidence), not a tool
+  one.
+- **One `klt sim` limit miss, kept as a result.** The envelope's status is
+  `fail`: 44 corners pass and `mos_ss` / −40 °C / 1.08 V misses the
+  flat-shelf plateau guard, |Avs(10 mHz) − Avs(0.1 Hz)| = 0.06608 dB against
+  the 0.05 dB limit (margin −0.01608 dB). It is the same point the harness
+  record documents (0.0660786 dB; the comparator cross-checks the harness
+  flag and they agree). The harness section above attributes it to this being
+the coldest, lowest-rail corner, where the supply zero sits lowest, so the
+10 mHz read is still on the skirt of the shelf. The envelope is consistent with
+that (it is not an independent test of it): at `mos_ss` the delta is 0.0661 dB
+at −40 °C / 1.08 V, falls to 0.0193 dB at 27 °C and 0.0068 dB at 125 °C (same
+1.08 V), and to 0.0083 dB at −40 °C / 1.20 V. The guard says how well the
+shelf is read; the residual is 0.066 dB on a PSRR of 29.54 dB, 27.7 dB above
+the bound, so it cannot change a PSRR verdict. The nearest other point is
+`mos_ss` / 27 °C / 1.08 V at 0.0193 dB (inside the limit). Neither the limit nor the shelf read was changed to
+  hide the miss.
+- Provenance and what the envelope is not: the client was klt 0.6.0 (not
+  0.7.0), the grid ran as five per-process shards, each with its cap-corner
+  card and OSDI preload moved into the body; the one-corner local prototype
+  with the shard body (below) shows that this changes no number. The
+  envelope's own `environment.remote.fleet` array carries the five jobs.
+
 ### One-corner prototype (supply `alter` interacts with the AC source)
 
 `corners.supply_v`'s `alter vdd=<V>` changes the DC value of the same source
@@ -330,18 +436,22 @@ is off-nominal; both agree with the harness to the CSV's printed digits, and
 the known plateau-guard miss reproduces). The comparison tolerance in
 `compare.py` (0.02 dB) is a provisional, argued bound (DR-0005's 9.9e-4
 cross-host relative current difference moves a gain by at most about
-0.017 dB); the real 45-point envelope must quantify the per-point spread
-before it is cited.
+0.017 dB). The committed 45-point envelope has now quantified the per-point
+spread (next section): it is 4.96e-5 dB at most.
 
-### Running it, and why the evidence is not here yet
+A third single corner was run locally with klt 0.7.0 on the shard-form body and
+request (`mos_ss`, −40 °C, 1.08 V; the pre_osdi and cap-card paths pointed at the
+local PDK): `avs0_db` 14.77840504, `avs_1khz_db` 35.26689954, plateau delta
+0.06607858 (limit miss), identical to the batch envelope's `mos_ss` point, so
+the body-level `pre_osdi`/`.lib` and the inlined DUT change no number.
 
-`klt/run.sh` submits the full grid to the batch fleet; **never** run the grid
-locally on a shared dispatch host. Before submitting, re-check that the
-client's `klt --version` equals the fleet runner's (2AMLogic/2am#2193 tracks
-the runner image; a mismatch is rejected with `batch_runner_version_mismatch`)
-and that `sim/tools/build-osdi.sh --check` passes. If one request cannot stage
-the required inputs, a deterministic sharded bridge is acceptable only after
-it is shown to produce the same 45 unique points and an unmodified,
-validation-gated merged envelope. Tests:
+### Running it
+
+`klt/run.sh` submits the grid to the batch fleet; **never** run the grid
+locally on a shared dispatch host (`PSRR_KLT_BACKEND=local` is refused in shard
+mode). Before submitting, `sim/preflight.sh` and `sim/tools/build-osdi.sh
+--check` must pass. Shard mode needs a client that has the batch backend and
+that the runner accepts (`KLT="uvx --from klayout-tools==0.6.0 klt"`); single
+mode needs a client whose `klt --version` equals the runner's. Tests:
 
     python3 -m unittest discover -s sim/cmrr-psrr/klt -p 'test_*.py'

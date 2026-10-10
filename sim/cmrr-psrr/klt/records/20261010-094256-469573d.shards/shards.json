@@ -1,0 +1,96 @@
+{
+  "master_request_sha256": "aeea6f2ba545a8780da842dc4cffe6144cde8e67ed204ef83384fa6009a34288",
+  "batch_pdk_root": "/opt/pdk",
+  "shards": [
+    {
+      "process": "mos_tt",
+      "request": "request-mos_tt.json",
+      "body": "body-mos_tt.spice",
+      "request_sha256": "9e2cd328bc96a10e870d6caea7dffdf1f1cbae794c057c3536b339e9483f135f",
+      "body_sha256": "5478e0d77f6b8961bb0bb94ef83150b4a5d241b00d1fafedaf5d3c33f02ab247",
+      "keys": [
+        "mos_tt_-40C_1.08V",
+        "mos_tt_-40C_1.20V",
+        "mos_tt_-40C_1.32V",
+        "mos_tt_27C_1.08V",
+        "mos_tt_27C_1.20V",
+        "mos_tt_27C_1.32V",
+        "mos_tt_125C_1.08V",
+        "mos_tt_125C_1.20V",
+        "mos_tt_125C_1.32V"
+      ]
+    },
+    {
+      "process": "mos_ss",
+      "request": "request-mos_ss.json",
+      "body": "body-mos_ss.spice",
+      "request_sha256": "a0be3215287faf6dae639287ecd268cadefe9fcbf6110037e7fe9365db4b6f8b",
+      "body_sha256": "db305f58bed2b47ef8ba3fb7db229168b6339c120e9aeee7dc08773b5f140fd7",
+      "keys": [
+        "mos_ss_-40C_1.08V",
+        "mos_ss_-40C_1.20V",
+        "mos_ss_-40C_1.32V",
+        "mos_ss_27C_1.08V",
+        "mos_ss_27C_1.20V",
+        "mos_ss_27C_1.32V",
+        "mos_ss_125C_1.08V",
+        "mos_ss_125C_1.20V",
+        "mos_ss_125C_1.32V"
+      ]
+    },
+    {
+      "process": "mos_ff",
+      "request": "request-mos_ff.json",
+      "body": "body-mos_ff.spice",
+      "request_sha256": "1c3e0a4713a2a3550ed205aeddc16e9cc217f4be74f0ebeaa7ad082b01417f45",
+      "body_sha256": "5ab9c1c60a5767a72a6497923f32e1db4d105cb0ed42c64e54b56af4c9b0147d",
+      "keys": [
+        "mos_ff_-40C_1.08V",
+        "mos_ff_-40C_1.20V",
+        "mos_ff_-40C_1.32V",
+        "mos_ff_27C_1.08V",
+        "mos_ff_27C_1.20V",
+        "mos_ff_27C_1.32V",
+        "mos_ff_125C_1.08V",
+        "mos_ff_125C_1.20V",
+        "mos_ff_125C_1.32V"
+      ]
+    },
+    {
+      "process": "mos_sf",
+      "request": "request-mos_sf.json",
+      "body": "body-mos_sf.spice",
+      "request_sha256": "e147b639465e850d8ffee6079b02c2db30e25e5b26243a422fcc8b510050845f",
+      "body_sha256": "33220320340cc05629ca138fcff929d298c857fa96381006354f0d990311d517",
+      "keys": [
+        "mos_sf_-40C_1.08V",
+        "mos_sf_-40C_1.20V",
+        "mos_sf_-40C_1.32V",
+        "mos_sf_27C_1.08V",
+        "mos_sf_27C_1.20V",
+        "mos_sf_27C_1.32V",
+        "mos_sf_125C_1.08V",
+        "mos_sf_125C_1.20V",
+        "mos_sf_125C_1.32V"
+      ]
+    },
+    {
+      "process": "mos_fs",
+      "request": "request-mos_fs.json",
+      "body": "body-mos_fs.spice",
+      "request_sha256": "32941931267275d4b5d8ca71efdb84ad211631b3667703b2c2db5170436d3abe",
+      "body_sha256": "d5e0ab00c9751bf93666f82ad8f14cc6600ea6498666bede26ef15c87b592bf5",
+      "keys": [
+        "mos_fs_-40C_1.08V",
+        "mos_fs_-40C_1.20V",
+        "mos_fs_-40C_1.32V",
+        "mos_fs_27C_1.08V",
+        "mos_fs_27C_1.20V",
+        "mos_fs_27C_1.32V",
+        "mos_fs_125C_1.08V",
+        "mos_fs_125C_1.20V",
+        "mos_fs_125C_1.32V"
+      ]
+    }
+  ]
+}

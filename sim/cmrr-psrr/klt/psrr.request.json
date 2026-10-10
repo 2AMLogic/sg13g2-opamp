@@ -1,6 +1,6 @@
 {
   "_comment": [
-    "sim/cmrr-psrr PSRR as a `klt sim` request (issue #99): the supply-gain half of the PSRR row. REQUEST COVERAGE ONLY -- no envelope has been committed from this request.",
+    "sim/cmrr-psrr PSRR as a `klt sim` request (issue #99): the supply-gain half of the PSRR row. This single-request form is NOT what produced the committed envelope: the klt 0.5.0 fleet runner cannot carry it, so records/20261010-094256-469573d.sim.json was minted from five per-process shards of it (shard.py).",
     "Circuit: tb_psrr.body.spice -- the same test circuit as ../testbench/tb_psrr.spice.tmpl (Vdd carries ac 1; the signal input is AC-quiet).",
     "Grid: cornerMOSlv.lib mos_tt/ss/ff/sf/fs [DR-1] x {-40, 27, 125} C x VDD {1.08, 1.20, 1.32} V = 45 corners.",
     "vinp sweeps WITH vdd by index (klt's supply_v semantics), so Vcm = VDD/2 at every corner, as in the harness.",
