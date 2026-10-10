@@ -2,8 +2,14 @@
 
 <!-- Maintained by the Loom Guide role. Newest entries first. -->
 
+### 2026-10-10
+
+- **Issue #98** (closed): sim: express the ratified mismatch-inclusive CMRR row as klt sim evidence (T1 item 5 coverage, follow-up to #85)
+- **Issue #123** (closed): Auditor guard review: temporary scratch variables blocked by worktree confinement
+
 ### 2026-10-09
 
+- **Issue #122** (closed): Auditor Capability Request: Python unavailable for offline signoff validation
 - **PR #130**: sim: input-noise bench as a klt sim request (Part of #96, first increment)
 - **PR #128**: spec: draft reproducible GDS bounding-box area definition for TBD-12
 - **PR #127**: post-layout: klt-sim-based measure command for item 7 (partial; run blocked by batch runner mismatch) (#86)

@@ -49,6 +49,7 @@ Issues carrying `loom:curated`.
 - **#86**: signoff: first `klt pex` post-layout run on opamp_core.gds (T1 item 7) *(curated)*
 - **#95**: sim: express the slew-rate bench as a klt sim request (T1 item 5 coverage, follow-up to #85) *(curated)*
 - **#96**: sim: express the input-noise bench as a klt sim request (T1 item 5 coverage, follow-up to #85) *(curated)*
+- **#97**: sim: express the input-offset bench (systematic half) as a klt sim request (T1 item 5 coverage, follow-up to #85) *(curated)*
 - **#105**: signoff: express the statistical rows as klt yield evidence for T1 item 6 (offset MC, mismatch CMRR) *(curated)*
 
 ## Proposed (Architect / Hermit)
@@ -69,7 +70,7 @@ _None._
 | In Progress (`loom:building`) | 1 |
 | PRs awaiting review | 1 |
 | Approved PRs awaiting merge | 0 |
-| Curated | 7 |
+| Curated | 8 |
 | Architect / Hermit proposals | 1 |
 | Active epics | 0 |
 <!-- guide:plan-body:end -->
