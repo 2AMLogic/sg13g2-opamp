@@ -267,3 +267,81 @@ sanity checks and record format, differing only in the injection source.
 - **Not input-CMR (input common-mode range) characterization** — the
   measurement runs at one fixed `Vcm = VDD/2` per grid point, per the
   fleet's bench convention (input common-mode range is its own issue, #21).
+
+## The `klt sim` path (`klt/`, issue #99): request delivered, no evidence yet
+
+`klt/` expresses the **PSRR+** half of this bench as a `klt sim` request, for
+T1 item 5 (`signoff/README.md`, "Item 5 envelope coverage, per ratified
+row"). **Status: first increment. The request, runner and comparator are
+delivered; no envelope has been committed and no measured comparison
+exists.** Only the harness record above is evidence for PSRR today. The CMRR
+bench is a separate ratified row (`sim/cmrr-mismatch/`, #98) and is not in
+`klt/`.
+
+| File | Role |
+|---|---|
+| `klt/psrr.request.json` | 45-point grid (`mos_tt/ss/ff/sf/fs` × −40/27/125 °C × 1.08/1.20/1.32 V; each process corner a bundle with `cornerCAP.lib cap_typ`; `vinp` swept with `vdd` so Vcm = VDD/2), `ac dec 20 10m 1g`, OSDI preload + `stage_model_inputs`, default solver tolerance (DR-0005) |
+| `klt/tb_psrr.body.spice` | the template's circuit as a body: exactly one DUT `.include`, no `.control`; `Vdd` carries `ac 1`, `Vinp` carries none |
+| `klt/run.sh` | sources `sim/preflight.sh` (which sources `sim/env.sh`); submits to the batch backend; writes the envelope **unmodified** to `klt/records/<UTC>-<sha>.sim.json` only after `compare.py validate` passes (45 unique points, no errored/inconclusive corner, `coverage.nothing_checked` false, nothing skipped) |
+| `klt/compare.py`, `klt/test_compare.py` | grid join and tolerance report; offline stdlib-only; tests with negative controls |
+
+### Which encoding: Avs in the tool, Av0 joined offline
+
+PSRR = Av0 / Avs needs two AC excitations (`Vinp ac 1` for Av0, `Vdd ac 1`
+for Avs). One AC solve cannot carry both, and a `limits` entry applies to one
+measurement of one request. So this is **not** a single-solve PSRR ratio, and
+it is not described as one. The request reports `avs0_db` (10 mHz, the DC
+shelf) and `avs_1khz_db`; `compare.py` joins the same-point Av0 from
+`sim/open-loop-ac/records/20260910-221601-22feaba.csv` on (process,
+temperature, VDD), computes `PSRR = Av0 − Avs0`, and applies the ratified
+bound (≥ 1.87 dB, DC shelf) **offline**. Consequences, stated plainly:
+
+- Av0 is **harness evidence**, not a `klt sim` Av0 envelope. This is the same
+  join the harness itself makes (above). If #85's AC envelope lands, the join
+  can use it instead (the other option in the issue).
+- The PSRR verdict is `compare.py`'s, not the tool's. The tool grades one
+  limit: the harness's flat-shelf plateau guard (|Avs(10 mHz) − Avs(0.1 Hz)|
+  ≤ 0.05 dB), which also keeps `coverage.nothing_checked` false. The harness
+  record documents one point over it (`mos_ss_-40C_1.08V`, 0.066 dB), so a
+  full-grid envelope will report that corner as a limit miss: a result, kept.
+- The DC shelf (10 mHz) and the 1 kHz figure are separate measurements; the
+  ratified row is the DC shelf. Absent same-point Av0 or Avs, `compare.py`
+  fails closed.
+- **The worst point clears the bound by 0.0009 dB** (FF / 125 °C / 1.32 V,
+  1.8709 dB vs 1.87 dB), far less than the comparison tolerance. Any
+  tool/harness verdict difference at that corner is therefore reported as
+  "explained by tolerance", and must not be read as agreement.
+
+### One-corner prototype (supply `alter` interacts with the AC source)
+
+`corners.supply_v`'s `alter vdd=<V>` changes the DC value of the same source
+that carries `ac 1`. To check that it keeps the AC magnitude, two single
+corners were run locally with `klt sim --backend local` (klt 0.7.0,
+ngspice-46, OSDI preflight passing), on a one-corner copy of the request.
+These are prototypes, **not envelopes, not committed, and not coverage**.
+
+| Corner | `avs0_db` | `avs_1khz_db` | plateau delta | Harness CSV (`avs0_db`, `avs_1khz_db`, plateau) |
+|---|---|---|---|---|
+| `mos_tt` / 27 °C / 1.20 V | 35.51667 | 39.65232 | 0.000612 | 35.5167, 39.6523, 0.0006117 |
+| `mos_ss` / −40 °C / 1.08 V | 14.77841 | 35.26690 | 0.066079 (limit miss) | 14.7784, 35.2669, 0.0660786 |
+
+Result: `alter vdd` sets the DC value and preserves `ac 1` (the second corner
+is off-nominal; both agree with the harness to the CSV's printed digits, and
+the known plateau-guard miss reproduces). The comparison tolerance in
+`compare.py` (0.02 dB) is a provisional, argued bound (DR-0005's 9.9e-4
+cross-host relative current difference moves a gain by at most about
+0.017 dB); the real 45-point envelope must quantify the per-point spread
+before it is cited.
+
+### Running it, and why the evidence is not here yet
+
+`klt/run.sh` submits the full grid to the batch fleet; **never** run the grid
+locally on a shared dispatch host. Before submitting, re-check that the
+client's `klt --version` equals the fleet runner's (2AMLogic/2am#2193 tracks
+the runner image; a mismatch is rejected with `batch_runner_version_mismatch`)
+and that `sim/tools/build-osdi.sh --check` passes. If one request cannot stage
+the required inputs, a deterministic sharded bridge is acceptable only after
+it is shown to produce the same 45 unique points and an unmodified,
+validation-gated merged envelope. Tests:
+
+    python3 -m unittest discover -s sim/cmrr-psrr/klt -p 'test_*.py'
