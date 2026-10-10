@@ -235,10 +235,12 @@ cmrr_mc_campaign_guard
 # ---------------------------------------------------------------------------
 stat_point() { # <point_index> <mc_sample_file> -> row on stdout
   python3 - "$1" "$2" "${AC_RECORD_CSV}" "${CMRR_RECORD_CSV}" \
-    "${OP_RAIL_FRAC}" "${OP_MID_FRAC}" "${PLATEAU_TOL_DB}" <<'PYEOF'
+    "${OP_RAIL_FRAC}" "${OP_MID_FRAC}" "${PLATEAU_TOL_DB}" "${SCRIPT_DIR}" <<'PYEOF'
 import csv, math, sys
 
-pidx, file, ac_csv, cmrr_csv, rail_frac, mid_frac, plateau_tol = sys.argv[1:8]
+pidx, file, ac_csv, cmrr_csv, rail_frac, mid_frac, plateau_tol, lib_dir = sys.argv[1:9]
+sys.path.insert(0, lib_dir)
+import mc_samples  # strict shared parser (issue #174), also used by make_draws_csv.sh
 pidx = int(pidx)
 rail_frac, mid_frac, plateau_tol = float(rail_frac), float(mid_frac), float(plateau_tol)
 
@@ -273,21 +275,11 @@ sys_cmrr_db = float(sy["cmrr_db"])
 sys_vout = float(sy["vout_dc_v"])
 sys_vibias = float(sy["vibias_dc_v"])
 
-# read sample file: OP/AC pairs by index
-ops, acs = {}, {}
-with open(file) as f:
-    for line in f:
-        p = line.split()
-        if not p:
-            continue
-        if p[0] == "OP" and len(p) >= 8:
-            ops[int(p[1])] = [float(x) for x in p[2:8]]
-        elif p[0] == "AC" and len(p) >= 5:
-            acs[int(p[1])] = [float(x) for x in p[2:5]]
-
-n_asked = max(ops.keys()) + 1
-if set(ops) != set(range(n_asked)) or set(acs) != set(range(n_asked)):
-    print(f"TRUNCATED {point_id}")
+# read sample file: strict validation (exactly one finite OP + AC per draw)
+try:
+    n_asked, ops, acs = mc_samples.read_samples(file)
+except mc_samples.SampleError as e:
+    print(f"INVALID {point_id}: {e}")
     sys.exit(1)
 
 vdd = float(VDD)
@@ -612,7 +604,7 @@ for i in "${!point_ids[@]}"; do
   row="$(stat_point "$i" "${samples}" || true)"
   if [[ -z "${row}" ]]; then
     stat_fail_points+=("${point_ids[$i]}")
-  elif grep -qE "^(NOJOIN|TRUNCATED|ALLFAIL)" <<<"${row}"; then
+  elif grep -qE "^(NOJOIN|TRUNCATED|INVALID|ALLFAIL)" <<<"${row}"; then
     echo "run_cmrr_mismatch_mc.sh: STATS FAILED ${point_ids[$i]}: ${row}" >&2
     stat_fail_points+=("${point_ids[$i]}")
   else

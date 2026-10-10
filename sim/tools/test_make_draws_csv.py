@@ -146,6 +146,94 @@ class MakeDrawsCsv(unittest.TestCase):
         self.assertEqual(p2.returncode, 3)
         self.assertEqual(out.read_bytes(), before)
 
+    # --- strict sample validation (issue #174) -------------------------------
+    def _invalid(self, mutate, needle):
+        rec = self.build()
+        f = self.samples / "mos_tt_27C_1.20V_mc_samples.txt"
+        f.write_text(mutate(f.read_text()))
+        p, out = self.run_script(rec)
+        self.assertEqual(p.returncode, 1, p.stderr)
+        self.assertIn("INVALID SAMPLES", p.stderr)
+        self.assertIn("mos_tt_27C_1.20V_mc_samples.txt", p.stderr)
+        self.assertIn(needle, p.stderr)
+        self.assertFalse(out.exists())
+        self.assertEqual(list(self.rec_dir.glob("*.tmp.*")), [])
+
+    def test_nan_plateau_partner_fails(self):
+        # only the 0.1 Hz partner (a01) is NaN; a10 stays finite
+        self._invalid(lambda t: t.replace("AC 2 6.0 6.0 5.999", "AC 2 6.0 nan 5.999"),
+                      "draw 2: non-finite value 'nan' in field acm01")
+
+    def test_infinities_fail(self):
+        for tok in ("inf", "-inf", "+Infinity", "1e999"):
+            self._invalid(lambda t, tok=tok: t.replace("AC 2 6.0 6.0 5.999", f"AC 2 6.0 {tok} 5.999"),
+                          "field acm01")
+        self._invalid(lambda t: t.replace("OP 1 0.6 ", "OP 1 -inf "), "field vout")
+
+    def test_malformed_tokens_fail(self):
+        for bad in ("abc", "1.2.3", "0x10", "1_0", "5,0", "--1"):
+            self._invalid(lambda t, bad=bad: t.replace("AC 3 4.5 4.5 4.499", f"AC 3 {bad} 4.5 4.499"),
+                          "malformed numeric token")
+        self._invalid(lambda t: t.replace("AC 3 ", "AC x3 "), "malformed draw index")
+
+    def test_duplicate_indices_fail(self):
+        self._invalid(lambda t: t + "AC 2 6.0 6.0 5.999\n", "duplicate AC record for draw 2")
+        self._invalid(lambda t: t + "OP 2 0.6 0.6 0.45 0.15 0.38 0.0001\n",
+                      "duplicate OP record for draw 2")
+
+    def test_missing_pairs_fail(self):
+        def drop(prefix):
+            return lambda t: "".join(l for l in t.splitlines(True) if not l.startswith(prefix))
+        self._invalid(drop("AC 4 "), "draw 4: missing AC")
+        self._invalid(drop("OP 4 "), "draw 4: missing OP")
+        self._invalid(lambda t: "", "empty sample file")
+
+    def test_short_and_long_records_fail(self):
+        self._invalid(lambda t: t.replace("AC 1 5.0 5.0 4.999", "AC 1 5.0 5.0"), "AC record has 4 tokens")
+        self._invalid(lambda t: t.replace("OP 1 0.6 0.6 0.45 0.15 0.38 0.0001",
+                                          "OP 1 0.6 0.6 0.45 0.15 0.38"), "OP record has 7 tokens")
+        self._invalid(lambda t: t.replace("AC 1 5.0 5.0 4.999", "AC 1 5.0 5.0 4.999 9"),
+                      "AC record has 6 tokens")
+
+    def test_unknown_record_fails(self):
+        self._invalid(lambda t: t + "XX 6 1 2 3\n", "unknown record type 'XX'")
+        self._invalid(lambda t: t + "op 6 1 2 3\n", "unknown record type 'op'")
+
+    def test_finite_excluded_plateau_unchanged(self):
+        # finite plateau failure is still an exclusion, not a parse error
+        rec = self.build()
+        f = self.samples / "mos_tt_27C_1.20V_mc_samples.txt"
+        f.write_text(f.read_text().replace("AC 2 6.0 6.0 5.999", "AC 2 6.0 7.0 5.999"))
+        p, out = self.run_script(rec)
+        self.assertEqual(p.returncode, 1)  # record says no exclusions -> round-trip mismatch
+        self.assertIn("ROUND-TRIP MISMATCH", p.stderr)
+        self.assertNotIn("INVALID SAMPLES", p.stderr)
+
+    def test_campaign_shares_strict_parser(self):
+        runner = (SIM_DIR / "cmrr-mismatch" / "run_cmrr_mismatch_mc.sh").read_text()
+        conv = SCRIPT.read_text()
+        for text in (runner, conv):
+            self.assertIn("import mc_samples", text)
+        self.assertIn("mc_samples.read_samples(file)", runner)
+        self.assertIn("INVALID", runner)
+        self.assertIn("read_samples_raw", conv)
+        self.assertNotIn("ops[int(p[1])]", runner + conv)
+
+    def test_campaign_stat_point_rejects_nan(self):
+        # drive the runner's own extraction through the shared module directly
+        import importlib.util
+        spec = importlib.util.spec_from_file_location(
+            "mc_samples", SIM_DIR / "cmrr-mismatch" / "mc_samples.py")
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        f = self.root / "s.txt"
+        f.write_text(sample_text(ACM).replace("AC 0 4.0 4.0", "AC 0 4.0 nan"))
+        with self.assertRaises(mod.SampleError):
+            mod.read_samples(str(f))
+        f.write_text(sample_text(ACM))
+        n, ops, acs = mod.read_samples(str(f))
+        self.assertEqual((n, acs[1]), (N, [5.0, 5.0, 4.999]))
+
     def test_committed_record(self):
         out = self.root / "real-draws.csv"
         p = subprocess.run([str(SCRIPT), "--record-csv", str(REAL_RECORD), "--out", str(out)],
