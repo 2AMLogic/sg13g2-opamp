@@ -121,12 +121,71 @@ require `xschem` or `klt` at run time (`design/netlist/opamp_core.spice`
 is committed, pre-netlisted). Requires the committed
 `sim/open-loop-ac/records/*.csv` (joined `av0_db`) and
 `sim/cmrr-psrr/records/*.csv` (negative-control cross-check); newest of
-each is picked automatically, overridable with `AC_RECORD_CSV` /
+each is picked automatically for a fresh run (a resume uses the ones its
+campaign manifest names), overridable with `AC_RECORD_CSV` /
 `CMRR_RECORD_CSV`. Full run: 2×300 pilot samples + 45×300 grid samples +
 45×3 negative-control + 2×300 repro ≈ 14,300 ngspice loop iterations in
 ~17 minutes on a laptop. Writes a new, timestamped, append-only record
 under `netlist-snapshots/<record-id>/`, `corners/<record-id>/` and
 `records/<record-id>.{csv,md}` — never overwriting a prior run.
+
+### Resuming an interrupted campaign (issue #163)
+
+A killed campaign can be continued by replaying its id
+(`RECORD_ID=<id> sim/cmrr-mismatch/run_cmrr_mismatch_mc.sh`): completed
+`*_mc_samples.txt` files, the DUT snapshot and the saved pilot are reused.
+That is only sound if the replay is the **same experiment**, so the runner
+binds every campaign to its inputs:
+
+- **Manifest.** A fresh run snapshots the DUT and publishes
+  `corners/<id>/campaign.manifest` before its first simulation. It is
+  immutable: created atomically and never rewritten. It is committed with the
+  campaign's other evidence. It holds sorted `key: value` lines covering:
+  - the DUT source and snapshot sha256, and the
+    `testbench/tb_cmrr_mc.spice.tmpl` sha256;
+  - the joined `sim/open-loop-ac/` and `sim/cmrr-psrr/` record paths and
+    sha256;
+  - the grid (corners, temperatures, supplies) and `CL`;
+  - `MC_SEED_BASE`, `MC_SEED_ALT`, `MC_N_FLOOR`, `MC_TARGET_SIGMA_RE` and
+    `MC_NEGCTL_N`;
+  - every validation tolerance (`NEGCTL_TOL_DB/V`, `OP_RAIL_FRAC`,
+    `OP_MID_FRAC`, `PLATEAU_TOL_DB`);
+  - the normalized `ngspice -v` version;
+  - the PDK name, its `.fetched-version` and one sha256 over every `*.lib` in
+    the PDK's `libs.tech/ngspice/models/`.
+
+  Paths inside the checkout are stored repo-relative and PDK files by
+  content only, so moving the checkout or the PDK install does not change
+  the experiment. Not bound: the OSDI binaries (`build-osdi.sh --check`
+  gates them; a rebuild need not be byte-identical) and the runner's own
+  bytes.
+- **Resume check.** A resume re-renders the manifest from the current
+  invocation and compares it to the stored one before any sample, the
+  snapshot or the pilot is touched. On any difference it exits 3 and prints
+  each differing key with its `stored=` and `current=` values. Such a
+  difference is, for example, a different seed, edited template or DUT,
+  changed bytes in a joined record, another ngspice, or an edited model
+  library. Start a new campaign (unset `RECORD_ID`) to run with the new
+  inputs. The joined records are the ones the manifest names, **not** the
+  newest: a record committed after the campaign began does not change a
+  resumed join. An explicit `AC_RECORD_CSV`/`CMRR_RECORD_CSV` naming a
+  different file is refused.
+- **Pilot.** The saved `records/<id>.pilot.txt` is checked against the
+  current seed base, N floor, sigma target, joined record ids and ngspice
+  version. Both `mc_n_effective` and `pilot_acm_sigma_max_linear` are
+  restored from it, so a resumed record reports the original pilot sigma
+  (it used to read `unset`). The pilot file is published atomically.
+- **Legacy campaigns.** An incomplete campaign with no manifest is refused
+  (exit 3) with instructions to start a new id, and nothing is modified.
+  Such a campaign was begun before #163, or it stopped before its manifest
+  was published. Its samples' inputs cannot be verified. Finalized records
+  stay refused by `sim/record-paths.sh` (#140) exactly as before.
+
+Implementation: [`campaign-guard.sh`](campaign-guard.sh) (sourced by the
+runner) and [`campaign_manifest.py`](campaign_manifest.py) (render /
+publish / compare). Offline controls with no simulation:
+`sim/tools/test_cmrr_mismatch_resume.py`. They use throwaway fixture trees
+and a stub `ngspice` that answers only `-v`.
 
 **Local-grid guard (interim, issue #110).** On a shared dispatch worker the
 daemon exports `KLT_SIM_BACKEND=batch`; `run_cmrr_mismatch_mc.sh` then refuses

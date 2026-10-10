@@ -26,6 +26,10 @@ _sg13g2_preflight_self="${_sg13g2_preflight_self:-$(basename "$0")}"
 #     RECORDS_DIR     ${EXPERIMENT_DIR}/records
 #     CSV_OUT         ${RECORDS_DIR}/${RECORD_ID}.csv
 #     MD_OUT          ${RECORDS_DIR}/${RECORD_ID}.md
+#     RECORD_RESUMED  1 when an EXISTING incomplete campaign is being
+#                     continued (--resumable, RECORD_ID set, corners/<id>/
+#                     already present), else 0. run_cmrr_mismatch_mc.sh keys
+#                     its campaign-manifest check on it (issue #163).
 #
 #   Callers needing a further record-id-derived path (run_offset_mc.sh's
 #   DRAWS_CSV) derive it locally from RECORDS_DIR/RECORD_ID after this call
@@ -77,9 +81,10 @@ _sg13g2_preflight_self="${_sg13g2_preflight_self:-$(basename "$0")}"
 #   The id syntax itself is unchanged; a RECORD_ID taken from the
 #   environment must be a single path component ([A-Za-z0-9._-], not
 #   starting with "."), because it is spliced into output paths.
-# shellcheck disable=SC2034  # CSV_OUT/MD_OUT are consumed by callers after this returns
+# shellcheck disable=SC2034  # CSV_OUT/MD_OUT/RECORD_RESUMED are consumed by callers after this returns
 sg13g2_preflight_record_paths() {
   local prefix="" resumable=0 resume=0
+  RECORD_RESUMED=0
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --prefix)
@@ -137,6 +142,7 @@ sg13g2_preflight_record_paths() {
     if mkdir "${CORNERS_OUT}" 2>/dev/null; then
       _sg13g2_record_refuse_if_taken
     else
+      RECORD_RESUMED=1
       echo "${_sg13g2_preflight_self}: resuming incomplete record ${RECORD_ID}." >&2
     fi
     mkdir -p "${SNAPSHOTS_OUT}" "${CORNERS_OUT}"
