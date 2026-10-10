@@ -472,6 +472,30 @@ longer matches what `klt` would say today, and a mis-keyed evidence entry
 that `klt` would silently ignore all fail a build instead of rotting
 quietly.
 
+## LVS reference freshness
+
+Items 4 and 11 (LVS part) cite `layout/opamp_core/lvs_report.json`, and the
+manifest pin binds that citation to the GDS only. The chain that keeps the
+recorded match from outliving its reference is:
+
+1. `design/netlist/opamp_core.spice` (schematic) is cross-checked against the
+   layout device tables, and the expanded reference
+   `layout/opamp_core/opamp_core.lvs_reference.spice` is derived from them:
+   `python3 layout/opamp_core/lvs_reference.py --check` (CI, after the klt
+   install supplies `klayout`) fails on any schematic/table inconsistency or
+   on a committed reference that differs from the regenerated text.
+2. `signoff/check_signoff.py` hashes the reference named by
+   `layout/opamp_core/lvs_request.json` and compares it to
+   `environment.reference_sha256` in every cited `kind: lvs` envelope (item 4
+   and the LVS part of compound item 11, in any list order). A missing or
+   malformed hash, a missing reference, a differing reference name or a hash
+   disagreement fails.
+
+Refresh after a schematic/table change: run `lvs_reference.py` (regenerates),
+re-run `klt lvs` (`layout/opamp_core/run_lvs.sh`), then
+`signoff/regenerate.sh`. Historical records under `signoff/reports/` and
+`sim/` are never edited to clear a failure; a new record is added.
+
 ## Fleet roll-up
 
 `block` is required in this manifest (klt itself calls it optional) because it
