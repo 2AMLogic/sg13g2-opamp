@@ -38,6 +38,11 @@ MANIFEST = SIGNOFF_DIR / "block-manifest.json"
 PINNED_INPUTS = SIGNOFF_DIR / "pinned-inputs.json"
 KLT_PIN = SIGNOFF_DIR / "klt-pin.txt"
 REPORTS_DIR = SIGNOFF_DIR / "reports"
+# The committed `klt lvs` request: names the plain-element reference netlist
+# (relative to the request's own directory). Every cited LVS envelope must
+# have been run against exactly those reference bytes.
+LVS_REQUEST = REPO_ROOT / "layout" / "opamp_core" / "lvs_request.json"
+SHA256_HEX_RE = re.compile(r"^[0-9a-f]{64}$")
 # The T1 item 8 characterization report (signoff/characterization/README.md):
 # its generic envelope, and the generator whose --check re-derives the cited
 # record from the committed sim/ evidence it selects.
@@ -274,6 +279,79 @@ def check_one_pin(pinned, artifact, label: str, failures: Failures) -> None:
         )
     else:
         print(f"  ok  evidence[{label}] pin matches {artifact}")
+
+
+def lvs_citations(manifest_evidence: dict):
+    """Yield (label, entry) for every `kind: lvs` citation, item 4 and any
+    LVS part of a compound item (11), independent of list order."""
+    for key, entry in manifest_evidence.items():
+        if isinstance(entry, list):
+            for index, part in enumerate(entry):
+                if isinstance(part, dict) and part.get("kind") == "lvs":
+                    yield f"{key}[{index}]", part
+        elif isinstance(entry, dict) and entry.get("kind") == "lvs":
+            yield key, entry
+
+
+def check_lvs_reference(manifest_evidence: dict, failures: Failures) -> None:
+    """Each cited LVS envelope matches the committed reference netlist bytes.
+
+    check_pins binds an LVS citation to the GDS only. The envelope also
+    records `environment.reference_sha256`; if the expanded reference is
+    edited (or regenerated from a changed schematic netlist) without a new
+    LVS run, the recorded match is stale. Fixing that means re-running LVS and
+    regenerating the signoff record -- never editing historical records.
+    """
+    citations = list(lvs_citations(manifest_evidence))
+    if not citations:
+        return
+    request = load_json(LVS_REQUEST, failures, "lvs reference")
+    if request is None:
+        return
+    ref_name = (request.get("reference") or {}).get("netlist") if isinstance(request, dict) else None
+    if not isinstance(ref_name, str) or not ref_name:
+        failures.add(f"lvs reference: {rel(LVS_REQUEST)} names no `reference.netlist`")
+        return
+    ref_path = LVS_REQUEST.parent / ref_name
+    if not ref_path.is_file():
+        failures.add(f"lvs reference: {rel(ref_path)} named by {rel(LVS_REQUEST)} does not exist")
+        return
+    actual = sha256_file(ref_path).removeprefix("sha256:")
+    for label, entry in citations:
+        cited = entry.get("file")
+        if not isinstance(cited, str):
+            continue  # reported by check_manifest
+        env_path = REPO_ROOT / cited
+        if not env_path.is_file():
+            continue  # reported by check_manifest
+        envelope = load_json(env_path, failures, f"lvs reference evidence[{label!r}]")
+        if not isinstance(envelope, dict):
+            continue
+        recorded_name = envelope.get("reference")
+        if recorded_name != ref_name:
+            failures.add(
+                f"lvs reference: evidence[{label!r}] ({cited}) records reference "
+                f"{recorded_name!r}, but {rel(LVS_REQUEST)} names {ref_name!r}"
+            )
+        env = envelope.get("environment")
+        recorded = env.get("reference_sha256") if isinstance(env, dict) else None
+        if not isinstance(recorded, str) or not SHA256_HEX_RE.match(recorded):
+            failures.add(
+                f"lvs reference: evidence[{label!r}] ({cited}) has a missing or "
+                f"malformed environment.reference_sha256 ({recorded!r}); "
+                "expected 64 lowercase hex digits"
+            )
+            continue
+        if recorded != actual:
+            failures.add(
+                f"lvs reference: {rel(ref_path)} has changed since the LVS "
+                f"match cited by evidence[{label!r}] was recorded\n"
+                f"  recorded: {recorded}\n  actual:   {actual}\n"
+                "  -> run `python3 layout/opamp_core/lvs_reference.py` to refresh the "
+                "reference, re-run `klt lvs`, then re-run signoff/regenerate.sh"
+            )
+        else:
+            print(f"  ok  evidence[{label}] LVS match is against current {rel(ref_path)}")
 
 
 def latest_report(failures: Failures) -> Path | None:
@@ -614,6 +692,9 @@ def main(argv: list[str]) -> int:
 
     print(f"== pinned inputs ({rel(PINNED_INPUTS)}) ==")
     check_pins(manifest_evidence, failures)
+
+    print("== LVS reference freshness (T1 items 4, 11) ==")
+    check_lvs_reference(manifest_evidence, failures)
 
     print("== characterization report (T1 item 8) ==")
     check_characterization(manifest_evidence, failures)

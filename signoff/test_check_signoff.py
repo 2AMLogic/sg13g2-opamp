@@ -58,12 +58,27 @@ class FixtureCase(unittest.TestCase):
                 "content_hash": ck.sha256_file(self.root / artifact),
             }
 
+        # LVS reference fixture: request + reference + an envelope recording
+        # the reference hash, cited as the LVS part of item 11 (and item 4 in
+        # the dedicated controls).
+        (self.root / "lay").mkdir(exist_ok=True)
+        (self.root / "lay" / "ref.spice").write_text("* ref\n")
+        _dump(self.root / "lay" / "lvs_request.json",
+              {"reference": {"netlist": "ref.spice"}})
+        self.lvs_env = {
+            "reference": "ref.spice",
+            "environment": {"reference_sha256": ck.sha256_file(
+                self.root / "lay" / "ref.spice").removeprefix("sha256:")},
+        }
+        _dump(self.root / "signoff" / "evidence" / "e11b.json", self.lvs_env)
+
         self.manifest = {
             "block": "fixture",
             "kind": "analog",
             "evidence": {
                 "1": entry("e1", "art/a.txt"),
-                "11": [entry("e11a", ITEM_11_PARTS[0]), entry("e11b", ITEM_11_PARTS[1])],
+                "11": [entry("e11a", ITEM_11_PARTS[0]),
+                       {**entry("e11b", ITEM_11_PARTS[1]), "kind": "lvs"}],
             },
         }
         self.pins = {"inputs": {"1": "art/a.txt", "11": list(ITEM_11_PARTS)}}
@@ -100,6 +115,7 @@ class FixtureCase(unittest.TestCase):
             mock.patch.object(ck, "MANIFEST", self.root / "signoff" / "block-manifest.json"),
             mock.patch.object(ck, "PINNED_INPUTS", self.root / "signoff" / "pinned-inputs.json"),
             mock.patch.object(ck, "REPORTS_DIR", self.reports_dir),
+            mock.patch.object(ck, "LVS_REQUEST", self.root / "lay" / "lvs_request.json"),
             mock.patch.object(si, "REPO_ROOT", self.root),
             mock.patch.object(si, "INTEGRATOR", self.root / "spec" / "integrator.json"),
             mock.patch.object(si, "REPORTS_DIR", self.reports_dir),
@@ -124,6 +140,7 @@ class FixtureCase(unittest.TestCase):
             manifest = ck.load_json(ck.MANIFEST, failures, "manifest")
             evidence = ck.check_manifest(manifest, failures)
             ck.check_pins(evidence, failures)
+            ck.check_lvs_reference(evidence, failures)
             ck.check_characterization(evidence, failures)
             path = ck.latest_report(failures)
             if path is not None:
@@ -151,6 +168,54 @@ class FixtureCase(unittest.TestCase):
 class BaselineTest(FixtureCase):
     def test_baseline_has_zero_failures(self):
         self.assertEqual(self.run_checks(), [])
+
+
+class LvsReferenceTest(FixtureCase):
+    def edit_env(self, mutate) -> None:
+        mutate(self.lvs_env)
+        _dump(self.root / "signoff" / "evidence" / "e11b.json", self.lvs_env)
+
+    def cite_item_4(self) -> None:
+        self.manifest["evidence"]["4"] = {
+            **self.manifest["evidence"]["11"][1], "file": "signoff/evidence/e4.json"}
+        _dump(self.root / "signoff" / "evidence" / "e4.json", self.lvs_env)
+        self.pins["inputs"]["4"] = ITEM_11_PARTS[1]
+
+    def test_item_4_baseline(self):
+        self.cite_item_4()
+        self.assertEqual(self.run_checks(), [])
+
+    def test_reference_bytes_changed_compound(self):
+        (self.root / "lay" / "ref.spice").write_text("* edited\n")
+        self.assertFails("ref.spice has changed since the LVS match")
+
+    def test_reference_bytes_changed_item_4(self):
+        self.cite_item_4()
+        (self.root / "lay" / "ref.spice").write_text("* edited\n")
+        self.assertFails("evidence['4'] was recorded")
+
+    def test_missing_hash_compound(self):
+        self.edit_env(lambda e: e["environment"].pop("reference_sha256"))
+        self.assertFails("missing or malformed environment.reference_sha256")
+
+    def test_malformed_hash_item_4(self):
+        self.cite_item_4()
+        self.edit_env(lambda e: e["environment"].update(reference_sha256="sha256:abc"))
+        self.assertFails("missing or malformed environment.reference_sha256")
+
+    def test_missing_reference_file(self):
+        (self.root / "lay" / "ref.spice").unlink()
+        self.assertFails("does not exist")
+
+    def test_report_names_other_reference(self):
+        self.edit_env(lambda e: e.update(reference="other.spice"))
+        self.assertFails("records reference 'other.spice'")
+
+    def test_lvs_part_first_in_list(self):
+        self.manifest["evidence"]["11"].reverse()
+        self.pins["inputs"]["11"].reverse()
+        (self.root / "lay" / "ref.spice").write_text("* edited\n")
+        self.assertFails("evidence['11[0]'] was recorded")
 
 
 class ManifestTest(FixtureCase):

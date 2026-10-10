@@ -158,6 +158,19 @@ jobs:
           python3 layout/opamp_core/measure_area.py --check
           python3 -m unittest discover -s layout/opamp_core -p 'test_measure_area.py' -v
 
+      - name: LVS reference is fresh against the schematic netlist (offline)
+        # Closes the other half of the LVS freshness chain (check_signoff.py
+        # compares the committed reference's hash to each cited LVS
+        # envelope's environment.reference_sha256): schematic netlist ->
+        # layout device tables -> expanded reference. --check runs
+        # verify_against_netlist() and diffs the regenerated reference against
+        # the committed text. Needs only the klayout module; no LVS run, PDK
+        # or simulator. Refresh: signoff/README.md "LVS reference freshness".
+        run: |
+          set -euo pipefail
+          python3 layout/opamp_core/lvs_reference.py --check
+          python3 -m unittest discover -s layout/opamp_core -p 'test_lvs_reference.py' -v
+
       - name: Re-grade the block manifest
         # `klt signoff --manifest` exits 3 when the block is not yet T1,
         # which is this block's current state and not an error --
