@@ -12,7 +12,8 @@ fields and published artifact paths are derived, not hand-edited:
     path must exist in the tree.
 
 Nothing here ratifies a bound or the Area row; ratified rows, ports and
-consumer verdicts are never touched.
+consumer verdicts are never touched. Their consistency with the symbol and
+the ratified table is checked read-only by signoff/check_integrator_contract.py.
 
   python3 signoff/sync_integrator.py --check    # offline; exit 1 on drift
   python3 signoff/sync_integrator.py --update   # rewrite managed fields in place
