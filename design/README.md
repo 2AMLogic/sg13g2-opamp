@@ -91,3 +91,34 @@ itself.
   was actually simulated, not just netlisted — see
   `sim/open-loop-ac/README.md` for the full open-loop AC PVT-grid bench
   and its results.
+
+## Schematic-to-netlist regeneration check (issue #190)
+
+`check_netlist_regen.py` proves the committed `netlist/opamp_core.spice` is
+still what `opamp_core.sch` netlists to (the static signoff inventory check
+deliberately does not). It runs the headless command above into a **temporary
+directory** (check mode never touches the committed netlist), then compares
+statements: blank lines and full-line `*` comments (including the
+host-specific `** sch_path:` line) are ignored, everything else — devices,
+connections, models, parameters, order — must match exactly. This is the same
+normalization `signoff/characterization/generate.py` uses.
+
+```bash
+export PDK_ROOT=/path/to/ihp-open-pdk PDK=ihp-sg13g2   # pinned by sim/pdk.json
+python3 design/check_netlist_regen.py        # 0 match, 1 circuit diff, 2 tool failure
+python3 -m unittest discover -s design -p 'test_check_netlist_regen.py'   # offline logic tests
+```
+
+xschem exiting non-zero, reporting errors/missing symbols on stderr, an
+unresolvable PDK, or producing no output all fail explicitly (exit 2). The
+tool prints the xschem version and PDK version it used; CI (`netlist-regen`
+job in `.github/workflows/signoff.yml`) installs xschem via apt and fetches
+the `release_tag` from `sim/pdk.json`. Last verified locally with
+`XSCHEM V3.4.4` and ihp-sg13g2 `0.3.0`.
+
+**Intentional refresh** after a deliberate schematic change: run
+`python3 design/check_netlist_regen.py --update` (the only mode that writes
+`netlist/opamp_core.spice`), review the git diff, then re-run
+`python3 layout/opamp_core/lvs_reference.py --check` and follow
+`signoff/README.md` for any downstream refresh. Existing `sim/` records and
+signoff reports are append-only and are not edited.

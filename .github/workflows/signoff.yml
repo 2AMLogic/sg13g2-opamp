@@ -218,3 +218,48 @@ jobs:
         env:
           KLT_SIGNOFF_CMD: klt
         run: python3 signoff/check_signoff.py --run-klt
+
+  netlist-regen:
+    # Schematic -> netlist freshness (issue #190). Separate from the
+    # offline/stdlib `signoff` job because it needs xschem and the pinned
+    # SG13G2 PDK. A provisioning or netlisting failure fails this job; it is
+    # never treated as a match. Never writes design/netlist/ (temp dir only).
+    name: Schematic regenerates the committed netlist (xschem + pinned PDK)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+
+      - name: Comparison logic negative controls (offline)
+        run: python3 -m unittest discover -s design -p 'test_check_netlist_regen.py' -v
+
+      - name: Install xschem
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends xschem
+          xschem --version 2>&1 | head -1
+
+      - name: Fetch the SG13G2 release pinned by sim/pdk.json
+        run: |
+          set -euo pipefail
+          tag="$(python3 -c "import json;print(json.load(open('sim/pdk.json'))['release_tag'])")"
+          url="$(python3 -c "import json;print(json.load(open('sim/pdk.json'))['release_url'])")"
+          root="${RUNNER_TEMP}/pdk"
+          mkdir -p "${root}/ihp-sg13g2" "${RUNNER_TEMP}/dl"
+          curl -fsSL -o "${RUNNER_TEMP}/dl/pdk.tar.gz" "${url}"
+          # release tarball root is IHP-Open-PDK-<version>/ihp-sg13g2/...
+          tar -xzf "${RUNNER_TEMP}/dl/pdk.tar.gz" -C "${root}/ihp-sg13g2" \
+            --strip-components=2 --wildcards '*/ihp-sg13g2/*'
+          echo "${tag#v}" > "${root}/ihp-sg13g2/.fetched-version"
+          test -d "${root}/ihp-sg13g2/libs.tech/xschem"
+          echo "PDK_ROOT=${root}" >> "${GITHUB_ENV}"
+          echo "PDK=ihp-sg13g2" >> "${GITHUB_ENV}"
+
+      - name: Regenerate the netlist and compare (check mode)
+        # Prints the xschem and PDK versions used. Exit 1 = circuit diff,
+        # 2 = tool/provisioning failure.
+        run: python3 design/check_netlist_regen.py
