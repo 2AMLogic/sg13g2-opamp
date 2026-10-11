@@ -9,7 +9,7 @@ hand-written, from committed evidence only:
 |---|---|
 | [`selection.json`](selection.json) | The **explicit record selection**: every record the report reads, by path and pinned by sha256, and every claimed row (column, extremum, unit, load, ratified bound copied verbatim from the spec, decision record). Nothing is discovered by glob or file mtime. |
 | [`generate.py`](generate.py) | Stdlib-only generator: audits the selected records, aggregates, and renders the report. |
-| [`test_generate.py`](test_generate.py) | Negative controls (removed corner, injected failing point, failed simulation point, duplicate point, non-finite value, missing record, unpinned change, mixed ngspice, different netlist, dB-domain CMRR, spec/inventory drift, append-only minting) plus reproduction tests. |
+| [`test_generate.py`](test_generate.py) | Negative controls (removed corner, injected failing point, failed simulation point, duplicate point, non-finite value, missing record, unpinned change, mixed ngspice, different netlist, dB-domain CMRR, fabricated MC statistic, broken draws population, spec/inventory drift, append-only minting) plus reproduction tests. |
 | [`reports/`](reports/) | Minted records, **append-only**: `<UTC yyyymmdd-HHMMSS>-<short sha of HEAD>.json` (machine-readable) and its `.md` rendering. |
 
 ## Regenerate from a cold checkout (no ngspice, no PDK, no network)
@@ -81,6 +81,28 @@ cited. `--check` verifies only the newest record.
 systematic (nominal-device) half; the mismatch-driven 3σ half is measured
 `[P]` and not yet ratified, and its Monte Carlo campaign ran at a **fixed
 1.20 V supply** — the report carries that limit with the numbers.
+
+## Offset Monte Carlo statistics audit (issue #199)
+
+An MC record may pin the raw per-draw population behind its summary
+(`draws_csv` + `draws_csv_sha256`, always together). Naming draws opts the
+record into the **statistics audit** (definition check
+`offset_mc_statistics`): every published per-point statistic — mean, sample
+σ (N−1), 3σ, min/max over the passing draws, and
+`vos_total_wc_det_plus_3sigma_v = |vos_systematic_det_v| + 3σ` — is
+recomputed from those draws exactly as
+[`sim/input-offset/run_offset_mc.sh`](../../sim/input-offset/run_offset_mc.sh)
+computes it (accumulation in draw order), and each summary cell must be that
+recomputed value **as the bench serializes it** (`printf %.9g`, nine
+significant digits). The tolerance is the serialization itself: a cell that
+is not the nine-digit rendering of the recomputed value — e.g. a fabricated
+σ, mean, extremum or total — is an `ERROR` naming the point and the offending
+field, never a published MEASURED row. The population itself must be complete
+and singular (missing, duplicated, seed/metadata-conflicting or non-finite
+PASS draws fail, via the [`../yield-inputs/`](../yield-inputs/) converter
+contract); the `negctrl` draws are audited on their own and never pooled into
+the mismatch statistics. Repinning a drifted draws file is a deliberate
+selection edit, exactly like repinning a summary.
 
 ## Minting a new record, and the item 8 citation
 
