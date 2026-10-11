@@ -4,7 +4,8 @@ Issue #171: klt_begin_record must claim the record destinations (sim +
 compare, honoring RECORD_SUFFIX) atomically BEFORE klt is invoked, and
 envelope / comparison publication must never replace an existing file. This
 is the klt-wrapper counterpart of the #140 reservation tested in
-test_record_paths.py (same primitive: an atomic un-`-p` mkdir).
+test_record_paths.py (same primitive: an atomic un-`-p` mkdir). The #209
+identity lifecycle is stubbed here and tested in test_env_drift_lifecycle.py.
 
 Every test builds a throwaway repo tree in a TemporaryDirectory and drives the
 real klt_run_common.sh from bash, with a stub `klt` and a stub compare.py.
@@ -53,11 +54,16 @@ SIM_DIR="${REPO_ROOT}/sim"
 date() { echo "${FAKE_TS}"; }
 git() { echo "${FAKE_SHA}"; }
 export NGSPICE_VERSION=stub PDK=pdk PDK_ROOT="${REPO_ROOT}/nopdk"
-# preflight.sh (not sourced here: it needs a PDK) provides the identity-sidecar
-# capture klt_write_envelope calls (issue #191); stub it, env_identity.py has its own tests.
-sg13g2_capture_env_identity() { printf '{"stub": "%s"}\\n' "$1" > "$2"; }
 # shellcheck source=/dev/null
 source "${COMMON}"
+# preflight.sh (not sourced here: it needs a PDK) provides the identity
+# lifecycle klt_begin_record / klt_write_envelope call (issues #191, #209).
+# Stub it here; the real sim/env-identity.sh is driven against a fake PDK
+# install by test_env_drift_lifecycle.py, env_identity.py by its own tests.
+sg13g2_env_identity_begin() { printf '{"stub": "%s"}\\n' "$1" > "$2"; }
+sg13g2_env_identity_finalize() {
+  [[ -e "$3" ]] || sg13g2_publish_noclobber "$2" "$3" || exit 4
+}
 KLT="${STUB_KLT}"
 klt_check_client
 klt_begin_record stub "${SUFFIX}"
@@ -253,7 +259,7 @@ class Reservation(unittest.TestCase):
 class PublishNoClobber(unittest.TestCase):
     def publish(self, src, dest):
         return subprocess.run(
-            ["bash", "-c", 'source "$1"; klt_publish_noclobber "$2" "$3"',
+            ["bash", "-c", 'source "$1"; sg13g2_publish_noclobber "$2" "$3"',
              "x", str(COMMON), str(src), str(dest)],
             capture_output=True, text=True, timeout=30)
 

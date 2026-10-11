@@ -30,6 +30,8 @@ CLI:
   env_identity.py capture --pdk-root R --pdk P --pin sim/pdk.json --record-id ID
                           --ngspice ngspice-46 --model cornerMOSlv.lib ... --out F
   env_identity.py verify  --sidecar F --pin sim/pdk.json [--record-id ID]
+  env_identity.py compare --before F --pdk-root R --pdk P --pin sim/pdk.json
+                          --ngspice ngspice-46 [--model cornerMOSlv.lib ...]
 """
 
 from __future__ import annotations
@@ -110,6 +112,87 @@ def resolve_closure(install: Path, roots: list[str]) -> tuple[list[dict], list[s
             cand = Path(target)
             queue.append(cand if cand.is_absolute() else path.parent / cand)
     return [{"path": p, "sha256": files[p]} for p in sorted(files)], sorted(set(unresolved))
+
+
+# Everything a sidecar's comparison key covers (#209): two captures of one
+# run must agree on all of this for the record to finalize. `record_id` is
+# deliberately excluded -- begin and finalize capture the same record.
+def _cfg(sidecar: dict, key: str):
+    value = sidecar.get("configured")
+    return value.get(key) if isinstance(value, dict) else None
+
+
+def _obs(sidecar: dict, key: str):
+    value = sidecar.get("observed")
+    return value.get(key) if isinstance(value, dict) else None
+
+
+def _closure(sidecar: dict) -> dict:
+    models = sidecar.get("models")
+    files = models.get("files") if isinstance(models, dict) else None
+    if not isinstance(files, list):
+        return {}
+    return {f.get("path"): f.get("sha256") for f in files if isinstance(f, dict)}
+
+
+def _models(sidecar: dict) -> dict:
+    value = sidecar.get("models")
+    return value if isinstance(value, dict) else {}
+
+
+def _osdi(sidecar: dict, key: str):
+    value = sidecar.get("osdi")
+    return value.get(key) if isinstance(value, dict) else None
+
+
+def compare(before: dict, after: dict) -> list[str]:
+    """Drift errors between the begin and finalize captures of one run (#209).
+
+    Pure: both arguments are sidecar dicts as `capture` returns them. Every
+    comparison-key field but `record_id` must be equal -- `configured`,
+    `observed`, `models.files`, `models.unresolved`, `osdi` and
+    `identity_sha256`. Model paths are install-relative, so moving the PDK
+    root (same bytes) is not drift; changed bytes, a changed closure, a
+    changed OSDI build, release marker, simulator or configured environment
+    each are. Empty list means the run finished under the identity it
+    started with.
+    """
+    if not isinstance(before, dict) or not isinstance(after, dict):
+        return ["sidecar is not a JSON object"]
+    errs: list[str] = []
+    for key in ("source", "release_tag", "variant"):
+        was, now = _cfg(before, key), _cfg(after, key)
+        if was != now:
+            errs.append(f"configured {key} changed during the run ({was!r} -> {now!r})")
+    was, now = _obs(before, "release_marker"), _obs(after, "release_marker")
+    if was != now:
+        errs.append(f"observed release marker changed during the run ({was!r} -> {now!r})")
+    was, now = _obs(before, "ngspice"), _obs(after, "ngspice")
+    if was != now:
+        errs.append(f"observed ngspice changed during the run ({was!r} -> {now!r})")
+
+    was_files, now_files = _closure(before), _closure(after)
+    for path in sorted(set(was_files) - set(now_files)):
+        errs.append(f"model file removed from the closure during the run: {path}")
+    for path in sorted(set(now_files) - set(was_files)):
+        errs.append(f"model file added to the closure during the run: {path}")
+    for path in sorted(set(was_files) & set(now_files)):
+        if was_files[path] != now_files[path]:
+            errs.append(f"model file {path} changed during the run (sha256 {was_files[path]} -> {now_files[path]})")
+
+    was, now = _models(before).get("unresolved"), _models(after).get("unresolved")
+    if was != now:
+        errs.append(f"model closure unresolved includes changed during the run ({was!r} -> {now!r})")
+
+    for key, label in (("manifest_sha256", "OSDI build-manifest sha256"), ("manifest_schema", "OSDI manifest schema")):
+        was, now = _osdi(before, key), _osdi(after, key)
+        if was != now:
+            errs.append(f"{label} changed during the run ({was!r} -> {now!r})")
+
+    was, now = before.get("identity_sha256"), after.get("identity_sha256")
+    if was != now:
+        errs.append(f"model/OSDI identity changed during the run (identity_sha256 {was} -> {now})")
+    return errs
 
 
 def capture(pdk_root: Path, pdk: str, pin: dict, record_id: str, ngspice: str, models=DEFAULT_MODELS) -> dict:
@@ -198,6 +281,14 @@ def main(argv: list[str]) -> int:
     v.add_argument("--sidecar", type=Path, required=True)
     v.add_argument("--pin", type=Path, required=True)
     v.add_argument("--record-id")
+    cmp = sub.add_parser("compare")
+    cmp.add_argument("--before", type=Path, required=True)
+    cmp.add_argument("--pdk-root", type=Path, required=True)
+    cmp.add_argument("--pdk", required=True)
+    cmp.add_argument("--pin", type=Path, required=True)
+    cmp.add_argument("--record-id", default=None)
+    cmp.add_argument("--ngspice", required=True)
+    cmp.add_argument("--model", action="append", default=None)
     a = ap.parse_args(argv)
     try:
         pin = json.loads(a.pin.read_text(encoding="utf-8"))
@@ -213,6 +304,23 @@ def main(argv: list[str]) -> int:
                 return 1
             a.out.write_text(canonical_json(side), encoding="utf-8")
             print(f"env_identity: wrote {a.out} (identity {side['identity_sha256'][:12]})")
+            return 0
+        if a.cmd == "compare":
+            before = json.loads(a.before.read_text(encoding="utf-8"))
+            if not isinstance(before, dict):
+                raise IdentityError(f"{a.before} is not a JSON object")
+            record_id = a.record_id or before.get("record_id") or "unknown"
+            # Re-resolve the SAME model roots the begin capture followed.
+            roots = (before.get("models") or {}).get("roots") if isinstance(before.get("models"), dict) else None
+            models = tuple(a.model or roots or DEFAULT_MODELS)
+            after = capture(a.pdk_root, a.pdk, pin, record_id, a.ngspice, models)
+            errs = compare(before, after)
+            if errs:
+                print("env_identity: run-time PDK/model identity DRIFTED since the run began -- the record is not finalizable:", file=sys.stderr)
+                for e in errs:
+                    print(f"env_identity:   {e}", file=sys.stderr)
+                return 1
+            print(f"env_identity: identity unchanged since the run began (identity {after['identity_sha256'][:12]})")
             return 0
         errs = verify(json.loads(a.sidecar.read_text(encoding="utf-8")), pin, a.record_id)
     except (OSError, ValueError, IdentityError) as exc:

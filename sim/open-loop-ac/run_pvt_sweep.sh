@@ -26,7 +26,18 @@
 # per point. Writes append-only evidence under corners/<record-id>/,
 # netlist-snapshots/<record-id>/ and records/<record-id>.{csv,md} -- same
 # fleet convention as sim/gm-id-characterization/run_gmid_sweep.sh in this
-# repo.
+# repo -- plus records/<record-id>.env.json, the run-time PDK/model identity
+# sidecar (issue #191), captured BEFORE the first ngspice launch and
+# published only if a fresh capture after the sweep still matches it
+# (issue #209; see sim/env-identity.sh for the before/after limitation).
+#
+# Exit status: 0 record written; 1 no point simulated (no summary written);
+# 3 preflight failed or the before-run identity capture failed (nothing
+# simulated); 4 the PDK/model identity drifted during the sweep (or its
+# sidecar could not be published) -- the record is NOT finalized: no
+# records/<id>.{csv,md,env.json} is written, the raw per-point results stay
+# in corners/<id>/ and records/<id>.csv.raw, and the begin capture in the
+# scratch dir named on stderr, for inspection.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -40,6 +51,13 @@ sg13g2_preflight_require_netlist
 
 OSDI_DIR="${SG13G2_OSDI_DIR}"
 sg13g2_preflight_record_paths
+
+# Run-time PDK/model identity, BEFORE the first ngspice launch (issue #209):
+# captured into private scratch outside records/; rechecked against a fresh
+# capture after the sweep, before anything in records/ is finalized.
+ENV_SCRATCH="$(mktemp -d "${TMPDIR:-/tmp}/open-loop-ac-${RECORD_ID}.XXXXXX")"
+ENV_BEGIN="${ENV_SCRATCH}/${RECORD_ID}.env.json"
+sg13g2_env_identity_begin "${RECORD_ID}" "${ENV_BEGIN}"
 
 DUT_NETLIST_SNAPSHOT="${SNAPSHOTS_OUT}/opamp_core.spice"
 cp "${DUT_NETLIST_SRC}" "${DUT_NETLIST_SNAPSHOT}"
@@ -201,6 +219,15 @@ if [[ ${passed} -eq 0 ]]; then
   exit 1
 fi
 
+# Model-identity recheck (issue #209), right after the last solver and
+# before any record file is finalized: on drift this exits 4 leaving only
+# the incomplete records/<id>.csv.raw and corners/<id>/ -- no .csv, .md or
+# .env.json. On a match it publishes the BEGIN capture (no-clobber) as
+# records/<id>.env.json, the sidecar describing what the sweep started with.
+sg13g2_env_identity_finalize "${RECORD_ID}" "${ENV_BEGIN}" "${RECORDS_DIR}/${RECORD_ID}.env.json"
+rm -f "${ENV_BEGIN}"
+rmdir "${ENV_SCRATCH}" 2>/dev/null || true
+
 mv "${CSV_OUT}.raw" "${CSV_OUT}"
 
 {
@@ -254,14 +281,6 @@ line("worst_pm_deg", worst_pm)
 line("worst_iq_a", worst_iq)
 PYEOF
 )"
-
-# Run-time PDK/model identity sidecar (issue #191): pins the model/include
-# closure and OSDI build this record actually used, so the record does not rest
-# on the install path or sim/pdk.json alone.
-sg13g2_capture_env_identity "${RECORD_ID}" "${RECORDS_DIR}/${RECORD_ID}.env.json" || {
-  echo "run_pvt_sweep.sh: could not write the PDK identity sidecar; record not finalized" >&2
-  exit 4
-}
 
 cat > "${MD_OUT}" <<EOF
 # open-loop-ac record ${RECORD_ID}

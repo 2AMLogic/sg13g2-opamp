@@ -10,7 +10,7 @@
 # each script did on its own before this file existed, plus
 # SG13G2_MOS_CORNERS, the PDK's MOS process-corner set every harness sweeps,
 # and SG13G2_NGSPICE_ERR_RE, the broken-simulation log signature every harness
-# scans its raw ngspice log for (see their own headers below). Six companion
+# scans its raw ngspice log for (see their own headers below). Eight companion
 # functions cover the remaining shared per-caller work:
 # sg13g2_preflight_require_netlist (the DUT_NETLIST_SRC guard most -- not all
 # -- callers need), sg13g2_preflight_record_paths (the record-id and
@@ -18,9 +18,12 @@
 # "did this simulation actually solve?" gate all ten callers apply),
 # sg13g2_latest_record_csv (resolve the newest committed sibling record every
 # cross-referencing caller joins against), sg13g2_csv_lookup (read one
-# column out of such a record by header name, keyed on point_id) and
+# column out of such a record by header name, keyed on point_id),
 # sg13g2_render_netlist (the shared sed-template render three callers each
-# carried their own byte-identical copy of) -- see their own headers below.
+# carried their own byte-identical copy of) and the model-identity lifecycle
+# pair sg13g2_env_identity_begin / sg13g2_env_identity_finalize (issue #209:
+# capture before the first solver, recheck before finalizing; held in
+# sim/env-identity.sh, sourced below) -- see their own headers.
 #
 # Callers MUST compute SCRIPT_DIR/SIM_DIR/REPO_ROOT themselves BEFORE
 # sourcing this file, mirroring sim/env.sh's own convention:
@@ -111,20 +114,16 @@ ${_sg13g2_preflight_self}: the pin in sim/pdk.json with a decision record.
 BANNER
 fi
 
-# sg13g2_capture_env_identity <record-id> <out-file>   (issue #191)
-#   Writes the run-time PDK/model identity sidecar for a record this run is
-#   finalizing: the hashed SPICE model/include closure this PDK install
-#   actually loads, the OSDI build-manifest identity and the observed release
-#   marker, bound to <record-id>. Contract and verifier: sim/tools/env_identity.py.
-#   Call it when the record is finalized, once per record, with <out-file> in
-#   records/ named <record-id>.env.json. Returns non-zero (after saying why) on
-#   an incompatible/unreadable install: the caller must not publish a record
-#   that claims provenance it does not have. Never overwrites an existing file.
-sg13g2_capture_env_identity() {
-  python3 "${SIM_DIR}/tools/env_identity.py" capture \
-    --pdk-root "${PDK_ROOT}" --pdk "${PDK}" --pin "${SIM_DIR}/pdk.json" \
-    --record-id "$1" --ngspice "${NGSPICE_VERSION}" --out "$2"
-}
+# sg13g2_capture_env_identity / sg13g2_env_identity_begin /
+# sg13g2_env_identity_finalize -- see sim/env-identity.sh (sourced here),
+# which holds the model-identity lifecycle so it can be tested offline.
+# Runners do NOT capture the identity once "when the record is finalized"
+# (issue #209): they capture it BEFORE the first solver and recheck it
+# before finalizing, so a record can only finalize under the identity its
+# measurements started with. That is a before/after check, not an immutable
+# PDK snapshot -- a change reverted before the recheck goes undetected.
+# shellcheck source=/dev/null
+source "${SIM_DIR}/env-identity.sh"
 
 # SG13G2_NGSPICE_ERR_RE
 #   The "this point's simulation is broken" log signature every sim/*/run_*.sh

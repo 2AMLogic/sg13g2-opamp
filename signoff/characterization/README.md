@@ -155,8 +155,10 @@ manifest cites it anywhere else.
 The report's `pdk_pin` is the *configured* release in `sim/pdk.json`; it is not
 evidence of what a run loaded. Each selected record may additionally pin a
 run-time **environment sidecar** (`sim/<bench>/records/<record-id>.env.json`,
-contract and verifier in `sim/tools/env_identity.py`, written by
-`sg13g2_capture_env_identity` when a harness finalizes a record):
+contract and verifier in `sim/tools/env_identity.py`, captured before the
+run's first solver and published only if it still matches when the harness
+finalizes the record -- see `sim/README.md` "Run-time PDK/model identity",
+issue #209, for that guarantee and its before/after limitation):
 
 - `configured` (what `sim/pdk.json` asserted) is kept apart from `observed`
   (install `.fetched-version`, ngspice);

@@ -233,3 +233,30 @@ _sg13g2_record_refuse() {
   } >&2
   exit 3
 }
+
+# sg13g2_publish_noclobber <src> <dest>   (issue #171; shared here since #209)
+#   Put a copy of <src> at <dest> without ever replacing or truncating an
+#   existing <dest>: copy to a hidden temp next to <dest>, `ln` the temp
+#   onto <dest> (ln(2) fails on an existing destination, so there is no
+#   check-then-create window), then unlink the temp. Returns 1 (with a
+#   message) if <dest> exists or the publish failed; the caller decides
+#   what "not published" means for it. This is the one shared publication
+#   primitive for append-only record files: sim/tools/klt_run_common.sh
+#   (which sources this file for its offline tests, and is itself sourced
+#   after preflight.sh -- hence after this file -- by every klt wrapper)
+#   and preflight.sh's sg13g2_env_identity_finalize both publish through it,
+#   so the no-clobber guarantee cannot drift between them.
+sg13g2_publish_noclobber() {
+  local src="$1" dest="$2" tmp rc=0
+  tmp="$(mktemp "$(dirname "${dest}")/.publish.XXXXXX")" || return 1
+  if cp "${src}" "${tmp}"; then
+    ln "${tmp}" "${dest}" 2>/dev/null || rc=1
+  else
+    rc=1
+  fi
+  unlink "${tmp}" 2>/dev/null || true
+  if [[ "${rc}" -ne 0 ]]; then
+    echo "${_sg13g2_preflight_self}: could not publish ${dest} (already exists?) -- not replaced; records are append-only." >&2
+  fi
+  return "${rc}"
+}
