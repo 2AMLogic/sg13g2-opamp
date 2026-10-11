@@ -54,6 +54,9 @@ import mc_samples  # noqa: E402
 # Shared noise post-processing (issue #213): the SAME module run_noise_sweep.sh runs.
 sys.path.insert(0, str(DEFAULT_REPO_ROOT / "sim" / "input-noise"))
 import noise_post  # noqa: E402
+# Shared slew post-processing (issue #227): the SAME module run_slew_sweep.sh runs.
+sys.path.insert(0, str(DEFAULT_REPO_ROOT / "sim" / "slew-rate"))
+import slew_post  # noqa: E402
 SELECTION_REL = "signoff/characterization/selection.json"
 REPORTS_REL = "signoff/characterization/reports"
 ENVELOPE_REL = "signoff/evidence/characterization.json"
@@ -148,6 +151,28 @@ NOISE_AUDIT_RULE = (
     "malformed, non-finite or stale-pinned artifact is an error naming the "
     "point and file. A summary edited with its own hash refreshed still fails "
     "while the pinned raw artifacts disagree."
+)
+
+SLEW_AUDIT_RULE = (
+    "Slew-rate raw-evidence audit (issue #227): a record that selects raw "
+    "transient evidence (`slew_raw`, one sha256-pinned `wrdata` v(out) "
+    "waveform and one sha256-pinned rendered bench netlist per grid point, "
+    "plus the measurement configuration) is audited offline against it, with "
+    "the measurement in sim/slew-rate/slew_post.py -- the module "
+    "run_slew_sweep.sh itself runs. The configuration (edge intervals, outer "
+    "and inner windows) must be exactly the bench's, and the supply, "
+    "common-mode voltage, step schedule and stop time of each pinned rendered "
+    "netlist must agree with it. Per point the four edge rates (first "
+    "interpolated crossing of the window edges inside the edge interval), the "
+    "worse edge, the waveform extrema, the window limits and the "
+    "waveform-derived linearity and traverse flags are recomputed, and each "
+    "committed cell must equal the recomputed value as the bench serializes "
+    "it (printf %.6g, six significant digits; flags 0/1), with no tolerance "
+    "beyond that serialization. A waveform that is missing, changed, "
+    "assigned to another point, non-finite, out of time order or without the "
+    "needed crossings cannot yield a passing measurement. A summary edited "
+    "coherently (rise, fall and worst together, hash refreshed) still fails "
+    "while the pinned waveforms disagree."
 )
 
 NOT_CLAIMED = [
@@ -313,10 +338,17 @@ def load_selection(path: Path) -> dict:
             _validate_mc_samples_selection(key, rec["mc_samples"], selection["records"])
         if "noise_raw" in rec:
             _validate_noise_raw_selection(key, rec["noise_raw"])
+        if "slew_raw" in rec:
+            _validate_slew_raw_selection(key, rec["slew_raw"])
         for name in rec.get("definition_checks", []):
             if name not in DEFINITION_CHECKS:
                 raise SelectionError(f"selection: record {key}: unknown definition check {name!r}")
             need = DEFINITION_CHECKS[name][1]
+            if need == "slew" and rec.get("slew_raw") is None:
+                raise SelectionError(
+                    f"selection: record {key}: definition check {name!r} verifies raw "
+                    "transient waveforms; name hash-pinned `slew_raw` beside the summary"
+                )
             if need == "draws" and rec.get("draws_csv") is None:
                 raise SelectionError(
                     f"selection: record {key}: definition check {name!r} verifies a raw "
@@ -389,6 +421,35 @@ def _validate_noise_raw_selection(key: str, nr) -> None:
         if not isinstance(entry, dict) or sorted(entry) != sorted(NOISE_PIN_KINDS):
             raise SelectionError(f"{where}.files[{pid!r}] needs exactly {list(NOISE_PIN_KINDS)}")
         for kind in NOISE_PIN_KINDS:
+            pin = entry[kind]
+            if not (isinstance(pin, dict) and isinstance(pin.get("path"), str) and isinstance(pin.get("sha256"), str)):
+                raise SelectionError(
+                    f"{where}.files[{pid!r}].{kind} needs string `path` and `sha256` "
+                    "(a raw artifact is never named without its pin)"
+                )
+
+
+SLEW_PIN_KINDS = ("tran", "netlist")
+
+
+def _validate_slew_raw_selection(key: str, sr) -> None:
+    """Shape of a record's `slew_raw` pin: the measurement configuration, plus
+    per point one pinned transient waveform and one pinned rendered netlist."""
+    where = f"selection: record {key}: `slew_raw`"
+    if not isinstance(sr, dict):
+        raise SelectionError(f"{where} must be an object")
+    if sr.get("config") != slew_post.CONFIG:
+        raise SelectionError(
+            f"{where}.config must be exactly {slew_post.CONFIG} (the measurement configuration of "
+            "sim/slew-rate/run_slew_sweep.sh that the shared post-processing is defined for)"
+        )
+    files = sr.get("files")
+    if not isinstance(files, dict) or not files:
+        raise SelectionError(f"{where}.files must be a non-empty object of point_id -> {{tran, netlist}}")
+    for pid, entry in files.items():
+        if not isinstance(entry, dict) or sorted(entry) != sorted(SLEW_PIN_KINDS):
+            raise SelectionError(f"{where}.files[{pid!r}] needs exactly {list(SLEW_PIN_KINDS)}")
+        for kind in SLEW_PIN_KINDS:
             pin = entry[kind]
             if not (isinstance(pin, dict) and isinstance(pin.get("path"), str) and isinstance(pin.get("sha256"), str)):
                 raise SelectionError(
@@ -536,6 +597,53 @@ def _check_slew_worse_edge(point: dict, draws) -> str | None:
     return None
 
 
+def _slew_cell_problem(field: str, cell: str | None, printed: str) -> str | None:
+    """Why `cell` is not `printed` (the bench's serialization of the recomputed value)."""
+    text = (cell or "").strip()
+    if printed == "nan":
+        return None if text.lower() == "nan" else f"{field} {text!r} but the pinned waveform gives an undefined (nan) value"
+    value, why = parse_decimal(cell)
+    if value is None:
+        return f"{field}: {why}"
+    if value != Decimal(printed):
+        return (
+            f"{field} {value} is not {printed} recomputed from the pinned waveform "
+            "(the bench writes this quantity with printf %.6g; the cell must be that "
+            "serialization, with no tolerance beyond its 6 digits)"
+        )
+    return None
+
+
+def _check_slew_raw(point: dict, pop: dict | None) -> str | None:
+    """The slew summary must follow from the pinned transient waveform
+    (SLEW_AUDIT_RULE): every waveform-derived cell is recomputed by the shared
+    slew_post module and compared as the bench serializes it."""
+    if pop is None:
+        return "cannot evaluate (no raw slew population available)"
+    pid = (point.get("point_id") or "").strip()
+    raw = pop.get(pid)
+    if raw is None:
+        return "cannot evaluate (no pinned raw slew artifacts for this point)"
+    where = f"({raw['tran']})"
+    problems = []
+    for field, expect in (("vdd_v", raw["vdd"]), ("vcm_v", raw["vcm"])):
+        problem = _slew_cell_problem(field, point.get(field), slew_post.serialize(expect))
+        if problem:
+            problems.append(f"{problem} (pinned rendered netlist {raw['netlist']})")
+    m = slew_post.measure(raw["t"], raw["v"], raw["vcm"], raw["w_out"], raw["w_in"], raw["t2"], raw["t3"], raw["tstop"])
+    for edge in ("sr_rise_v_per_us", "sr_fall_v_per_us", "sr_rise_inner_v_per_us", "sr_fall_inner_v_per_us"):
+        if m[edge] != m[edge]:
+            problems.append(f"{edge}: no window crossing inside its edge interval in the pinned waveform, so no passing measurement exists {where}")
+    worst = slew_post.worst_edge(m["sr_rise_v_per_us"], m["sr_fall_v_per_us"])
+    cells = dict(zip(slew_post.FIELDS, slew_post.format_fields(m)))
+    cells["sr_worst_v_per_us"] = slew_post.serialize(worst)
+    for field in (*slew_post.FIELDS[:4], "sr_worst_v_per_us", *slew_post.FIELDS[4:]):
+        problem = _slew_cell_problem(field, point.get(field), cells[field])
+        if problem:
+            problems.append(f"{problem} {where}")
+    return "; ".join(problems) or None
+
+
 def _check_offset_magnitude(point: dict, draws) -> str | None:
     signed, _ = parse_decimal(point.get("vos_null_v"))
     magnitude, _ = parse_decimal(point.get("vos_abs_v"))
@@ -643,6 +751,7 @@ DEFINITION_CHECKS = {
     "cmrr_mc_statistics": (_check_cmrr_mc_statistics, "samples"),
     "noise_raw_audit": (_check_noise_raw, "noise"),
     "slew_worse_edge": (_check_slew_worse_edge, False),
+    "slew_raw_audit": (_check_slew_raw, "slew"),
     "offset_magnitude": (_check_offset_magnitude, False),
     "offset_mc_statistics": (_check_offset_mc_statistics, "draws"),
 }
@@ -901,6 +1010,91 @@ def _load_noise_population(repo: Path, key: str, nr: dict, expected: list, error
     return None if len(errors) > n_err else points
 
 
+def _load_slew_population(repo: Path, key: str, sr: dict, expected: list, errors: list) -> dict | None:
+    """Pin-check and strictly parse each grid point's transient waveform and
+    rendered netlist, and refuse a netlist that disagrees with the pinned
+    measurement configuration. None when anything is wrong; problems name
+    point and file."""
+    n_err = len(errors)
+    files = sr["files"]
+    cfg = {k: float(v) for k, v in sr["config"].items()}
+    expected_ids = [pid for pid, _ in expected]
+    for pid in sorted(set(files) - set(expected_ids)):
+        errors.append(f"record {key}: raw slew artifacts pinned for {pid!r}, which is outside the expected grid")
+    seen_paths: dict[str, str] = {}
+    for pid in expected_ids:
+        entry = files.get(pid)
+        if entry is None:
+            continue
+        for kind in SLEW_PIN_KINDS:
+            rel = entry[kind]["path"]
+            owner = f"point {pid} {kind}"
+            if rel in seen_paths:
+                errors.append(f"record {key}: {rel} is pinned twice ({seen_paths[rel]} and {owner}); one raw artifact per point and kind")
+            seen_paths[rel] = owner
+            want = f"{pid}_tran.csv" if kind == "tran" else f"{pid}.spice"
+            if Path(rel).name != want:
+                errors.append(f"record {key}: point {pid}: {kind} pin names {rel}, which belongs to another point (expected file {want})")
+    points: dict = {}
+    for pid in expected_ids:
+        entry = files.get(pid)
+        if entry is None:
+            errors.append(f"record {key}: point {pid}: no pinned raw slew waveform/netlist (every grid point needs both)")
+            continue
+        texts = {}
+        for kind in SLEW_PIN_KINDS:
+            rel, pinned = entry[kind]["path"], entry[kind]["sha256"]
+            path = repo / rel
+            if not path.is_file():
+                errors.append(f"record {key}: point {pid}: missing raw slew {kind} {rel}")
+                continue
+            actual = sha256_file(path)
+            if actual != pinned:
+                errors.append(
+                    f"record {key}: point {pid}: {rel} does not match its selection pin "
+                    f"(pinned {pinned}, actual {actual}) -- re-select deliberately, "
+                    "never re-read silently"
+                )
+                continue
+            try:
+                texts[kind] = path.read_text(encoding="utf-8")
+            except (OSError, UnicodeDecodeError) as exc:
+                errors.append(f"record {key}: point {pid}: cannot read {rel} ({exc})")
+        if len(texts) != len(SLEW_PIN_KINDS):
+            continue
+        tran_rel, net_rel = entry["tran"]["path"], entry["netlist"]["path"]
+        try:
+            t, v = slew_post.parse_waveform(texts["tran"], tran_rel)
+        except slew_post.SlewError as exc:
+            errors.append(f"record {key}: point {pid}: invalid slew waveform: {exc}")
+            continue
+        try:
+            rc = slew_post.rendered_config(texts["netlist"], net_rel)
+        except slew_post.SlewError as exc:
+            errors.append(f"record {key}: point {pid}: invalid rendered netlist: {exc}")
+            continue
+        bad = [
+            f"{name} {rc[name]:g} (netlist) != {cfg[name]:g} (pinned config)"
+            for name in ("t2_ns", "t3_ns", "tstop_ns") if rc[name] != cfg[name]
+        ]
+        if rc["tran_stop_ns"] != cfg["tstop_ns"]:
+            bad.append(f".tran stop {rc['tran_stop_ns']:g} ns != tstop_ns {cfg['tstop_ns']:g} (pinned config)")
+        if abs(2.0 * rc["vcm_v"] - rc["vdd_v"]) > 1e-9:
+            bad.append(f"common mode {rc['vcm_v']:g} V is not VDD/2 of {rc['vdd_v']:g} V")
+        if Path(rc["wrdata"]).name != Path(tran_rel).name:
+            bad.append(f"wrdata target {Path(rc['wrdata']).name} is not the pinned waveform {Path(tran_rel).name}")
+        if bad:
+            errors.append(f"record {key}: point {pid}: measurement configuration mismatch in {net_rel}: " + "; ".join(bad))
+            continue
+        points[pid] = {
+            "t": t, "v": v, "vdd": rc["vdd_v"], "vcm": rc["vcm_v"],
+            "w_out": cfg["win_outer_v"], "w_in": cfg["win_inner_v"],
+            "t2": cfg["t2_ns"] * 1e-9, "t3": cfg["t3_ns"] * 1e-9, "tstop": cfg["tstop_ns"] * 1e-9,
+            "tran": tran_rel, "netlist": net_rel,
+        }
+    return None if len(errors) > n_err else points
+
+
 def load_record(repo: Path, key: str, spec: dict, grid: dict, env: dict, records: dict | None = None) -> dict:
     """Read and audit one selected record. Never raises on bad evidence."""
     state = {
@@ -1121,13 +1315,26 @@ def load_record(repo: Path, key: str, spec: dict, grid: dict, env: dict, records
             "band": nr["band"],
         }
 
+    # 3e. raw transient waveforms (issue #227): one pinned waveform and one
+    # pinned rendered netlist per grid point, strictly parsed.
+    slew_pop: dict | None = None
+    sr = spec.get("slew_raw")
+    if sr is not None:
+        slew_pop = _load_slew_population(repo, key, sr, expected, errors)
+        src["slew_raw"] = {
+            "status": "verified" if slew_pop is not None else "error",
+            "points": len(sr["files"]),
+            "pins_sha256": sha256_bytes(canonical_json(sr["files"]).encode("utf-8")),
+            "config": sr["config"],
+        }
+
     # 4. validity flags and definitions, per point
     conditions = spec.get("valid_when", [])
 
     def run_definition_checks(pid: str, row: dict) -> None:
         for name in spec.get("definition_checks", []):
             check, needs = DEFINITION_CHECKS[name]
-            pop = {"draws": draws_pass, "samples": sample_pop, "noise": noise_pop}.get(needs)
+            pop = {"draws": draws_pass, "samples": sample_pop, "noise": noise_pop, "slew": slew_pop}.get(needs)
             if needs and pop is None:
                 continue  # the population load above already reported why
             problem = check(row, pop)
@@ -1614,6 +1821,7 @@ def build_content(repo: Path, selection_path: Path) -> dict:
         "draws_audit_rule": DRAWS_AUDIT_RULE,
         "samples_audit_rule": SAMPLES_AUDIT_RULE,
         "noise_audit_rule": NOISE_AUDIT_RULE,
+        "slew_audit_rule": SLEW_AUDIT_RULE,
         "environment": {
             "pdk_provenance": pdk_provenance_summary(records),
             "ngspice_pin": env.get("ngspice"),
@@ -1856,6 +2064,13 @@ def render_markdown(report: dict) -> str:
         claim = "verified for every selected record" if prov["pdk_reproducibility_verified"] else "**NOT claimed** (not every selected record has checked run-time PDK identity)"
         w(f"PDK reproducibility is {claim}. {prov['note']}.\n\n")
     def _draws_cell(src: dict) -> str:
+        slew = src.get("slew_raw")
+        if slew:
+            return (
+                f"{slew['points']} pinned waveform+netlist pairs (`{_short(slew['pins_sha256'])}`, "
+                f"{slew['status']}: edges {slew['config']['t2_ns']}/{slew['config']['t3_ns']}/{slew['config']['tstop_ns']} ns, "
+                f"windows +/-{slew['config']['win_outer_v']} V and +/-{slew['config']['win_inner_v']} V)"
+            )
         noise = src.get("noise_raw")
         if noise:
             return (
@@ -1898,6 +2113,9 @@ def render_markdown(report: dict) -> str:
     noise_rule = content.get("noise_audit_rule")
     if noise_rule and any(src.get("noise_raw") for src in content["sources"].values()):
         w(f"\n{noise_rule}\n\n")
+    slew_rule = content.get("slew_audit_rule")
+    if slew_rule and any(src.get("slew_raw") for src in content["sources"].values()):
+        w(f"\n{slew_rule}\n\n")
     w("\nSpec section 2 rows covered: ")
     w(", ".join(f"{r['row']}{'' if r['covered'] else ' (NOT COVERED)'}" for r in content["spec_coverage"]) + ".\n")
     w("Item 9 inventory rows covered: ")

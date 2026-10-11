@@ -15,7 +15,9 @@ from __future__ import annotations
 import contextlib
 import io
 import json
+import math
 import shutil
+import subprocess
 import sys
 import tempfile
 import threading
@@ -33,6 +35,9 @@ import generate  # noqa: E402
 
 sys.path.insert(0, str(HERE.parent.parent / "sim" / "cmrr-mismatch"))
 import mc_samples  # noqa: E402
+
+sys.path.insert(0, str(HERE.parent.parent / "sim" / "slew-rate"))
+import slew_post  # noqa: E402
 
 REPO = HERE.parent.parent
 SELECTION = REPO / generate.SELECTION_REL
@@ -80,6 +85,9 @@ class Fixture:
                 files.update(e["path"] for e in rec["mc_samples"]["files"].values())
             if "noise_raw" in rec:
                 for entry in rec["noise_raw"]["files"].values():
+                    files.update(pin["path"] for pin in entry.values())
+            if "slew_raw" in rec:
+                for entry in rec["slew_raw"]["files"].values():
                     files.update(pin["path"] for pin in entry.values())
         files.update({generate.SELECTION_REL, generate.GENERATOR_REL})
         for rel in files:
@@ -1634,6 +1642,308 @@ class NoiseRawAudit(unittest.TestCase):
         runner = (REPO / "sim" / "input-noise" / "run_noise_sweep.sh").read_text(encoding="utf-8")
         self.assertIn("noise_post.py", runner)
         self.assertNotIn("PYEOF", runner.split("noise_post.py")[1].split("done")[0])
+
+
+class SlewRawAudit(unittest.TestCase):
+    """Issue #227: the slew-rate summary is audited against hash-pinned
+    transient waveforms and rendered netlists with the SAME measurement the
+    bench runs (sim/slew-rate/slew_post.py)."""
+
+    RECORD = "slew-rate"
+    POINT = "mos_tt_27C_1.20V"
+
+    def setUp(self) -> None:
+        self.fx = Fixture()
+
+    def tearDown(self) -> None:
+        self.fx.close()
+
+    def fresh(self) -> None:
+        self.fx.close()
+        self.fx = Fixture()
+
+    def raw(self) -> dict:
+        return self.fx.selection["records"][self.RECORD]["slew_raw"]
+
+    def errors(self, content: dict) -> list:
+        out = list(content["errors"])
+        for row in content["rows"]:
+            out.extend(row["errors"])
+        return out
+
+    def assert_error(self, *fragments: str) -> list:
+        content = self.fx.build()
+        errors = self.errors(content)
+        self.assertEqual(content["overall"]["verdict"], "ERROR", errors)
+        for fragment in fragments:
+            self.assertTrue(any(fragment in e for e in errors), (fragment, errors))
+        return errors
+
+    def entry(self, kind, pid=None) -> dict:
+        return self.raw()["files"][pid or self.POINT][kind]
+
+    def edit_raw(self, kind, transform, pid=None, repin=True) -> None:
+        entry = self.entry(kind, pid)
+        path = self.fx.root / entry["path"]
+        lines = path.read_text(encoding="utf-8").splitlines()
+        path.write_text("\n".join(transform(lines)) + "\n", encoding="utf-8")
+        if repin:
+            entry["sha256"] = generate.sha256_file(path)
+            self.fx.save_selection()
+
+    def cell(self, column, pid=None) -> str:
+        return next(r for r in generate.read_csv_rows(self.fx.csv_path(self.RECORD))[1]
+                    if r["point_id"] == (pid or self.POINT))[column]
+
+    def definition_error(self) -> list:
+        return self.assert_error(f"point {self.POINT} fails definition check slew_raw_audit")
+
+    # --- committed evidence -------------------------------------------------
+
+    def test_committed_population_rederives_offline(self):
+        content = self.fx.build()
+        self.assertEqual(self.errors(content), [])
+        raw = content["sources"][self.RECORD]["slew_raw"]
+        self.assertEqual((raw["status"], raw["points"]), ("verified", 45))
+        self.assertIn("slew_raw_audit", content["sources"][self.RECORD]["definition_checks"])
+        self.assertEqual(len(content["sources"][self.RECORD]["definition_checks"]), 2)
+        self.assertEqual(content["sources"][self.RECORD]["valid_points"], 45)
+
+    def test_report_exposes_audit_rule_and_status(self):
+        content = self.fx.build()
+        self.assertIn("Slew-rate raw-evidence audit", content["slew_audit_rule"])
+        md = generate.render_markdown(generate.make_report(content, "20260101-000000-abcd", self.fx.root))
+        self.assertIn("pinned waveform+netlist pairs", md)
+
+    def test_every_committed_cell_is_the_shared_serialization(self):
+        for pid in sorted(self.raw()["files"]):
+            path = REPO / self.raw()["files"][pid]["tran"]["path"]
+            t, v = slew_post.parse_waveform(path.read_text(encoding="utf-8"), str(path))
+            row = next(r for r in generate.read_csv_rows(self.fx.csv_path(self.RECORD))[1] if r["point_id"] == pid)
+            vcm = float(row["vcm_v"])
+            m = slew_post.measure(t, v, vcm, 0.15, 0.075, 300e-9, 550e-9, 800e-9)
+            self.assertEqual(slew_post.format_fields(m), [row[f] for f in slew_post.FIELDS], pid)
+            self.assertEqual(slew_post.serialize(slew_post.worst_edge(m["sr_rise_v_per_us"], m["sr_fall_v_per_us"])),
+                             row["sr_worst_v_per_us"], pid)
+
+    # --- coherent summary tampering ----------------------------------------
+
+    def test_coherent_summary_edit_with_refreshed_hash_fails(self):
+        # rise/fall/worst moved together: the old definition check still passes,
+        # the unchanged pinned waveform does not.
+        self.fx.set_cell(self.RECORD, self.POINT, "sr_rise_v_per_us", "9.5")
+        self.fx.set_cell(self.RECORD, self.POINT, "sr_fall_v_per_us", "9.25")
+        self.fx.set_cell(self.RECORD, self.POINT, "sr_worst_v_per_us", "9.25")
+        self.assertIsNone(generate._check_slew_worse_edge(
+            {"sr_rise_v_per_us": "9.5", "sr_fall_v_per_us": "9.25", "sr_worst_v_per_us": "9.25"}, None))
+        errors = self.definition_error()
+        self.assertTrue(any("sr_rise_v_per_us 9.5 is not" in e and "recomputed from the pinned waveform" in e for e in errors), errors)
+        self.assertTrue(any("sr_fall_v_per_us 9.25 is not" in e for e in errors), errors)
+        self.assertTrue(any(self.entry("tran")["path"] in e for e in errors), errors)
+
+    def test_worst_edge_alone_fails(self):
+        rise = self.cell("sr_rise_v_per_us")
+        self.fx.set_cell(self.RECORD, self.POINT, "sr_worst_v_per_us", rise)  # not the slower edge
+        errors = self.definition_error()
+        self.assertTrue(any("is not the worse" in e or "sr_worst_v_per_us" in e for e in errors), errors)
+
+    def test_one_digit_beyond_serialization_fails(self):
+        for field in ("sr_rise_inner_v_per_us", "vout_min_v", "vout_max_v", "window_lo_v", "window_hi_v"):
+            with self.subTest(field=field):
+                self.fresh()
+                cell = self.cell(field)
+                bumped = format(float(cell) * 1.00001 + (1e-7 if float(cell) == 0 else 0), ".6g")
+                self.fx.set_cell(self.RECORD, self.POINT, field, bumped)
+                self.assert_error(f"point {self.POINT} fails definition check slew_raw_audit", field)
+
+    def test_vdd_and_common_mode_cells_follow_the_netlist(self):
+        self.fx.set_cell(self.RECORD, self.POINT, "vcm_v", "0.61")
+        self.assertTrue(any("vcm_v" in e and self.entry("netlist")["path"] in e for e in self.definition_error()))
+
+    # --- waveform evidence ---------------------------------------------------
+
+    def test_changed_waveform_without_repin_fails(self):
+        self.edit_raw("tran", lambda ls: ls[:-1] + [" 7.99e-07 0.0 "], repin=False)
+        self.assert_error(f"point {self.POINT}: {self.entry('tran')['path']} does not match its selection pin")
+
+    def test_changed_waveform_repinned_disagrees_with_summary(self):
+        # a slower rising edge: delay the output ramp by stretching v around the window
+        def slow(lines):
+            out = []
+            for line in lines:
+                t, v = line.split()[:2]
+                out.append(f" {t} {v} " if float(t) < 300e-9 or float(t) > 550e-9 else f" {t} {float(v) * 0.9 + 0.05:.8e} ")
+            return out
+        self.edit_raw("tran", slow)
+        self.definition_error()
+
+    def test_missing_waveform_fails(self):
+        (self.fx.root / self.entry("tran")["path"]).unlink()
+        self.assert_error(f"point {self.POINT}: missing raw slew tran {self.entry('tran')['path']}")
+
+    def test_missing_netlist_fails(self):
+        (self.fx.root / self.entry("netlist")["path"]).unlink()
+        self.assert_error(f"point {self.POINT}: missing raw slew netlist")
+
+    def test_missing_point_association_fails(self):
+        del self.raw()["files"][self.POINT]
+        self.fx.save_selection()
+        self.assert_error(f"point {self.POINT}: no pinned raw slew waveform/netlist")
+
+    def test_pin_outside_the_grid_fails(self):
+        self.raw()["files"]["mos_tt_99C_1.20V"] = self.raw()["files"][self.POINT]
+        self.fx.save_selection()
+        self.assert_error("'mos_tt_99C_1.20V', which is outside the expected grid")
+
+    def test_duplicate_assignment_fails(self):
+        other = "mos_tt_27C_1.32V"
+        self.raw()["files"][other] = json.loads(json.dumps(self.raw()["files"][self.POINT]))
+        self.fx.save_selection()
+        errors = self.assert_error("is pinned twice", "belongs to another point")
+        self.assertTrue(any(other in e for e in errors), errors)
+
+    def test_non_finite_and_malformed_samples_fail(self):
+        for bad in (" 1.0e-07 nan ", " 1.0e-07 inf ", " nan 0.5 ", " 1.0e-07 -Infinity ", " 1.0e-07 abc ", " 1.0e-07 "):
+            with self.subTest(bad=bad):
+                self.fresh()
+                self.edit_raw("tran", lambda ls: ls[:5] + [bad] + ls[5:])
+                errors = self.assert_error(f"point {self.POINT}: invalid slew waveform")
+                self.assertTrue(any(f"{self.entry('tran')['path']}:6" in e for e in errors), errors)
+
+    def test_time_order_violations_fail(self):
+        def swap(lines):
+            return lines[:5] + [lines[6], lines[5]] + lines[7:]
+        self.edit_raw("tran", swap)
+        self.assert_error(f"point {self.POINT}: invalid slew waveform", "does not increase")
+
+    def test_duplicate_time_stamp_fails(self):
+        self.edit_raw("tran", lambda ls: ls[:5] + [ls[5]] + ls[5:])
+        self.assert_error(f"point {self.POINT}: invalid slew waveform", "does not increase")
+
+    def test_empty_waveform_fails(self):
+        self.edit_raw("tran", lambda ls: [])
+        self.assert_error(f"point {self.POINT}: invalid slew waveform", "need at least 2")
+
+    def test_missing_crossings_cannot_pass_even_with_nan_cells(self):
+        # a flat waveform never crosses the windows; the summary is edited to
+        # agree (nan) and keeps its flags: still no passing measurement.
+        self.edit_raw("tran", lambda ls: [f"{l.split()[0]} 0.6" for l in ls])
+        for field in ("sr_rise_v_per_us", "sr_fall_v_per_us", "sr_rise_inner_v_per_us",
+                      "sr_fall_inner_v_per_us", "sr_worst_v_per_us"):
+            self.fx.set_cell(self.RECORD, self.POINT, field, "nan")
+        errors = self.definition_error()
+        self.assertTrue(any("no window crossing inside its edge interval" in e for e in errors), errors)
+
+    # --- flags -----------------------------------------------------------------
+
+    def _audit_with_all_points_valid(self):
+        self.fx.selection["records"][self.RECORD]["valid_when"] = []
+        self.fx.save_selection()
+
+    def test_linearity_flag_change_is_detected(self):
+        self._audit_with_all_points_valid()
+        self.fx.set_cell(self.RECORD, self.POINT, "linearity_pass", "0")
+        errors = self.definition_error()
+        self.assertTrue(any("linearity_pass 0 is not 1" in e for e in errors), errors)
+
+    def test_traverse_flag_change_is_detected(self):
+        self._audit_with_all_points_valid()
+        self.fx.set_cell(self.RECORD, self.POINT, "traverse_pass", "0")
+        errors = self.definition_error()
+        self.assertTrue(any("traverse_pass 0 is not 1" in e for e in errors), errors)
+
+    def test_flag_that_the_waveform_fails_cannot_be_asserted_passing(self):
+        # park the output mid-window before the rising edge: traverse truly fails
+        self.edit_raw("tran", lambda ls: [
+            f"{l.split()[0]} 0.6" if 290e-9 <= float(l.split()[0]) < 299.5e-9 else l for l in ls])
+        errors = self.definition_error()
+        self.assertTrue(any("traverse_pass 1 is not 0" in e for e in errors), errors)
+
+    # --- measurement configuration -------------------------------------------
+
+    def test_selection_config_mismatch_is_refused(self):
+        for field, value in (("t2_ns", "301"), ("t3_ns", "560"), ("tstop_ns", "900"),
+                             ("win_outer_v", "0.2"), ("win_inner_v", "0.05")):
+            with self.subTest(field=field):
+                self.fresh()
+                self.raw()["config"][field] = value
+                self.fx.save_selection()
+                with self.assertRaises(generate.SelectionError):
+                    self.fx.build()
+
+    def test_missing_config_is_refused(self):
+        del self.raw()["config"]
+        self.fx.save_selection()
+        with self.assertRaises(generate.SelectionError):
+            self.fx.build()
+
+    def test_netlist_schedule_disagreeing_with_config_is_refused(self):
+        self.edit_raw("netlist", lambda ls: [l.replace("300n 0.3 300.1n", "310n 0.3 310.1n") for l in ls])
+        self.assert_error(f"point {self.POINT}: measurement configuration mismatch", "t2_ns 310")
+
+    def test_netlist_stop_time_disagreeing_with_config_is_refused(self):
+        self.edit_raw("netlist", lambda ls: [("tran 1n 900n 0 0.05n" if l.startswith("tran ") else l) for l in ls])
+        self.assert_error(f"point {self.POINT}: measurement configuration mismatch", ".tran stop 900")
+
+    def test_netlist_common_mode_not_mid_rail_is_refused(self):
+        self.edit_raw("netlist", lambda ls: [l.replace("dc 0.6 pwl(0 0.6 50n 0.6", "dc 0.7 pwl(0 0.7 50n 0.7") for l in ls])
+        self.assert_error(f"point {self.POINT}: measurement configuration mismatch", "is not VDD/2")
+
+    def test_netlist_writing_another_waveform_is_refused(self):
+        self.edit_raw("netlist", lambda ls: [l.replace(f"{self.POINT}_tran.csv", "mos_tt_27C_1.32V_tran.csv") for l in ls])
+        self.assert_error(f"point {self.POINT}: measurement configuration mismatch", "wrdata target")
+
+    def test_malformed_netlist_fails(self):
+        self.edit_raw("netlist", lambda ls: [l for l in ls if not l.startswith("Vinp")])
+        self.assert_error(f"point {self.POINT}: invalid rendered netlist")
+
+    def test_unpinned_artifact_entry_is_rejected(self):
+        del self.entry("tran")["sha256"]
+        self.fx.save_selection()
+        with self.assertRaises(generate.SelectionError):
+            self.fx.build()
+
+    def test_audit_without_pins_is_rejected(self):
+        del self.fx.selection["records"][self.RECORD]["slew_raw"]
+        self.fx.save_selection()
+        with self.assertRaises(generate.SelectionError):
+            self.fx.build()
+
+    # --- the shared module -----------------------------------------------------
+
+    def test_measure_is_nan_without_crossings_and_worst_edge_ignores_one_nan(self):
+        t = [i * 1e-9 for i in range(800)]
+        m = slew_post.measure(t, [0.6] * 800, 0.6, 0.15, 0.075, 300e-9, 550e-9, 800e-9)
+        self.assertTrue(math.isnan(m["sr_rise_v_per_us"]) and math.isnan(m["sr_fall_v_per_us"]))
+        self.assertEqual((m["linearity_pass"], m["traverse_pass"]), (0, 0))
+        self.assertTrue(math.isnan(slew_post.worst_edge(float("nan"), float("nan"))))
+        self.assertEqual(slew_post.worst_edge(float("nan"), 3.0), 3.0)
+        self.assertEqual(slew_post.serialize(float("nan")), "nan")
+        self.assertEqual(slew_post.serialize(0.1 + 0.2), "0.3")
+
+    def test_runner_uses_the_shared_module_and_its_constants(self):
+        runner = (REPO / "sim" / "slew-rate" / "run_slew_sweep.sh").read_text(encoding="utf-8")
+        self.assertIn("slew_post.py", runner)
+        self.assertNotIn("def cross(", runner)
+        for var, key in (("WIN_OUTER", "win_outer_v"), ("WIN_INNER", "win_inner_v"), ("T2_NS", "t2_ns"),
+                         ("T3_NS", "t3_ns"), ("TSTOP_NS", "tstop_ns")):
+            self.assertIn(f'{var}="{slew_post.CONFIG[key]}"' if var.startswith("WIN") else f"{var}={slew_post.CONFIG[key]}\n", runner)
+
+    def test_cli_matches_the_committed_summary(self):
+        row = next(r for r in generate.read_csv_rows(self.fx.csv_path(self.RECORD))[1] if r["point_id"] == self.POINT)
+        out = subprocess.run(
+            [sys.executable, "-I", str(REPO / "sim" / "slew-rate" / "slew_post.py"),
+             str(REPO / self.entry("tran")["path"]), row["vcm_v"], "0.15", "0.075", "300", "550", "800"],
+            capture_output=True, text=True, check=True).stdout.split()
+        self.assertEqual(out, [row[f] for f in slew_post.FIELDS])
+
+    def test_cli_reports_a_bad_waveform_with_no_stdout(self):
+        bad = self.fx.root / "bad_tran.csv"
+        bad.write_text(" 0 nan \n 1e-9 0.5 \n", encoding="utf-8")
+        res = subprocess.run([sys.executable, "-I", str(REPO / "sim" / "slew-rate" / "slew_post.py"),
+                              str(bad), "0.6", "0.15", "0.075", "300", "550", "800"], capture_output=True, text=True)
+        self.assertEqual((res.returncode, res.stdout), (1, ""))
+        self.assertIn("non-finite", res.stderr)
 
 
 if __name__ == "__main__":

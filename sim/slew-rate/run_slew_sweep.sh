@@ -183,88 +183,18 @@ print('1' if ok else '0')
 ")"
 
       # --- Slew post-processing, read from the committed waveform CSV.
-      read -r sr_rise sr_fall sr_rise_in sr_fall_in lin_pass trav_pass vout_min vout_max win_lo win_hi < <(python3 - "${tran_csv}" "${vcm}" "${WIN_OUTER}" "${WIN_INNER}" "${T2_NS}" "${T3_NS}" "${TSTOP_NS}" <<'PYEOF'
-import sys
-
-path = sys.argv[1]
-vcm = float(sys.argv[2])
-w_out = float(sys.argv[3])
-w_in = float(sys.argv[4])
-t2 = float(sys.argv[5]) * 1e-9
-t3 = float(sys.argv[6]) * 1e-9
-tstop = float(sys.argv[7]) * 1e-9
-
-# wrdata column layout: (scale,value) pair per requested vector -- col1 =
-# time (v(out)'s own scale), col2 = v(out). Same gotcha
-# sim/gm-id-characterization/README.md documents once for this fleet.
-t, v = [], []
-with open(path) as f:
-    for line in f:
-        parts = line.split()
-        if len(parts) < 2:
-            continue
-        t.append(float(parts[0]))
-        v.append(float(parts[1]))
-
-
-def cross(t_lo, t_hi, level, rising):
-    """First interpolated crossing of `level` inside [t_lo, t_hi]."""
-    for i in range(1, len(t)):
-        if not (t_lo <= t[i] <= t_hi):
-            continue
-        a, b = v[i - 1], v[i]
-        if (rising and a <= level < b) or ((not rising) and a >= level > b):
-            return t[i - 1] + (level - a) / (b - a) * (t[i] - t[i - 1])
-    return None
-
-
-def slew(t_lo, t_hi, half, rising):
-    """V/us over the +/-half window centred on mid-rail."""
-    first = vcm - half if rising else vcm + half
-    second = vcm + half if rising else vcm - half
-    ta = cross(t_lo, t_hi, first, rising)
-    tb = cross(t_lo, t_hi, second, rising)
-    if ta is None or tb is None or tb == ta:
-        return float('nan')
-    return 2 * half / abs(tb - ta) / 1e6
-
-
-def value_at(ts):
-    for i in range(len(t)):
-        if t[i] >= ts:
-            return v[i]
-    return v[-1]
-
-
-sr_rise = slew(t2, t3, w_out, True)
-sr_fall = slew(t3, tstop, w_out, False)
-sr_rise_in = slew(t2, t3, w_in, True)
-sr_fall_in = slew(t3, tstop, w_in, False)
-
-# Ramp linearity: the inner and outer windows must agree to 2%, i.e. the
-# output really was on a constant-slope ramp across the measured window
-# rather than on a settling tail.
-def close(a, b):
-    return a == a and b == b and abs(a - b) <= 0.02 * abs(b)
-
-
-lin_pass = 1 if (close(sr_rise_in, sr_rise) and close(sr_fall_in, sr_fall)) else 0
-
-# Traverse check: the output must have parked BELOW the window before the
-# rising edge and ABOVE it before the falling edge, so each measured
-# window is fully inside a single full-swing transition.
-trav_pass = 1 if (value_at(t2 - 1e-9) < vcm - w_out and value_at(t3 - 1e-9) > vcm + w_out) else 0
-
-
-def fmt(x):
-    return "nan" if x != x else f"{x:.6g}"
-
-
-print(f"{fmt(sr_rise)} {fmt(sr_fall)} {fmt(sr_rise_in)} {fmt(sr_fall_in)} "
-      f"{lin_pass} {trav_pass} {fmt(min(v))} {fmt(max(v))} "
-      f"{fmt(vcm - w_out)} {fmt(vcm + w_out)}")
-PYEOF
-)
+      # The definition lives in slew_post.py (stdlib only), shared with the
+      # offline raw-evidence audit in signoff/characterization/generate.py
+      # (issue #227); the audit refuses any other WIN_*/T*_NS configuration.
+      # An unreadable/malformed waveform prints nothing: the empty-field
+      # guard below then marks the point SIM FAILED.
+      sr_rise="" sr_fall="" sr_rise_in="" sr_fall_in="" lin_pass="" trav_pass="" vout_min="" vout_max="" win_lo="" win_hi=""
+      read -r sr_rise sr_fall sr_rise_in sr_fall_in lin_pass trav_pass vout_min vout_max win_lo win_hi < <(python3 "${SCRIPT_DIR}/slew_post.py" "${tran_csv}" "${vcm}" "${WIN_OUTER}" "${WIN_INNER}" "${T2_NS}" "${T3_NS}" "${TSTOP_NS}" || true)
+      if [[ -z "${win_hi}" ]]; then
+        echo "run_slew_sweep.sh: SIM FAILED ${point_id} -- unusable transient waveform ${tran_csv}" >&2
+        sim_fail_points+=("${point_id}")
+        continue
+      fi
 
       sr_worst="$(python3 -c "
 import math
