@@ -70,6 +70,8 @@ class Fixture:
         files = {self.selection[k] for k in ("spec", "inventory", "pdk_pin", "design_netlist")}
         for rec in self.selection["records"].values():
             files.update(rec[f] for f in ("csv", "md", "netlist_snapshot"))
+            if "draws_csv" in rec:
+                files.add(rec["draws_csv"])
         files.update({generate.SELECTION_REL, generate.GENERATOR_REL})
         for rel in files:
             dst = self.root / rel
@@ -90,6 +92,9 @@ class Fixture:
     def csv_path(self, key: str) -> Path:
         return self.root / self.selection["records"][key]["csv"]
 
+    def draws_path(self, key: str) -> Path:
+        return self.root / self.selection["records"][key]["draws_csv"]
+
     def rewrite_csv(self, key: str, transform, repin: bool = True) -> None:
         path = self.csv_path(key)
         lines = path.read_text(encoding="utf-8").splitlines()
@@ -97,6 +102,30 @@ class Fixture:
         if repin:
             self.selection["records"][key]["csv_sha256"] = generate.sha256_file(path)
             self.save_selection()
+
+    def rewrite_draws(self, key: str, transform, repin: bool = True) -> None:
+        """Rewrite the record's pinned draws population (deliberate re-selection)."""
+        path = self.draws_path(key)
+        lines = path.read_text(encoding="utf-8").splitlines()
+        path.write_text("\n".join(transform(lines)) + "\n", encoding="utf-8")
+        if repin:
+            self.selection["records"][key]["draws_csv_sha256"] = generate.sha256_file(path)
+            self.save_selection()
+
+    def set_draw_cell(self, key: str, point_id: str, draw_index: int, column: str, value: str, repin: bool = True) -> None:
+        def transform(lines):
+            header = lines[0].split(",")
+            idx = header.index(column)
+            draw_col = header.index("draw_index")
+            out = [lines[0]]
+            for line in lines[1:]:
+                cells = line.split(",")
+                if cells[0] == point_id and cells[draw_col] == str(draw_index):
+                    cells[idx] = value
+                out.append(",".join(cells))
+            return out
+
+        self.rewrite_draws(key, transform, repin)
 
     def set_cell(self, key: str, point_id: str, column: str, value: str, repin: bool = True) -> None:
         def transform(lines):
@@ -178,6 +207,18 @@ class CommittedEvidence(unittest.TestCase):
         self.assertEqual(rows["offset_mc_3sigma"]["coverage"]["grid"], "offset_mc15")
         self.assertTrue(rows["offset_mc_3sigma"]["measured_worst"]["point"].endswith("_1.20V"))
         self.assertTrue(any("FIXED 1.20 V" in c for c in self.content["caveats"]))
+
+    def test_mc_summary_statistics_follow_from_the_pinned_draws(self):
+        # Issue #199: the selected campaign's published statistics must be
+        # derivable from its hash-pinned draws population, at the bench's
+        # printf %.9g serialization, or the record is an error.
+        draws = self.content["sources"]["input-offset-mc"]["draws"]
+        self.assertEqual(draws["status"], "verified")
+        self.assertEqual(draws["points"], 16)  # 15 mismatch points + negctrl
+        self.assertEqual(draws["draws"], 4800)
+        self.assertEqual(draws["passing_draws"], 4800)
+        self.assertEqual(self.content["errors"], [])
+        self.assertNotIn("input-offset-mc", self.content["environment"]["pdk_provenance"]["error"])
 
     def test_binding_points_match_spec_prose(self):
         rows = rows_by_id(self.content)
@@ -510,16 +551,28 @@ class NegativeControls(unittest.TestCase):
         self.assertEqual(row["verdict"], "ERROR")
 
     def test_mc_supply_axis_point_missing_is_incomplete(self):
-        self.fx.rewrite_csv("input-offset-mc", lambda ls: [l for l in ls if not l.startswith("mos_fs_mismatch_125C")])
+        # Removed from summary AND draws together (a consistent re-selection):
+        # what remains is missing grid coverage, i.e. INCOMPLETE, not an
+        # error. (A summary-only removal is a summary/draws contradiction --
+        # the error control lives in OffsetMcStatistics.)
+        pid = "mos_fs_mismatch_125C_1.20V"
+        self.fx.rewrite_csv("input-offset-mc", lambda ls: [l for l in ls if not l.startswith(pid)])
+        self.fx.rewrite_draws("input-offset-mc", lambda ls: [l for l in ls if not l.startswith(pid)])
         rows = rows_by_id(self.fx.build())
         self.assertEqual(rows["offset_mc_3sigma"]["verdict"], "INCOMPLETE")
-        self.assertIn("mos_fs_mismatch_125C_1.20V", rows["offset_mc_total"]["coverage"]["missing"])
+        self.assertIn(pid, rows["offset_mc_total"]["coverage"]["missing"])
 
     def test_mc_negative_control_missing_is_incomplete(self):
         self.fx.rewrite_csv("input-offset-mc", lambda ls: [l for l in ls if "negctrl" not in l])
+        self.fx.rewrite_draws("input-offset-mc", lambda ls: [l for l in ls if "negctrl" not in l])
         self.assertEqual(rows_by_id(self.fx.build())["offset_mc_3sigma"]["verdict"], "INCOMPLETE")
 
     def test_mc_short_draw_count_is_incomplete(self):
+        # One draw honestly re-classified as FAIL, and the summary repinned to
+        # say so: the point fails its own validity flags (n_pass < n_draws),
+        # which is INCOMPLETE coverage -- never a silent reduction.
+        self.fx.set_draw_cell("input-offset-mc", "mos_ss_mismatch_27C_1.20V", 7, "status", "FAIL")
+        self.fx.set_draw_cell("input-offset-mc", "mos_ss_mismatch_27C_1.20V", 7, "fail_reason", "reclassified")
         self.fx.set_cell("input-offset-mc", "mos_ss_mismatch_27C_1.20V", "n_pass", "299")
         row = rows_by_id(self.fx.build())["offset_mc_3sigma"]
         self.assertEqual(row["verdict"], "INCOMPLETE")
@@ -649,6 +702,151 @@ class NegativeControls(unittest.TestCase):
         with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
             self.assertEqual(generate.mint(self.fx.root, self.fx.selection_path), 1)
         self.assertIsNone(generate.latest_report(self.fx.root / generate.REPORTS_REL))
+
+
+class OffsetMcStatistics(unittest.TestCase):
+    """Issue #199: the draws audit rejects fabricated statistics and broken
+    draw populations, naming the point and offending field. The committed
+    campaign is the positive control (CommittedEvidence); every control here
+    perturbs exactly one thing against the otherwise-consistent fixture."""
+
+    RECORD = "input-offset-mc"
+    POINT = "mos_ss_mismatch_27C_1.20V"  # any ordinary mismatch point
+    NEGCTRL = "mos_tt_negctrl_27C_1.20V"
+
+    def setUp(self) -> None:
+        self.fx = Fixture()
+
+    def tearDown(self) -> None:
+        self.fx.close()
+
+    def all_errors(self, content: dict) -> list:
+        # Record errors surface on every row that cites the record.
+        out = list(content["errors"])
+        for row in content["rows"]:
+            out.extend(row["errors"])
+        return out
+
+    def assert_audit_error(self, *fragments: str) -> None:
+        content = self.fx.build()
+        errors = self.all_errors(content)
+        self.assertEqual(content["overall"]["verdict"], "ERROR")
+        self.assertTrue(errors, "expected the audit to report a problem")
+        for fragment in fragments:
+            self.assertTrue(any(fragment in e for e in errors), errors)
+
+    def test_baseline_has_no_audit_errors(self):
+        content = self.fx.build()
+        self.assertEqual(self.all_errors(content), [])
+        self.assertEqual(content["sources"][self.RECORD]["draws"]["status"], "verified")
+
+    def test_altered_summary_statistic_is_rejected_field_by_field(self):
+        # A fresh, correctly repinned summary whose finite sigma, three-sigma,
+        # mean, extrema or total no longer follows from the pinned draws is an
+        # error naming the point and the offending field -- never a publishable
+        # MEASURED row.
+        for column, fabricated in (
+            ("mean_vos_v", "0.015373984"),
+            ("sigma_vos_v", "0.008956746"),
+            ("three_sigma_v", "0.02687024"),
+            ("min_vos_v", "-0.007416798"),
+            ("max_vos_v", "0.040074417"),
+            ("vos_total_wc_det_plus_3sigma_v", "0.042223313"),
+        ):
+            with self.subTest(field=column):
+                fx = Fixture()
+                try:
+                    fx.set_cell(self.RECORD, self.POINT, column, fabricated)
+                    content = fx.build()
+                    self.assertEqual(content["overall"]["verdict"], "ERROR")
+                    self.assertTrue(
+                        any(
+                            f"point {self.POINT} fails definition check offset_mc_statistics: {column}" in e
+                            for e in self.all_errors(content)
+                        ),
+                        self.all_errors(content),
+                    )
+                finally:
+                    fx.close()
+
+    def test_negative_spread_magnitude_is_rejected(self):
+        for column in ("sigma_vos_v", "three_sigma_v", "vos_total_wc_det_plus_3sigma_v"):
+            with self.subTest(field=column):
+                fx = Fixture()
+                try:
+                    fx.set_cell(self.RECORD, self.POINT, column, "-0.026870239")
+                    content = fx.build()
+                    self.assertEqual(content["overall"]["verdict"], "ERROR")
+                    self.assertTrue(
+                        any(f"{column} -0.026870239 is negative" in e for e in self.all_errors(content)),
+                        self.all_errors(content),
+                    )
+                finally:
+                    fx.close()
+
+    def test_drifted_draws_file_is_error_even_unrepinned(self):
+        self.fx.set_draw_cell(self.RECORD, self.POINT, 5, "vos_v", "0.0099999999", repin=False)
+        content = self.fx.build()
+        self.assertEqual(content["overall"]["verdict"], "ERROR")
+        self.assertTrue(
+            any("does not match its selection pin" in e for e in self.all_errors(content)),
+            self.all_errors(content),
+        )
+
+    def test_missing_draws_file_is_error(self):
+        self.fx.draws_path(self.RECORD).unlink()
+        self.assert_audit_error("missing draws population")
+
+    def test_duplicate_draw_is_error(self):
+        def duplicate_one(lines):
+            target = next(l for l in lines if l.startswith(f"{self.POINT},") and l.split(",")[6] == "5")
+            return lines + [target]
+
+        self.fx.rewrite_draws(self.RECORD, duplicate_one)
+        self.assert_audit_error("duplicate draw_index 5")
+
+    def test_missing_draw_is_error_not_a_quiet_population_reduction(self):
+        def drop_one(lines):
+            return [l for l in lines if not (l.startswith(f"{self.POINT},") and l.split(",")[6] == "5")]
+
+        self.fx.rewrite_draws(self.RECORD, drop_one)
+        self.assert_audit_error("1 of 300 expected draws missing")
+
+    def test_non_finite_pass_draw_is_error(self):
+        self.fx.set_draw_cell(self.RECORD, self.POINT, 5, "vos_v", "nan")
+        self.assert_audit_error("is not finite")
+
+    def test_draw_seed_conflicting_with_the_campaign_is_error(self):
+        self.fx.set_draw_cell(self.RECORD, self.POINT, 5, "draw_seed", "99999999")
+        self.assert_audit_error("draw_seed 99999999")
+
+    def test_negctrl_is_audited_on_its_own_population_only(self):
+        # A perturbed negctrl draw breaks exactly the negctrl point's own
+        # statistics: mismatch points are never pooled with it (and vice
+        # versa -- the field-by-field control above perturbs a mismatch
+        # point and leaves this one alone).
+        self.fx.set_draw_cell(self.RECORD, self.NEGCTRL, 5, "vos_v", "0.0160000000")
+        content = self.fx.build()
+        errors = self.all_errors(content)
+        self.assertEqual(content["overall"]["verdict"], "ERROR")
+        self.assertTrue(
+            any(f"point {self.NEGCTRL} fails definition check offset_mc_statistics" in e for e in errors),
+            errors,
+        )
+        self.assertFalse(any(self.POINT in e for e in errors), errors)
+
+    def test_draws_file_may_not_be_named_without_its_hash_pin(self):
+        del self.fx.selection["records"][self.RECORD]["draws_csv_sha256"]
+        self.fx.save_selection()
+        with self.assertRaises(generate.SelectionError):
+            self.fx.build()
+
+    def test_statistics_check_requires_a_draws_population(self):
+        del self.fx.selection["records"][self.RECORD]["draws_csv"]
+        del self.fx.selection["records"][self.RECORD]["draws_csv_sha256"]
+        self.fx.save_selection()
+        with self.assertRaises(generate.SelectionError):
+            self.fx.build()
 
 
 class LoadCondition(unittest.TestCase):

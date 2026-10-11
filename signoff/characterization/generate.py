@@ -43,6 +43,9 @@ DEFAULT_REPO_ROOT = HERE.parent.parent
 # Shared sidecar contract/helper (issue #191); pure functions, stdlib only.
 sys.path.insert(0, str(DEFAULT_REPO_ROOT / "sim" / "tools"))
 import env_identity  # noqa: E402
+# Shared draws-population contract (issue #141); pure functions, stdlib only.
+sys.path.insert(0, str(DEFAULT_REPO_ROOT / "signoff" / "yield-inputs"))
+import offset_draws_to_sampleset as draws_contract  # noqa: E402
 SELECTION_REL = "signoff/characterization/selection.json"
 REPORTS_REL = "signoff/characterization/reports"
 ENVELOPE_REL = "signoff/evidence/characterization.json"
@@ -73,6 +76,25 @@ COMPARISON_RULE = (
     "its record's validity flags never contributes an extremum: it is counted "
     "as missing coverage, so a failed simulation point can only make a row "
     "INCOMPLETE, never PASS."
+)
+
+DRAWS_AUDIT_RULE = (
+    "Offset Monte Carlo statistics audit (issue #199): a record that selects a "
+    "raw draws population (`draws_csv`, pinned by sha256 beside its summary) has "
+    "every published per-point statistic recomputed from that population exactly "
+    "as sim/input-offset/run_offset_mc.sh computes it -- accumulation in draw "
+    "order, mean = sum/n_pass, sample sigma with the N-1 denominator, "
+    "three-sigma = 3 sigma, min/max over the passing draws, and worst-case "
+    "total = |vos_systematic_det_v| + three-sigma. A committed summary cell "
+    "passes only when it is that recomputed value as the bench serializes it "
+    "(printf %.9g, nine significant digits), i.e. within half a unit in the 9th "
+    "significant digit (5e-9 relative); a cell that differs beyond its own "
+    "serialization is an error naming the point and the offending field. The "
+    "draws population itself must be complete and singular: missing, duplicated, "
+    "mismatched or non-finite PASS draws fail the record rather than quietly "
+    "shrinking it. The negative-control (negctrl) draws are a separate "
+    "population: audited on their own draws like every other point's, never "
+    "pooled into the mismatch statistics."
 )
 
 NOT_CLAIMED = [
@@ -213,9 +235,21 @@ def load_selection(path: Path) -> dict:
                 raise SelectionError(f"selection: record {key}: bad valid_when entry {cond!r}")
         if ("env_sidecar" in rec) != ("env_sidecar_sha256" in rec):
             raise SelectionError(f"selection: record {key}: `env_sidecar` and `env_sidecar_sha256` go together")
+        if ("draws_csv" in rec) != ("draws_csv_sha256" in rec):
+            raise SelectionError(
+                f"selection: record {key}: `draws_csv` and `draws_csv_sha256` go "
+                "together; a draws population is named only with its hash pin"
+            )
+        if rec.get("draws_csv") is not None and not isinstance(rec["draws_csv"], str):
+            raise SelectionError(f"selection: record {key}: `draws_csv` must be a path string")
         for name in rec.get("definition_checks", []):
             if name not in DEFINITION_CHECKS:
                 raise SelectionError(f"selection: record {key}: unknown definition check {name!r}")
+            if DEFINITION_CHECKS[name][1] and rec.get("draws_csv") is None:
+                raise SelectionError(
+                    f"selection: record {key}: definition check {name!r} verifies a raw "
+                    "draws population; name a hash-pinned `draws_csv` beside the summary"
+                )
     return selection
 
 
@@ -223,7 +257,7 @@ def load_selection(path: Path) -> dict:
 # definition checks: per-point identities a record's derived column must obey
 
 
-def _check_cmrr_linear(point: dict) -> str | None:
+def _check_cmrr_linear(point: dict, draws) -> str | None:
     """DR-0004's definition: Av0 - 20log10(mean + 3 sigma), LINEAR domain."""
     try:
         av0 = float(point["av0_db"])
@@ -244,7 +278,7 @@ def _check_cmrr_linear(point: dict) -> str | None:
     return None
 
 
-def _check_slew_worse_edge(point: dict) -> str | None:
+def _check_slew_worse_edge(point: dict, draws) -> str | None:
     rise, _ = parse_decimal(point.get("sr_rise_v_per_us"))
     fall, _ = parse_decimal(point.get("sr_fall_v_per_us"))
     worst, _ = parse_decimal(point.get("sr_worst_v_per_us"))
@@ -255,7 +289,7 @@ def _check_slew_worse_edge(point: dict) -> str | None:
     return None
 
 
-def _check_offset_magnitude(point: dict) -> str | None:
+def _check_offset_magnitude(point: dict, draws) -> str | None:
     signed, _ = parse_decimal(point.get("vos_null_v"))
     magnitude, _ = parse_decimal(point.get("vos_abs_v"))
     if None in (signed, magnitude):
@@ -265,10 +299,102 @@ def _check_offset_magnitude(point: dict) -> str | None:
     return None
 
 
+# run_offset_mc.sh serializes every summary statistic with printf %.9g: nine
+# significant digits. The audit's tolerance IS that serialization: a committed
+# cell must be the recomputed value re-serialized exactly the way the bench
+# writes it -- the same nine significant digits. Anything else differs beyond
+# its own serialization and is an error naming the point and the offending
+# field.
+
+
+def _serialized_stat_problem(field: str, cell: str | None, recomputed: float) -> str | None:
+    """Why `cell` is not `recomputed` at the bench's printf %.9g precision."""
+    value, why = parse_decimal(cell)
+    if value is None:
+        return f"{field}: {why}"
+    printed = Decimal(format(recomputed, ".9g"))
+    if value != printed:
+        return (
+            f"{field} {value} is not {printed} recomputed from the pinned draws "
+            "(the bench writes this statistic with printf %.9g; the cell must be "
+            "that serialization, with no tolerance beyond its nine digits)"
+        )
+    return None
+
+
+def _check_offset_mc_statistics(point: dict, draws: dict | None) -> str | None:
+    """The published MC statistics must follow from the pinned draws population.
+
+    Recomputes the per-point digest exactly as sim/input-offset/run_offset_mc.sh
+    computes it -- naive accumulation in draw order, mean = sum/n_pass, sample
+    sigma with the N-1 denominator, three-sigma = 3 sigma, min/max over the
+    passing draws, worst-case total = |vos_systematic_det_v| + three-sigma --
+    and holds each committed cell to the bench's printf %.9g serialization of
+    that value (DRAWS_AUDIT_RULE). Non-finite or negative spread magnitudes are
+    errors in their own right.
+    """
+    if draws is None:
+        return "cannot evaluate (no draws population available)"
+    pid = (point.get("point_id") or "").strip()
+    values = draws.get(pid)
+    if not values:
+        return "cannot evaluate (no passing draws recorded)"
+    n = len(values)
+    total = 0.0
+    for value in values:
+        total += value
+    mean = total / n
+    ssq = 0.0
+    for value in values:
+        d = value - mean
+        ssq += d * d
+    sigma = math.sqrt(ssq / (n - 1)) if n > 1 else 0.0
+    vmin = vmax = values[0]
+    for value in values:
+        if value < vmin:
+            vmin = value
+        if value > vmax:
+            vmax = value
+    for field, cell, recomputed in (
+        ("mean_vos_v", point.get("mean_vos_v"), mean),
+        ("sigma_vos_v", point.get("sigma_vos_v"), sigma),
+        ("three_sigma_v", point.get("three_sigma_v"), 3.0 * sigma),
+        ("min_vos_v", point.get("min_vos_v"), vmin),
+        ("max_vos_v", point.get("max_vos_v"), vmax),
+    ):
+        parsed, _ = parse_decimal(cell)
+        if parsed is not None and field in ("sigma_vos_v", "three_sigma_v") and parsed < 0:
+            return f"{field} {cell} is negative (a spread magnitude cannot be)"
+        problem = _serialized_stat_problem(field, cell, recomputed)
+        if problem:
+            return problem
+    det, det_why = parse_decimal(point.get("vos_systematic_det_v"))
+    total_cell = point.get("vos_total_wc_det_plus_3sigma_v")
+    total_value, total_why = parse_decimal(total_cell)
+    if det is None:
+        if total_value is not None:
+            return (
+                f"vos_total_wc_det_plus_3sigma_v {total_cell} must be non-finite like its "
+                f"deterministic join ({det_why})"
+            )
+        return None
+    if total_value is None:
+        return f"vos_total_wc_det_plus_3sigma_v: {total_why}"
+    if total_value < 0:
+        return f"vos_total_wc_det_plus_3sigma_v {total_cell} is negative (|systematic| + 3 sigma cannot be)"
+    return _serialized_stat_problem(
+        "vos_total_wc_det_plus_3sigma_v", total_cell, abs(float(det)) + 3.0 * sigma
+    )
+
+
+# Each entry: (check(point, draws), needs a validated draws population). A
+# draws check runs only where that population loaded cleanly; its load reports
+# its own problems (point, line, reason) as record errors.
 DEFINITION_CHECKS = {
-    "cmrr_linear_3sigma": _check_cmrr_linear,
-    "slew_worse_edge": _check_slew_worse_edge,
-    "offset_magnitude": _check_offset_magnitude,
+    "cmrr_linear_3sigma": (_check_cmrr_linear, False),
+    "slew_worse_edge": (_check_slew_worse_edge, False),
+    "offset_magnitude": (_check_offset_magnitude, False),
+    "offset_mc_statistics": (_check_offset_mc_statistics, True),
 }
 
 
@@ -426,6 +552,21 @@ def load_record(repo: Path, key: str, spec: dict, grid: dict, env: dict) -> dict
                 f"(pinned {pinned}, actual {actual}) -- re-select deliberately, "
                 "never re-read silently"
             )
+    draws_rel = spec.get("draws_csv")
+    if draws_rel is not None:
+        src["draws"] = {"csv": draws_rel, "status": "error"}
+        path = repo / draws_rel
+        if not path.is_file():
+            errors.append(f"record {key}: missing draws population {draws_rel}")
+        else:
+            actual = sha256_file(path)
+            src["draws"]["sha256"] = actual
+            if actual != spec.get("draws_csv_sha256"):
+                errors.append(
+                    f"record {key}: {draws_rel} does not match its selection pin "
+                    f"(pinned {spec.get('draws_csv_sha256')}, actual {actual}) -- "
+                    "re-select deliberately, never re-read silently"
+                )
     if errors:
         return state
 
@@ -513,8 +654,58 @@ def load_record(repo: Path, key: str, spec: dict, grid: dict, env: dict) -> dict
     for pid in sorted(controls - set(state["controls"])):
         state["missing"].append(pid)
 
+    # 3b. draws population (issue #199): identity, completeness and the raw
+    # passing values the per-point statistics audit recomputes from. The
+    # converter's own contract validates draw indices, seeds, metadata and
+    # PASS counts against the pinned summary; it never summarizes.
+    draws_pass: dict[str, list[float]] | None = None
+    if draws_rel is not None:
+        try:
+            draws_header, draw_rows = read_csv_rows(repo / draws_rel)
+        except (OSError, UnicodeDecodeError, csv.Error) as exc:
+            errors.append(f"record {key}: cannot parse {draws_rel} ({exc})")
+        else:
+            missing_cols = [c for c in draws_contract.DRAW_COLS if c not in draws_header]
+            if missing_cols:
+                errors.append(f"record {key}: {draws_rel} is missing column(s) {missing_cols}")
+            else:
+                try:
+                    draws_expected = draws_contract.load_expected(repo / spec["csv"])
+                    got = draws_contract.validate(draw_rows, draws_expected, draws_rel)
+                except draws_contract.DrawValidationError as exc:
+                    shown, rest = exc.problems[:20], exc.problems[20:]
+                    errors.extend(f"record {key}: draws population {draws_rel}: {p}" for p in shown)
+                    if rest:
+                        errors.append(
+                            f"record {key}: draws population {draws_rel}: ... and "
+                            f"{len(rest)} more problem(s)"
+                        )
+                else:
+                    draws_pass = {
+                        pid: [got[pid][i] for i in sorted(got[pid]) if got[pid][i] is not None]
+                        for pid in got
+                    }
+                    src["draws"].update(
+                        {
+                            "status": "verified",
+                            "points": len(draws_pass),
+                            "draws": len(draw_rows),
+                            "passing_draws": sum(len(v) for v in draws_pass.values()),
+                        }
+                    )
+
     # 4. validity flags and definitions, per point
     conditions = spec.get("valid_when", [])
+
+    def run_definition_checks(pid: str, row: dict) -> None:
+        for name in spec.get("definition_checks", []):
+            check, needs_draws = DEFINITION_CHECKS[name]
+            if needs_draws and draws_pass is None:
+                continue  # the population load above already reported why
+            problem = check(row, draws_pass)
+            if problem:
+                errors.append(f"record {key}: point {pid} fails definition check {name}: {problem}")
+
     for pid, _ in expected:
         row = state["points"].get(pid)
         if row is None:
@@ -523,15 +714,16 @@ def load_record(repo: Path, key: str, spec: dict, grid: dict, env: dict) -> dict
         if why:
             state["invalid"][pid] = why
             continue
-        for name in spec.get("definition_checks", []):
-            problem = DEFINITION_CHECKS[name](row)
-            if problem:
-                errors.append(f"record {key}: point {pid} fails definition check {name}: {problem}")
+        run_definition_checks(pid, row)
         state["valid_ids"].append(pid)
     for pid, row in sorted(state["controls"].items()):
         why = point_is_valid(row, conditions)
         if why:
             state["invalid"][pid] = why
+            continue
+        # Controls are audited on their own population, exactly like grid
+        # points; they are never pooled into another point's statistics.
+        run_definition_checks(pid, row)
 
     src["expected_points"] = len(expected) + len(controls)
     src["observed_points"] = len(state["points"]) + len(state["controls"])
@@ -991,6 +1183,7 @@ def build_content(repo: Path, selection_path: Path) -> dict:
             "sha256": sha256_file(selection_path),
         },
         "comparison_rule": COMPARISON_RULE,
+        "draws_audit_rule": DRAWS_AUDIT_RULE,
         "environment": {
             "pdk_provenance": pdk_provenance_summary(records),
             "ngspice_pin": env.get("ngspice"),
@@ -1232,15 +1425,30 @@ def render_markdown(report: dict) -> str:
         )
         claim = "verified for every selected record" if prov["pdk_reproducibility_verified"] else "**NOT claimed** (not every selected record has checked run-time PDK identity)"
         w(f"PDK reproducibility is {claim}. {prov['note']}.\n\n")
-    w("| Record | CSV (sha256) | MD (sha256) | ngspice | PDK provenance | Grid | Expected | Observed | Valid |\n")
-    w("|---|---|---|---|---|---|---|---|---|\n")
+    def _draws_cell(src: dict) -> str:
+        draws = src.get("draws")
+        if not draws:
+            return "—"
+        cell = f"`{draws['csv']}` (`{_short(draws.get('sha256'))}`, {draws['status']}"
+        if draws["status"] == "verified":
+            cell += (
+                f": {draws['points']} points, {draws['draws']} draws, "
+                f"{draws['passing_draws']} passing"
+            )
+        return cell + ")"
+
+    w("| Record | CSV (sha256) | MD (sha256) | ngspice | PDK provenance | Grid | Expected | Observed | Valid | Draws population (sha256, audit) |\n")
+    w("|---|---|---|---|---|---|---|---|---|---|\n")
     for key, src in content["sources"].items():
         w(
             f"| {key} | `{src['csv']}` (`{_short(src['csv_sha256'])}`) | `{src['md']}` (`{_short(src['md_sha256'])}`) "
             f"| {src.get('ngspice') or '—'} | {(src.get('pdk_provenance') or {}).get('status', 'not recorded')}"
             f"{' (`' + _short(src['pdk_provenance']['identity_sha256']) + '`)' if (src.get('pdk_provenance') or {}).get('identity_sha256') else ''} | {src['grid']} | {src.get('expected_points', '—')} "
-            f"| {src.get('observed_points', '—')} | {src.get('valid_points', '—')} |\n"
+            f"| {src.get('observed_points', '—')} | {src.get('valid_points', '—')} | {_draws_cell(src)} |\n"
         )
+    draws_rule = content.get("draws_audit_rule")
+    if draws_rule and any(src.get("draws") for src in content["sources"].values()):
+        w(f"\n{draws_rule}\n\n")
     w("\nSpec section 2 rows covered: ")
     w(", ".join(f"{r['row']}{'' if r['covered'] else ' (NOT COVERED)'}" for r in content["spec_coverage"]) + ".\n")
     w("Item 9 inventory rows covered: ")
