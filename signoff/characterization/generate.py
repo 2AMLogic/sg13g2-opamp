@@ -183,6 +183,10 @@ def load_selection(path: Path) -> dict:
             raise SelectionError(f"selection: row {rid}: `class` must be one of {ROW_CLASSES}")
         if row["class"] == "pending":
             continue
+        if "load" in row:
+            raise SelectionError(f"selection: row {rid}: free-text `load` is gone; use a structured `load_condition`")
+        if not isinstance(row.get("load_condition"), dict):
+            raise SelectionError(f"selection: row {rid}: needs a `load_condition` object")
         if row.get("record") not in selection["records"]:
             raise SelectionError(f"selection: row {rid} names unknown record {row.get('record')!r}")
         if row.get("extremum") not in EXTREMA:
@@ -427,6 +431,7 @@ def load_record(repo: Path, key: str, spec: dict, grid: dict, env: dict) -> dict
 
     # 2. environment: same ngspice as the pin, same circuit as design/
     md_text = (repo / spec["md"]).read_text(encoding="utf-8")
+    state["stated_cl"] = source_cl_statements(md_text)
     versions = sorted(set(NGSPICE_RE.findall(md_text)))
     if len(versions) != 1:
         errors.append(
@@ -638,6 +643,92 @@ def check_bound_against_clause(bound: dict, unit: str | None, text: str) -> list
     return errs
 
 
+CAP_UNITS = {"F": Decimal(1), "mF": Decimal("1e-3"), "uF": Decimal("1e-6"), "µF": Decimal("1e-6"),
+             "nF": Decimal("1e-9"), "pF": Decimal("1e-12"), "fF": Decimal("1e-15")}
+CAP_RE = r"([0-9]+(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?)\s*(F|mF|uF|µF|nF|pF|fF)\b"
+LOAD_APPLICABILITY = ("applies", "dc_ignored")
+SPEC_CL_RE = re.compile(r"^\|\s*Load capacitance, CL\s*\|\s*\*\*\s*" + CAP_RE)
+SOURCE_CL_RE = re.compile(r"\bCL\s*=\s*`?\s*" + CAP_RE)
+
+
+def parse_capacitance(text: str | None) -> tuple[Decimal | None, str | None]:
+    """'2 pF' / '2e-12 F' -> farads (Decimal), so equal loads compare equal."""
+    match = re.fullmatch(CAP_RE, (text or "").strip())
+    if not match:
+        return None, f"{text!r} is not a capacitance (expected e.g. '2 pF' or '2e-12 F')"
+    return Decimal(match.group(1)) * CAP_UNITS[match.group(2)], None
+
+
+def source_cl_statements(md_text: str) -> list[str]:
+    """Every explicit `CL = <value> <unit>` the record's own prose states."""
+    return sorted({f"{m.group(1)} {m.group(2)}" for m in SOURCE_CL_RE.finditer(md_text)})
+
+
+def check_load_condition(row: dict, state: dict, spec_lines: list[str]) -> tuple[str, list[str], dict]:
+    """Validate the row's structured load against the ratified spec and the
+    selected record's own stated CL. Returns (displayed load, errors, detail).
+
+    The displayed load is DERIVED from the validated numbers, never copied from
+    a free-text label. Only the capacitive load is validated; every other
+    condition string stays explicitly descriptive."""
+    errors: list[str] = []
+    cond = row.get("load_condition")
+    detail: dict = {"status": "unverified"}
+    if not isinstance(cond, dict):
+        return "load not stated", [f"row {row['id']}: no structured `load_condition`"], detail
+    note = cond.get("note") or ""
+    applicability = cond.get("applicability")
+    if applicability not in LOAD_APPLICABILITY:
+        errors.append(f"row {row['id']}: load_condition.applicability must be one of {LOAD_APPLICABILITY}")
+    selected, problem = parse_capacitance(cond.get("cl"))
+    if problem:
+        errors.append(f"row {row['id']}: load_condition.cl {problem}")
+    ratified = None
+    for line in spec_lines:
+        match = SPEC_CL_RE.match(line)
+        if match:
+            ratified = Decimal(match.group(1)) * CAP_UNITS[match.group(2)]
+            detail["ratified_cl"] = f"{match.group(1)} {match.group(2)}"
+            break
+    if ratified is None:
+        errors.append("spec/target-spec.md section 1 has no parseable 'Load capacitance, CL' row")
+    stated = [parse_capacitance(s)[0] for s in state.get("stated_cl", [])]
+    detail["selected_cl"] = cond.get("cl")
+    detail["source_states"] = list(state.get("stated_cl", []))
+    detail["applicability"] = applicability
+    if selected is not None and ratified is not None and selected != ratified:
+        errors.append(
+            f"row {row['id']}: reported load {cond.get('cl')} contradicts the ratified "
+            f"CL of {detail['ratified_cl']} (spec/target-spec.md section 1) -- a load "
+            "label is not evidence"
+        )
+    contradicting = sorted(s for s, v in zip(state.get("stated_cl", []), stated) if selected is not None and v != selected)
+    if contradicting:
+        errors.append(
+            f"row {row['id']}: reported load {cond.get('cl')} contradicts the selected "
+            f"record {row['record']}, which states CL = {', '.join(contradicting)}"
+        )
+    if errors:
+        detail["status"] = "contradicted"
+        return f"CL = {cond.get('cl')} (CONTRADICTED, see errors)", errors, detail
+    if applicability == "dc_ignored":
+        detail["status"] = "not_applicable"
+        text = (f"CL = {cond['cl']} [DR-1] attached; a DC analysis is independent of it "
+                "(applicability: DC, not a load claim)")
+    elif state.get("stated_cl"):
+        detail["status"] = "verified"
+        text = (f"CL = {cond['cl']} [DR-1] (verified: ratified spec section 1 and the selected "
+                f"record both state it; record says {', '.join(state['stated_cl'])})")
+    else:
+        detail["status"] = "unverified"
+        text = (f"CL = {cond['cl']} [DR-1] (UNVERIFIED against the source: the selected "
+                "record states no CL; matches the ratified spec only)")
+    if note:
+        text += f"; {note}"
+    return text, errors, detail
+
+
+
 def evaluate_row(row: dict, records: dict, spec_lines: list[str], inventory: dict, selection: dict) -> dict:
     out = {
         "id": row["id"],
@@ -645,8 +736,10 @@ def evaluate_row(row: dict, records: dict, spec_lines: list[str], inventory: dic
         "class": row["class"],
         "decision_record": row.get("decision_record"),
         "tag": row.get("tag"),
-        "load": row.get("load"),
+        "load": None,
+        "load_check": None,
         "conditions": row.get("conditions"),
+        "conditions_provenance": "descriptive: selection text, not validated against the source record",
         "errors": [],
     }
     errors = out["errors"]
@@ -682,6 +775,8 @@ def evaluate_row(row: dict, records: dict, spec_lines: list[str], inventory: dic
 
     state = records[row["record"]]
     errors.extend(state["errors"])
+    out["load"], load_errors, out["load_check"] = check_load_condition(row, state, spec_lines)
+    errors.extend(load_errors)
     scale = Decimal(row["scale"])
     out["unit"] = row.get("unit")
     out["source"] = {
@@ -1049,7 +1144,7 @@ def render_markdown(report: dict) -> str:
             worst_txt = f"{_v(worst.get('value'), unit)} at `{worst.get('point')}`" if worst else "—"
             best_txt = f"{_v(best.get('value'), unit)} at `{best.get('point')}`" if best else "—"
             source_txt = f"`{src['csv']}` col `{src['column']}` (`{_short(src['csv_sha256'])}`)"
-            cond = f"{row['load']}; {row['conditions']}"
+            cond = f"{row['load']}; conditions (descriptive, unverified): {row['conditions']}"
             if with_bound:
                 bound = row["bound"]
                 bound_txt = f"{'≥' if bound['op'] == '>=' else '≤'} {bound['value']} {unit}"
