@@ -1,0 +1,46 @@
+# Shared provisioning for every job that needs the pinned SG13G2 PDK
+# (issue #201: the netlist-regen and layout-regen jobs must not carry
+# duplicated fetch shell).
+#
+# Fetches the IHP-Open-PDK release pinned by sim/pdk.json (release_url ->
+# $PDK_ROOT/ihp-sg13g2, open_pdks-shaped, the layout `klt pdk find` /
+# sim/env.sh convention), stamps .fetched-version, and exports PDK_ROOT and
+# PDK into the calling job's environment.
+#
+# Fail-closed: any fetch/extract/layout error exits non-zero (set -euo
+# pipefail) and fails the calling job; a missing or malformed PDK is never
+# treated as a pass. The `libs.tech/xschem` sanity check is the same one the
+# netlist-regen job made before this was factored out -- it proves the
+# variant tree extracted, which both consumers need.
+#
+# Requires python3 on PATH (setup-python before this step); curl and GNU tar
+# are preinstalled on ubuntu-latest runners.
+
+name: 'Set up the pinned SG13G2 PDK'
+description: >-
+  Fetch the IHP-Open-PDK release pinned by sim/pdk.json into $PDK_ROOT and
+  export PDK_ROOT/PDK. Fails the job on any provisioning error.
+
+runs:
+  using: 'composite'
+  steps:
+    - id: fetch
+      shell: bash
+      run: |
+        set -euo pipefail
+        tag="$(python3 -c "import json;print(json.load(open('sim/pdk.json'))['release_tag'])")"
+        url="$(python3 -c "import json;print(json.load(open('sim/pdk.json'))['release_url'])")"
+        root="${RUNNER_TEMP}/pdk"
+        mkdir -p "${root}/ihp-sg13g2" "${RUNNER_TEMP}/dl"
+        curl -fsSL -o "${RUNNER_TEMP}/dl/pdk.tar.gz" "${url}"
+        # release tarball root is IHP-Open-PDK-<version>/ihp-sg13g2/...
+        tar -xzf "${RUNNER_TEMP}/dl/pdk.tar.gz" -C "${root}/ihp-sg13g2" \
+          --strip-components=2 --wildcards '*/ihp-sg13g2/*'
+        echo "${tag#v}" > "${root}/ihp-sg13g2/.fetched-version"
+        test -d "${root}/ihp-sg13g2/libs.tech/xschem"
+        echo "pdk_root=${root}" >> "${GITHUB_OUTPUT}"
+        echo "pdk=ihp-sg13g2" >> "${GITHUB_OUTPUT}"
+        echo "release_tag=${tag}" >> "${GITHUB_OUTPUT}"
+        echo "PDK_ROOT=${root}" >> "${GITHUB_ENV}"
+        echo "PDK=ihp-sg13g2" >> "${GITHUB_ENV}"
+        echo "SG13G2 PDK ${tag} -> ${root}/ihp-sg13g2 (stamped $(cat "${root}/ihp-sg13g2/.fetched-version"))"

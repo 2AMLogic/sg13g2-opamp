@@ -110,30 +110,40 @@ argument, here:
   moves.
 - The half item 2 asks for that no envelope can carry — "reproducibly
   generated or with documented provenance" — **this block claims the
-  documented-provenance alternative, not a CI-enforced "reproducibly
-  generated" one.** `layout/opamp_core/generate.py --check` regenerates into
-  a temp directory and fails on any byte difference, but nothing in
-  `.github/workflows/signoff.yml` runs it: CI verifies the *committed hash*
-  offline (`check_signoff.py`, above) and never re-invokes the generator, so
-  byte-for-byte regeneration is a property verified by a human running
-  `--check` by hand, not one this register can point to as continuously
-  machine-checked. CI does not run `generate.py` at all, so it does not
-  enforce this either — but the one assumption identified as most likely to
-  break silently is machine-checked independent of who runs it: that `klt
-  gen mos_array`'s common-centroid unit ordering is what makes the block's
-  `B A A B` interdigitation actually common-centroid, via
-  `assert_common_centroid()` inside `generate.py` itself. A `klt` behaviour
-  change that broke it fails the very next *local* regeneration or `--check`
-  run — not CI — rather than only showing up as an unexplained byte diff
-  nobody was looking at. The documented-provenance claim itself rests on
-  `layout/README.md`'s revision table (exact `klt` revision, curated-deck
-  hash and PDK release the committed bytes were produced with) and its
-  "Determinism" section. Standing up a second CI job that installs `klt`
-  **and** the pinned PDK to run `--check` on every push was considered and
-  deferred as materially higher cost (PDK checkout/caching in Actions) than
-  this repo's other CI; see
-  [#50](https://github.com/2AMLogic/sg13g2-opamp/issues/50) for the record of
-  that decision.
+  documented-provenance alternative, and since #201 the "reproducibly
+  generated" half is additionally CI-enforced.** The register's citation
+  still rests on the documented-provenance chain — `layout/README.md`'s
+  revision table (exact `klt` revision, curated-deck hash and PDK release
+  the committed bytes were produced with) and its "Determinism" section —
+  but the regeneration itself is no longer only a human-verified property:
+  `.github/workflows/signoff.yml`'s `layout-regen` job provisions the
+  pinned PDK (shared `setup-sg13g2-pdk` composite action with the
+  netlist-regen job) and runs `python3 layout/opamp_core/generate.py
+  --check` on every push and PR, installing `klt` at
+  `layout/klt-pin.txt`'s tag commit in its own environment — deliberately
+  not this register's grading pin, `signoff/klt-pin.txt`, which governs how
+  the checklist is parsed, not how the evidence is produced — plus
+  `klayout==0.30.10` under the job interpreter, the same two-environment
+  split the committed bytes were made with. A byte drift, a DRC-report
+  drift, a missing `klt` or a failed PDK fetch all fail the job; nothing is
+  downgraded to a pass. The offline re-hash above and the regeneration gate
+  are complementary: the first closes "someone hand-edited the stream", the
+  second closes "the generator stopped reproducing it".
+- The one assumption identified as most likely to break silently — that
+  `klt gen mos_array`'s common-centroid unit ordering is what makes the
+  block's `B A A B` interdigitation actually common-centroid, via
+  `assert_common_centroid()` inside `generate.py` itself — is asserted at
+  every regeneration and every `--check` run, so a `klt` behaviour change
+  that broke it now fails the CI regeneration gate directly rather than
+  only surfacing as an unexplained byte diff.
+- The earlier deferral — "standing up a second CI job that installs `klt`
+  **and** the pinned PDK was considered and deferred as materially higher
+  cost", recorded in
+  [#50](https://github.com/2AMLogic/sg13g2-opamp/issues/50) — was reversed
+  by [#201](https://github.com/2AMLogic/sg13g2-opamp/issues/201): #190 had
+  already added the pinned-PDK provisioning for the netlist-regen job, and
+  factoring that fetch into the shared composite action removed the
+  duplication cost.
 
 **Item 3's coverage disclosure is in `layout/README.md`**, quoted verbatim
 from the cited report's own `coverage` block: `deck_scope` (16 rule
