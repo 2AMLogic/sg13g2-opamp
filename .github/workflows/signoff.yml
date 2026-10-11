@@ -121,15 +121,21 @@ jobs:
         # run: sim/post-layout/check_bounds.py (needs a pex report argument
         # produced by a layout/PEX run, so it is not an offline checker; its
         # logic is covered by test_post_layout.py). No klt, ngspice or PDK.
+        # Fail-closed enumeration: find|sort runs to a temp file first under
+        # pipefail (a find failure aborts before any test runs; a process
+        # substitution would swallow it), and an empty selection fails.
         run: |
           set -euo pipefail
+          list="$(mktemp)"
+          find sim -name 'test_*.py' -printf '%h\n' | sort -u > "${list}"
+          [ -s "${list}" ] || { echo "no sim/ test dirs found" >&2; exit 1; }
           n=0
           while IFS= read -r d; do
             echo "== unittest: ${d}"
             python3 -m unittest discover -s "${d}" -p 'test_*.py' -v
             n=$((n + 1))
-          done < <(find sim -name 'test_*.py' -printf '%h\n' | sort -u)
-          [ "${n}" -gt 0 ] || { echo "no sim/ test dirs found" >&2; exit 1; }
+          done < "${list}"
+          [ "${n}" -gt 0 ] || { echo "no sim/ test dirs run" >&2; exit 1; }
           echo "== grid-guard refusal controls"
           bash sim/tools/test-grid-guard.sh
           echo "== ICMR evidence checker"
