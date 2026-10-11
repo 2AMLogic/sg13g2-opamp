@@ -51,6 +51,9 @@ import offset_draws_to_sampleset as draws_contract  # noqa: E402
 # Shared CMRR sample parser + statistics (issue #174 / #208); stdlib only.
 sys.path.insert(0, str(DEFAULT_REPO_ROOT / "sim" / "cmrr-mismatch"))
 import mc_samples  # noqa: E402
+# Shared noise post-processing (issue #213): the SAME module run_noise_sweep.sh runs.
+sys.path.insert(0, str(DEFAULT_REPO_ROOT / "sim" / "input-noise"))
+import noise_post  # noqa: E402
 SELECTION_REL = "signoff/characterization/selection.json"
 REPORTS_REL = "signoff/characterization/reports"
 ENVELOPE_REL = "signoff/evidence/characterization.json"
@@ -122,6 +125,29 @@ SAMPLES_AUDIT_RULE = (
     "while the pinned samples stay unchanged is an error naming the point and "
     "field, as is any unparseable, truncated, duplicated or stale-pinned "
     "population."
+)
+
+NOISE_AUDIT_RULE = (
+    "Input-noise raw-evidence audit (issue #213): a record that selects raw "
+    "noise artifacts (`noise_raw`, one sha256-pinned ngspice log and one "
+    "sha256-pinned in-band spectrum per grid point) is audited offline against "
+    "them, with the post-processing in sim/input-noise/noise_post.py -- the "
+    "module run_noise_sweep.sh itself runs. Two independent checks per point: "
+    "(1) integrated-log: `vni_int_vrms` must be the single NOISE_INOISE_TOTAL "
+    "token of the pinned log, which the bench copies verbatim (so equality is "
+    "exact, not toleranced); (2) spectrum-derived: the five spot densities, "
+    "the flicker (A/f) and thermal (B) weighted-least-squares split, the "
+    "flicker corner and flicker fraction, and the trapezoidal cross-check "
+    "ratio against the logged total are recomputed from the pinned spectrum "
+    "and each cell must equal the recomputed value as the bench serializes it "
+    "(printf %.6g, six significant digits; `nan` where undefined). The "
+    "trapezoidal spectrum integral is the bench's cross-check of the logged "
+    "figure, never a substitute for it: neither check can mask the other. The "
+    "spectrum must be the documented band (100 Hz - 1 MHz, 81 points, dec 20, "
+    "strictly increasing) with finite positive samples; a missing, duplicated, "
+    "malformed, non-finite or stale-pinned artifact is an error naming the "
+    "point and file. A summary edited with its own hash refreshed still fails "
+    "while the pinned raw artifacts disagree."
 )
 
 NOT_CLAIMED = [
@@ -210,9 +236,18 @@ def normalized_netlist_hash(path: Path) -> str:
     return sha256_bytes(("\n".join(lines) + "\n").encode("utf-8"))
 
 
+def _no_duplicate_keys(pairs):
+    out = {}
+    for key, value in pairs:
+        if key in out:
+            raise ValueError(f"duplicate key {key!r}")
+        out[key] = value
+    return out
+
+
 def load_selection(path: Path) -> dict:
     try:
-        selection = json.loads(path.read_text(encoding="utf-8"))
+        selection = json.loads(path.read_text(encoding="utf-8"), object_pairs_hook=_no_duplicate_keys)
     except OSError as exc:
         raise SelectionError(f"cannot read selection {path}: {exc}") from exc
     except ValueError as exc:
@@ -276,6 +311,8 @@ def load_selection(path: Path) -> dict:
             raise SelectionError(f"selection: record {key}: `draws_csv` must be a path string")
         if "mc_samples" in rec:
             _validate_mc_samples_selection(key, rec["mc_samples"], selection["records"])
+        if "noise_raw" in rec:
+            _validate_noise_raw_selection(key, rec["noise_raw"])
         for name in rec.get("definition_checks", []):
             if name not in DEFINITION_CHECKS:
                 raise SelectionError(f"selection: record {key}: unknown definition check {name!r}")
@@ -289,6 +326,11 @@ def load_selection(path: Path) -> dict:
                 raise SelectionError(
                     f"selection: record {key}: definition check {name!r} verifies raw "
                     "CMRR samples; name hash-pinned `mc_samples` beside the summary"
+                )
+            if need == "noise" and rec.get("noise_raw") is None:
+                raise SelectionError(
+                    f"selection: record {key}: definition check {name!r} verifies raw "
+                    "noise artifacts; name hash-pinned `noise_raw` beside the summary"
                 )
     return selection
 
@@ -320,6 +362,39 @@ def _validate_mc_samples_selection(key: str, ms, records: dict) -> None:
         if not (isinstance(entry, dict) and isinstance(entry.get("path"), str)
                 and isinstance(entry.get("sha256"), str)):
             raise SelectionError(f"{where}.files[{pid!r}] needs string `path` and `sha256` (a sample file is never named without its pin)")
+
+
+NOISE_PIN_KINDS = ("log", "spectrum")
+
+
+def _validate_noise_raw_selection(key: str, nr) -> None:
+    """Shape of a record's `noise_raw` pin: per point, one pinned log and one
+    pinned in-band spectrum, plus the documented measurement band."""
+    where = f"selection: record {key}: `noise_raw`"
+    if not isinstance(nr, dict):
+        raise SelectionError(f"{where} must be an object")
+    band = nr.get("band")
+    want = {
+        "lo_hz": format(noise_post.BAND_LO_HZ, "g"),
+        "hi_hz": format(noise_post.BAND_HI_HZ, "g"),
+        "points": noise_post.N_POINTS,
+        "points_per_decade": noise_post.POINTS_PER_DECADE,
+    }
+    if band != want:
+        raise SelectionError(f"{where}.band must be exactly {want} (the documented band the shared post-processing enforces)")
+    files = nr.get("files")
+    if not isinstance(files, dict) or not files:
+        raise SelectionError(f"{where}.files must be a non-empty object of point_id -> {{log, spectrum}}")
+    for pid, entry in files.items():
+        if not isinstance(entry, dict) or sorted(entry) != sorted(NOISE_PIN_KINDS):
+            raise SelectionError(f"{where}.files[{pid!r}] needs exactly {list(NOISE_PIN_KINDS)}")
+        for kind in NOISE_PIN_KINDS:
+            pin = entry[kind]
+            if not (isinstance(pin, dict) and isinstance(pin.get("path"), str) and isinstance(pin.get("sha256"), str)):
+                raise SelectionError(
+                    f"{where}.files[{pid!r}].{kind} needs string `path` and `sha256` "
+                    "(a raw artifact is never named without its pin)"
+                )
 
 
 # --------------------------------------------------------------------------
@@ -397,6 +472,57 @@ def _check_cmrr_mc_statistics(point: dict, pop: dict | None) -> str | None:
         if problem:
             return problem
     return None
+
+
+def _noise_cell_problem(field: str, cell: str | None, recomputed: float) -> str | None:
+    """Why `cell` is not `recomputed` as the noise bench serializes it (%.6g;
+    `nan` where the quantity is undefined)."""
+    text = (cell or "").strip()
+    if recomputed != recomputed:
+        return None if text.lower() == "nan" else (
+            f"{field} {text!r} but the pinned spectrum gives an undefined (nan) value"
+        )
+    value, why = parse_decimal(cell)
+    if value is None:
+        return f"{field}: {why}"
+    printed = Decimal(noise_post.serialize(recomputed))
+    if value != printed:
+        return (
+            f"{field} {value} is not {printed} recomputed from the pinned spectrum "
+            "(the bench writes this quantity with printf %.6g; the cell must be that "
+            "serialization, with no tolerance beyond its 6 digits)"
+        )
+    return None
+
+
+def _check_noise_raw(point: dict, pop: dict | None) -> str | None:
+    """The input-noise summary must follow from the pinned raw artifacts
+    (NOISE_AUDIT_RULE). Integrated-log and spectrum-derived checks are
+    independent: both run, and every disagreement is reported."""
+    if pop is None:
+        return "cannot evaluate (no raw noise population available)"
+    pid = (point.get("point_id") or "").strip()
+    raw = pop.get(pid)
+    if raw is None:
+        return "cannot evaluate (no pinned raw noise artifacts for this point)"
+    problems = []
+    # (1) integrated figure: the bench copies the log token verbatim.
+    cell, why = parse_decimal(point.get("vni_int_vrms"))
+    if cell is None:
+        problems.append(f"[integrated-log] vni_int_vrms: {why}")
+    elif cell != Decimal(raw["token"]):
+        problems.append(
+            f"[integrated-log] vni_int_vrms {cell} is not the {noise_post.LOG_KEY} "
+            f"{raw['token']} logged in {raw['log']} (the bench copies that token verbatim)"
+        )
+    # (2) spectrum-derived: independent of the summary's own integrated cell
+    # (the cross-check ratio uses the LOGGED total, not the summary's).
+    derived = noise_post.derive(raw["freqs"], raw["dens"], raw["value"])
+    for field, value in zip(noise_post.SPECTRUM_FIELDS, derived):
+        problem = _noise_cell_problem(field, point.get(field), value)
+        if problem:
+            problems.append(f"[spectrum] {problem} ({raw['spectrum']})")
+    return "; ".join(problems) or None
 
 
 def _check_slew_worse_edge(point: dict, draws) -> str | None:
@@ -515,6 +641,7 @@ def _check_offset_mc_statistics(point: dict, draws: dict | None) -> str | None:
 DEFINITION_CHECKS = {
     "cmrr_linear_3sigma": (_check_cmrr_linear, False),
     "cmrr_mc_statistics": (_check_cmrr_mc_statistics, "samples"),
+    "noise_raw_audit": (_check_noise_raw, "noise"),
     "slew_worse_edge": (_check_slew_worse_edge, False),
     "offset_magnitude": (_check_offset_magnitude, False),
     "offset_mc_statistics": (_check_offset_mc_statistics, "draws"),
@@ -705,6 +832,73 @@ def _load_sample_population(repo: Path, key: str, ms: dict, expected: list, reco
             "plateau_tol_db": float(ms["acceptance"]["plateau_tol_db"]),
         },
     }
+
+
+def _load_noise_population(repo: Path, key: str, nr: dict, expected: list, errors: list) -> dict | None:
+    """Pin-check and strictly parse each grid point's raw noise log and in-band
+    spectrum. None when anything is wrong; problems name point and file."""
+    n_err = len(errors)
+    files = nr["files"]
+    expected_ids = [pid for pid, _ in expected]
+    for pid in sorted(set(files) - set(expected_ids)):
+        errors.append(f"record {key}: raw noise artifacts pinned for {pid!r}, which is outside the expected grid")
+    seen_paths: dict[str, str] = {}
+    for pid in expected_ids:
+        entry = files.get(pid)
+        if entry is None:
+            continue
+        for kind in NOISE_PIN_KINDS:
+            rel = entry[kind]["path"]
+            owner = f"point {pid} {kind}"
+            if rel in seen_paths:
+                errors.append(f"record {key}: {rel} is pinned twice ({seen_paths[rel]} and {owner}); one raw artifact per point and kind")
+            seen_paths[rel] = owner
+            stem = Path(rel).name
+            want = f"{pid}.log" if kind == "log" else f"{pid}_noise.csv"
+            if stem != want:
+                errors.append(f"record {key}: point {pid}: {kind} pin names {rel}, which belongs to another point (expected file {want})")
+    points: dict = {}
+    for pid in expected_ids:
+        entry = files.get(pid)
+        if entry is None:
+            errors.append(f"record {key}: point {pid}: no pinned raw noise log/spectrum (every grid point needs both)")
+            continue
+        texts = {}
+        for kind in NOISE_PIN_KINDS:
+            rel, pinned = entry[kind]["path"], entry[kind]["sha256"]
+            path = repo / rel
+            if not path.is_file():
+                errors.append(f"record {key}: point {pid}: missing raw noise {kind} {rel}")
+                continue
+            actual = sha256_file(path)
+            if actual != pinned:
+                errors.append(
+                    f"record {key}: point {pid}: {rel} does not match its selection pin "
+                    f"(pinned {pinned}, actual {actual}) -- re-select deliberately, "
+                    "never re-read silently"
+                )
+                continue
+            try:
+                texts[kind] = path.read_text(encoding="utf-8")
+            except (OSError, UnicodeDecodeError) as exc:
+                errors.append(f"record {key}: point {pid}: cannot read {rel} ({exc})")
+        if len(texts) != len(NOISE_PIN_KINDS):
+            continue
+        try:
+            token, value = noise_post.parse_log_total(texts["log"], entry["log"]["path"])
+        except noise_post.NoiseError as exc:
+            errors.append(f"record {key}: point {pid}: invalid noise log: {exc}")
+            continue
+        try:
+            freqs, dens = noise_post.parse_spectrum(texts["spectrum"], entry["spectrum"]["path"])
+        except noise_post.NoiseError as exc:
+            errors.append(f"record {key}: point {pid}: invalid noise spectrum: {exc}")
+            continue
+        points[pid] = {
+            "token": token, "value": value, "freqs": freqs, "dens": dens,
+            "log": entry["log"]["path"], "spectrum": entry["spectrum"]["path"],
+        }
+    return None if len(errors) > n_err else points
 
 
 def load_record(repo: Path, key: str, spec: dict, grid: dict, env: dict, records: dict | None = None) -> dict:
@@ -914,13 +1108,26 @@ def load_record(repo: Path, key: str, spec: dict, grid: dict, env: dict, records
         if sample_pop is not None:
             src["samples"]["draws"] = sum(e["n"] for e in sample_pop["points"].values())
 
+    # 3d. raw noise artifacts (issue #213): one pinned log and one pinned
+    # in-band spectrum per grid point, strictly parsed.
+    noise_pop: dict | None = None
+    nr = spec.get("noise_raw")
+    if nr is not None:
+        noise_pop = _load_noise_population(repo, key, nr, expected, errors)
+        src["noise_raw"] = {
+            "status": "verified" if noise_pop is not None else "error",
+            "points": len(nr["files"]),
+            "pins_sha256": sha256_bytes(canonical_json(nr["files"]).encode("utf-8")),
+            "band": nr["band"],
+        }
+
     # 4. validity flags and definitions, per point
     conditions = spec.get("valid_when", [])
 
     def run_definition_checks(pid: str, row: dict) -> None:
         for name in spec.get("definition_checks", []):
             check, needs = DEFINITION_CHECKS[name]
-            pop = {"draws": draws_pass, "samples": sample_pop}.get(needs)
+            pop = {"draws": draws_pass, "samples": sample_pop, "noise": noise_pop}.get(needs)
             if needs and pop is None:
                 continue  # the population load above already reported why
             problem = check(row, pop)
@@ -1406,6 +1613,7 @@ def build_content(repo: Path, selection_path: Path) -> dict:
         "comparison_rule": COMPARISON_RULE,
         "draws_audit_rule": DRAWS_AUDIT_RULE,
         "samples_audit_rule": SAMPLES_AUDIT_RULE,
+        "noise_audit_rule": NOISE_AUDIT_RULE,
         "environment": {
             "pdk_provenance": pdk_provenance_summary(records),
             "ngspice_pin": env.get("ngspice"),
@@ -1648,6 +1856,13 @@ def render_markdown(report: dict) -> str:
         claim = "verified for every selected record" if prov["pdk_reproducibility_verified"] else "**NOT claimed** (not every selected record has checked run-time PDK identity)"
         w(f"PDK reproducibility is {claim}. {prov['note']}.\n\n")
     def _draws_cell(src: dict) -> str:
+        noise = src.get("noise_raw")
+        if noise:
+            return (
+                f"{noise['points']} pinned log+spectrum pairs (`{_short(noise['pins_sha256'])}`, "
+                f"{noise['status']}: band {noise['band']['lo_hz']} Hz - {noise['band']['hi_hz']} Hz, "
+                f"{noise['band']['points']} points)"
+            )
         samples = src.get("samples")
         if samples:
             cell = f"{samples['files']} pinned sample files (`{_short(samples['pins_sha256'])}`, {samples['status']}"
@@ -1680,6 +1895,9 @@ def render_markdown(report: dict) -> str:
     samples_rule = content.get("samples_audit_rule")
     if samples_rule and any(src.get("samples") for src in content["sources"].values()):
         w(f"\n{samples_rule}\n\n")
+    noise_rule = content.get("noise_audit_rule")
+    if noise_rule and any(src.get("noise_raw") for src in content["sources"].values()):
+        w(f"\n{noise_rule}\n\n")
     w("\nSpec section 2 rows covered: ")
     w(", ".join(f"{r['row']}{'' if r['covered'] else ' (NOT COVERED)'}" for r in content["spec_coverage"]) + ".\n")
     w("Item 9 inventory rows covered: ")

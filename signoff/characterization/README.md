@@ -121,6 +121,25 @@ duplicated OP/AC pairs, non-finite tokens, stale pins and a wrong Av0 join are
 point-specific errors. Historical sim records are untouched; only a new
 report is minted.
 
+## Input-noise raw-evidence audit (issue #213)
+
+The `input-noise` record pins, per PVT point, its raw ngspice log and in-band
+spectrum under `noise_raw` in [`selection.json`](selection.json) (sha256 for
+each file, plus the documented 100 Hz - 1 MHz / 81-point / `dec 20` band).
+Definition check `noise_raw_audit` re-derives the summary offline (stdlib only)
+with [`sim/input-noise/noise_post.py`](../../sim/input-noise/noise_post.py),
+the module `run_noise_sweep.sh` itself runs, so bench and audit share one
+definition. Two checks run independently and both report: **integrated-log**
+(`vni_int_vrms` must be the single `NOISE_INOISE_TOTAL` token of the pinned log,
+which the bench copies verbatim) and **spectrum-derived** (five spot densities,
+flicker/thermal split, flicker corner and fraction, and the trapezoidal
+cross-check ratio, each at the bench's `printf %.6g`; `nan` where undefined).
+The trapezoidal integral stays a cross-check of the logged figure, never a
+substitute for it. Missing, duplicated or foreign-point associations, changed
+pins, non-finite samples and malformed frequency grids are point-specific
+errors; the report's sources table shows the audit status and the pin-set hash.
+Historical sim records are untouched; only a new report is minted.
+
 ## Minting a new record, and the item 8 citation
 
 ```bash
