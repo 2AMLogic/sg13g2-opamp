@@ -95,9 +95,6 @@ jobs:
         # equivalence, byte freshness, or a re-run of any bench.
         run: python3 signoff/check_inventories.py
 
-      - name: Inventory validator negative controls (offline)
-        run: python3 -m unittest discover -s signoff -p 'test_check_inventories.py' -v
-
       - name: Integrator view is in step with the newest record (offline)
         # spec/integrator.json's maturity counts, source record and GDS path
         # are derived from the newest committed signoff record; a new report
@@ -113,16 +110,6 @@ jobs:
         run: |
           set -euo pipefail
           python3 -I signoff/check_integrator_contract.py
-          python3 -m unittest discover -s signoff -p 'test_check_integrator_contract.py' -v
-
-      - name: Characterization report negative controls (offline)
-        run: python3 -m unittest discover -s signoff/characterization -v
-
-      - name: Signoff checker negative controls (offline)
-        # Builds a throwaway fixture tree, applies one mutation per control
-        # and asserts the exact diagnostic from check_signoff.py and
-        # sync_integrator.py. Never touches the real checkout; no klt.
-        run: python3 -m unittest discover -s signoff -p 'test_check_signoff.py' -v
 
       - name: Bench negative controls and evidence checkers (offline)
         # Every sim/ directory holding a test_*.py is run on its own
@@ -148,16 +135,38 @@ jobs:
           echo "== ICMR evidence checker"
           python3 sim/input-cmr/check_icmr_evidence.py
 
-      - name: Offset yield-input sample-set reproduces and converter tests pass (offline)
+      - name: Offset yield-input sample-set reproduces (offline)
         # signoff/yield-inputs: --check fails if the committed sample-set no
         # longer reproduces byte for byte from the committed draws CSV (even
-        # when the CSV is unchanged); the tests cover duplicate/missing draw
-        # indices, conflicting metadata, unknown status/mode and non-finite
-        # PASS values. Stdlib only; no PDK, ngspice or klt.
+        # when the CSV is unchanged). Its converter tests are run by the
+        # signoff discovery step below. Stdlib only; no PDK, ngspice or klt.
         run: |
           set -euo pipefail
           python3 -I signoff/yield-inputs/offset_draws_to_sampleset.py --check
-          python3 -I -m unittest discover -s signoff/yield-inputs -p 'test_offset_draws_to_sampleset.py' -v
+
+      - name: Signoff offline tests, discovered per directory (offline)
+        # Every signoff/ directory holding a test_*.py is run once on its own
+        # (`unittest discover -s <dir>`), the same policy as the sim/ step:
+        # signoff/yield-inputs is not a package, so one top-level discover
+        # cannot import it. Covers the root (check_signoff, check_inventories,
+        # check_integrator_contract, regenerate fixtures), characterization/
+        # and yield-inputs/; a new module or nested directory is picked up
+        # with no workflow edit. Fail-closed: enumeration runs to a temp file
+        # first (a find failure aborts under pipefail/errexit), and an empty
+        # selection fails. Stdlib + bash only; no klt, PDK or simulator.
+        run: |
+          set -euo pipefail
+          list="$(mktemp)"
+          find signoff -type f -name 'test_*.py' -printf '%h\n' | sort -u > "${list}"
+          [ -s "${list}" ] || { echo "no signoff/ test dirs found" >&2; exit 1; }
+          n=0
+          while IFS= read -r d; do
+            echo "== unittest: ${d}"
+            python3 -m unittest discover -s "${d}" -p 'test_*.py' -v
+            n=$((n + 1))
+          done < "${list}"
+          [ "${n}" -gt 0 ] || { echo "no signoff/ test dirs run" >&2; exit 1; }
+          echo "== ${n} signoff test dir(s) passed"
 
       - name: Install klt at the pinned revision
         # Pinned, not floating: the T1 item skeleton is parsed out of

@@ -33,7 +33,7 @@ treats 3 as failure cannot run on a block that is not already finished.
 hard-linked into place only if klt exited 0/3 and the document parses. A failed
 or malformed run, or a concurrent run with the same record id, never leaves a
 partial verdict that `check_signoff.py` would pick as the latest report.
-Offline tests: `python3 -m unittest discover -s signoff -p 'test_regenerate.py'`.
+Offline tests: run by CI's signoff test discovery (see "Offline test discovery"); alone: `python3 -m unittest discover -s signoff -p 'test_regenerate.py'`.
 
 - **Checklist** (the item skeleton, parsed at run time):
   `klayout-tools/docs/design-evidence-tiers.md`
@@ -480,14 +480,40 @@ every push and every PR:
 |---|---|---|
 | Manifest shape, pins vs. committed artifacts, record consistency, item 8 report reproduces | offline half of the `signoff` job, via `check_signoff.py` | python3 only |
 | Item 1/9/10 inventory entries still hold (paths, runner modes, `bash -n`, records, doc headings) | offline half of the `signoff` job, via `check_inventories.py` | python3 + bash (+ git for the tracked/mode checks) |
-| Inventory validator negative controls | offline half of the `signoff` job, `python3 -m unittest discover -s signoff -p 'test_check_inventories.py'` | python3 + bash + git |
-| Characterization report negative controls | offline half of the `signoff` job, `python3 -m unittest discover -s signoff/characterization` | python3 only |
+| All offline `signoff/` tests (inventory, checker, integrator-contract and regenerate fixtures; characterization; yield-input converter) | offline half of the `signoff` job, automatic per-directory discovery (see below) | python3 + bash + git |
 | Re-grade with the pinned `klt` and diff against the committed record | online half of the `signoff` job, via `check_signoff.py --run-klt` | network (installs `klt` at `klt-pin.txt`'s revision) |
 
 So a manifest citing an artifact that has since changed, a record that no
 longer matches what `klt` would say today, and a mis-keyed evidence entry
 that `klt` would silently ignore all fail a build instead of rotting
 quietly.
+
+### Offline test discovery
+
+CI does not hand-list `signoff/` tests. One step, before `klt` is installed,
+finds every directory under `signoff/` holding a `test_*.py` and runs
+`python3 -m unittest discover -s <dir> -p 'test_*.py' -v` once per directory
+(today: `signoff/`, `signoff/characterization/`, `signoff/yield-inputs/`).
+Directories are discovered separately because `yield-inputs/` is not an
+importable package. A new module in an existing directory, or in a new nested
+directory, is picked up with no workflow edit. The step fails on any failing
+test, on a failed enumeration, and when no directory is found. The standalone
+validators (`check_signoff.py`, `check_inventories.py`,
+`sync_integrator.py --check`, `check_integrator_contract.py`,
+`offset_draws_to_sampleset.py --check`) remain separate steps.
+
+Local equivalent (stdlib + bash, no klt/PDK/simulator), from the repo root:
+
+```bash
+set -euo pipefail
+list="$(mktemp)"
+find signoff -type f -name 'test_*.py' -printf '%h\n' | sort -u > "$list"
+[ -s "$list" ] || { echo "no signoff/ test dirs found" >&2; exit 1; }
+while IFS= read -r d; do
+  echo "== unittest: $d"
+  python3 -m unittest discover -s "$d" -p 'test_*.py' -v
+done < "$list"
+```
 
 ## LVS reference freshness
 
