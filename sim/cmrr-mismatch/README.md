@@ -181,6 +181,22 @@ binds every campaign to its inputs:
   was published. Its samples' inputs cannot be verified. Finalized records
   stay refused by `sim/record-paths.sh` (#140) exactly as before.
 
+- **One live writer per campaign (issue #204).** `sim/record-paths.sh`
+  takes a non-blocking exclusive `flock(1)` on
+  `sim/cmrr-mismatch/.record-locks/<id>.lock` before the finalized check or
+  any output is touched, and holds it for the whole runner process lifetime.
+  A second process for the same id (a resume while a resume or a fresh run
+  owns it, or the reverse) exits 3 at once with a diagnostic and changes no
+  sample, snapshot, pilot or record byte. The kernel drops the lock when the
+  owner exits or is killed, so an interrupted campaign resumes without any
+  cleanup; the lock file is never deleted (stable inode) and is gitignored
+  ownership state, not evidence. Different ids are independent. Child
+  processes inherit the lock, so an orphaned simulator still writing keeps
+  the record owned until it too exits. `flock` is part of util-linux
+  (`/usr/bin/flock` on the Linux workers); the helper exits 3 if it is
+  missing. Advisory: it excludes cooperating runners, and on NFS-like
+  filesystems flock semantics may differ (not used here).
+
 Implementation: [`campaign-guard.sh`](campaign-guard.sh) (sourced by the
 runner) and [`campaign_manifest.py`](campaign_manifest.py) (render /
 publish / compare). Offline controls with no simulation:

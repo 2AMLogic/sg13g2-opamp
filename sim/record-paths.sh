@@ -78,6 +78,12 @@ _sg13g2_preflight_self="${_sg13g2_preflight_self:-$(basename "$0")}"
 #       record refuses, since the resumed run would rewrite both files.
 #       Resuming an id with nothing on disk yet reserves it like a fresh run.
 #
+#   Live-writer exclusion (issue #204). After the id is known and before
+#   the finalized check or any output is touched, the process takes a
+#   non-blocking exclusive flock on .record-locks/<id>.lock and holds it
+#   until exit (see _sg13g2_record_lock). A fresh start and a --resumable
+#   resume of one id therefore cannot overlap; the loser exits 3 untouched.
+#
 #   The id syntax itself is unchanged; a RECORD_ID taken from the
 #   environment must be a single path component ([A-Za-z0-9._-], not
 #   starting with "."), because it is spliced into output paths.
@@ -125,6 +131,10 @@ sg13g2_preflight_record_paths() {
   MD_OUT="${RECORDS_DIR}/${RECORD_ID}.md"
   mkdir -p "${EXPERIMENT_DIR}/netlist-snapshots" "${EXPERIMENT_DIR}/corners" "${RECORDS_DIR}"
 
+  # Issue #204: own the record for this process's whole lifetime BEFORE the
+  # finalized check or any run-owned output is touched.
+  _sg13g2_record_lock
+
   if [[ "${resume}" -eq 1 ]]; then
     local final=() f
     for f in "${CSV_OUT}" "${MD_OUT}"; do
@@ -156,6 +166,41 @@ sg13g2_preflight_record_paths() {
   if ! mkdir "${SNAPSHOTS_OUT}" 2>/dev/null; then
     rmdir "${CORNERS_OUT}" 2>/dev/null || true
     _sg13g2_record_refuse "${SNAPSHOTS_OUT}"
+  fi
+}
+
+# _sg13g2_record_lock
+#   Issue #204. Take a non-blocking exclusive advisory flock(1) lock on
+#   ${EXPERIMENT_DIR}/.record-locks/${RECORD_ID}.lock (gitignored, so it is
+#   never evidence and stays out of records/ corners/ netlist-snapshots/).
+#   The lock file is never unlinked (stable inode, so a late opener cannot
+#   lock a different inode than the owner); the fd is opened here, in the
+#   caller's shell, and left open until the process exits, so the kernel
+#   releases ownership on exit or kill (no stale-lock recovery needed).
+#   Children inherit the fd, so an orphaned simulator child that is still
+#   writing keeps the record owned. A second writer of the same id, fresh or
+#   --resumable, exits 3 immediately having written nothing. Different ids
+#   use different lock files and are independent. Requires flock(1)
+#   (util-linux; present on the Linux dispatch workers).
+_sg13g2_record_lock() {
+  if ! command -v flock >/dev/null 2>&1; then
+    echo "${_sg13g2_preflight_self}: flock(1) (util-linux) is required to own record ${RECORD_ID}; not found in PATH." >&2
+    exit 3
+  fi
+  local lockdir="${EXPERIMENT_DIR}/.record-locks"
+  SG13G2_RECORD_LOCK_FILE="${lockdir}/${RECORD_ID}.lock"
+  mkdir -p "${lockdir}"
+  if ! exec {SG13G2_RECORD_LOCK_FD}>>"${SG13G2_RECORD_LOCK_FILE}"; then
+    echo "${_sg13g2_preflight_self}: cannot open record lock ${SG13G2_RECORD_LOCK_FILE}." >&2
+    exit 3
+  fi
+  if ! flock -n "${SG13G2_RECORD_LOCK_FD}"; then
+    {
+      echo "${_sg13g2_preflight_self}: refusing to start: record ${RECORD_ID} is owned by another live writer"
+      echo "${_sg13g2_preflight_self}: (lock ${SG13G2_RECORD_LOCK_FILE} is held). Nothing was written."
+      echo "${_sg13g2_preflight_self}: Wait for it to exit, or start a new campaign under a new id."
+    } >&2
+    exit 3
   fi
 }
 
