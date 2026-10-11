@@ -31,6 +31,9 @@ sys.path.insert(0, str(HERE))
 
 import generate  # noqa: E402
 
+sys.path.insert(0, str(HERE.parent.parent / "sim" / "cmrr-mismatch"))
+import mc_samples  # noqa: E402
+
 REPO = HERE.parent.parent
 SELECTION = REPO / generate.SELECTION_REL
 
@@ -73,6 +76,8 @@ class Fixture:
             files.update(rec[f] for f in ("csv", "md", "netlist_snapshot"))
             if "draws_csv" in rec:
                 files.add(rec["draws_csv"])
+            if "mc_samples" in rec:
+                files.update(e["path"] for e in rec["mc_samples"]["files"].values())
         files.update({generate.SELECTION_REL, generate.GENERATOR_REL})
         for rel in files:
             dst = self.root / rel
@@ -96,7 +101,21 @@ class Fixture:
     def draws_path(self, key: str) -> Path:
         return self.root / self.selection["records"][key]["draws_csv"]
 
+    keep_cmrr_audit = False
+
+    def detach_cmrr_population(self) -> None:
+        """The CMRR audit joins Av0 from the open-loop record (issue #208), so a
+        control that perturbs open-loop Av0 for ITS OWN purpose would trip the
+        join. Those controls drop the CMRR raw-sample audit; CmrrMcStatistics
+        (keep_cmrr_audit) tests the join itself."""
+        rec = self.selection["records"]["cmrr-mismatch"]
+        rec.pop("mc_samples", None)
+        rec["definition_checks"] = [c for c in rec["definition_checks"] if c != "cmrr_mc_statistics"]
+        self.save_selection()
+
     def rewrite_csv(self, key: str, transform, repin: bool = True) -> None:
+        if key == "open-loop-ac" and not self.keep_cmrr_audit:
+            self.detach_cmrr_population()
         path = self.csv_path(key)
         lines = path.read_text(encoding="utf-8").splitlines()
         path.write_text("\n".join(transform(lines)) + "\n", encoding="utf-8")
@@ -1010,6 +1029,217 @@ class OffsetMcStatistics(unittest.TestCase):
         self.fx.save_selection()
         with self.assertRaises(generate.SelectionError):
             self.fx.build()
+
+
+class CmrrMcStatistics(unittest.TestCase):
+    """Issue #208: the CMRR summary is audited against hash-pinned raw sample
+    files, not merely against its own mean/sigma/CMRR identity."""
+
+    RECORD = "cmrr-mismatch"
+    POINT = "mos_tt_27C_1.20V"
+
+    def setUp(self) -> None:
+        self.fx = Fixture()
+        self.fx.keep_cmrr_audit = True
+
+    def tearDown(self) -> None:
+        self.fx.close()
+
+    def errors(self, content: dict) -> list:
+        out = list(content["errors"])
+        for row in content["rows"]:
+            out.extend(row["errors"])
+        return out
+
+    def assert_error(self, *fragments: str) -> None:
+        content = self.fx.build()
+        errors = self.errors(content)
+        self.assertEqual(content["overall"]["verdict"], "ERROR", errors)
+        for fragment in fragments:
+            self.assertTrue(any(fragment in e for e in errors), errors)
+
+    def entry(self, pid=None) -> dict:
+        return self.fx.selection["records"][self.RECORD]["mc_samples"]["files"][pid or self.POINT]
+
+    def edit_samples(self, transform, pid=None, repin=True) -> None:
+        entry = self.entry(pid)
+        path = self.fx.root / entry["path"]
+        lines = path.read_text(encoding="utf-8").splitlines()
+        path.write_text("\n".join(transform(lines)) + "\n", encoding="utf-8")
+        if repin:
+            entry["sha256"] = generate.sha256_file(path)
+            self.fx.save_selection()
+
+    def test_committed_campaign_reproduces_from_pinned_samples(self):
+        content = self.fx.build()
+        self.assertEqual(self.errors(content), [])
+        samples = content["sources"][self.RECORD]["samples"]
+        self.assertEqual(samples["status"], "verified")
+        self.assertEqual(samples["files"], 45)
+        self.assertEqual(samples["draws"], 45 * 300)
+
+    def test_coherent_summary_mutation_passes_the_old_identity_but_fails_the_audit(self):
+        # mean, sigma and CMRR changed together keep Av0 - 20log10(mean+3s)
+        # true, so the summary-only definition check is satisfied.
+        rows = {r["point_id"]: r for r in generate.read_csv_rows(self.fx.csv_path(self.RECORD))[1]}
+        row = dict(rows[self.POINT])
+        mean, sigma, av0 = float(row["acm_lin_mean"]), float(row["acm_lin_sigma"]), float(row["av0_db"])
+        new_mean = mean * 1.05
+        new_cmrr = av0 - 20 * __import__("math").log10(new_mean + 3 * sigma)
+        self.fx.set_cell(self.RECORD, self.POINT, "acm_lin_mean", f"{new_mean:.6g}")
+        self.fx.set_cell(self.RECORD, self.POINT, "cmrr_3sigma_db", f"{new_cmrr:.6g}")
+        row.update(acm_lin_mean=f"{new_mean:.6g}", cmrr_3sigma_db=f"{new_cmrr:.6g}")
+        self.assertIsNone(generate._check_cmrr_linear(row, None))
+        self.assert_error(f"point {self.POINT} fails definition check cmrr_mc_statistics", "acm_lin_mean")
+
+    def test_each_serialized_statistic_is_checked_at_six_digits(self):
+        rows = {r["point_id"]: r for r in generate.read_csv_rows(self.fx.csv_path(self.RECORD))[1]}
+        for field in ("acm_lin_sigma", "acm_plus_3sigma_db", "cmrr_db_mean", "cmrr_db_p01",
+                      "cmrr_db_min", "cmrr_1khz_3sigma_db", "plateau_max_db"):
+            with self.subTest(field=field):
+                fx = Fixture()
+                try:
+                    old = Decimal(rows[self.POINT][field])
+                    bumped = old + Decimal("0.0001") if old != 0 else Decimal("0.001")
+                    fx.set_cell(self.RECORD, self.POINT, field, str(bumped))
+                    errors = [e for e in fx.build()["errors"] + [x for r in fx.build()["rows"] for x in r["errors"]]]
+                    self.assertTrue(any(field in e and self.POINT in e for e in errors), errors)
+                finally:
+                    fx.close()
+
+    def test_equal_value_in_another_notation_is_accepted(self):
+        old = generate.read_csv_rows(self.fx.csv_path(self.RECORD))[1]
+        cell = next(r for r in old if r["point_id"] == self.POINT)["acm_lin_sigma"]
+        alt = str((Decimal(cell) * 1000).normalize()) + "e-3"
+        self.fx.set_cell(self.RECORD, self.POINT, "acm_lin_sigma", alt)
+        self.assertEqual(self.errors(self.fx.build()), [])
+
+    def test_wrong_sample_count_is_rejected(self):
+        # drop draw 299 entirely (both records): a coherent 299-draw file, but
+        # the summary still says 300 draws.
+        self.edit_samples(lambda ls: [l for l in ls if not l.split()[:2] in (["OP", "299"], ["AC", "299"])])
+        self.assert_error(self.POINT, "mc_n '300' != 299")
+
+    def test_missing_ac_of_a_pair_is_rejected(self):
+        self.edit_samples(lambda ls: [l for l in ls if l.split()[:2] != ["AC", "17"]])
+        self.assert_error(self.POINT, "draw 17: missing AC record")
+
+    def test_duplicated_op_is_rejected(self):
+        def dup(ls):
+            first = next(l for l in ls if l.startswith("OP 5 "))
+            return ls + [first]
+        self.edit_samples(dup)
+        self.assert_error(self.POINT, "duplicate OP record for draw 5")
+
+    def test_non_finite_sample_token_is_rejected(self):
+        def poison(ls):
+            out = []
+            for l in ls:
+                p = l.split()
+                if p[:2] == ["AC", "3"]:
+                    p[2] = "nan"
+                    l = " ".join(p)
+                out.append(l)
+            return out
+        self.edit_samples(poison)
+        self.assert_error(self.POINT, "non-finite")
+
+    def test_stale_population_pin_is_rejected(self):
+        self.edit_samples(lambda ls: ls + [""], repin=False)  # bytes change, pin does not
+        self.assert_error(self.POINT, "does not match its selection pin")
+
+    def test_edited_sample_value_with_summary_untouched_fails_even_repinned(self):
+        def tweak(ls):
+            out = []
+            for l in ls:
+                p = l.split()
+                if p[:2] == ["AC", "10"]:
+                    p[2] = "30.0"
+                    l = " ".join(p)
+                out.append(l)
+            return out
+        self.edit_samples(tweak)
+        self.assert_error(self.POINT)
+
+    def test_missing_sample_file_is_rejected(self):
+        (self.fx.root / self.entry()["path"]).unlink()
+        self.assert_error(self.POINT, "missing sample file")
+
+    def test_unpinned_grid_point_is_rejected(self):
+        del self.fx.selection["records"][self.RECORD]["mc_samples"]["files"][self.POINT]
+        self.fx.save_selection()
+        self.assert_error(self.POINT, "no pinned sample file")
+
+    def test_incorrect_av0_in_summary_is_rejected(self):
+        self.fx.set_cell(self.RECORD, self.POINT, "av0_db", "41.5")
+        self.assert_error(self.POINT, "av0_db")
+
+    def test_join_record_changed_is_rejected(self):
+        # Alter the joined deterministic Av0 AND re-pin it: the summary's own
+        # Av0 no longer matches the explicitly selected join.
+        self.fx.set_cell("open-loop-ac", self.POINT, "av0_db", "41.5")
+        self.assert_error(self.POINT, "av0_db")
+
+    def test_join_record_must_be_a_selected_record(self):
+        self.fx.selection["records"][self.RECORD]["mc_samples"]["av0_join"] = "nope"
+        self.fx.save_selection()
+        with self.assertRaises(generate.SelectionError):
+            self.fx.build()
+
+    def test_sample_file_may_not_be_named_without_its_pin(self):
+        del self.entry()["sha256"]
+        self.fx.save_selection()
+        with self.assertRaises(generate.SelectionError):
+            self.fx.build()
+
+    def test_statistics_check_requires_pinned_samples(self):
+        del self.fx.selection["records"][self.RECORD]["mc_samples"]
+        self.fx.save_selection()
+        with self.assertRaises(generate.SelectionError):
+            self.fx.build()
+
+
+class CmrrPointStats(unittest.TestCase):
+    """The shared pure helper: acceptance rules and the linear-domain bound."""
+
+    VDD, VCM = 1.2, 0.6
+
+    @staticmethod
+    def op(vout=0.6, vd1=0.5, vd2=0.5, vtail=0.3):
+        return [vout, vd1, vd2, vtail, 0.5, 1e-4]
+
+    def build(self, draws):
+        ops = {k: d[0] for k, d in enumerate(draws)}
+        acs = {k: d[1] for k, d in enumerate(draws)}
+        return mc_samples.point_stats(len(draws), ops, acs, 40.0, self.VDD, self.VCM, 0.02, 0.15, 0.05)
+
+    def test_accepts_excludes_and_counts_by_the_bench_rules(self):
+        good = (self.op(), [-10.0, -10.0, -10.0])
+        draws = [good, good, (self.op(), [-12.0, -12.0, -12.0]),
+                 (self.op(vout=0.9), [-10.0, -10.0, -10.0]),     # |vout-vcm| > 0.15*vdd
+                 (self.op(vtail=0.01), [-10.0, -10.0, -10.0]),   # inside rail margin
+                 (self.op(), [-10.0, -10.2, -10.0])]             # plateau 0.2 dB > 0.05
+        st = self.build(draws)
+        self.assertEqual((st["mc_n"], st["mc_n_ok"], st["mc_n_excluded"]), (6, 3, 3))
+        self.assertEqual((st["op_fail"], st["plateau_fail"]), (2, 1))
+        self.assertAlmostEqual(st["plateau_max_db"], 0.2)
+
+    def test_bound_is_linear_domain_sample_sigma(self):
+        import math
+        a = [-10.0, -12.0, -14.0]
+        draws = [(self.op(), [x, x, x]) for x in a]
+        lin = [10 ** (x / 20) for x in a]
+        mu = sum(lin) / 3
+        sd = math.sqrt(sum((v - mu) ** 2 for v in lin) / 2)
+        st = self.build(draws)
+        self.assertAlmostEqual(st["acm_lin_mean"], mu)
+        self.assertAlmostEqual(st["acm_lin_sigma"], sd)
+        self.assertAlmostEqual(st["cmrr_3sigma_db"], 40.0 - 20 * math.log10(mu + 3 * sd))
+        self.assertAlmostEqual(st["cmrr_db_min"], 40.0 - (-10.0))
+
+    def test_fewer_than_two_accepted_draws_is_an_error(self):
+        with self.assertRaises(mc_samples.SampleError):
+            self.build([(self.op(), [-10.0] * 3), (self.op(vout=0.9), [-10.0] * 3)])
 
 
 class LoadCondition(unittest.TestCase):

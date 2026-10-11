@@ -283,7 +283,6 @@ except mc_samples.SampleError as e:
     sys.exit(1)
 
 vdd = float(VDD)
-rail_lo, rail_hi = rail_frac * vdd, vdd - rail_frac * vdd
 
 # Estimator domains, stated up front because they matter here:
 #   - The quoted per-point mismatch-inclusive bound is computed in the
@@ -299,64 +298,21 @@ rail_lo, rail_hi = rail_frac * vdd, vdd - rail_frac * vdd
 #     sigma domain").
 #   - Empirical dB-domain columns (mean, 1st percentile, worst sample)
 #     are recorded as context, computed from the same samples.
-acm_lin, acm1k_lin, cmrr_db, cmrr1k_db = [], [], [], []
-excluded = op_fail = plateau_fail = 0
-plateau_max = 0.0
-n_ok = 0
-for k in range(n_asked):
-    vout, vd1, vd2, vtail, vibias, ivdd = ops[k]
-    acm10m, acm01, acm1k = acs[k]
-    ok = abs(vout - vcm) <= mid_frac * vdd
-    for node in (vout, vd1, vd2, vtail):
-        if not (rail_lo <= node <= rail_hi):
-            ok = False
-    pdelta = abs(acm10m - acm01)
-    plateau_max = max(plateau_max, pdelta)
-    if not ok:
-        op_fail += 1
-        excluded += 1
-    elif pdelta > plateau_tol:
-        plateau_fail += 1
-        excluded += 1
-    else:
-        n_ok += 1
-        acm_lin.append(10 ** (acm10m / 20.0))
-        acm1k_lin.append(10 ** (acm1k / 20.0))
-        cmrr_db.append(av0_db - acm10m)
-        cmrr1k_db.append(av0_db - acm1k)
-
-if n_ok < 2:
+# The acceptance rules and statistics live in mc_samples.point_stats (issue
+# #208), shared with the offline characterization audit so the two cannot
+# diverge.
+try:
+    st = mc_samples.point_stats(n_asked, ops, acs, av0_db, vdd, vcm,
+                                rail_frac, mid_frac, plateau_tol)
+except mc_samples.SampleError:
     print(f"ALLFAIL {point_id}")
     sys.exit(1)
 
-def lin_stats(v):
-    n = len(v)
-    mu = sum(v) / n
-    var = sum((x - mu) ** 2 for x in v) / (n - 1)
-    return mu, math.sqrt(var)
-
-def db_stats(v):
-    n = len(v)
-    mu = sum(v) / n
-    sv = sorted(v)
-    def pct(p):
-        pos = p * (n - 1)
-        lo = int(math.floor(pos))
-        hi = min(lo + 1, n - 1)
-        frac = pos - lo
-        return sv[lo] * (1 - frac) + sv[hi] * frac
-    return mu, sv[0], pct(0.01)
-
-mu_a, sd_a = lin_stats(acm_lin)
-acm_3s_db = 20 * math.log10(mu_a + 3 * sd_a)
-mu_a1k, sd_a1k = lin_stats(acm1k_lin)
-acm1k_3s_db = 20 * math.log10(mu_a1k + 3 * sd_a1k)
-mu_c, vmin_c, p01_c = db_stats(cmrr_db)
-
 print(f"{point_id},{CORNER},{TEMP},{VDD},{vcm:g},{av0_db:.6g},{sys_acm0_db:.6g},{sys_cmrr_db:.6g},"
-      f"{n_asked},{n_ok},{excluded},{op_fail},{plateau_fail},"
-      f"{mu_a:.6g},{sd_a:.6g},{acm_3s_db:.6g},{av0_db - acm_3s_db:.6g},"
-      f"{mu_c:.6g},{p01_c:.6g},{vmin_c:.6g},{av0_db - acm1k_3s_db:.6g},{plateau_max:.6g}")
+      f"{st['mc_n']},{st['mc_n_ok']},{st['mc_n_excluded']},{st['op_fail']},{st['plateau_fail']},"
+      f"{st['acm_lin_mean']:.6g},{st['acm_lin_sigma']:.6g},{st['acm_plus_3sigma_db']:.6g},"
+      f"{st['cmrr_3sigma_db']:.6g},{st['cmrr_db_mean']:.6g},{st['cmrr_db_p01']:.6g},"
+      f"{st['cmrr_db_min']:.6g},{st['cmrr_1khz_3sigma_db']:.6g},{st['plateau_max_db']:.6g}")
 PYEOF
 }
 

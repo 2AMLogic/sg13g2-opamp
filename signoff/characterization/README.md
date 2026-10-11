@@ -104,6 +104,23 @@ contract); the `negctrl` draws are audited on their own and never pooled into
 the mismatch statistics. Repinning a drifted draws file is a deliberate
 selection edit, exactly like repinning a summary.
 
+## CMRR mismatch statistics audit (issue #208)
+
+The `cmrr-mismatch` record's `cmrr_linear_3sigma` check only proves that its
+own summary is self-consistent (a coherently edited mean, sigma and CMRR would
+satisfy it). The record therefore also pins its raw population under
+`mc_samples` in [`selection.json`](selection.json): one sha256-pinned
+`<point>_mc_samples.txt` per grid point (a pinned *list* of files, not the
+offset draws CSV contract), the bench acceptance thresholds, and the
+`av0_join` record Av0 comes from. Definition check `cmrr_mc_statistics`
+re-derives every summary cell offline (stdlib only) with
+`sim/cmrr-mismatch/mc_samples.py` `point_stats` — the same function
+`run_cmrr_mismatch_mc.sh` uses — and holds each to the bench's `printf %.6g`.
+The DR-0004 linear-domain definition is unchanged. Wrong counts, missing or
+duplicated OP/AC pairs, non-finite tokens, stale pins and a wrong Av0 join are
+point-specific errors. Historical sim records are untouched; only a new
+report is minted.
+
 ## Minting a new record, and the item 8 citation
 
 ```bash
