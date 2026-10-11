@@ -451,7 +451,7 @@ class OpenLoopRunner(unittest.TestCase):
     def setUp(self) -> None:
         self._tmp = tempfile.TemporaryDirectory()
         self.t = Tree(self._tmp.name)
-        for name in ("preflight.sh", "env.sh", "record-paths.sh", "env-identity.sh"):
+        for name in ("preflight.sh", "env.sh", "record-paths.sh", "env-identity.sh", "ac-join.sh"):
             shutil.copy2(SIM_DIR / name, self.t.sim / name)
         _write_exec(self.t.sim / "tools" / "build-osdi.sh", "#!/usr/bin/env bash\nexit 0\n")
         self.bench = self.t.sim / "open-loop-ac"
@@ -601,7 +601,7 @@ class NativeNoiseRunner(unittest.TestCase):
     def setUp(self) -> None:
         self._tmp = tempfile.TemporaryDirectory()
         self.t = Tree(self._tmp.name)
-        for name in ("preflight.sh", "env.sh", "record-paths.sh", "env-identity.sh"):
+        for name in ("preflight.sh", "env.sh", "record-paths.sh", "env-identity.sh", "ac-join.sh"):
             shutil.copy2(SIM_DIR / name, self.t.sim / name)
         _write_exec(self.t.sim / "tools" / "build-osdi.sh", "#!/usr/bin/env bash\nexit 0\n")
         self.bench = self.t.sim / "input-noise"

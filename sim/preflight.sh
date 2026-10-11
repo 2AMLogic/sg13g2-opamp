@@ -125,6 +125,11 @@ fi
 # shellcheck source=/dev/null
 source "${SIM_DIR}/env-identity.sh"
 
+# sg13g2_ac_join_admit / sg13g2_ac_join_publish -- cross-record AC join
+# admission (issue #224); see sim/ac-join.sh.
+# shellcheck source=/dev/null
+source "${SIM_DIR}/ac-join.sh"
+
 # SG13G2_NGSPICE_ERR_RE
 #   The "this point's simulation is broken" log signature every sim/*/run_*.sh
 #   harness greps its raw ngspice log for, as one `grep -E` alternation.

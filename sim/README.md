@@ -123,6 +123,57 @@ controls: `tools/test_env_identity.py` (the comparison and OSDI output validatio
 `tools/test_env_drift_lifecycle.py` (the klt wrapper and both native
 runners, stub solvers, fake install).
 
+## Cross-record AC joins (issue #224)
+
+`cmrr-psrr/run_cmrr_psrr_sweep.sh`, `input-offset/run_offset_sweep.sh` and
+`output-swing/run_swing_sweep.sh` import per-grid-point values (`av0_db`, and
+`vout_dc_v` / `ivdd_total_a` for two of them) from an earlier
+`open-loop-ac` record. A matching PVT key alone does not make that valid, so
+before the first solver each runs `sg13g2_ac_join_admit`
+([`ac-join.sh`](ac-join.sh), checks in
+[`tools/ac_join_admission.py`](tools/ac_join_admission.py)).
+
+**Source selection.** The default source is the newest
+`open-loop-ac/records/*.csv` (lexicographic = chronological id order);
+`AC_RECORD_CSV=<path>` selects another. Both get the identical admission
+check -- an explicit path is never trusted more than the default. (The
+optional `OFFSET_RECORD_CSV` import in `output-swing` is a different
+experiment's record and is not covered by this check.)
+
+**Compatibility guarantee.** A source is admitted only if all hold; every
+failure is reported together and the run exits 3 having simulated nothing
+(and leaving no stray record directories):
+
+- it has a verified `records/<id>.env.json` sidecar (schema, hashes, pin);
+- that identity equals this run's captured environment (model closure bytes
+  and OSDI manifest via `identity_sha256`, release marker, configured pin,
+  simulator) -- identities are compared, not record ids or host paths;
+- `netlist-snapshots/<id>/opamp_core.spice` is byte-identical to this run's
+  DUT snapshot;
+- load (`Cload` in each source per-point netlist equals the consumer's CL)
+  and common-mode configuration (`vcm_v` = VDD/2) match;
+- each requested `(corner, temp, vdd)` point has exactly one source row, a
+  consistent `point_id`, `op_pass == 1` and finite required columns, and the
+  source has no points outside the requested grid.
+
+On success the finalized consumer record carries `records/<id>.env.json`
+(its own identity, now usable as a future source) and
+`records/<id>.ac-join.json` binding the accepted source's CSV, sidecar and
+DUT-snapshot sha256 plus the compatibility basis; its `.md` points at both.
+
+**Legacy sources.** Records minted before the identity lifecycle have no
+sidecar (all committed `open-loop-ac` records today). They stay as historical
+evidence, unmodified, but are *refused* for a new join: no identity is guessed
+into an append-only record.
+
+**Regenerating an incompatible source.** Run
+`sim/open-loop-ac/run_pvt_sweep.sh` under the same DUT and model install you
+will run the consumer against (it mints a new record with a sidecar), commit
+it, then re-run the consumer (newest-record default) or pass
+`AC_RECORD_CSV=sim/open-loop-ac/records/<new-id>.csv`. A changed DUT or PDK
+means the consumer's prior joined records are not comparable either; they
+are not rewritten. Offline controls: `tools/test_ac_join_admission.py`.
+
 ## OSDI device models
 
 SG13G2's LV/HV MOS (PSP103.6) compact model is Verilog-A; ngspice can only
