@@ -32,9 +32,11 @@ import hashlib
 import io
 import json
 import math
+import os
 import re
 import subprocess
 import sys
+import tempfile
 from decimal import ROUND_HALF_EVEN, Decimal, InvalidOperation
 from pathlib import Path
 
@@ -50,6 +52,9 @@ SELECTION_REL = "signoff/characterization/selection.json"
 REPORTS_REL = "signoff/characterization/reports"
 ENVELOPE_REL = "signoff/evidence/characterization.json"
 GENERATOR_REL = "signoff/characterization/generate.py"
+# Existence of this file inside the report store IS the mint publication
+# lock (see _acquire_mint_lock); it is created and removed by every mint.
+MINT_LOCK_NAME = ".mint.lock"
 
 SELECTION_SCHEMA = "sg13g2-opamp/characterization-selection/1"
 REPORT_SCHEMA = "sg13g2-opamp/characterization-report/2"
@@ -115,6 +120,11 @@ NOT_CLAIMED = [
 
 class SelectionError(Exception):
     """The selection file itself is malformed (not an evidence problem)."""
+
+
+class CollisionError(Exception):
+    """A report destination path already exists: the record is refused,
+    never replaced (the report store is append-only)."""
 
 
 def sha256_bytes(data: bytes) -> str:
@@ -1495,6 +1505,109 @@ def envelope_for(report_rel: str, report_hash: str, content: dict) -> dict:
     }
 
 
+def _stage_text(dest: Path, text: str) -> Path:
+    """Write text to a unique staging file beside dest (never at dest) and
+    return its path. The caller publishes or discards it."""
+    fd, name = tempfile.mkstemp(dir=dest.parent, prefix=f".{dest.name}.", suffix=".part")
+    tmp = Path(name)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(text)
+        os.chmod(tmp, 0o644)  # mkstemp is 0600; reports and the envelope are read by others
+    except BaseException:
+        tmp.unlink(missing_ok=True)
+        raise
+    return tmp
+
+
+def _link_no_clobber(tmp: Path, dest: Path) -> None:
+    """Publish the staged file at dest without ever replacing or truncating
+    an existing dest (the Python twin of klt_publish_noclobber in
+    sim/tools/klt_run_common.sh). The hard link either lands whole on a free
+    name or refuses with CollisionError; dest is never opened for writing.
+    The staging file is always removed."""
+    try:
+        os.link(tmp, dest)
+    except FileExistsError as exc:
+        raise CollisionError(f"{dest.name} already exists") from exc
+    finally:
+        tmp.unlink(missing_ok=True)
+
+
+def _replace_text_atomically(dest: Path, text: str) -> None:
+    """Overwrite the mutable dest in one atomic step (os.replace): a reader
+    sees the old contents or the new contents, never a truncated file."""
+    tmp = _stage_text(dest, text)
+    try:
+        os.replace(tmp, dest)
+    finally:
+        tmp.unlink(missing_ok=True)  # no-op once the replace has moved it
+
+
+def _acquire_mint_lock(reports: Path) -> int | None:
+    """Create and hold the report store's publication lock, an O_EXCL file
+    whose existence IS the lock (the reservation idiom of
+    sim/tools/klt_run_common.sh). Held for the process lifetime of one mint
+    and removed on exit. Returns the fd, or None when another mint holds
+    the store."""
+    try:
+        fd = os.open(reports / MINT_LOCK_NAME, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o644)
+    except FileExistsError:
+        return None
+    try:
+        os.write(fd, f"{os.getpid()}\n".encode())
+    except OSError:
+        pass  # diagnostic only; the lock itself is the file's existence
+    return fd
+
+
+def _publish_mint(repo: Path, reports: Path, record_id: str, content: dict) -> int:
+    """Publish one mint while the store lock is held: recheck both
+    destinations, publish the complete JSON and Markdown records without
+    replacing anything, and only then swap the evidence envelope atomically.
+    Any failure rolls back what this call created, so the store keeps its
+    earlier files byte-for-byte and the envelope is left untouched."""
+    json_path = reports / f"{record_id}.json"
+    md_path = reports / f"{record_id}.md"
+    # Recheck under the lock: a pre-lock exists() check cannot reserve the
+    # paths, so two same-id minters could otherwise both pass it.
+    taken = [p for p in (json_path, md_path) if os.path.lexists(p)]
+    if taken:
+        print(f"refusing to overwrite existing record {record_id}", file=sys.stderr)
+        return 1
+    report = make_report(content, record_id, repo)
+    created: list[Path] = []
+    try:
+        _link_no_clobber(_stage_text(json_path, canonical_json(report)), json_path)
+        created.append(json_path)
+        _link_no_clobber(_stage_text(md_path, render_markdown(report)), md_path)
+        created.append(md_path)
+        report_rel = f"{REPORTS_REL}/{record_id}.json"
+        report_hash = sha256_file(json_path)
+        _replace_text_atomically(repo / ENVELOPE_REL, canonical_json(envelope_for(report_rel, report_hash, content)))
+    except CollisionError as exc:
+        for p in created:
+            p.unlink(missing_ok=True)
+        print(f"refusing to overwrite existing record {record_id}: {exc}", file=sys.stderr)
+        return 1
+    except Exception as exc:
+        for p in created:
+            p.unlink(missing_ok=True)
+        print(f"mint failed, nothing published: {exc}", file=sys.stderr)
+        return 1
+    except BaseException:
+        for p in created:
+            p.unlink(missing_ok=True)
+        raise
+    print(f"wrote {REPORTS_REL}/{record_id}.json and .md (overall {content['overall']['verdict']})")
+    print(f"wrote {ENVELOPE_REL} (status {'pass' if content['overall']['verdict'] == 'PASS' else 'fail'})")
+    print("next: pin it -- signoff/block-manifest.json evidence[\"8\"].content_hash and")
+    print(f"      signoff/pinned-inputs.json inputs[\"8\"] = {report_rel!r}, both at")
+    print(f"      {report_hash}; then bash signoff/regenerate.sh and")
+    print("      python3 signoff/check_signoff.py --run-klt")
+    return 0
+
+
 def mint(repo: Path, selection_path: Path) -> int:
     content = build_content(repo, selection_path)
     if content["overall"]["verdict"] == "ERROR":
@@ -1505,25 +1618,20 @@ def mint(repo: Path, selection_path: Path) -> int:
     record_id = f"{stamp}-{git_head(repo) or 'nogit'}"
     reports = repo / REPORTS_REL
     reports.mkdir(parents=True, exist_ok=True)
-    json_path = reports / f"{record_id}.json"
-    md_path = reports / f"{record_id}.md"
-    if json_path.exists() or md_path.exists():
-        print(f"refusing to overwrite existing record {record_id}", file=sys.stderr)
+    lock_fd = _acquire_mint_lock(reports)
+    if lock_fd is None:
+        print(f"another --mint holds the publication lock ({REPORTS_REL}/{MINT_LOCK_NAME}) -- refusing;", file=sys.stderr)
+        print("reports are append-only. If no mint is live (killed earlier), remove that lock file and re-run.", file=sys.stderr)
         return 1
-    report = make_report(content, record_id, repo)
-    json_path.write_text(canonical_json(report), encoding="utf-8")
-    md_path.write_text(render_markdown(report), encoding="utf-8")
-    report_rel = f"{REPORTS_REL}/{record_id}.json"
-    report_hash = sha256_file(json_path)
-    envelope = repo / ENVELOPE_REL
-    envelope.write_text(canonical_json(envelope_for(report_rel, report_hash, content)), encoding="utf-8")
-    print(f"wrote {REPORTS_REL}/{record_id}.json and .md (overall {content['overall']['verdict']})")
-    print(f"wrote {ENVELOPE_REL} (status {'pass' if content['overall']['verdict'] == 'PASS' else 'fail'})")
-    print("next: pin it -- signoff/block-manifest.json evidence[\"8\"].content_hash and")
-    print(f"      signoff/pinned-inputs.json inputs[\"8\"] = {report_rel!r}, both at")
-    print(f"      {report_hash}; then bash signoff/regenerate.sh and")
-    print("      python3 signoff/check_signoff.py --run-klt")
-    return 0
+    try:
+        # Holding the store lock: sweep staging files a killed earlier mint
+        # may have left, then publish. No other mint can be staging now.
+        for p in (*reports.glob(".*.part"), *(repo / ENVELOPE_REL).parent.glob(f".{Path(ENVELOPE_REL).name}.*.part")):
+            p.unlink(missing_ok=True)
+        return _publish_mint(repo, reports, record_id, content)
+    finally:
+        os.close(lock_fd)
+        (reports / MINT_LOCK_NAME).unlink(missing_ok=True)
 
 
 def check(repo: Path, selection_path: Path, report_path: Path | None) -> int:

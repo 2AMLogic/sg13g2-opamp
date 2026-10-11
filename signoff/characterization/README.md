@@ -115,7 +115,14 @@ to mint at all when the inputs are in `ERROR`) and re-wraps
 [`../evidence/characterization.json`](../evidence/characterization.json): a
 `generic` envelope, `t1_item: 8`, whose `provenance.input` binds the new JSON
 record by repo path and sha256 and whose `status` is `pass` only when the
-report's overall verdict is `PASS`. Then refresh the two pins it prints —
+report's overall verdict is `PASS`. Publication is serialized: a mint takes an
+exclusive lock (`.mint.lock` in `reports/`, held for the life of the process),
+publishes both records through no-clobber links so an existing destination is
+refused byte-for-byte intact, rolls back a part-way failure, and swaps the
+evidence envelope in atomically — a reader never sees a truncated envelope,
+and a concurrent mint with the same record id refuses instead of overwriting.
+A lock left behind by a killed mint is removed by hand before re-running.
+Then refresh the two pins it prints —
 `signoff/block-manifest.json` `evidence["8"].content_hash` and
 `signoff/pinned-inputs.json` `inputs["8"]` — re-grade with
 `bash signoff/regenerate.sh`, and run `python3 signoff/check_signoff.py`
