@@ -172,7 +172,7 @@ class Fixture:
         files = {}
         base = (repo or self.repo) / "sim" / "cmrr-mismatch"
         for p in sorted(base.rglob("*")):
-            if p.is_file():
+            if p.is_file() and ".record-locks" not in p.parts:  # #204 flock state
                 files[str(p.relative_to(base))] = p.read_bytes()
         return files
 

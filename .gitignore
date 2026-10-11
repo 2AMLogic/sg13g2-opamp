@@ -11,6 +11,8 @@ bsim4v5.out
 # (append-only record trail), so they escape the *.log rule.
 !sim/*/corners/**/*.log
 sim/build/
+# per-record advisory flock files (issue #204); ownership state, not evidence
+sim/*/.record-locks/
 design/build/
 # synthesis / P&R scratch
 flow/build/

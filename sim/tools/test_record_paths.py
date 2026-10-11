@@ -13,6 +13,7 @@ identical timestamp and commit" is produced without a production knob.
 No PDK, OSDI build, ngspice or klt is needed.
 """
 import os
+import signal
 import subprocess
 import tempfile
 import time
@@ -46,6 +47,11 @@ source "${RECORD_PATHS}"
 sg13g2_preflight_record_paths "$@"
 echo "RECORD_ID=${RECORD_ID}"
 echo "RECORD_RESUMED=${RECORD_RESUMED}"
+if [[ -n "${HOLD_READY:-}" ]]; then
+  # Stand in for a live campaign: signal ownership, then stay alive.
+  : > "${HOLD_READY}"
+  while :; do sleep 0.05; done
+fi
 [[ -n "${NO_WRITE:-}" ]] && exit 0
 echo "snapshot ${tag}" > "${SNAPSHOTS_OUT}/opamp_core.spice"
 echo "log ${tag}" > "${CORNERS_OUT}/p0.log"
@@ -86,6 +92,8 @@ class Fixture:
         files, dirs = {}, []
         for p in sorted(self.bench.rglob("*")):
             rel = str(p.relative_to(self.bench))
+            if rel.split("/")[0] == ".record-locks":
+                continue  # ownership state (empty flock files), not evidence
             if p.is_dir():
                 dirs.append(rel)
             else:
@@ -263,6 +271,121 @@ class ResumableCampaign(unittest.TestCase):
             r = fx.run("x", RECORD_ID="something-else")
             self.assertEqual(r.returncode, 0, r.stderr)
             self.assertIn(f"RECORD_ID={RID}", r.stdout)
+
+
+class LiveWriterExclusion(unittest.TestCase):
+    """Issue #204: a per-record flock owned for the process lifetime."""
+
+    def _incomplete(self, fx):
+        ResumableCampaign._incomplete(self, fx)
+
+    def _hold(self, fx, tag, *args, **env):
+        ready = fx.root / f"ready-{tag}"
+        p = subprocess.Popen(fx.argv(tag, *args),
+                             env=fx.env(HOLD_READY=str(ready), **env),
+                             stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                             text=True, start_new_session=True)
+        self.addCleanup(self._reap, p)
+        deadline = time.time() + 30
+        while not ready.exists():
+            if p.poll() is not None:
+                self.fail(f"owner exited early: {p.stderr.read()}")
+            self.assertLess(time.time(), deadline, "owner never became ready")
+            time.sleep(0.01)
+        return p
+
+    @staticmethod
+    def _reap(p):
+        try:
+            os.killpg(p.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        p.wait()
+        p.stdout.close()
+        p.stderr.close()
+
+    def test_second_matching_resume_is_refused_and_changes_nothing(self):
+        with tempfile.TemporaryDirectory() as d:
+            fx = Fixture(d)
+            self._incomplete(fx)
+            self._hold(fx, "owner", "--resumable", RECORD_ID=RID)
+            before = fx.snapshot()
+            r = fx.run("loser", "--resumable", RECORD_ID=RID)
+            self.assertEqual(r.returncode, 3, r.stderr)
+            self.assertIn("another live writer", r.stderr)
+            self.assertNotIn("RECORD_RESUMED", r.stdout)
+            self.assertEqual(fx.snapshot(), before)
+
+    def test_resume_cannot_overlap_fresh_owner(self):
+        with tempfile.TemporaryDirectory() as d:
+            fx = Fixture(d)
+            self._hold(fx, "fresh")
+            before = fx.snapshot()
+            r = fx.run("resume", "--resumable", RECORD_ID=RID)
+            self.assertEqual(r.returncode, 3, r.stderr)
+            self.assertIn("another live writer", r.stderr)
+            self.assertEqual(fx.snapshot(), before)
+
+    def test_fresh_start_cannot_overlap_resume_owner(self):
+        with tempfile.TemporaryDirectory() as d:
+            fx = Fixture(d)
+            self._incomplete(fx)
+            self._hold(fx, "owner", "--resumable", RECORD_ID=RID)
+            before = fx.snapshot()
+            r = fx.run("fresh")
+            self.assertEqual(r.returncode, 3, r.stderr)
+            self.assertIn("another live writer", r.stderr)
+            self.assertEqual(fx.snapshot(), before)
+
+    def test_killed_owner_releases_lock_and_campaign_resumes(self):
+        with tempfile.TemporaryDirectory() as d:
+            fx = Fixture(d)
+            self._incomplete(fx)
+            p = self._hold(fx, "owner", "--resumable", RECORD_ID=RID)
+            lock = fx.bench / ".record-locks" / f"{RID}.lock"
+            ino = lock.stat().st_ino
+            os.killpg(p.pid, signal.SIGKILL)
+            p.wait()
+            before = fx.snapshot()
+            r = fx.run("resume", "--resumable", RECORD_ID=RID, NO_WRITE="1")
+            self.assertEqual(r.returncode, 0, r.stderr)
+            self.assertIn("RECORD_RESUMED=1", r.stdout)
+            self.assertEqual(fx.snapshot(), before)
+            self.assertEqual(lock.stat().st_ino, ino)  # never unlinked
+            self.assertEqual(
+                (fx.bench / "corners" / RID / "p0_mc_samples.txt")
+                .read_text(), "partial\n")
+
+    def test_finalized_still_refuses_resume_while_unlocked(self):
+        with tempfile.TemporaryDirectory() as d:
+            fx = Fixture(d)
+            self._incomplete(fx)
+            (fx.bench / "records" / f"{RID}.csv").write_text("final\n")
+            r = fx.run("again", "--resumable", RECORD_ID=RID)
+            self.assertEqual(r.returncode, 3)
+            self.assertIn("finalized", r.stderr)
+
+    def test_different_record_ids_are_independent(self):
+        with tempfile.TemporaryDirectory() as d:
+            fx = Fixture(d)
+            self._hold(fx, "owner")
+            other = "20260202-000000-" + SHA
+            r = fx.run("other", "--resumable", RECORD_ID=other)
+            self.assertEqual(r.returncode, 0, r.stderr)
+            self.assertIn(f"RECORD_ID={other}", r.stdout)
+
+    def test_lock_file_is_not_counted_as_record_output(self):
+        # The lock lives outside records/corners/netlist-snapshots, so a
+        # released lock never makes a later fresh mint of that id look taken
+        # beyond the real outputs, and it is gitignored.
+        with tempfile.TemporaryDirectory() as d:
+            fx = Fixture(d)
+            r = fx.run("first", NO_WRITE="1")
+            self.assertEqual(r.returncode, 0, r.stderr)
+            self.assertTrue((fx.bench / ".record-locks" / f"{RID}.lock").exists())
+            self.assertEqual(os.listdir(fx.bench / "records"), [])
+        ign = (SIM_DIR.parent / ".gitignore").read_text()
+        self.assertIn("sim/*/.record-locks/", ign)
 
 
 if __name__ == "__main__":
