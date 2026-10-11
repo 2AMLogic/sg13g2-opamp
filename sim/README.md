@@ -87,6 +87,22 @@ capture in the scratch dir named on stderr). A failed begin capture exits 3
 before anything is simulated. Re-run under a fresh record id once the
 environment is stable.
 
+**Live OSDI binaries (issue #218).** The `.build-manifest` digest is accepted
+as the recorded identity only after its claims are checked against the live
+bytes, at *both* the begin capture and the finalize recheck
+(`validate_osdi_outputs` in [`tools/env_identity.py`](tools/env_identity.py)):
+the manifest must carry the supported `schema=1` and exactly one well-formed
+`output.<model>.osdi=<sha256>` entry for each required model (`psp103`,
+`psp103_nqs`, `r3_cmc`, `mosvar` -- the `MODELS` list of
+[`tools/build-osdi.sh`](tools/build-osdi.sh), kept in agreement by a test), each
+binary must resolve inside the PDK OSDI directory, be readable and hash to its
+entry. Otherwise capture refuses, naming the model: at begin the run exits 3
+having simulated nothing; at finalize it exits 4 with nothing published, so a
+binary replaced or deleted after begin with the manifest untouched no longer
+finalizes. The sidecar schema is unchanged; sidecars minted before this check
+are still verified offline under their existing policy and carry no such
+guarantee.
+
 **Limitation.** This is a before/after comparison, **not an immutable
 snapshot** of the PDK: a file changed and restored before the final check
 is not detected, and the sidecar cannot prove which bytes each individual
@@ -97,7 +113,7 @@ future work. Records minted before this check (and the committed
 such guarantee. The remaining `run_*.sh` benches write no sidecar; the
 resume-capable `cmrr-mismatch/run_cmrr_mismatch_mc.sh` keeps its own
 campaign-manifest input check and is not part of this lifecycle. Offline
-controls: `tools/test_env_identity.py` (the comparison) and
+controls: `tools/test_env_identity.py` (the comparison and OSDI output validation) and
 `tools/test_env_drift_lifecycle.py` (the klt wrapper and both native
 runners, stub solvers, fake install).
 

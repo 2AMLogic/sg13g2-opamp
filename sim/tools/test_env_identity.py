@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import copy
 import json
+import re
 import sys
 import tempfile
 import unittest
@@ -22,7 +23,18 @@ PIN = json.loads((HERE.parent / "pdk.json").read_text(encoding="utf-8"))
 RID = "20260101-000000-abcdef0"
 
 
-def make_install(root: Path, marker: str = "0.3.0", mos_body: str = "* mos tt\n", manifest: str = "schema=1\n") -> Path:
+def osdi_binary(model: str) -> bytes:
+    return f"fake osdi binary for {model}\n".encode()
+
+
+def osdi_manifest(extra: str = "", models=ei.REQUIRED_OSDI_MODELS) -> str:
+    """A build-osdi.sh-shaped manifest whose output hashes match `osdi_binary`."""
+    lines = ["schema=1", "openvaf_tag=fixture"]
+    lines += [f"output.{m}.osdi={ei.sha256_bytes(osdi_binary(m))}" for m in models]
+    return "\n".join(lines) + "\n" + extra
+
+
+def make_install(root: Path, marker: str = "0.3.0", mos_body: str = "* mos tt\n", manifest: str | None = None) -> Path:
     inst = root / "ihp-sg13g2"
     models = inst / ei.MODELS_SUBDIR
     models.mkdir(parents=True)
@@ -33,7 +45,9 @@ def make_install(root: Path, marker: str = "0.3.0", mos_body: str = "* mos tt\n"
     (inst / ".fetched-version").write_text(marker + "\n", encoding="utf-8")
     osdi = inst / "libs.tech/ngspice/osdi"
     osdi.mkdir(parents=True)
-    (osdi / ".build-manifest").write_text(manifest, encoding="utf-8")
+    for m in ei.REQUIRED_OSDI_MODELS:
+        (osdi / f"{m}.osdi").write_bytes(osdi_binary(m))
+    (osdi / ".build-manifest").write_text(osdi_manifest() if manifest is None else manifest, encoding="utf-8")
     return inst
 
 
@@ -72,7 +86,7 @@ class EnvIdentity(unittest.TestCase):
 
     def test_osdi_manifest_change_changes_identity(self):
         a = capture(self.tmp / "a")
-        b = capture(self.tmp / "b", manifest="schema=1\noutput.psp103.osdi=deadbeef\n")
+        b = capture(self.tmp / "b", manifest=osdi_manifest("openvaf_tag=other\n"))
         self.assertNotEqual(a["identity_sha256"], b["identity_sha256"])
 
     def test_tampered_model_hash_is_error(self):
@@ -177,7 +191,7 @@ class Compare(unittest.TestCase):
 
     def test_osdi_manifest_change_is_drift(self):
         before = self.cap()
-        (self.inst / ei.OSDI_MANIFEST_REL).write_text("schema=1\noutput.psp103.osdi=deadbeef\n", encoding="utf-8")
+        (self.inst / ei.OSDI_MANIFEST_REL).write_text(osdi_manifest("openvaf_tag=other\n"), encoding="utf-8")
         errs = ei.compare(before, self.cap())
         self.assertTrue(any("OSDI build-manifest" in e for e in errs), errs)
 
@@ -231,6 +245,99 @@ class Compare(unittest.TestCase):
         bad = self.tmp / "bad.env.json"
         bad.write_text("[]", encoding="utf-8")
         self.assertEqual(self.cli(bad), 1)
+
+
+class OsdiOutputValidation(unittest.TestCase):
+    """#218: the manifest is accepted as identity only if the live binaries satisfy it."""
+
+    def setUp(self) -> None:
+        self._tmp = tempfile.TemporaryDirectory()
+        self.tmp = Path(self._tmp.name)
+        self.inst = make_install(self.tmp)
+        self.osdi = self.inst / ei.OSDI_DIR_REL
+
+    def tearDown(self) -> None:
+        self._tmp.cleanup()
+
+    def cap(self) -> dict:
+        return ei.capture(self.tmp, "ihp-sg13g2", PIN, RID, "ngspice-46")
+
+    def refuses(self, model: str, *needles: str) -> None:
+        with self.assertRaises(ei.IdentityError) as cm:
+            self.cap()
+        msg = str(cm.exception)
+        self.assertIn(f"{model}:", msg)
+        for n in needles:
+            self.assertIn(n, msg)
+
+    def test_unchanged_install_captures_and_verifies(self):
+        self.assertEqual(ei.verify(self.cap(), PIN, RID), [])
+
+    def test_each_replaced_binary_refuses_naming_the_model(self):
+        for m in ei.REQUIRED_OSDI_MODELS:
+            with self.subTest(m):
+                (self.osdi / f"{m}.osdi").write_bytes(b"replaced\n")
+                self.refuses(m, "does not match")
+                (self.osdi / f"{m}.osdi").write_bytes(osdi_binary(m))
+                self.cap()
+
+    def test_each_deleted_binary_refuses(self):
+        for m in ei.REQUIRED_OSDI_MODELS:
+            with self.subTest(m):
+                (self.osdi / f"{m}.osdi").unlink()
+                self.refuses(m, "missing")
+                (self.osdi / f"{m}.osdi").write_bytes(osdi_binary(m))
+
+    def test_unreadable_binary_refuses(self):
+        (self.osdi / "r3_cmc.osdi").unlink()
+        (self.osdi / "r3_cmc.osdi").mkdir()  # a directory is not a binary
+        self.refuses("r3_cmc", "missing")
+
+    def test_each_removed_entry_refuses(self):
+        for m in ei.REQUIRED_OSDI_MODELS:
+            with self.subTest(m):
+                (self.osdi / ".build-manifest").write_text(osdi_manifest(models=[x for x in ei.REQUIRED_OSDI_MODELS if x != m]), encoding="utf-8")
+                self.refuses(m, "no output")
+
+    def test_corrupt_or_duplicate_entry_refuses(self):
+        good = osdi_manifest()
+        for bad in (good.replace(ei.sha256_bytes(osdi_binary("mosvar")), "MISSING"),
+                    good.replace(ei.sha256_bytes(osdi_binary("mosvar")), "abc"),
+                    good + f"output.mosvar.osdi={ei.sha256_bytes(osdi_binary('mosvar'))}\n"):
+            with self.subTest(bad[-40:]):
+                (self.osdi / ".build-manifest").write_text(bad, encoding="utf-8")
+                self.refuses("mosvar", "malformed")
+
+    def test_wrong_hash_refuses(self):
+        good = osdi_manifest()
+        (self.osdi / ".build-manifest").write_text(
+            good.replace(ei.sha256_bytes(osdi_binary("psp103_nqs")), "0" * 64), encoding="utf-8")
+        self.refuses("psp103_nqs", "does not match")
+
+    def test_unsupported_or_missing_schema_refuses(self):
+        for text in (osdi_manifest().replace("schema=1", "schema=2"), "\n".join(osdi_manifest().splitlines()[1:]) + "\n"):
+            with self.subTest(text[:12]):
+                (self.osdi / ".build-manifest").write_text(text, encoding="utf-8")
+                with self.assertRaises(ei.IdentityError) as cm:
+                    self.cap()
+                self.assertIn("unsupported schema", str(cm.exception))
+
+    def test_binary_resolving_outside_osdi_dir_refuses(self):
+        outside = self.tmp / "elsewhere.osdi"
+        outside.write_bytes(osdi_binary("mosvar"))
+        (self.osdi / "mosvar.osdi").unlink()
+        (self.osdi / "mosvar.osdi").symlink_to(outside)
+        self.refuses("mosvar", "outside")
+
+    def test_required_models_agree_with_build_script(self):
+        text = (HERE / "build-osdi.sh").read_text(encoding="utf-8")
+        entries = re.search(r"^MODELS=\((.*)\)\s*$", text, re.MULTILINE).group(1)
+        names = [e.strip('"').split(":")[0] for e in entries.split()]
+        self.assertEqual(sorted(names), sorted(ei.REQUIRED_OSDI_MODELS))
+        schema = re.search(r"^MANIFEST_SCHEMA=(\S+)$", text, re.MULTILINE).group(1)
+        self.assertEqual(schema, ei.OSDI_MANIFEST_SCHEMA)
+        # the script renders exactly the entry shape the validator parses
+        self.assertIn('echo "output.${model}.osdi=', text)
 
 
 if __name__ == "__main__":
