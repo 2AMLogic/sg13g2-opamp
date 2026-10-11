@@ -23,7 +23,7 @@
     },
     "8": {
       "file": "signoff/evidence/characterization.json",
-      "content_hash": "sha256:0e07909d436f06622e7970ad5d8b7e3e8a80f8adfcadd744b560c91ead1a2279"
+      "content_hash": "sha256:9b64e91014ddf75b016a1515d276215c094d84dcf19244dd6901bff40a26996b"
     },
     "9": {
       "file": "signoff/evidence/testbenches.json",
