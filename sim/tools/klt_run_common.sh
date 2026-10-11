@@ -24,7 +24,8 @@
 #                                          -> runs `klt sim`; sets `incomplete`
 #   klt_validate_envelope <out> [<validate args>...]
 #   klt_require_complete                   -> exit 4 if `incomplete` is set
-#   klt_write_envelope <out>               -> copies into records/
+#   klt_write_envelope <out>               -> copies into records/ (+ the
+#                                             <id>.env.json PDK identity sidecar, #191)
 #   KLT_PROVENANCE_EXTRA=(key=value ...)   -> optional, placed before pdk=
 #   klt_compare_and_finish <compare args>...
 #                                          -> compare; exit 0 / 5
@@ -165,6 +166,16 @@ klt_require_complete() {
 
 klt_write_envelope() {
   klt_publish_noclobber "$1" "${RECORDS_DIR}/${RECORD_ID}${RECORD_SUFFIX}.sim.json" || exit 4
+  # Run-time PDK/model identity sidecar (issue #191): one per record id, bound
+  # to it; later suffixed envelopes of the same id reuse the first.
+  local side="${RECORDS_DIR}/${RECORD_ID}.env.json"
+  if [[ ! -e "${side}" ]]; then
+    sg13g2_capture_env_identity "${RECORD_ID}" "${SCRATCH}/${RECORD_ID}.env.json" &&
+      klt_publish_noclobber "${SCRATCH}/${RECORD_ID}.env.json" "${side}" || {
+      echo "run.sh: could not publish the PDK identity sidecar ${side}" >&2
+      exit 4
+    }
+  fi
 }
 
 klt_compare_and_finish() {

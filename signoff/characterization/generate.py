@@ -40,6 +40,9 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 DEFAULT_REPO_ROOT = HERE.parent.parent
+# Shared sidecar contract/helper (issue #191); pure functions, stdlib only.
+sys.path.insert(0, str(DEFAULT_REPO_ROOT / "sim" / "tools"))
+import env_identity  # noqa: E402
 SELECTION_REL = "signoff/characterization/selection.json"
 REPORTS_REL = "signoff/characterization/reports"
 ENVELOPE_REL = "signoff/evidence/characterization.json"
@@ -204,6 +207,8 @@ def load_selection(path: Path) -> dict:
         for cond in rec.get("valid_when", []):
             if not (isinstance(cond, list) and len(cond) == 3 and cond[1] in VALID_OPS):
                 raise SelectionError(f"selection: record {key}: bad valid_when entry {cond!r}")
+        if ("env_sidecar" in rec) != ("env_sidecar_sha256" in rec):
+            raise SelectionError(f"selection: record {key}: `env_sidecar` and `env_sidecar_sha256` go together")
         for name in rec.get("definition_checks", []):
             if name not in DEFINITION_CHECKS:
                 raise SelectionError(f"selection: record {key}: unknown definition check {name!r}")
@@ -303,6 +308,72 @@ def point_is_valid(point: dict, conditions: list) -> str | None:
     return None
 
 
+PROV_LEGACY = "legacy-unverified"
+PROV_VERIFIED = "verified"
+PROV_ERROR = "error"
+SIDECAR_OPTIONAL_KEYS = ("env_sidecar", "env_sidecar_sha256")
+
+
+def check_pdk_provenance(repo: Path, key: str, spec: dict, env: dict, state: dict) -> None:
+    """Bind a selected record to its pinned run-time PDK/model identity sidecar (#191).
+
+    No sidecar selected -> the record is shown as legacy/unverified (its numbers
+    and verdicts are unchanged; provenance is never invented). A sidecar that is
+    selected must exist, match its pin, parse, belong to THIS record and be
+    compatible with the configured baseline, or the record is an ERROR: it can
+    never silently inherit the current PDK label.
+    """
+    prov = state["source"]["pdk_provenance"]
+    errors = state["errors"]
+    rel = spec.get("env_sidecar")
+    if rel is None:
+        if spec.get("env_sidecar_sha256") is not None:
+            errors.append(f"record {key}: `env_sidecar_sha256` is set without an `env_sidecar`")
+            prov["status"] = PROV_ERROR
+        return
+    prov.update({"status": PROV_ERROR, "sidecar": rel if isinstance(rel, str) else None})
+    if not isinstance(rel, str):
+        errors.append(f"record {key}: `env_sidecar` must be a path string")
+        return
+    path = repo / rel
+    if not path.is_file():
+        errors.append(f"record {key}: PDK provenance error: missing environment sidecar {rel}")
+        return
+    actual = sha256_file(path)
+    prov["sidecar_sha256"] = actual
+    if actual != spec.get("env_sidecar_sha256"):
+        errors.append(
+            f"record {key}: PDK provenance error: {rel} does not match its selection pin "
+            f"(pinned {spec.get('env_sidecar_sha256')}, actual {actual}) -- re-select deliberately, never re-read silently"
+        )
+        return
+    try:
+        sidecar = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        errors.append(f"record {key}: PDK provenance error: {rel} is not valid JSON ({exc})")
+        return
+    pin = env.get("pin")
+    if not isinstance(pin, dict):
+        errors.append(f"record {key}: PDK provenance error: no readable PDK pin to check {rel} against")
+        return
+    record_id = Path(spec["csv"]).stem
+    problems = env_identity.verify(sidecar, pin, record_id, env.get("ngspice"))
+    if problems:
+        for problem in problems:
+            errors.append(f"record {key}: PDK provenance error: {rel}: {problem}")
+        return
+    prov.update(
+        {
+            "status": PROV_VERIFIED,
+            "identity_sha256": sidecar["identity_sha256"],
+            "observed_release_marker": sidecar["observed"]["release_marker"],
+            "configured_release": f"{sidecar['configured']['source']} {sidecar['configured']['release_tag']}",
+            "model_files": len(sidecar["models"]["files"]),
+            "osdi_manifest_sha256": sidecar["osdi"]["manifest_sha256"],
+        }
+    )
+
+
 def load_record(repo: Path, key: str, spec: dict, grid: dict, env: dict) -> dict:
     """Read and audit one selected record. Never raises on bad evidence."""
     state = {
@@ -326,6 +397,7 @@ def load_record(repo: Path, key: str, spec: dict, grid: dict, env: dict) -> dict
             "filter": spec.get("filter"),
             "valid_when": spec.get("valid_when", []),
             "definition_checks": spec.get("definition_checks", []),
+            "pdk_provenance": {"status": PROV_LEGACY},
         },
     }
     errors = state["errors"]
@@ -370,6 +442,7 @@ def load_record(repo: Path, key: str, spec: dict, grid: dict, env: dict) -> dict
                 f"{env['ngspice']} -- mixed simulation environments are not "
                 "combined silently"
             )
+    check_pdk_provenance(repo, key, spec, env, state)
     snapshot_norm = normalized_netlist_hash(repo / spec["netlist_snapshot"])
     if env.get("netlist_normalized_sha256") and snapshot_norm != env["netlist_normalized_sha256"]:
         errors.append(
@@ -713,6 +786,26 @@ def evaluate_row(row: dict, records: dict, spec_lines: list[str], inventory: dic
 # report
 
 
+def pdk_provenance_summary(records: dict) -> dict:
+    by_status: dict[str, list[str]] = {}
+    for key, state in sorted(records.items()):
+        by_status.setdefault(state["source"]["pdk_provenance"]["status"], []).append(key)
+    all_verified = bool(records) and set(by_status) == {PROV_VERIFIED}
+    return {
+        "verified": by_status.get(PROV_VERIFIED, []),
+        "legacy_unverified": by_status.get(PROV_LEGACY, []),
+        "error": by_status.get(PROV_ERROR, []),
+        "pdk_reproducibility_verified": all_verified,
+        "note": (
+            "The configured release shown above (sim/pdk.json) is the CONFIGURED release, not run-time evidence. A record is "
+            "`verified` only when its selection pins an environment sidecar (sim/tools/env_identity.py) whose "
+            "model-closure and OSDI identity checks pass and whose configured release matches the current pin; "
+            "`legacy-unverified` records keep their numerical results and electrical verdicts but carry NO "
+            "run-time PDK provenance (it is not invented retroactively -- new runs and new records are needed)"
+        ),
+    }
+
+
 def build_content(repo: Path, selection_path: Path) -> dict:
     repo = repo.resolve()
     selection = load_selection(selection_path)
@@ -732,6 +825,7 @@ def build_content(repo: Path, selection_path: Path) -> dict:
             pdk = json.loads(pdk_path.read_text(encoding="utf-8"))
             env["ngspice"] = pdk["osdi_toolchain"]["ngspice_actually_used"]
             env["pdk"] = f"{pdk['source']} {pdk['release_tag']}"
+            env["pin"] = pdk
         except (ValueError, KeyError, TypeError) as exc:
             global_errors.append(f"{selection['pdk_pin']}: cannot read the ngspice/PDK pin ({exc})")
     netlist = need(selection["design_netlist"])
@@ -803,6 +897,7 @@ def build_content(repo: Path, selection_path: Path) -> dict:
         },
         "comparison_rule": COMPARISON_RULE,
         "environment": {
+            "pdk_provenance": pdk_provenance_summary(records),
             "ngspice_pin": env.get("ngspice"),
             "pdk_pin": env.get("pdk"),
             "pdk_pin_file": selection["pdk_pin"],
@@ -1028,14 +1123,27 @@ def render_markdown(report: dict) -> str:
 
     env = content["environment"]
     w("\n## Sources and environment\n\n")
-    w(f"Simulator pin: `{env['ngspice_pin']}`; PDK pin: {env['pdk_pin']} (`{env['pdk_pin_file']}`); ")
+    w(f"Simulator pin: `{env['ngspice_pin']}`; configured PDK release (not run-time evidence): {env['pdk_pin']} (`{env['pdk_pin_file']}`); ")
     w(f"design netlist `{env['design_netlist']}` (normalized `{_short(env['design_netlist_normalized_sha256'])}`). {env['note']}.\n\n")
-    w("| Record | CSV (sha256) | MD (sha256) | ngspice | Grid | Expected | Observed | Valid |\n")
-    w("|---|---|---|---|---|---|---|---|\n")
+    prov = env.get("pdk_provenance")
+    if prov is None:  # a report minted before issue #191: render, never crash
+        w("PDK provenance: not recorded by this report (it predates the environment-sidecar contract); PDK reproducibility is **NOT claimed**.\n\n")
+    else:
+        w("PDK provenance (separate from the electrical verdicts): ")
+        w(
+            f"verified {len(prov['verified'])} ({', '.join(prov['verified']) or 'none'}); "
+            f"**legacy/unverified {len(prov['legacy_unverified'])}** ({', '.join(prov['legacy_unverified']) or 'none'}); "
+            f"error {len(prov['error'])}. "
+        )
+        claim = "verified for every selected record" if prov["pdk_reproducibility_verified"] else "**NOT claimed** (not every selected record has checked run-time PDK identity)"
+        w(f"PDK reproducibility is {claim}. {prov['note']}.\n\n")
+    w("| Record | CSV (sha256) | MD (sha256) | ngspice | PDK provenance | Grid | Expected | Observed | Valid |\n")
+    w("|---|---|---|---|---|---|---|---|---|\n")
     for key, src in content["sources"].items():
         w(
             f"| {key} | `{src['csv']}` (`{_short(src['csv_sha256'])}`) | `{src['md']}` (`{_short(src['md_sha256'])}`) "
-            f"| {src.get('ngspice') or '—'} | {src['grid']} | {src.get('expected_points', '—')} "
+            f"| {src.get('ngspice') or '—'} | {(src.get('pdk_provenance') or {}).get('status', 'not recorded')}"
+            f"{' (`' + _short(src['pdk_provenance']['identity_sha256']) + '`)' if (src.get('pdk_provenance') or {}).get('identity_sha256') else ''} | {src['grid']} | {src.get('expected_points', '—')} "
             f"| {src.get('observed_points', '—')} | {src.get('valid_points', '—')} |\n"
         )
     w("\nSpec section 2 rows covered: ")

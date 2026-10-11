@@ -103,3 +103,37 @@ This report is cited for **item 8 only**. It is a generic aggregation of
 harness-native records, not a `klt sim` or `klt yield` envelope, and must not
 be cited as item 5 or item 6 evidence; `check_signoff.py` fails if the
 manifest cites it anywhere else.
+
+## PDK provenance (issue #191)
+
+The report's `pdk_pin` is the *configured* release in `sim/pdk.json`; it is not
+evidence of what a run loaded. Each selected record may additionally pin a
+run-time **environment sidecar** (`sim/<bench>/records/<record-id>.env.json`,
+contract and verifier in `sim/tools/env_identity.py`, written by
+`sg13g2_capture_env_identity` when a harness finalizes a record):
+
+- `configured` (what `sim/pdk.json` asserted) is kept apart from `observed`
+  (install `.fetched-version`, ngspice);
+- `models` hashes the resolved `.lib`/`.include` closure of the SPICE model
+  files the run loads, by path relative to the PDK install root, so absolute
+  host paths never define identity and two installs with the same release marker
+  but different model bytes have different `identity_sha256`;
+- `osdi` binds the `sim/tools/build-osdi.sh` build manifest (Verilog-A inputs and
+  compiled outputs).
+
+Selection: add `env_sidecar` and `env_sidecar_sha256` (both, or neither) to a
+`records` entry. Per-record status in the report:
+
+| status | meaning |
+|---|---|
+| `verified` | sidecar pinned, bound to this record, identity recomputes, compatible with the current `sim/pdk.json` release/simulator |
+| `legacy-unverified` | no sidecar selected (every record committed before #191); numbers and electrical verdicts are unchanged, PDK provenance is *not claimed* and is never invented retroactively -- it needs a new run and a new record |
+| `error` | sidecar missing, hash-pin mismatch, malformed, tampered, for another record, or incompatible (e.g. `release_tag` changed after the run): the record's rows grade ERROR, so a configuration change cannot relabel old records as verified |
+
+This is reported separately from the electrical PASS/FAIL. The report states PDK
+reproducibility as claimed only when every selected record is `verified`.
+Validation is offline: no PDK, simulator or network (`python3 -m unittest
+discover -s signoff/characterization`, `-s sim/tools -p test_env_identity.py`).
+Only the `open-loop-ac` harness and the shared klt wrapper
+(`sim/tools/klt_run_common.sh`) write sidecars so far; other bespoke
+`run_*.sh` harnesses are legacy until they call the helper.
