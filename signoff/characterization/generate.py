@@ -48,6 +48,9 @@ import env_identity  # noqa: E402
 # Shared draws-population contract (issue #141); pure functions, stdlib only.
 sys.path.insert(0, str(DEFAULT_REPO_ROOT / "signoff" / "yield-inputs"))
 import offset_draws_to_sampleset as draws_contract  # noqa: E402
+# Shared CMRR sample parser + statistics (issue #174 / #208); stdlib only.
+sys.path.insert(0, str(DEFAULT_REPO_ROOT / "sim" / "cmrr-mismatch"))
+import mc_samples  # noqa: E402
 SELECTION_REL = "signoff/characterization/selection.json"
 REPORTS_REL = "signoff/characterization/reports"
 ENVELOPE_REL = "signoff/evidence/characterization.json"
@@ -100,6 +103,25 @@ DRAWS_AUDIT_RULE = (
     "shrinking it. The negative-control (negctrl) draws are a separate "
     "population: audited on their own draws like every other point's, never "
     "pooled into the mismatch statistics."
+)
+
+SAMPLES_AUDIT_RULE = (
+    "CMRR mismatch statistics audit (issue #208): a record that selects raw "
+    "sample files (`mc_samples`, one sha256-pinned `<point>_mc_samples.txt` per "
+    "grid point) has every published per-point statistic recomputed offline "
+    "from those samples by the SAME function the bench uses "
+    "(sim/cmrr-mismatch/mc_samples.py point_stats): the strict parser (exactly "
+    "one finite OP and one AC record per draw), the op_fail / plateau_fail "
+    "acceptance rules with the pinned thresholds, the accepted/excluded "
+    "counts, the LINEAR-domain Acm mean and N-1 sample sigma, and the DR-0004 "
+    "bound Av0 - 20log10(mean + 3 sigma). Each committed cell must equal the "
+    "recomputed value as the bench serializes it (printf %.6g, six "
+    "significant digits). Av0 is joined from the explicitly selected, "
+    "hash-pinned deterministic record (`av0_join`), never taken from the "
+    "summary. A summary edited coherently (mean, sigma and CMRR together) "
+    "while the pinned samples stay unchanged is an error naming the point and "
+    "field, as is any unparseable, truncated, duplicated or stale-pinned "
+    "population."
 )
 
 NOT_CLAIMED = [
@@ -252,15 +274,52 @@ def load_selection(path: Path) -> dict:
             )
         if rec.get("draws_csv") is not None and not isinstance(rec["draws_csv"], str):
             raise SelectionError(f"selection: record {key}: `draws_csv` must be a path string")
+        if "mc_samples" in rec:
+            _validate_mc_samples_selection(key, rec["mc_samples"], selection["records"])
         for name in rec.get("definition_checks", []):
             if name not in DEFINITION_CHECKS:
                 raise SelectionError(f"selection: record {key}: unknown definition check {name!r}")
-            if DEFINITION_CHECKS[name][1] and rec.get("draws_csv") is None:
+            need = DEFINITION_CHECKS[name][1]
+            if need == "draws" and rec.get("draws_csv") is None:
                 raise SelectionError(
                     f"selection: record {key}: definition check {name!r} verifies a raw "
                     "draws population; name a hash-pinned `draws_csv` beside the summary"
                 )
+            if need == "samples" and rec.get("mc_samples") is None:
+                raise SelectionError(
+                    f"selection: record {key}: definition check {name!r} verifies raw "
+                    "CMRR samples; name hash-pinned `mc_samples` beside the summary"
+                )
     return selection
+
+
+MC_ACCEPTANCE_KEYS = ("op_rail_frac", "op_mid_frac", "plateau_tol_db")
+
+
+def _validate_mc_samples_selection(key: str, ms, records: dict) -> None:
+    """Shape of a record's `mc_samples` pin (a pinned LIST of raw sample files,
+    not the offset-specific draws CSV contract)."""
+    where = f"selection: record {key}: `mc_samples`"
+    if not isinstance(ms, dict):
+        raise SelectionError(f"{where} must be an object")
+    if ms.get("av0_join") not in records:
+        raise SelectionError(f"{where}.av0_join must name a selected record")
+    acc = ms.get("acceptance")
+    if not isinstance(acc, dict) or sorted(acc) != sorted(MC_ACCEPTANCE_KEYS):
+        raise SelectionError(f"{where}.acceptance must have exactly {list(MC_ACCEPTANCE_KEYS)}")
+    for name, text in acc.items():
+        try:
+            if not math.isfinite(float(text)) or float(text) < 0:
+                raise ValueError
+        except (TypeError, ValueError) as exc:
+            raise SelectionError(f"{where}.acceptance.{name} must be a non-negative number string") from exc
+    files = ms.get("files")
+    if not isinstance(files, dict) or not files:
+        raise SelectionError(f"{where}.files must be a non-empty object of point_id -> pinned file")
+    for pid, entry in files.items():
+        if not (isinstance(entry, dict) and isinstance(entry.get("path"), str)
+                and isinstance(entry.get("sha256"), str)):
+            raise SelectionError(f"{where}.files[{pid!r}] needs string `path` and `sha256` (a sample file is never named without its pin)")
 
 
 # --------------------------------------------------------------------------
@@ -285,6 +344,58 @@ def _check_cmrr_linear(point: dict, draws) -> str | None:
             f"cmrr_3sigma_db {stated} != Av0 - 20log10(mean + 3 sigma) = {derived:.6f} "
             "(the linear-domain definition DR-0004 ratifies)"
         )
+    return None
+
+
+def _check_cmrr_mc_statistics(point: dict, pop: dict | None) -> str | None:
+    """Every published CMRR mismatch statistic must follow from the pinned raw
+    samples (SAMPLES_AUDIT_RULE), with Av0 joined from the pinned
+    deterministic record. `pop` is the loaded population (see load_record)."""
+    if pop is None:
+        return "cannot evaluate (no sample population available)"
+    pid = (point.get("point_id") or "").strip()
+    entry = pop["points"].get(pid)
+    if entry is None:
+        return "cannot evaluate (no pinned sample file for this point)"
+    av0 = pop["av0"].get(pid)
+    if av0 is None:
+        return f"cannot evaluate (no Av0 row for this point in the joined record {pop['join_csv']})"
+    try:
+        vdd = float(point["vdd_v"])
+    except (KeyError, ValueError) as exc:
+        return f"cannot evaluate ({exc})"
+    acc = pop["acceptance"]
+    stated_av0, why = parse_decimal(point.get("av0_db"))
+    if stated_av0 is None:
+        return f"av0_db: {why}"
+    if stated_av0 != Decimal(format(av0, ".6g")):
+        return (
+            f"av0_db {stated_av0} is not the Av0 {format(av0, '.6g')} of the pinned join "
+            f"record {pop['join_csv']} (the summary may not carry its own Av0)"
+        )
+    vcm = vdd / 2.0
+    problem = _serialized_stat_problem("vcm_v", point.get("vcm_v"), vcm, 6)
+    if problem:
+        return problem
+    try:
+        st = mc_samples.point_stats(
+            entry["n"], entry["ops"], entry["acs"], av0, vdd, vcm,
+            acc["op_rail_frac"], acc["op_mid_frac"], acc["plateau_tol_db"],
+        )
+    except mc_samples.SampleError as exc:
+        return f"pinned samples give no statistics ({exc})"
+    for field in ("mc_n", "mc_n_ok", "mc_n_excluded", "op_fail", "plateau_fail"):
+        cell = (point.get(field) or "").strip()
+        if cell != str(st[field]):
+            return f"{field} {cell!r} != {st[field]} counted from the pinned samples"
+    for field in (
+        "acm_lin_mean", "acm_lin_sigma", "acm_plus_3sigma_db", "cmrr_3sigma_db",
+        "cmrr_db_mean", "cmrr_db_p01", "cmrr_db_min", "cmrr_1khz_3sigma_db",
+        "plateau_max_db",
+    ):
+        problem = _serialized_stat_problem(field, point.get(field), st[field], 6)
+        if problem:
+            return problem
     return None
 
 
@@ -317,17 +428,18 @@ def _check_offset_magnitude(point: dict, draws) -> str | None:
 # field.
 
 
-def _serialized_stat_problem(field: str, cell: str | None, recomputed: float) -> str | None:
-    """Why `cell` is not `recomputed` at the bench's printf %.9g precision."""
+def _serialized_stat_problem(field: str, cell: str | None, recomputed: float, digits: int = 9) -> str | None:
+    """Why `cell` is not `recomputed` at the bench's printf %.<digits>g precision."""
     value, why = parse_decimal(cell)
     if value is None:
         return f"{field}: {why}"
-    printed = Decimal(format(recomputed, ".9g"))
+    printed = Decimal(format(recomputed, f".{digits}g"))
     if value != printed:
         return (
-            f"{field} {value} is not {printed} recomputed from the pinned draws "
-            "(the bench writes this statistic with printf %.9g; the cell must be "
-            "that serialization, with no tolerance beyond its nine digits)"
+            f"{field} {value} is not {printed} recomputed from the pinned "
+            f"{'draws' if digits == 9 else 'samples'} "
+            f"(the bench writes this statistic with printf %.{digits}g; the cell must be "
+            f"that serialization, with no tolerance beyond its {digits} digits)"
         )
     return None
 
@@ -402,9 +514,10 @@ def _check_offset_mc_statistics(point: dict, draws: dict | None) -> str | None:
 # its own problems (point, line, reason) as record errors.
 DEFINITION_CHECKS = {
     "cmrr_linear_3sigma": (_check_cmrr_linear, False),
+    "cmrr_mc_statistics": (_check_cmrr_mc_statistics, "samples"),
     "slew_worse_edge": (_check_slew_worse_edge, False),
     "offset_magnitude": (_check_offset_magnitude, False),
-    "offset_mc_statistics": (_check_offset_mc_statistics, True),
+    "offset_mc_statistics": (_check_offset_mc_statistics, "draws"),
 }
 
 
@@ -514,7 +627,87 @@ def check_pdk_provenance(repo: Path, key: str, spec: dict, env: dict, state: dic
     )
 
 
-def load_record(repo: Path, key: str, spec: dict, grid: dict, env: dict) -> dict:
+def _load_sample_population(repo: Path, key: str, ms: dict, expected: list, records: dict, errors: list) -> dict | None:
+    """Pin-check and strictly parse each grid point's raw sample file, and join
+    Av0 from the pinned deterministic record. None when anything is wrong."""
+    n_err = len(errors)
+    files = ms["files"]
+    expected_ids = [pid for pid, _ in expected]
+    for pid in sorted(set(files) - set(expected_ids)):
+        errors.append(f"record {key}: samples pinned for {pid!r}, which is outside the expected grid")
+    points: dict = {}
+    for pid in expected_ids:
+        entry = files.get(pid)
+        if entry is None:
+            errors.append(f"record {key}: point {pid}: no pinned sample file (every grid point needs one)")
+            continue
+        path = repo / entry["path"]
+        if not path.is_file():
+            errors.append(f"record {key}: point {pid}: missing sample file {entry['path']}")
+            continue
+        actual = sha256_file(path)
+        if actual != entry["sha256"]:
+            errors.append(
+                f"record {key}: point {pid}: {entry['path']} does not match its selection pin "
+                f"(pinned {entry['sha256']}, actual {actual}) -- re-select deliberately, "
+                "never re-read silently"
+            )
+            continue
+        try:
+            n, ops, acs = mc_samples.read_samples(str(path))
+        except (mc_samples.SampleError, OSError, UnicodeDecodeError) as exc:
+            errors.append(f"record {key}: point {pid}: invalid sample population: {exc}")
+            continue
+        points[pid] = {"n": n, "ops": ops, "acs": acs}
+    # Av0 join: the explicitly selected deterministic record, by pin.
+    join_key = ms["av0_join"]
+    join = records.get(join_key)
+    av0: dict[str, float] = {}
+    if join is None:
+        errors.append(f"record {key}: av0_join {join_key!r} is not a selected record")
+        join_csv = None
+    else:
+        join_csv = join.get("csv")
+        jpath = repo / join_csv if isinstance(join_csv, str) else None
+        if jpath is None or not jpath.is_file():
+            errors.append(f"record {key}: Av0 join record {join_csv} is missing")
+        elif sha256_file(jpath) != join.get("csv_sha256"):
+            errors.append(f"record {key}: Av0 join record {join_csv} does not match its selection pin")
+        else:
+            try:
+                _, jrows = read_csv_rows(jpath)
+            except (OSError, UnicodeDecodeError, csv.Error) as exc:
+                errors.append(f"record {key}: cannot parse Av0 join record {join_csv} ({exc})")
+                jrows = []
+            for row in jrows:
+                jid = (row.get("point_id") or "").strip()
+                try:
+                    value = float(row["av0_db"])
+                except (KeyError, TypeError, ValueError):
+                    continue
+                if not math.isfinite(value):
+                    continue
+                if jid in av0:
+                    errors.append(f"record {key}: Av0 join record {join_csv}: duplicate point {jid}")
+                av0[jid] = value
+            for pid in expected_ids:
+                if pid not in av0:
+                    errors.append(f"record {key}: point {pid}: no finite Av0 in the joined record {join_csv}")
+    if len(errors) > n_err:
+        return None
+    return {
+        "points": points,
+        "av0": av0,
+        "join_csv": join_csv,
+        "acceptance": {
+            "op_rail_frac": float(ms["acceptance"]["op_rail_frac"]),
+            "op_mid_frac": float(ms["acceptance"]["op_mid_frac"]),
+            "plateau_tol_db": float(ms["acceptance"]["plateau_tol_db"]),
+        },
+    }
+
+
+def load_record(repo: Path, key: str, spec: dict, grid: dict, env: dict, records: dict | None = None) -> dict:
     """Read and audit one selected record. Never raises on bad evidence."""
     state = {
         "key": key,
@@ -704,15 +897,33 @@ def load_record(repo: Path, key: str, spec: dict, grid: dict, env: dict) -> dict
                         }
                     )
 
+    # 3c. raw CMRR sample population (issue #208): every grid point's sample
+    # file is pinned, strictly parsed, and Av0 is joined from the pinned
+    # deterministic record. Problems are point-specific record errors.
+    sample_pop: dict | None = None
+    ms = spec.get("mc_samples")
+    if ms is not None:
+        sample_pop = _load_sample_population(repo, key, ms, expected, records or {}, errors)
+        src["samples"] = {
+            "status": "verified" if sample_pop is not None else "error",
+            "files": len(ms["files"]),
+            "pins_sha256": sha256_bytes(canonical_json(ms["files"]).encode("utf-8")),
+            "av0_join": ms["av0_join"],
+            "acceptance": ms["acceptance"],
+        }
+        if sample_pop is not None:
+            src["samples"]["draws"] = sum(e["n"] for e in sample_pop["points"].values())
+
     # 4. validity flags and definitions, per point
     conditions = spec.get("valid_when", [])
 
     def run_definition_checks(pid: str, row: dict) -> None:
         for name in spec.get("definition_checks", []):
-            check, needs_draws = DEFINITION_CHECKS[name]
-            if needs_draws and draws_pass is None:
+            check, needs = DEFINITION_CHECKS[name]
+            pop = {"draws": draws_pass, "samples": sample_pop}.get(needs)
+            if needs and pop is None:
                 continue  # the population load above already reported why
-            problem = check(row, draws_pass)
+            problem = check(row, pop)
             if problem:
                 errors.append(f"record {key}: point {pid} fails definition check {name}: {problem}")
 
@@ -1134,7 +1345,7 @@ def build_content(repo: Path, selection_path: Path) -> dict:
     inventory = parse_inventory(inventory_path) if inventory_path else {}
 
     records = {
-        key: load_record(repo, key, spec, selection["grids"][spec["grid"]], env)
+        key: load_record(repo, key, spec, selection["grids"][spec["grid"]], env, selection["records"])
         for key, spec in sorted(selection["records"].items())
     }
     rows = [evaluate_row(row, records, spec_lines, inventory, selection) for row in selection["rows"]]
@@ -1194,6 +1405,7 @@ def build_content(repo: Path, selection_path: Path) -> dict:
         },
         "comparison_rule": COMPARISON_RULE,
         "draws_audit_rule": DRAWS_AUDIT_RULE,
+        "samples_audit_rule": SAMPLES_AUDIT_RULE,
         "environment": {
             "pdk_provenance": pdk_provenance_summary(records),
             "ngspice_pin": env.get("ngspice"),
@@ -1436,6 +1648,12 @@ def render_markdown(report: dict) -> str:
         claim = "verified for every selected record" if prov["pdk_reproducibility_verified"] else "**NOT claimed** (not every selected record has checked run-time PDK identity)"
         w(f"PDK reproducibility is {claim}. {prov['note']}.\n\n")
     def _draws_cell(src: dict) -> str:
+        samples = src.get("samples")
+        if samples:
+            cell = f"{samples['files']} pinned sample files (`{_short(samples['pins_sha256'])}`, {samples['status']}"
+            if samples["status"] == "verified":
+                cell += f": {samples['draws']} draws; Av0 joined from `{samples['av0_join']}`"
+            return cell + ")"
         draws = src.get("draws")
         if not draws:
             return "—"
@@ -1459,6 +1677,9 @@ def render_markdown(report: dict) -> str:
     draws_rule = content.get("draws_audit_rule")
     if draws_rule and any(src.get("draws") for src in content["sources"].values()):
         w(f"\n{draws_rule}\n\n")
+    samples_rule = content.get("samples_audit_rule")
+    if samples_rule and any(src.get("samples") for src in content["sources"].values()):
+        w(f"\n{samples_rule}\n\n")
     w("\nSpec section 2 rows covered: ")
     w(", ".join(f"{r['row']}{'' if r['covered'] else ' (NOT COVERED)'}" for r in content["spec_coverage"]) + ".\n")
     w("Item 9 inventory rows covered: ")
