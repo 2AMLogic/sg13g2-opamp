@@ -61,8 +61,9 @@ run-time identity sidecar, `records/<record-id>.env.json` (contract and
 verifier in [`tools/env_identity.py`](tools/env_identity.py), issue #191),
 pins the hashed SPICE model/include closure the run loads, the OSDI
 `.build-manifest`, the observed release marker (`.fetched-version`), the
-ngspice build and the configured `source`/`release_tag`/`variant`. Two code
-paths mint one today: `open-loop-ac/run_pvt_sweep.sh` and the shared
+ngspice build and the configured `source`/`release_tag`/`variant`. Three code
+paths mint one today: `open-loop-ac/run_pvt_sweep.sh`, the native
+`input-noise/run_noise_sweep.sh` (issue #214) and the shared
 `klt sim` wrapper lifecycle (`tools/klt_run_common.sh`, used by the
 `output-swing`, `input-noise`, `cmrr-psrr` and `slew-rate` `klt/run.sh`).
 
@@ -78,9 +79,10 @@ persistent change — a used model/include byte, the closure, the OSDI
 manifest, the release marker, ngspice or the configured pin — the run exits
 4 with a diagnostic naming what changed, and publishes nothing that looks
 finalized: no sidecar and no `records/<id>.sim.json` / `.compare.json` for a
-klt wrapper; no `records/<id>.csv` / `.md` / `.env.json` for
-`run_pvt_sweep.sh`. Its incomplete artifacts stay for inspection (the klt
-scratch dir, or `corners/<id>/` plus `records/<id>.csv.raw`, and the begin
+klt wrapper; no `records/<id>.csv` / `.md` / `.env.json` for the native
+`run_pvt_sweep.sh` / `run_noise_sweep.sh`. Its incomplete artifacts stay for
+inspection (the klt scratch dir, or `corners/<id>/` plus
+`records/<id>.csv.raw`, and the begin
 capture in the scratch dir named on stderr). A failed begin capture exits 3
 before anything is simulated. Re-run under a fresh record id once the
 environment is stable.
@@ -92,12 +94,12 @@ solver invocation read. Copying the install into a per-run snapshot would
 close that gap at the cost of storage and lifecycle scope; it is deliberate
 future work. Records minted before this check (and the committed
 `legacy-unverified` records without any sidecar) are unchanged and carry no
-such guarantee. The other `run_*.sh` benches write no sidecar; the
+such guarantee. The remaining `run_*.sh` benches write no sidecar; the
 resume-capable `cmrr-mismatch/run_cmrr_mismatch_mc.sh` keeps its own
 campaign-manifest input check and is not part of this lifecycle. Offline
 controls: `tools/test_env_identity.py` (the comparison) and
-`tools/test_env_drift_lifecycle.py` (both runners, stub solvers, fake
-install).
+`tools/test_env_drift_lifecycle.py` (the klt wrapper and both native
+runners, stub solvers, fake install).
 
 ## OSDI device models
 

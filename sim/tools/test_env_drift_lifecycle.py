@@ -4,7 +4,7 @@ A record's run-time PDK/model identity (sim/tools/env_identity.py, #191) is
 captured BEFORE the first solver (sg13g2_env_identity_begin) and rechecked
 against a fresh capture immediately before the record is finalized
 (sg13g2_env_identity_finalize, sim/env-identity.sh). These tests drive the
-REAL lifecycle helpers through two representative runners against a fake
+REAL lifecycle helpers through three representative runners against a fake
 PDK install, with stub solvers that can change the install mid-run:
 
   * KltRunner     -- the real sim/tools/klt_run_common.sh (the four
@@ -13,7 +13,11 @@ PDK install, with stub solvers that can change the install mid-run:
   * OpenLoopRunner -- the real sim/open-loop-ac/run_pvt_sweep.sh, copied
                      with its real sim/preflight.sh, env.sh, record-paths.sh
                      and env-identity.sh into a throwaway tree, with a stub
-                     `ngspice` and a stub sim/tools/build-osdi.sh.
+                     `ngspice` and a stub sim/tools/build-osdi.sh;
+  * NativeNoiseRunner -- the real sim/input-noise/run_noise_sweep.sh, the
+                     same throwaway-tree setup, with a stub `ngspice` that
+                     can drift the install at the units check or at a DUT
+                     solve (issue #214).
 
 No PDK download, ngspice, OSDI build or klt is needed; `date` and `git` are
 shadowed so record ids are deterministic. Stdlib unittest:
@@ -138,6 +142,59 @@ echo "OP_VIBIAS ${half}"
 echo "OP_IVDD 2e-05"
 exit 0
 """
+
+# The input-noise bench's stub solver. Deck layout the real runner relies
+# on, mirrored by NOISE_TMPL below: the units-check deck (named
+# *tb_noise_units_check*) is the FIRST `-b` invocation, each DUT point is a
+# rendered template carrying one `Vdd` line and two `wrdata` lines whose
+# first output path is the in-band spectrum CSV the sweep post-processes
+# (81 swept points, (scale,value) column pairs).
+#
+# MUTATE_UNITS_FILE/TEXT mutate the install at the units check only;
+# MUTATE_FILE/TEXT (the shared MUTATE_SH) at a DUT solve only. NGSPICE_LOG
+# records every `-b` deck path, so a test can prove a solver never ran.
+STUB_NOISE_NGSPICE = "#!/usr/bin/env bash\n" + r"""
+if [[ "$1" == "-v" ]]; then
+  printf '******\n** ngspice-46 : Circuit level simulation program (stub)\n'
+  exit 0
+fi
+[[ "$1" == "-b" ]] || exit 2
+netlist="$2"
+echo "${netlist}" >> "${NGSPICE_LOG}"
+if [[ "${netlist}" == *tb_noise_units_check* ]]; then
+  if [[ -n "${MUTATE_UNITS_FILE:-}" ]]; then printf '%s' "${MUTATE_UNITS_TEXT}" > "${MUTATE_UNITS_FILE}"; fi
+  echo "UNITS_INOISE_SPECTRUM 4.0704e-09"
+  echo "UNITS_ONOISE_SPECTRUM 4.0704e-07"
+  echo "UNITS_INOISE_TOTAL 3.86146e-07"
+  exit 0
+fi
+""" + MUTATE_SH + r"""
+vdd="$(awk '/^Vdd /{print $5}' "${netlist}")"
+noise_csv="$(awk '/^wrdata /{print $2; exit}' "${netlist}")"
+half="$(awk -v v="${vdd}" 'BEGIN{print v/2}')"
+awk 'BEGIN{for(i=0;i<81;i++){f=100*10^(i/20); printf "%.12g %g %.12g %g\n", f, 1e-6, f, 1e-6}}' > "${noise_csv}"
+echo "OP_VOUT ${half}"
+echo "OP_VD1 ${half}"
+echo "OP_VD2 ${half}"
+echo "OP_VTAIL ${half}"
+echo "OP_VIBIAS ${half}"
+echo "OP_IVDD 2e-05"
+echo "NOISE_INOISE_TOTAL 9.9995e-04"
+echo "AC_CLGAIN_100HZ 1.0"
+echo "AC_CLGAIN_1MHZ 1.0"
+exit 0
+"""
+
+# Minimal stand-in for testbench/tb_noise.spice.tmpl: the runner only
+# renders it (shared sed substitutions plus @@NOISE_CSV@@/@@NOISE_WIDE_CSV@@)
+# and hands the result to the stub solver, which reads the two lines above.
+NOISE_TMPL = """\
+* stub noise testbench (offline lifecycle test)
+Vdd vdd 0 dc @@VDD_V@@
+wrdata @@NOISE_CSV@@ inoise_spectrum onoise_spectrum
+wrdata @@NOISE_WIDE_CSV@@ inoise_spectrum onoise_spectrum
+"""
+
 
 STUB_BIN = {
     # Deterministic record ids for the real record-paths.sh.
@@ -381,6 +438,118 @@ class OpenLoopRunner(unittest.TestCase):
         self.assertEqual((self.bench / "records" / f"{rid3}.env.json").read_text(), self.t.capture(rid3))
         # The first record is untouched throughout.
         self.assertEqual(self.record_files(RID), [f"{RID}.csv", f"{RID}.env.json", f"{RID}.md"])
+
+
+class NativeNoiseRunner(unittest.TestCase):
+    """The real sim/input-noise/run_noise_sweep.sh with a stub ngspice."""
+
+    def setUp(self) -> None:
+        self._tmp = tempfile.TemporaryDirectory()
+        self.t = Tree(self._tmp.name)
+        for name in ("preflight.sh", "env.sh", "record-paths.sh", "env-identity.sh"):
+            shutil.copy2(SIM_DIR / name, self.t.sim / name)
+        _write_exec(self.t.sim / "tools" / "build-osdi.sh", "#!/usr/bin/env bash\nexit 0\n")
+        self.bench = self.t.sim / "input-noise"
+        (self.bench / "testbench").mkdir(parents=True)
+        shutil.copy2(SIM_DIR / "input-noise" / "run_noise_sweep.sh", self.bench / "run_noise_sweep.sh")
+        # The per-point post-processing the runner shells out to (#213): it
+        # validates the stub solver's spectrum like the real one.
+        shutil.copy2(SIM_DIR / "input-noise" / "noise_post.py", self.bench / "noise_post.py")
+        (self.bench / "testbench" / "tb_noise.spice.tmpl").write_text(NOISE_TMPL, encoding="utf-8")
+        (self.bench / "testbench" / "tb_noise_units_check.spice").write_text(
+            "* stub units-check deck -- the stub solver answers for it\n", encoding="utf-8")
+        (self.t.root / "design" / "netlist").mkdir(parents=True)
+        (self.t.root / "design" / "netlist" / "opamp_core.spice").write_text("* stub DUT\n", encoding="utf-8")
+        _write_exec(self.t.bin / "ngspice", STUB_NOISE_NGSPICE)
+        for name, text in STUB_BIN.items():
+            _write_exec(self.t.bin / name, text)
+        self.log = self.t.root / "ngspice.log"
+
+    def tearDown(self) -> None:
+        self._tmp.cleanup()
+
+    def run_sweep(self, ts: str = TS, **env) -> subprocess.CompletedProcess:
+        return subprocess.run(["bash", str(self.bench / "run_noise_sweep.sh")],
+                              env=self.t.env(FAKE_TS=ts, NGSPICE_LOG=str(self.log), **env),
+                              capture_output=True, text=True, timeout=300)
+
+    def record_files(self, rid: str) -> list[str]:
+        return sorted(p.name for p in (self.bench / "records").glob(f"{rid}*"))
+
+    def solver_calls(self) -> int:
+        return len(self.log.read_text().splitlines()) if self.log.exists() else 0
+
+    def test_stable_run_publishes_the_begin_capture(self):
+        r = self.run_sweep()
+        self.assertEqual(r.returncode, 0, r.stderr)
+        # One units check + one DUT solve per grid point (5 x 3 x 3).
+        self.assertEqual(self.solver_calls(), 46)
+        # The record is finalized: csv + md + the sidecar, which is the
+        # ORIGINAL begin capture byte for byte.
+        self.assertEqual(self.record_files(RID), [f"{RID}.csv", f"{RID}.env.json", f"{RID}.md"])
+        self.assertEqual((self.bench / "records" / f"{RID}.env.json").read_text(), self.t.capture())
+        self.assertIn(f"{RID}.env.json", (self.bench / "records" / f"{RID}.md").read_text())
+        self.assertEqual(list(self.t.tmp.iterdir()), [])  # scratch cleaned on success
+
+    def test_failed_begin_capture_aborts_before_any_solver(self):
+        # An install whose model closure cannot be resolved: preflight's own
+        # guards pass, but the begin capture refuses -- so the units check
+        # and every DUT solve must be skipped and nothing finalized.
+        self.t.live(MOS_INC).unlink()
+        r = self.run_sweep()
+        self.assertEqual(r.returncode, 3, r.stderr)
+        self.assertIn("refusing to start", r.stderr)
+        self.assertIn("nothing was simulated", r.stderr)
+        self.assertEqual(self.solver_calls(), 0)
+        self.assertEqual(self.record_files(RID), [])
+
+    def test_units_check_drift_refuses_finalization(self):
+        path, text, needle = mutations(self.t)["used model include"]
+        begin = self.t.capture()
+        r = self.run_sweep(MUTATE_UNITS_FILE=str(path), MUTATE_UNITS_TEXT=text)
+        self.assertEqual(r.returncode, 4, r.stderr)
+        self.assertIn("DRIFTED", r.stderr)
+        self.assertIn(needle, r.stderr)
+        self.assertIn("refusing to finalize", r.stderr)
+        # Nothing finalized-looking: the raw results stay provisional and
+        # the corners/ inspection artifacts (units check + point logs) are
+        # kept, but no .csv / .md / .env.json exists.
+        self.assertEqual(self.record_files(RID), [f"{RID}.csv.raw"])
+        corners = self.bench / "corners" / RID
+        self.assertTrue((corners / "units_check.log").is_file())
+        self.assertTrue(any(corners.glob("mos_*_noise.csv")))
+        scratch = list(self.t.tmp.iterdir())
+        self.assertEqual(len(scratch), 1)
+        self.assertEqual((scratch[0] / f"{RID}.env.json").read_text(), begin)
+
+    def test_dut_solve_drift_refuses_finalization(self):
+        path, text, needle = mutations(self.t)["OSDI manifest"]
+        r = self.run_sweep(MUTATE_FILE=str(path), MUTATE_TEXT=text)
+        self.assertEqual(r.returncode, 4, r.stderr)
+        self.assertIn("DRIFTED", r.stderr)
+        self.assertIn(needle, r.stderr)
+        self.assertEqual(self.record_files(RID), [f"{RID}.csv.raw"])
+        self.assertEqual(self.solver_calls(), 46)  # every point ran; publication is what was refused
+        scratch = list(self.t.tmp.iterdir())
+        self.assertEqual(len(scratch), 1)  # begin capture kept for inspection
+
+    def test_rerun_after_refusal_finalizes_under_the_new_identity(self):
+        path, text, _ = mutations(self.t)["used model include"]
+        old = self.t.capture()
+        self.assertEqual(self.run_sweep(MUTATE_FILE=str(path), MUTATE_TEXT=text).returncode, 4)
+        rid2_files = self.record_files(RID)
+        self.assertEqual(rid2_files, [f"{RID}.csv.raw"])  # the refusal left only inspection artifacts
+        # A fresh id, run once the environment is stable again, finalizes
+        # under the identity it actually started with -- and never touches
+        # the refused run's artifacts.
+        ts2 = "20260101-000100"
+        rid2 = f"{ts2}-{SHA}"
+        r = self.run_sweep(ts2)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        side = (self.bench / "records" / f"{rid2}.env.json").read_text()
+        self.assertEqual(side, self.t.capture(rid2))
+        self.assertNotEqual(side, old)
+        self.assertEqual(self.record_files(RID), rid2_files)
 
 
 if __name__ == "__main__":
