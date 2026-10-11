@@ -250,22 +250,74 @@ jobs:
           xschem --version 2>&1 | head -1
 
       - name: Fetch the SG13G2 release pinned by sim/pdk.json
-        run: |
-          set -euo pipefail
-          tag="$(python3 -c "import json;print(json.load(open('sim/pdk.json'))['release_tag'])")"
-          url="$(python3 -c "import json;print(json.load(open('sim/pdk.json'))['release_url'])")"
-          root="${RUNNER_TEMP}/pdk"
-          mkdir -p "${root}/ihp-sg13g2" "${RUNNER_TEMP}/dl"
-          curl -fsSL -o "${RUNNER_TEMP}/dl/pdk.tar.gz" "${url}"
-          # release tarball root is IHP-Open-PDK-<version>/ihp-sg13g2/...
-          tar -xzf "${RUNNER_TEMP}/dl/pdk.tar.gz" -C "${root}/ihp-sg13g2" \
-            --strip-components=2 --wildcards '*/ihp-sg13g2/*'
-          echo "${tag#v}" > "${root}/ihp-sg13g2/.fetched-version"
-          test -d "${root}/ihp-sg13g2/libs.tech/xschem"
-          echo "PDK_ROOT=${root}" >> "${GITHUB_ENV}"
-          echo "PDK=ihp-sg13g2" >> "${GITHUB_ENV}"
+        # Shared with the layout-regen job below (issue #201): same fetch,
+        # same fail-closed checks, one implementation.
+        uses: ./.github/actions/setup-sg13g2-pdk
 
       - name: Regenerate the netlist and compare (check mode)
         # Prints the xschem and PDK versions used. Exit 1 = circuit diff,
         # 2 = tool/provisioning failure.
         run: python3 design/check_netlist_regen.py
+
+  layout-regen:
+    # Byte-for-byte layout regeneration (issue #201). Separate from the
+    # `signoff` job because it needs the pinned PDK and its own klt, and
+    # separate from `netlist-regen` because the toolchains differ: this one
+    # installs the klayout revision the committed bytes were *drawn* with
+    # (layout/README.md's revision table: KLayout 0.30.10 for builder.py)
+    # plus `klt` at layout/klt-pin.txt -- deliberately NOT the signoff
+    # grading pin in signoff/klt-pin.txt. Any provisioning, generation or
+    # comparison failure fails the job; it is never treated as a match.
+    # Never writes layout/opamp_core/ (--check regenerates into a temp dir).
+    name: Layout regenerates the committed GDS byte-for-byte (klt @ layout pin + pinned PDK)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+
+      - name: Fetch the SG13G2 release pinned by sim/pdk.json
+        uses: ./.github/actions/setup-sg13g2-pdk
+
+      - name: Install the layout generation toolchain (isolated from the signoff grading pin)
+        # Two environments, mirroring the host the committed bytes were
+        # produced on (layout/README.md revision table): the job interpreter
+        # carries the `klayout` python package builder.py imports (0.30.10),
+        # and `klt` lives in its own venv with whatever klayout its own
+        # dependency resolution pulls in (0.30.12 at the recorded pin --
+        # the report's klayout_version_mismatch disclosure). Only a `klt`
+        # shim is put on PATH, so `python3` keeps resolving to the job
+        # interpreter and the two environments cannot leak into each other.
+        run: |
+          set -euo pipefail
+          pin="$(grep -v '^[[:space:]]*#' layout/klt-pin.txt | grep -v '^[[:space:]]*$' | head -1)"
+          python3 -m pip install --upgrade pip
+          python3 -m pip install "klayout==0.30.10"
+          python3 -m venv "${RUNNER_TEMP}/klt-layout-venv"
+          "${RUNNER_TEMP}/klt-layout-venv/bin/pip" install \
+            "klayout-tools @ git+https://github.com/2AMLogic/klayout-tools@${pin}"
+          mkdir -p "${RUNNER_TEMP}/klt-bin"
+          ln -s "${RUNNER_TEMP}/klt-layout-venv/bin/klt" "${RUNNER_TEMP}/klt-bin/klt"
+          echo "${RUNNER_TEMP}/klt-bin" >> "${GITHUB_PATH}"
+
+      - name: Log the resolved generation provenance
+        # The exact versions this --check run is reproducible against; the
+        # revision table in layout/README.md documents what the committed
+        # bytes were produced with, and these two sets must agree.
+        run: |
+          set -euo pipefail
+          echo "layout klt pin: $(grep -v '^[[:space:]]*#' layout/klt-pin.txt | grep -v '^[[:space:]]*$' | head -1)"
+          echo "klt: $(klt version)"
+          echo "builder python: $(python3 --version 2>&1)"
+          echo "builder klayout: $(python3 -m pip show klayout | sed -n 's/^Version: //p')"
+          echo "klt-env klayout: $("${RUNNER_TEMP}/klt-layout-venv/bin/pip" show klayout | sed -n 's/^Version: //p')"
+          echo "PDK release: $(cat "${PDK_ROOT}/ihp-sg13g2/.fetched-version") at ${PDK_ROOT}/ihp-sg13g2"
+
+      - name: Regenerate the layout and compare (check mode)
+        # Exit 1 on any drift: GDS bytes vs the committed stream,
+        # DRC status/violation_count/coverage vs the committed report.
+        run: |
+          set -euo pipefail
+          python3 layout/opamp_core/generate.py --check

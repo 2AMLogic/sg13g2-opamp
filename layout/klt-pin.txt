@@ -1,0 +1,24 @@
+# The klayout-tools revision the committed layout under opamp_core/ was
+# generated (and is byte-for-byte re-generated) with.
+#
+# This is deliberately NOT signoff/klt-pin.txt. That pin governs how the T1
+# register is *graded* (the checklist skeleton it parses); this one governs
+# how the layout *evidence* is produced -- `klt gen` draws the devices, so a
+# different revision can move the bytes. The two are independent on purpose;
+# see layout/README.md's revision table and its "What CI actually enforces"
+# section.
+#
+# Value: the v0.6.0 tag commit. layout/README.md's revision table records
+# `klt 0.6.0` (read back from opamp_core/drc_report.json's own
+# provenance.klt_version); this file makes the same fact an installable,
+# immutable pin. CI installs exactly this revision into its own environment
+# (separate from the job interpreter, which carries the klayout release
+# builder.py was recorded against) and runs
+# `python3 layout/opamp_core/generate.py --check` with it on every push and
+# PR (.github/workflows/signoff.yml, layout-regen job).
+#
+# Bumping this pin is a deliberate act: bump the rev, re-run --check
+# locally, and if the bytes move, refresh the committed GDS, DRC report,
+# signoff pins and the revision table together in the same change.
+# One non-comment line: a full 40-hex git sha.
+c622e8addb362491664d44ba4d717f354ca88bbd

@@ -8,9 +8,11 @@ netlist's topology and wires them together.
 
 **What this is evidence for, and what it is not.** It is T1 item 2 (a
 committed GDS with documented provenance -- see "Determinism" in
-``layout/README.md``: CI verifies the committed hash, not a fresh ``--check``
-regeneration, so this block claims item 2's documented-provenance
-alternative rather than a CI-enforced "reproducibly generated" one; see
+``layout/README.md``: since #201 CI also runs this very ``--check``
+regeneration on every push and PR (the ``layout-regen`` job, at the
+``layout/klt-pin.txt`` revision and the pinned PDK), so the documented
+provenance is additionally a continuously machine-checked
+"reproducibly generated" property; the earlier deferral is
 `#50 <https://github.com/2AMLogic/sg13g2-opamp/issues/50>`_), item 3 (a
 committed DRC report with its coverage disclosed), and -- since T1 item 4
 (#57) -- the layout half of LVS: the substrate/well-tap implants and the

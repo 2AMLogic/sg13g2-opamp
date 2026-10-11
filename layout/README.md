@@ -91,7 +91,7 @@ python3 layout/opamp_core/generate.py --drc-negative-control
 
 | Thing | Value |
 |---|---|
-| `klt` (for `opamp_core/`) | `0.6.0` — read back from `opamp_core/drc_report.json`'s own `provenance.klt_version` rather than transcribed, so this row cannot drift from the committed bytes it describes. (The prior stream's report recorded `0.6.0+gd574697ed72c`; the #57 regeneration's report records the plain `0.6.0` this install reports. The LVS report records the same value.) |
+| `klt` (for `opamp_core/`) | `0.6.0` — read back from `opamp_core/drc_report.json`'s own `provenance.klt_version` rather than transcribed, so this row cannot drift from the committed bytes it describes. (The prior stream's report recorded `0.6.0+gd574697ed72c`; the #57 regeneration's report records the plain `0.6.0` this install reports. The LVS report records the same value.) Since #201 this is an installable pin, not just a recorded string: [`klt-pin.txt`](klt-pin.txt) names the `v0.6.0` tag commit (`c622e8addb362491664d44ba4d717f354ca88bbd`), which CI installs — in its own environment, separate from the job interpreter's `klayout` package — for the `layout-regen` regeneration gate, where a clean checkout at exactly this revision reproduces the committed bytes. |
 | `klt` (for `opamp_core/erc_report.json`) | `0.6.0+g5265f1a27e8f` — read back from that report's own `provenance.klt_version`. **Deliberately a different, newer build than the DRC/LVS row above**, and the difference is load-bearing rather than incidental: the ERC report's two `ties[]` entries need both the tie-isolation fix (klayout-tools#2169 — without it a correct tie declaration reports a false `erc.supply_short` on any routed design) and the asserted-substrate form (`well_layer: null` + `well_boxes`, klayout-tools#2255) that SG13G2's undrawn p-substrate leaves as the only truthful way to declare the `vss` tie. Neither the DRC nor the LVS verdict depends on the build that produced the ERC one; nothing was regenerated to obtain this row. |
 | Curated `sg13g2` deck | `sha256:894326a4e37fb24fef2f7ffc6ae1da55a0e262b0f0bc1c09adc4862909278fda`, 43 rules, `released: yes` (`klt deck hash --deck sg13g2`) — unchanged across the `klt` revisions above |
 | KLayout inside `klt` | `0.30.12`, which the report flags as `provenance.klayout_version_mismatch: true` — that `klt` build was tested against `klayout==0.30.10`. Per `klt`'s own warning the *verdict* is unaffected; report counts could in principle differ on the tested engine. |
@@ -744,45 +744,57 @@ not an obstacle.
 
 ### What CI actually enforces, and what it does not
 
-**The paragraphs above are all true, and all verified by hand, not by CI.**
-`.github/workflows/signoff.yml` re-hashes the committed GDS offline
-(`signoff/check_signoff.py`) and fails if a committed byte moves without the
-DRC report and the signoff pins moving with it — that closes "someone
-hand-edited the stream". It does **not** run `opamp_core/generate.py --check`:
-nothing in CI
-regenerates the stream and diffs it against the committed bytes on every push,
-so "byte-for-byte reproducible" is not a continuously machine-checked
-property of the generator here — only a property a human verified by
-running `--check` and recorded in the revision table above.
+**The paragraphs above are all verified, and since #201 the regeneration
+itself is machine-checked.** `.github/workflows/signoff.yml` runs two gates
+over the committed stream:
+
+- **Offline re-hash** (`signoff/check_signoff.py`, the `signoff` job):
+  fails if a committed byte moves without the DRC report and the signoff
+  pins moving with it — that closes "someone hand-edited the stream".
+- **Regeneration gate** (`layout-regen` job, added by #201): provisions the
+  pinned PDK (the same `sim/pdk.json` release the netlist-regen job fetches,
+  via the shared `.github/actions/setup-sg13g2-pdk` composite action) and
+  runs `python3 layout/opamp_core/generate.py --check` on **every push and
+  PR**, installing exactly the revisions this table records — `klt` at
+  [`klt-pin.txt`](klt-pin.txt)'s tag commit in its own venv, and
+  `klayout==0.30.10` in the job interpreter builder.py runs under, the same
+  two-environment split the committed bytes were produced with (the job
+  logs both KLayout versions and the PDK release). It fails closed: a
+  provisioning failure, a missing `klt`, a byte drift or a DRC-report drift
+  all fail the job. It regenerates into a temp directory and never writes
+  `layout/opamp_core/`.
+
+The regeneration gate is the coordinate-perturbation-negative-control kind of
+check: with one floorplan coordinate moved (`miller_cap` x 46.0 → 46.2 µm in
+a scratch copy), `--check` exits 1 with "FAIL: regenerated GDS differs from
+committed" while `klt drc` still reports `clean` on the broken stream — the
+byte gate catches what the DRC verdict cannot (demonstrated on the pinned
+toolchain, #201's PR description).
 
 Item 2 of the T1 checklist accepts either "reproducibly generated" **or**
 "documented provenance" (`signoff/README.md` → "What the manifest cites").
-This repo's manifest cites `opamp_core/` for item 2, and that citation rests
-on the **documented-provenance** alternative — the revision table above, plus
-`verify_deck_minima()` and `verify_against_netlist()` failing loudly on drift
-— not on a CI-enforced "reproducibly generated" one.
+This repo's manifest cites `opamp_core/` for item 2. It rests on the
+**documented-provenance** alternative — the revision table above, plus
+`verify_deck_minima()` and `verify_against_netlist()` failing loudly on
+drift — and, since #201, the "reproducibly generated" half is *additionally*
+CI-enforced rather than only human-verified: the same pinned toolchain that
+produced the committed bytes re-derives them on every push.
 
-CI does not run `generate.py` at all, so nothing above is CI-enforced. One
-assumption is machine-checked independent of who runs it, though: the
-block's single most fragile one, that `klt gen mos_array`'s common-centroid
-unit ordering (`U2 U0 U1 U3`) is what makes the `B A A B` interdigitation
+The `assert_common_centroid()` assumption — that `klt gen mos_array`'s unit
+ordering (`U2 U0 U1 U3`) is what makes the `B A A B` interdigitation
 described in
 ["Matching"](#matching-what-was-chosen-for-xm1xm2-and-xm3xm4-and-what-it-costs)
-above actually common-centroid. `assert_common_centroid()` in
-`opamp_core/generate.py` asserts it at every regeneration and every `--check`
-run, so a future `klt` that renumbered the units fails the very next *local*
-run instead of only showing up as an unexplained byte diff that nobody was
-running `--check` to see.
+above actually common-centroid — is machine-checked independent of who runs
+it: it is asserted at every regeneration and every `--check` run, so a
+future `klt` that renumbered the units fails the very next run, including
+the CI one.
 
-Standing up a second CI job that installs `klt` **and** the pinned
-IHP-Open-PDK release to run `--check` on every push was
-considered and deferred: it needs a PDK checkout (and caching strategy) in
-Actions that the rest of this repo's CI deliberately avoids
-(`.github/workflows/signoff.yml`'s own header: "needs no PDK, no ngspice and
-no klayout install of its own"), a materially larger and less-tested
-surface than this repo's other CI. The record of that decision, and the
-reasoning behind it, is
-[#50](https://github.com/2AMLogic/sg13g2-opamp/issues/50).
+The deferral recorded in [#50](https://github.com/2AMLogic/sg13g2-opamp/issues/50)
+— "standing up a second CI job that installs `klt` **and** the pinned
+IHP-Open-PDK release was considered and deferred" — was reversed by #201:
+issue #190 had already added the PDK provisioning for the netlist-regen job,
+which removed the deferred job's main cost, and the shared composite action
+keeps the duplication at zero.
 
 ## Area measurement (proposed, TBD-12)
 
