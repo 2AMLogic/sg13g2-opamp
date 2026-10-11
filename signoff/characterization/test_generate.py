@@ -18,6 +18,7 @@ import json
 import shutil
 import sys
 import tempfile
+import threading
 import types
 import unittest
 from datetime import datetime, timezone
@@ -702,6 +703,168 @@ class NegativeControls(unittest.TestCase):
         with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
             self.assertEqual(generate.mint(self.fx.root, self.fx.selection_path), 1)
         self.assertIsNone(generate.latest_report(self.fx.root / generate.REPORTS_REL))
+
+
+class MintPublication(unittest.TestCase):
+    """Issue #205: concurrent and part-way failing mints can never replace,
+    truncate or half-publish evidence. Every control forces one record id
+    (frozen clock, fixed HEAD) and synchronizes its writers explicitly --
+    never by probabilistic timing."""
+
+    HEAD = "205dead"
+
+    def setUp(self) -> None:
+        self.fx = Fixture()
+
+    def tearDown(self) -> None:
+        self.fx.close()
+
+    def forced_id(self, clock: datetime) -> str:
+        return f"{clock.strftime('%Y%m%d-%H%M%S')}-{self.HEAD}"
+
+    def pinned(self, clock: datetime, fn):
+        """Run fn with the clock and HEAD pinned, so every mint inside
+        computes exactly the record id `forced_id(clock)` returns."""
+        class FrozenClock(datetime):
+            @classmethod
+            def now(cls, tz=None):
+                return clock
+
+        with mock.patch.object(generate, "_dt", types.SimpleNamespace(datetime=FrozenClock, timezone=timezone)), \
+                mock.patch.object(generate, "git_head", lambda repo: self.HEAD), \
+                contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            return fn()
+
+    def mint_pinned(self, clock: datetime) -> int:
+        return self.pinned(clock, lambda: generate.mint(self.fx.root, self.fx.selection_path))
+
+    def test_same_id_concurrent_mints_serialize_and_one_refuses(self):
+        clock = datetime(2030, 1, 2, 3, 4, 5, tzinfo=timezone.utc)
+        record_id = self.forced_id(clock)
+        reports = self.fx.root / generate.REPORTS_REL
+        barrier = threading.Barrier(2)
+        results = []
+
+        def run():
+            barrier.wait()  # both writers are live before either publishes
+            results.append(generate.mint(self.fx.root, self.fx.selection_path))
+
+        def orchestrate():
+            threads = [threading.Thread(target=run) for _ in range(2)]
+            for t in threads:
+                t.start()
+            for t in threads:
+                t.join()
+
+        self.pinned(clock, orchestrate)
+        self.assertEqual(sorted(results), [0, 1])
+        # exactly one complete record, at the forced id
+        self.assertEqual(sorted(p.name for p in reports.glob("*.json")), [f"{record_id}.json"])
+        self.assertEqual(sorted(p.name for p in reports.glob("*.md")), [f"{record_id}.md"])
+        committed = json.loads((reports / f"{record_id}.json").read_text(encoding="utf-8"))
+        self.assertEqual(committed["record_metadata"]["record_id"], record_id)
+        self.assertEqual((reports / f"{record_id}.md").read_text(encoding="utf-8"), generate.render_markdown(committed))
+        # the envelope wraps exactly the record that survived, at its hash
+        envelope = json.loads((self.fx.root / generate.ENVELOPE_REL).read_text(encoding="utf-8"))
+        self.assertEqual(envelope["provenance"]["input"]["path"]["path"], f"{generate.REPORTS_REL}/{record_id}.json")
+        self.assertEqual(envelope["provenance"]["input"]["content_hash"], generate.sha256_file(reports / f"{record_id}.json"))
+        # the lock is released, no staging file survived, the record reproduces
+        self.assertFalse((reports / generate.MINT_LOCK_NAME).exists())
+        self.assertEqual(list(reports.glob(".*.part")), [])
+        self.assertEqual(generate.check(self.fx.root, self.fx.selection_path, None), 0)
+
+    def test_existing_json_only_or_md_only_twin_is_preserved_and_refused(self):
+        clock = datetime(2030, 1, 2, 3, 4, 5, tzinfo=timezone.utc)
+        record_id = self.forced_id(clock)
+        reports = self.fx.root / generate.REPORTS_REL
+        reports.mkdir(parents=True, exist_ok=True)
+        json_path = reports / f"{record_id}.json"
+        md_path = reports / f"{record_id}.md"
+        # a JSON-only destination at the forced id is kept verbatim, refused
+        json_path.write_bytes(b"earlier evidence, keep byte-for-byte\n")
+        self.assertEqual(self.mint_pinned(clock), 1)
+        self.assertEqual(json_path.read_bytes(), b"earlier evidence, keep byte-for-byte\n")
+        self.assertFalse(md_path.exists())
+        self.assertFalse((self.fx.root / generate.ENVELOPE_REL).exists())
+        # the same for a Markdown-only destination
+        json_path.unlink()
+        md_path.write_bytes(b"earlier rendering, keep byte-for-byte\n")
+        self.assertEqual(self.mint_pinned(clock), 1)
+        self.assertEqual(md_path.read_bytes(), b"earlier rendering, keep byte-for-byte\n")
+        self.assertFalse(json_path.exists())
+        self.assertFalse((self.fx.root / generate.ENVELOPE_REL).exists())
+
+    def test_failure_before_complete_publication_keeps_store_and_envelope_intact(self):
+        first = datetime(2030, 1, 2, 3, 4, 5, tzinfo=timezone.utc)
+        self.assertEqual(self.mint_pinned(first), 0)
+        reports = self.fx.root / generate.REPORTS_REL
+        first_json = reports / f"{self.forced_id(first)}.json"
+        first_md = reports / f"{self.forced_id(first)}.md"
+        envelope_path = self.fx.root / generate.ENVELOPE_REL
+        json_before, md_before, envelope_before = first_json.read_bytes(), first_md.read_bytes(), envelope_path.read_bytes()
+
+        second = datetime(2030, 1, 2, 3, 4, 6, tzinfo=timezone.utc)
+        record_id = self.forced_id(second)
+        real_link = generate._link_no_clobber
+
+        def failing_link(tmp, dest):
+            if dest.suffix == ".md":
+                tmp.unlink(missing_ok=True)  # the real helper always removes its staging file
+                raise OSError("injected publication failure")
+            return real_link(tmp, dest)
+
+        with mock.patch.object(generate, "_link_no_clobber", failing_link):
+            self.assertEqual(self.mint_pinned(second), 1)
+        # the half-published record is rolled back; earlier files and the
+        # envelope are untouched, byte-for-byte
+        self.assertFalse((reports / f"{record_id}.json").exists())
+        self.assertFalse((reports / f"{record_id}.md").exists())
+        self.assertEqual(first_json.read_bytes(), json_before)
+        self.assertEqual(first_md.read_bytes(), md_before)
+        self.assertEqual(envelope_path.read_bytes(), envelope_before)
+        self.assertEqual(list(reports.glob(".*.part")), [])
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(generate.check(self.fx.root, self.fx.selection_path, None), 0)
+
+    def test_envelope_is_swapped_atomically_never_truncated(self):
+        clock = datetime(2030, 1, 2, 3, 4, 5, tzinfo=timezone.utc)
+        envelope_path = self.fx.root / generate.ENVELOPE_REL
+        envelope_path.parent.mkdir(parents=True, exist_ok=True)
+        envelope_path.write_bytes(b'{"stale": "envelope a reader may be reading"}\n')
+        seen = []
+        real_replace = generate._replace_text_atomically
+
+        def spy(dest, text):
+            seen.append(dest.name)
+            real_replace(dest, text)
+
+        with mock.patch.object(generate, "_replace_text_atomically", spy):
+            self.assertEqual(self.mint_pinned(clock), 0)
+        # the envelope was published by an atomic replace, never a truncating write
+        self.assertEqual(seen, [envelope_path.name])
+        self.assertEqual(list(envelope_path.parent.glob(f".{envelope_path.name}.*.part")), [])
+        envelope = json.loads(envelope_path.read_text(encoding="utf-8"))
+        self.assertEqual(envelope["t1_item"], 8)
+
+    def test_mint_refuses_while_the_store_lock_is_held_and_recovers_after(self):
+        clock = datetime(2030, 1, 2, 3, 4, 5, tzinfo=timezone.utc)
+        record_id = self.forced_id(clock)
+        reports = self.fx.root / generate.REPORTS_REL
+        reports.mkdir(parents=True, exist_ok=True)
+        lock = reports / generate.MINT_LOCK_NAME
+        lock.write_bytes(b"99999\n")
+        self.assertEqual(self.mint_pinned(clock), 1)
+        self.assertIsNone(generate.latest_report(reports))
+        self.assertFalse((self.fx.root / generate.ENVELOPE_REL).exists())
+        # a lock left behind by a killed mint is recoverable: sweep its stale
+        # staging file, remove the lock, and the next mint publishes cleanly
+        stale = reports / f".{record_id}.json.XXXXXX.part"
+        stale.write_bytes(b'{"half": ')
+        lock.unlink()
+        self.assertEqual(self.mint_pinned(clock), 0)
+        self.assertFalse(stale.exists())
+        self.assertFalse(lock.exists())
+        self.assertEqual(generate.check(self.fx.root, self.fx.selection_path, None), 0)
 
 
 class OffsetMcStatistics(unittest.TestCase):
