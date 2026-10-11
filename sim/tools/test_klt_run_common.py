@@ -53,6 +53,9 @@ SIM_DIR="${REPO_ROOT}/sim"
 date() { echo "${FAKE_TS}"; }
 git() { echo "${FAKE_SHA}"; }
 export NGSPICE_VERSION=stub PDK=pdk PDK_ROOT="${REPO_ROOT}/nopdk"
+# preflight.sh (not sourced here: it needs a PDK) provides the identity-sidecar
+# capture klt_write_envelope calls (issue #191); stub it, env_identity.py has its own tests.
+sg13g2_capture_env_identity() { printf '{"stub": "%s"}\\n' "$1" > "$2"; }
 # shellcheck source=/dev/null
 source "${COMMON}"
 KLT="${STUB_KLT}"
@@ -123,7 +126,7 @@ class Reservation(unittest.TestCase):
             self.assertEqual(r.returncode, 0, r.stderr)
             snap = fx.snapshot()
             self.assertEqual(sorted(snap),
-                             [f"{RID}.compare.json", f"{RID}.sim.json"])
+                             [f"{RID}.compare.json", f"{RID}.env.json", f"{RID}.sim.json"])
             self.assertEqual(snap[f"{RID}.sim.json"], b'{"from": "first"}\n')
             self.assertEqual(list(fx.tmp.iterdir()), [])
 
@@ -235,7 +238,7 @@ class Reservation(unittest.TestCase):
             r = fx.run(TAG="t", STUB_COMPARE_RC="1")
             self.assertEqual(r.returncode, 5, r.stderr)
             self.assertEqual(sorted(fx.snapshot()),
-                             [f"{RID}.compare.json", f"{RID}.sim.json"])
+                             [f"{RID}.compare.json", f"{RID}.env.json", f"{RID}.sim.json"])
             # Nothing stale: reservation released, id now refused as taken.
             self.assertEqual(fx.run(TAG="again").returncode, 3)
 
@@ -244,7 +247,7 @@ class Reservation(unittest.TestCase):
             fx = Fixture(d)
             r = fx.run(TAG="t", STUB_COMPARE_RC="9")
             self.assertEqual(r.returncode, 5, r.stderr)
-            self.assertEqual(sorted(fx.snapshot()), [f"{RID}.sim.json"])
+            self.assertEqual(sorted(fx.snapshot()), [f"{RID}.env.json", f"{RID}.sim.json"])
 
 
 class PublishNoClobber(unittest.TestCase):

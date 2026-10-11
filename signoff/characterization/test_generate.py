@@ -226,6 +226,124 @@ class CommittedEvidence(unittest.TestCase):
         self.assertEqual(rc, 0, out.getvalue())
 
 
+class PdkProvenance(unittest.TestCase):
+    """Issue #191: selected records pin a run-time PDK/model identity sidecar."""
+
+    KEY = "input-noise"
+
+    def setUp(self) -> None:
+        self.fx = Fixture()
+        self.pdk = tempfile.TemporaryDirectory()
+        sys.path.insert(0, str(REPO / "sim" / "tools"))
+        import env_identity
+        import test_env_identity
+
+        self.ei = env_identity
+        test_env_identity.make_install(Path(self.pdk.name))
+        self.pin = json.loads((self.fx.root / self.fx.selection["pdk_pin"]).read_text(encoding="utf-8"))
+        self.rec = self.fx.selection["records"][self.KEY]
+        self.record_id = Path(self.rec["csv"]).stem
+        self.side_rel = str(Path(self.rec["csv"]).with_suffix(".env.json"))
+
+    def tearDown(self) -> None:
+        self.pdk.cleanup()
+        self.fx.close()
+
+    def select(self, sidecar: dict | str) -> None:
+        path = self.fx.root / self.side_rel
+        path.write_text(sidecar if isinstance(sidecar, str) else json.dumps(sidecar), encoding="utf-8")
+        self.rec["env_sidecar"] = self.side_rel
+        self.rec["env_sidecar_sha256"] = generate.sha256_file(path)
+        self.fx.save_selection()
+
+    def good(self) -> dict:
+        return self.ei.capture(Path(self.pdk.name), "ihp-sg13g2", self.pin, self.record_id, "ngspice-46")
+
+    def prov(self, content: dict, key: str | None = None) -> dict:
+        return content["sources"][key or self.KEY]["pdk_provenance"]
+
+    def test_committed_records_without_sidecar_are_visibly_legacy(self):
+        content = self.fx.build()
+        env = content["environment"]["pdk_provenance"]
+        self.assertEqual(len(env["legacy_unverified"]), len(content["sources"]))
+        self.assertFalse(env["pdk_reproducibility_verified"])
+        md = generate.render_markdown(generate.make_report(content, None, self.fx.root))
+        self.assertIn("legacy-unverified", md)
+        self.assertIn("NOT claimed", md)
+        self.assertEqual(content["overall"]["verdict"], "FAIL")  # electrical verdict unchanged
+
+    def test_valid_sidecar_is_verified_and_shown(self):
+        self.select(self.good())
+        content = self.fx.build()
+        self.assertEqual(self.prov(content)["status"], "verified")
+        self.assertIn(self.KEY, content["environment"]["pdk_provenance"]["verified"])
+        self.assertEqual(content["overall"]["verdict"], "FAIL")
+        self.assertEqual(content["errors"], [])
+        self.assertIn("verified 1", generate.render_markdown(generate.make_report(content, None, self.fx.root)))
+
+    def assert_provenance_error(self, text: str) -> None:
+        content = self.fx.build()
+        self.assertEqual(self.prov(content)["status"], "error")
+        row = rows_by_id(content)["input_noise"]
+        self.assertEqual(row["verdict"], "ERROR")
+        self.assertTrue(any("PDK provenance error" in e and text in e for e in row["errors"]), row["errors"])
+        self.assertFalse(content["environment"]["pdk_provenance"]["pdk_reproducibility_verified"])
+
+    def test_missing_sidecar_is_error(self):
+        self.select(self.good())
+        (self.fx.root / self.side_rel).unlink()
+        self.assert_provenance_error("missing environment sidecar")
+
+    def test_unpinned_change_is_error(self):
+        self.select(self.good())
+        path = self.fx.root / self.side_rel
+        path.write_text(path.read_text(encoding="utf-8") + " ", encoding="utf-8")
+        self.assert_provenance_error("does not match its selection pin")
+
+    def test_malformed_sidecar_is_error(self):
+        self.select("{not json")
+        self.assert_provenance_error("not valid JSON")
+        self.select({"schema": self.ei.SCHEMA})
+        self.assert_provenance_error("malformed")
+
+    def test_tampered_sidecar_repinned_is_error(self):
+        side = self.good()
+        side["models"]["files"][0]["sha256"] = "1" * 64
+        self.select(side)
+        self.assert_provenance_error("tampered")
+
+    def test_sidecar_of_another_record_is_error(self):
+        side = self.good()
+        side["record_id"] = "20260101-000000-0000000"
+        self.select(side)
+        self.assert_provenance_error("bound to record")
+
+    def test_configuration_release_change_cannot_relabel_records_as_verified(self):
+        self.select(self.good())
+        pin_path = self.fx.root / self.fx.selection["pdk_pin"]
+        self.pin["release_tag"] = "v0.4.0"
+        pin_path.write_text(json.dumps(self.pin), encoding="utf-8")
+        self.assert_provenance_error("incompatible")
+
+    def test_incompatible_observed_install_is_error(self):
+        side = self.good()
+        side["observed"]["release_marker"] = "0.2.9"
+        side["identity_sha256"] = self.ei.identity_of(side["models"]["files"], side["osdi"])
+        self.select(side)
+        self.assert_provenance_error("observed install release")
+
+    def test_sidecar_pin_must_come_in_pairs(self):
+        self.rec["env_sidecar"] = self.side_rel
+        self.fx.save_selection()
+        with self.assertRaises(generate.SelectionError):
+            self.fx.build()
+
+    def test_mint_refuses_provenance_error(self):
+        self.select("{not json")
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            self.assertEqual(generate.mint(self.fx.root, self.fx.selection_path), 1)
+
+
 class NegativeControls(unittest.TestCase):
     def setUp(self) -> None:
         self.fx = Fixture()

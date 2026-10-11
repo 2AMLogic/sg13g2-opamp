@@ -111,6 +111,21 @@ ${_sg13g2_preflight_self}: the pin in sim/pdk.json with a decision record.
 BANNER
 fi
 
+# sg13g2_capture_env_identity <record-id> <out-file>   (issue #191)
+#   Writes the run-time PDK/model identity sidecar for a record this run is
+#   finalizing: the hashed SPICE model/include closure this PDK install
+#   actually loads, the OSDI build-manifest identity and the observed release
+#   marker, bound to <record-id>. Contract and verifier: sim/tools/env_identity.py.
+#   Call it when the record is finalized, once per record, with <out-file> in
+#   records/ named <record-id>.env.json. Returns non-zero (after saying why) on
+#   an incompatible/unreadable install: the caller must not publish a record
+#   that claims provenance it does not have. Never overwrites an existing file.
+sg13g2_capture_env_identity() {
+  python3 "${SIM_DIR}/tools/env_identity.py" capture \
+    --pdk-root "${PDK_ROOT}" --pdk "${PDK}" --pin "${SIM_DIR}/pdk.json" \
+    --record-id "$1" --ngspice "${NGSPICE_VERSION}" --out "$2"
+}
+
 # SG13G2_NGSPICE_ERR_RE
 #   The "this point's simulation is broken" log signature every sim/*/run_*.sh
 #   harness greps its raw ngspice log for, as one `grep -E` alternation.
