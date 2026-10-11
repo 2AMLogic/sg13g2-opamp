@@ -55,6 +55,19 @@ OSDI_MANIFEST = f"{PDK}/{ei.OSDI_MANIFEST_REL}"
 MARKER = f"{PDK}/.fetched-version"
 
 
+OSDI_DIR = f"{PDK}/{ei.OSDI_DIR_REL}"
+
+
+def osdi_binary(model: str) -> bytes:
+    return f"fake osdi binary for {model}\n".encode()
+
+
+def osdi_manifest(extra: str = "") -> str:
+    lines = ["schema=1", "openvaf_tag=fixture"]
+    lines += [f"output.{m}.osdi={ei.sha256_bytes(osdi_binary(m))}" for m in ei.REQUIRED_OSDI_MODELS]
+    return "\n".join(lines) + "\n" + extra
+
+
 def make_install(pdk_root: Path) -> None:
     inst = pdk_root / PDK
     models = inst / ei.MODELS_SUBDIR
@@ -66,7 +79,9 @@ def make_install(pdk_root: Path) -> None:
     (inst / ".fetched-version").write_text("0.3.0\n", encoding="utf-8")
     osdi = inst / "libs.tech/ngspice/osdi"
     osdi.mkdir(parents=True)
-    (osdi / ".build-manifest").write_text("schema=1\n", encoding="utf-8")
+    for m in ei.REQUIRED_OSDI_MODELS:
+        (osdi / f"{m}.osdi").write_bytes(osdi_binary(m))
+    (osdi / ".build-manifest").write_text(osdi_manifest(), encoding="utf-8")
 
 
 # The stub solver. If MUTATE_FILE is set, every invocation (over)writes
@@ -249,7 +264,7 @@ def mutations(tree: Tree) -> dict:
     pin = dict(PIN, release_tag="v0.3.1")
     return {
         "used model include": (tree.live(MOS_INC), "* mos tt, edited mid-run\n", "sub/mos.inc"),
-        "OSDI manifest": (tree.live(OSDI_MANIFEST), "schema=1\noutput.psp103.osdi=deadbeef\n", "OSDI build-manifest"),
+        "OSDI manifest": (tree.live(OSDI_MANIFEST), osdi_manifest("openvaf_tag=other\n"), "OSDI build-manifest"),
         "release marker": (tree.live(MARKER), "0.3.1\n", "release marker"),
         "configured pin": (tree.sim / "pdk.json", json.dumps(pin, indent=2) + "\n", "configured release_tag"),
     }
@@ -327,6 +342,51 @@ class KltRunner(unittest.TestCase):
                 self.assertEqual(len(scratch), 1)
                 self.assertTrue((scratch[0] / "x.sim.json").is_file())
                 self.assertEqual((scratch[0] / f"{RID}.env.json").read_text(), begin)
+
+    def test_each_replaced_osdi_binary_refuses_finalization(self):
+        # #218: the manifest stays byte-identical, only a binary changes.
+        for model in ei.REQUIRED_OSDI_MODELS:
+            with self.subTest(model), tempfile.TemporaryDirectory() as d:
+                self.build(d)
+                manifest = self.t.live(OSDI_MANIFEST).read_bytes()
+                begin = self.t.capture()
+                binary = self.t.live(f"{OSDI_DIR}/{model}.osdi")
+                r = self.run_bench(MUTATE_FILE=str(binary), MUTATE_TEXT="replaced after begin\n")
+                self.assertEqual(self.t.live(OSDI_MANIFEST).read_bytes(), manifest)
+                self.assertEqual(r.returncode, 4, r.stderr)
+                self.assertIn(f"{model}:", r.stderr)
+                self.assertIn("refusing to finalize", r.stderr)
+                self.assertEqual(self.snapshot(), {})
+                scratch = list(self.t.tmp.iterdir())
+                self.assertEqual(len(scratch), 1)
+                self.assertTrue((scratch[0] / "x.sim.json").is_file())
+                self.assertEqual((scratch[0] / f"{RID}.env.json").read_text(), begin)
+
+    def test_invalid_osdi_install_aborts_before_any_solver(self):
+        def delete(t, m): t.live(f"{OSDI_DIR}/{m}.osdi").unlink()
+        def drop(t, m):
+            f = t.live(OSDI_MANIFEST)
+            f.write_text("".join(l for l in f.read_text().splitlines(True) if not l.startswith(f"output.{m}.osdi=")))
+        def corrupt(t, m):
+            f = t.live(OSDI_MANIFEST)
+            f.write_text(f.read_text().replace(ei.sha256_bytes(osdi_binary(m)), "0" * 64))
+        def schema(t, m):
+            f = t.live(OSDI_MANIFEST)
+            f.write_text(f.read_text().replace("schema=1", "schema=9"))
+        for name, op in (("deleted", delete), ("entry removed", drop), ("corrupt hash", corrupt), ("schema", schema)):
+            for model in ei.REQUIRED_OSDI_MODELS:
+                with self.subTest(f"{name}/{model}"), tempfile.TemporaryDirectory() as d:
+                    self.build(d)
+                    op(self.t, model)
+                    r = self.run_bench()
+                    self.assertEqual(r.returncode, 3, r.stderr)
+                    self.assertIn("nothing was simulated", r.stderr)
+                    if name != "schema":
+                        self.assertIn(f"{model}:", r.stderr)
+                    else:
+                        self.assertIn("unsupported schema", r.stderr)
+                    self.assertEqual(self.klt_calls(), 0)
+                    self.assertEqual(self.snapshot(), {})
 
     def test_rerun_after_drift_finalizes_under_the_new_identity(self):
         path, text, _ = mutations(self.t)["used model include"]

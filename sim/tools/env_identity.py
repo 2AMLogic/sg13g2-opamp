@@ -21,6 +21,8 @@ Sidecar contract (`sim/<bench>/records/<record-id>.env.json`), schema
   osdi                 {manifest_sha256, manifest_schema}
                        identity of the sim/tools/build-osdi.sh `.build-manifest`
                        (binds the Verilog-A inputs and compiled .osdi outputs)
+                       capture (begin AND finalize) refuses unless every required
+                       compiled .osdi binary still hashes to its manifest entry (#218)
   identity_sha256      sha256 over canonical JSON of {models.files, osdi}
 
 Two installs with the same release marker but different model bytes therefore
@@ -47,6 +49,11 @@ SCHEMA = "sg13g2-opamp/env-identity/1"
 SIDECAR_SUFFIX = ".env.json"
 MODELS_SUBDIR = "libs.tech/ngspice/models"
 OSDI_MANIFEST_REL = "libs.tech/ngspice/osdi/.build-manifest"
+OSDI_DIR_REL = "libs.tech/ngspice/osdi"
+# Contract shared with sim/tools/build-osdi.sh (MODELS=(...) names and
+# MANIFEST_SCHEMA); test_env_identity.py asserts the two agree (#218).
+OSDI_MANIFEST_SCHEMA = "1"
+REQUIRED_OSDI_MODELS = ("psp103", "psp103_nqs", "r3_cmc", "mosvar")
 DEFAULT_MODELS = ("cornerMOSlv.lib", "cornerCAP.lib")
 _DIRECTIVE_RE = re.compile(r'^\s*\.(lib|include|inc)\s+(?:"([^"]+)"|\'([^\']+)\'|(\S+))(\s+\S+)?', re.IGNORECASE)
 _SHA_RE = re.compile(r"^[0-9a-f]{64}$")
@@ -195,6 +202,63 @@ def compare(before: dict, after: dict) -> list[str]:
     return errs
 
 
+def validate_osdi_outputs(osdi_dir: Path, raw: bytes) -> None:
+    """Refuse unless every required compiled OSDI binary matches the manifest (#218).
+
+    `raw` is the bytes of `.build-manifest`. The manifest is accepted as an
+    identity only after its `output.<model>.osdi=<sha256>` claims are shown
+    to hold against the live binaries under `osdi_dir`. Raises IdentityError
+    naming the affected model (all problems are reported together).
+    """
+    text = raw.decode("utf-8", errors="replace")
+    lines = text.splitlines()
+    schema = None
+    outputs: dict[str, list[str]] = {}
+    for line in lines:
+        key, sep, value = line.partition("=")
+        if not sep:
+            continue
+        if key == "schema":
+            schema = value if schema is None else schema
+        elif key.startswith("output.") and key.endswith(".osdi"):
+            outputs.setdefault(key[len("output."):-len(".osdi")], []).append(value)
+    if schema != OSDI_MANIFEST_SCHEMA:
+        raise IdentityError(
+            f"OSDI build manifest has unsupported schema {schema!r} (supported: {OSDI_MANIFEST_SCHEMA!r}); "
+            "run sim/tools/build-osdi.sh to rebuild")
+    root = osdi_dir.resolve()
+    errs: list[str] = []
+    for model in REQUIRED_OSDI_MODELS:
+        claims = outputs.get(model)
+        if not claims:
+            errs.append(f"{model}: no output.{model}.osdi entry in the OSDI build manifest")
+            continue
+        if len(claims) != 1 or not _SHA_RE.match(claims[0]):
+            errs.append(f"{model}: malformed output.{model}.osdi entry in the OSDI build manifest (need exactly one sha256)")
+            continue
+        path = osdi_dir / f"{model}.osdi"
+        try:
+            resolved = path.resolve()
+            resolved.relative_to(root)
+        except (OSError, ValueError):
+            errs.append(f"{model}: {model}.osdi resolves outside the PDK OSDI directory")
+            continue
+        if not resolved.is_file():
+            errs.append(f"{model}: OSDI binary {model}.osdi is missing from {OSDI_DIR_REL}")
+            continue
+        try:
+            live = sha256_bytes(resolved.read_bytes())
+        except OSError as exc:
+            errs.append(f"{model}: OSDI binary {model}.osdi is unreadable ({exc.strerror or exc})")
+            continue
+        if live != claims[0]:
+            errs.append(f"{model}: OSDI binary {model}.osdi does not match the build manifest (manifest {claims[0]}, live {live})")
+    if errs:
+        raise IdentityError(
+            "live OSDI binaries do not satisfy the build manifest -- run sim/tools/build-osdi.sh to rebuild:\n  "
+            + "\n  ".join(errs))
+
+
 def capture(pdk_root: Path, pdk: str, pin: dict, record_id: str, ngspice: str, models=DEFAULT_MODELS) -> dict:
     install = Path(pdk_root) / pdk
     if not install.is_dir():
@@ -204,6 +268,7 @@ def capture(pdk_root: Path, pdk: str, pin: dict, record_id: str, ngspice: str, m
     osdi: dict = {"manifest_sha256": None, "manifest_schema": None}
     if manifest.is_file():
         raw = manifest.read_bytes()
+        validate_osdi_outputs(install / OSDI_DIR_REL, raw)
         osdi["manifest_sha256"] = sha256_bytes(raw)
         m = re.search(rb"^schema=(\S+)$", raw, re.MULTILINE)
         osdi["manifest_schema"] = m.group(1).decode() if m else None
