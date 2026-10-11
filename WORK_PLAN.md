@@ -25,7 +25,7 @@ Human-approved issues ready for implementation (`loom:issue`).
 
 Issues currently being built (`loom:building`).
 
-- **#99**: sim: express the PSRR bench as a klt sim request (T1 item 5 coverage, follow-up to #85)
+_None._
 
 ## PRs Awaiting Review
 
@@ -57,8 +57,7 @@ Issues carrying `loom:curated`.
 ## Proposed (Architect / Hermit)
 
 - **#105**: signoff: express the statistical rows as klt yield evidence for T1 item 6 (offset MC, mismatch CMRR) *(architect)*
-- **#171**: sim: reserve klt wrapper record destinations before submitting runs *(architect)*
-- **#174**: cmrr-mismatch: validate raw sample finiteness and unique OP/AC pairs *(architect)*
+- **#180**: CI: signoff/test_regenerate.py is never run; discover all tests instead of hand-listing *(architect)*
 
 ## Epics
 
@@ -71,10 +70,10 @@ _None._
 | Operator merge-risk holds | 1 |
 | Operator priority | 0 |
 | Ready (`loom:issue`) | 1 |
-| In Progress (`loom:building`) | 1 |
+| In Progress (`loom:building`) | 0 |
 | PRs awaiting review | 1 |
 | Approved PRs awaiting merge | 1 |
 | Curated | 10 |
-| Architect / Hermit proposals | 3 |
+| Architect / Hermit proposals | 2 |
 | Active epics | 0 |
 <!-- guide:plan-body:end -->
