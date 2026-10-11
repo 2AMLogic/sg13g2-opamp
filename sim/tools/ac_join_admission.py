@@ -35,7 +35,13 @@ together. Exit 0 admitted, 1 rejected, 2 usage/IO.
   ac_join_admission.py admit --source-csv F --consumer-env F
       --consumer-snapshot F --consumer-record-id ID --pin sim/pdk.json
       --cl-f 2e-12 --vcm-frac 0.5 --corners A B ... --temps T ... --vdds V ...
-      --require-col av0_db ... --out F
+      --require-col av0_db ... --snapshot-out F --out F
+
+Frozen source (issue #226): the CSV is captured as ONE byte buffer; the checks,
+csv_sha256 and the --snapshot-out copy all come from it, and consumers read
+only that snapshot (sim/ac-join.sh sg13g2_ac_lookup, which re-verifies the
+snapshot hash before every lookup and never falls back to the original path).
+Provenance records the original selection path and the snapshot hash.
 """
 
 from __future__ import annotations
@@ -43,8 +49,10 @@ from __future__ import annotations
 import argparse
 import csv
 import hashlib
+import io
 import json
 import math
+import os
 import re
 import sys
 from pathlib import Path
@@ -59,6 +67,27 @@ _CLOAD_RE = re.compile(r"^\s*Cload\s+\S+\s+\S+\s+(\S+)", re.IGNORECASE | re.MULT
 
 def sha256_file(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def sha256_bytes(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+
+def write_snapshot(dest: Path, data: bytes) -> None:
+    """Create the private, read-only source snapshot (exclusive; never overwrites)."""
+    fd = os.open(dest, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    try:
+        with os.fdopen(fd, "wb") as fh:
+            fh.write(data)
+            fh.flush()
+            os.fsync(fh.fileno())
+    except BaseException:
+        try:
+            os.unlink(dest)
+        except OSError:
+            pass
+        raise
+    os.chmod(dest, 0o400)
 
 
 def _num(text):
@@ -101,8 +130,16 @@ def _identity_diffs(src: dict, cons: dict) -> list[str]:
 
 
 def admit(source_csv: Path, consumer_env: dict, consumer_snapshot: Path, consumer_record_id: str,
-          pin: dict, cl_f: float, vcm_frac: float, corners, temps, vdds, require_cols) -> tuple[list[str], dict | None]:
-    """Return (errors, provenance). provenance is None iff errors is non-empty."""
+          pin: dict, cl_f: float, vcm_frac: float, corners, temps, vdds, require_cols,
+          snapshot_out: Path | None = None) -> tuple[list[str], dict | None]:
+    """Return (errors, provenance). provenance is None iff errors is non-empty.
+
+    The source CSV is read ONCE into a byte buffer (issue #226); validation,
+    the recorded csv_sha256 and the snapshot written to snapshot_out are all
+    derived from that buffer, so a replacement of the original path during or
+    after admission cannot make them describe different bytes. Consumers read
+    only the snapshot. A snapshot write failure raises OSError (nothing is
+    admitted); the snapshot is removed again if admission is rejected."""
     errs: list[str] = []
     source_csv = Path(source_csv)
     exp = source_csv.parent.parent
@@ -111,8 +148,13 @@ def admit(source_csv: Path, consumer_env: dict, consumer_snapshot: Path, consume
     snap_dir = exp / "netlist-snapshots" / sid
     src_dut = snap_dir / "opamp_core.spice"
 
-    if not source_csv.is_file() or source_csv.stat().st_size == 0:
+    try:
+        csv_bytes = source_csv.read_bytes()
+    except OSError:
+        csv_bytes = b""
+    if not csv_bytes:
         return [f"source record {source_csv} is missing or empty"], None
+    csv_sha = sha256_bytes(csv_bytes)
 
     # 1. identity sidecar (legacy sources are refused, never guessed)
     sidecar = None
@@ -141,9 +183,11 @@ def admit(source_csv: Path, consumer_env: dict, consumer_snapshot: Path, consume
             f"(sha256 {sha256_file(src_dut)} vs {sha256_file(consumer_snapshot)})")
 
     # 3/4. grid rows and operating conditions
-    with source_csv.open(newline="", encoding="utf-8") as fh:
-        rows = list(csv.DictReader(fh))
-        header = rows and list(rows[0].keys())
+    try:
+        rows = list(csv.DictReader(io.StringIO(csv_bytes.decode("utf-8"), newline="")))
+    except (UnicodeDecodeError, csv.Error) as exc:
+        return errs + [f"source record {source_csv} is not readable CSV ({exc})"], None
+    header = rows and list(rows[0].keys())
     need = ["point_id", "corner", "temp_c", "vdd_v", "vcm_v", "op_pass", *require_cols]
     missing = [c for c in need if rows and c not in header]
     if not rows:
@@ -200,12 +244,17 @@ def admit(source_csv: Path, consumer_env: dict, consumer_snapshot: Path, consume
 
     if errs:
         return errs, None
+    if snapshot_out is not None:
+        write_snapshot(Path(snapshot_out), csv_bytes)
     return [], {
         "schema": SCHEMA,
         "consumer_record_id": consumer_record_id,
         "source": {
             "record_id": sid,
-            "csv_sha256": sha256_file(source_csv),
+            "csv_sha256": csv_sha,
+            "selection_path": str(source_csv),
+            "snapshot_sha256": csv_sha,
+            "snapshot": Path(snapshot_out).name if snapshot_out is not None else None,
             "env_sidecar_sha256": sha256_file(sidecar_path),
             "dut_snapshot_sha256": sha256_file(src_dut),
             "identity_sha256": sidecar["identity_sha256"],
@@ -249,13 +298,18 @@ def main(argv: list[str]) -> int:
     a.add_argument("--temps", nargs="+", required=True)
     a.add_argument("--vdds", nargs="+", required=True)
     a.add_argument("--require-col", nargs="+", default=["av0_db"])
+    a.add_argument("--snapshot-out", type=Path, required=True,
+                   help="private copy of the admitted source bytes; consumers read only this")
     a.add_argument("--out", type=Path, required=True)
     ns = ap.parse_args(argv)
+    if ns.out.exists() or ns.snapshot_out.exists():
+        print(f"ac_join_admission: refusing to overwrite {ns.out} / {ns.snapshot_out}", file=sys.stderr)
+        return 2
     try:
         pin = json.loads(ns.pin.read_text(encoding="utf-8"))
         env = json.loads(ns.consumer_env.read_text(encoding="utf-8"))
         errs, prov = admit(ns.source_csv, env, ns.consumer_snapshot, ns.consumer_record_id, pin, ns.cl_f,
-                           ns.vcm_frac, ns.corners, ns.temps, ns.vdds, ns.require_col)
+                           ns.vcm_frac, ns.corners, ns.temps, ns.vdds, ns.require_col, ns.snapshot_out)
     except (OSError, ValueError, KeyError) as exc:
         print(f"ac_join_admission: {exc}", file=sys.stderr)
         return 2
@@ -265,10 +319,12 @@ def main(argv: list[str]) -> int:
             print(f"ac_join_admission:   {e}", file=sys.stderr)
         print(REMEDIATION, file=sys.stderr)
         return 1
-    if ns.out.exists():
-        print(f"ac_join_admission: refusing to overwrite {ns.out}", file=sys.stderr)
+    try:
+        ns.out.write_text(ei.canonical_json(prov), encoding="utf-8")
+    except OSError as exc:
+        print(f"ac_join_admission: {exc}", file=sys.stderr)
+        ns.snapshot_out.unlink(missing_ok=True)
         return 2
-    ns.out.write_text(ei.canonical_json(prov), encoding="utf-8")
     print(f"ac_join_admission: admitted {prov['source']['record_id']} (csv {prov['source']['csv_sha256'][:12]})")
     return 0
 

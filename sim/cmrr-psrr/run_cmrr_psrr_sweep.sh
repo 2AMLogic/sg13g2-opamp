@@ -161,7 +161,8 @@ for corner in "${CORNERS[@]}"; do
 
       # --- Av0 + open-loop op point for this grid point (joined, not
       # re-measured; see header).
-      read -r ol_av0_db ol_vout_dc < <(python3 - "${AC_RECORD_CSV}" "${corner}" "${temp}" "${vdd}" <<'PYEOF'
+      sg13g2_ac_snapshot_verify || exit 4
+      read -r ol_av0_db ol_vout_dc < <(python3 - "${AC_SNAPSHOT_CSV}" "${corner}" "${temp}" "${vdd}" <<'PYEOF'
 import csv, sys
 
 want = (sys.argv[2], sys.argv[3], sys.argv[4])
@@ -289,7 +290,7 @@ fi
 # accepted source's hashes/compatibility basis as records/<id>.ac-join.json.
 sg13g2_env_identity_finalize "${RECORD_ID}" "${ENV_BEGIN}" "${RECORDS_DIR}/${RECORD_ID}.env.json"
 sg13g2_ac_join_publish "${AC_JOIN_PROV}" "${RECORDS_DIR}/${RECORD_ID}.ac-join.json"
-rm -f "${ENV_SCRATCH}/${RECORD_ID}.env.json" "${ENV_SCRATCH}/${RECORD_ID}.ac-join.json"
+rm -f "${ENV_SCRATCH}/${RECORD_ID}.env.json" "${ENV_SCRATCH}/${RECORD_ID}.ac-join.json" "${ENV_SCRATCH}/${RECORD_ID}.ac-source.csv"
 rmdir "${ENV_SCRATCH}" 2>/dev/null || true
 
 mv "${CSV_OUT}.raw" "${CSV_OUT}"
