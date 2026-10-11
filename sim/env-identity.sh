@@ -6,7 +6,8 @@
 # offline against a fake PDK install: this file sources nothing, checks no
 # PDK/OSDI/ngspice and runs no simulator. At CALL time it needs SIM_DIR,
 # PDK_ROOT, PDK and NGSPICE_VERSION (all set by sim/preflight.sh), python3 on
-# PATH, and sg13g2_publish_noclobber (sim/record-paths.sh) for finalize.
+# PATH, and sg13g2_publish_noclobber (sim/record-paths.sh) for finalize,
+# which also needs a working `ngspice -v` (re-observed, issue #212).
 #
 # Contract (issue #209). A record's <id>.env.json sidecar describes the
 # model/include closure, OSDI build manifest, observed release marker,
@@ -18,6 +19,11 @@
 #   ... solvers ...
 #   sg13g2_env_identity_finalize <id> <scratch-file> records/<id>.env.json
 #   ... only then publish the record's finalized files (.md / .sim.json) ...
+#
+# At finalize the simulator version is RE-OBSERVED (`ngspice -v`, normalized
+# like preflight's) rather than reusing preflight's NGSPICE_VERSION; a
+# missing executable, nonzero exit, empty or unparseable output refuses
+# finalization (exit 4) just like drift (issue #212).
 #
 # Guarantee: a PERSISTENT change to any of those inputs between the begin
 # capture and the finalize recheck refuses finalization (exit 4, nothing
@@ -76,6 +82,37 @@ sg13g2_env_identity_begin() {
   }
 }
 
+# sg13g2_observe_ngspice_version   (issue #212)
+#   Print the live, normalized simulator version (e.g. `ngspice-46`) on
+#   stdout. Returns non-zero, with a diagnostic on stderr and nothing on
+#   stdout, if ngspice is not resolvable, `ngspice -v` exits non-zero, or
+#   its line 2 does not normalize to `ngspice-<digit>...`. The exit status
+#   is captured explicitly so a valid-looking banner printed by a failing
+#   query is never laundered through a successful sed pipeline. Unlike
+#   preflight's warn-only pin check, an unreadable observation is an error.
+sg13g2_observe_ngspice_version() {
+  local raw rc=0 ver
+  if ! command -v ngspice >/dev/null 2>&1; then
+    echo "${_sg13g2_preflight_self}: ngspice is no longer on PATH." >&2
+    return 1
+  fi
+  raw="$(ngspice -v 2>&1)" || rc=$?
+  if [[ ${rc} -ne 0 ]]; then
+    echo "${_sg13g2_preflight_self}: 'ngspice -v' exited ${rc}." >&2
+    return 1
+  fi
+  ver="$(printf '%s\n' "${raw}" | sed -n '2p' | sed -E 's/^\*\* *//; s/ *:.*$//')"
+  if [[ -z "${ver}" ]]; then
+    echo "${_sg13g2_preflight_self}: 'ngspice -v' produced no version line." >&2
+    return 1
+  fi
+  if [[ ! "${ver}" =~ ^ngspice-[0-9] ]]; then
+    echo "${_sg13g2_preflight_self}: unparseable 'ngspice -v' version '${ver}' (expected ngspice-NN)." >&2
+    return 1
+  fi
+  printf '%s\n' "${ver}"
+}
+
 # sg13g2_env_identity_finalize <record-id> <begin-file> <dest>   (issue #209)
 #   The finalize half of the identity lifecycle: recheck the BEGIN capture
 #   taken before the first solver against a FRESH capture of the live
@@ -104,9 +141,14 @@ sg13g2_env_identity_finalize() {
     echo "${_sg13g2_preflight_self}: no begin identity capture at ${begin} -- sg13g2_env_identity_begin must run before the first solver; record ${record_id} not finalized." >&2
     exit 4
   fi
+  local live_ngspice
+  if ! live_ngspice="$(sg13g2_observe_ngspice_version)"; then
+    echo "${_sg13g2_preflight_self}: could not re-observe the simulator version at finalization -- refusing to finalize record ${record_id}; incomplete artifacts kept for inspection, begin capture: ${begin}." >&2
+    exit 4
+  fi
   if ! python3 "${SIM_DIR}/tools/env_identity.py" compare \
       --before "${begin}" --pdk-root "${PDK_ROOT}" --pdk "${PDK}" \
-      --pin "${SIM_DIR}/pdk.json" --ngspice "${NGSPICE_VERSION}"; then
+      --pin "${SIM_DIR}/pdk.json" --ngspice "${live_ngspice}"; then
     echo "${_sg13g2_preflight_self}: run-time PDK/model identity drifted while record ${record_id} ran -- refusing to finalize; incomplete artifacts kept for inspection, begin capture: ${begin}." >&2
     exit 4
   fi

@@ -83,7 +83,13 @@ klt wrapper; no `records/<id>.csv` / `.md` / `.env.json` for the native
 `run_pvt_sweep.sh` / `run_noise_sweep.sh`. Its incomplete artifacts stay for
 inspection (the klt scratch dir, or `corners/<id>/` plus
 `records/<id>.csv.raw`, and the begin
-capture in the scratch dir named on stderr). A failed begin capture exits 3
+capture in the scratch dir named on stderr). At finalization the simulator version is
+**re-observed** (a fresh `ngspice -v`, normalized like preflight's) rather
+than reusing the value preflight read at start, so a persistent version
+change during the run is drift; a missing `ngspice`, a non-zero `-v` exit
+(even if it printed a version), empty output or an unparseable version
+also refuses finalization with exit 4. (The configured-pin check in
+preflight stays warn-only.) A failed begin capture exits 3
 before anything is simulated. Re-run under a fresh record id once the
 environment is stable.
 

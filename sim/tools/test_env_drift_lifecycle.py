@@ -124,12 +124,21 @@ klt_compare_and_finish
 
 STUB_NGSPICE = "#!/usr/bin/env bash\n" + r"""
 if [[ "$1" == "-v" ]]; then
-  printf '******\n** ngspice-46 : Circuit level simulation program (stub)\n'
+  # VERSION_FILE (optional) holds the reported version, or one of the
+  # failure modes below, so a test can change it while a solver runs.
+  v=46; [[ -z "${VERSION_FILE:-}" ]] || v="$(cat "${VERSION_FILE}")"
+  case "${v}" in
+    failexit) printf '******\n** ngspice-46 : Circuit level simulation program (stub)\n'; exit 1 ;;
+    empty) exit 0 ;;
+    malformed) printf '******\n** not a version banner\n'; exit 0 ;;
+  esac
+  printf '******\n** ngspice-%s : Circuit level simulation program (stub)\n' "${v}"
   exit 0
 fi
 [[ "$1" == "-b" ]] || exit 2
 netlist="$2"
 """ + MUTATE_SH + r"""
+if [[ -n "${REMOVE_NGSPICE:-}" ]]; then rm -f "${REMOVE_NGSPICE}"; fi
 vdd="$(awk '/^Vdd /{print $5}' "${netlist}")"
 ac_csv="$(awk '/^wrdata /{print $2}' "${netlist}")"
 half="$(awk -v v="${vdd}" 'BEGIN{print v/2}')"
@@ -155,7 +164,15 @@ exit 0
 # records every `-b` deck path, so a test can prove a solver never ran.
 STUB_NOISE_NGSPICE = "#!/usr/bin/env bash\n" + r"""
 if [[ "$1" == "-v" ]]; then
-  printf '******\n** ngspice-46 : Circuit level simulation program (stub)\n'
+  # VERSION_FILE (optional) holds the reported version, or one of the
+  # failure modes below, so a test can change it while a solver runs.
+  v=46; [[ -z "${VERSION_FILE:-}" ]] || v="$(cat "${VERSION_FILE}")"
+  case "${v}" in
+    failexit) printf '******\n** ngspice-46 : Circuit level simulation program (stub)\n'; exit 1 ;;
+    empty) exit 0 ;;
+    malformed) printf '******\n** not a version banner\n'; exit 0 ;;
+  esac
+  printf '******\n** ngspice-%s : Circuit level simulation program (stub)\n' "${v}"
   exit 0
 fi
 [[ "$1" == "-b" ]] || exit 2
@@ -267,6 +284,7 @@ class KltRunner(unittest.TestCase):
         (self.bench / "compare.py").write_text(STUB_COMPARE, encoding="utf-8")
         self.klt = self.t.root / "klt"
         _write_exec(self.klt, STUB_KLT)
+        _write_exec(self.t.bin / "ngspice", STUB_NGSPICE)  # refreshed version query (#212)
         self.driver = self.t.root / "driver.sh"
         self.driver.write_text(KLT_DRIVER, encoding="utf-8")
         self.log = self.t.root / "klt.log"
@@ -437,6 +455,83 @@ class OpenLoopRunner(unittest.TestCase):
         self.assertEqual(self.record_files(rid3), [f"{rid3}.csv", f"{rid3}.env.json", f"{rid3}.md"])
         self.assertEqual((self.bench / "records" / f"{rid3}.env.json").read_text(), self.t.capture(rid3))
         # The first record is untouched throughout.
+        self.assertEqual(self.record_files(RID), [f"{RID}.csv", f"{RID}.env.json", f"{RID}.md"])
+
+    # ---- issue #212: the finalizer re-observes `ngspice -v` ----------------
+
+    def _versioned(self, text: str = "46\n") -> Path:
+        version = self.t.root / "ngspice-version"
+        version.write_text(text, encoding="utf-8")
+        return version
+
+    def _assert_refused_unfinalized(self, r, needle: str) -> None:
+        self.assertEqual(r.returncode, 4, r.stderr)
+        self.assertIn("refusing to finalize", r.stderr)
+        self.assertIn(needle, r.stderr)
+        self.assertEqual(self.record_files(RID), [f"{RID}.csv.raw"])
+        self.assertTrue(any((self.bench / "corners" / RID).glob("*.log")))
+        scratch = list(self.t.tmp.iterdir())
+        self.assertEqual(len(scratch), 1)
+        self.assertEqual((scratch[0] / f"{RID}.env.json").read_text(), self.t.capture())
+
+    def test_persistent_ngspice_version_change_refuses_finalization(self):
+        version = self._versioned()
+        r = self.run_sweep(VERSION_FILE=str(version), MUTATE_FILE=str(version), MUTATE_TEXT="47\n")
+        self.assertIn("DRIFTED", r.stderr)
+        self.assertIn("ngspice", r.stderr)
+        self._assert_refused_unfinalized(r, "ngspice-47")
+
+    def test_unchanged_reported_version_finalizes(self):
+        version = self._versioned()
+        r = self.run_sweep(VERSION_FILE=str(version))
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(self.record_files(RID), [f"{RID}.csv", f"{RID}.env.json", f"{RID}.md"])
+        self.assertEqual((self.bench / "records" / f"{RID}.env.json").read_text(), self.t.capture())
+
+    def _failed_observation(self, mode: str, needle: str) -> None:
+        version = self._versioned()
+        r = self.run_sweep(VERSION_FILE=str(version), MUTATE_FILE=str(version),
+                           MUTATE_TEXT=mode + "\n")
+        self._assert_refused_unfinalized(r, needle)
+        self.assertIn("re-observe the simulator version", r.stderr)
+
+    def test_nonzero_version_query_with_valid_stdout_refuses(self):
+        self._failed_observation("failexit", "exited 1")
+
+    def test_empty_version_output_at_finalize_refuses(self):
+        self._failed_observation("empty", "no version line")
+
+    def test_malformed_version_output_at_finalize_refuses(self):
+        self._failed_observation("malformed", "unparseable")
+
+    def _path_without_other_ngspice(self) -> str:
+        """PATH = the stub bin dir + symlinks to every other tool, but no
+        ngspice, so removing the stub really makes the simulator vanish even
+        on a host that has a real one installed."""
+        shim = self.t.root / "path-shim"
+        shim.mkdir()
+        for d in os.environ.get("PATH", "").split(os.pathsep):
+            if not d or not os.path.isdir(d) or Path(d) == self.t.bin:
+                continue
+            for name in os.listdir(d):
+                link = shim / name
+                src = os.path.join(d, name)
+                if name != "ngspice" and not link.is_symlink() and os.access(src, os.X_OK):
+                    link.symlink_to(src)
+        return f"{self.t.bin}{os.pathsep}{shim}"
+
+    def test_missing_ngspice_at_finalize_refuses(self):
+        r = self.run_sweep(REMOVE_NGSPICE=str(self.t.bin / "ngspice"),
+                           PATH=self._path_without_other_ngspice())
+        # bash may report this as a hashed-path exit 127 or as "not on PATH".
+        self._assert_refused_unfinalized(r, "re-observe the simulator version")
+
+    def test_preflight_pin_mismatch_still_only_warns(self):
+        version = self._versioned("99\n")
+        r = self.run_sweep(VERSION_FILE=str(version), NGSPICE_VERSION="")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("WARNING: ngspice does not match", r.stderr)
+        self.assertIn("ngspice-99", r.stderr)
         self.assertEqual(self.record_files(RID), [f"{RID}.csv", f"{RID}.env.json", f"{RID}.md"])
 
 
