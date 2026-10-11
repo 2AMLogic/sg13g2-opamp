@@ -188,73 +188,15 @@ print('1' if ok else '0')
       # the in-band spectrum into a flicker (A/f) and a thermal (B) term,
       # the resulting flicker corner, and a trapezoidal cross-check of
       # ngspice's own integrated figure.
-      read -r cs_ratio s100 s1k s10k s100k s1m acoef bfloor fcorner ffrac < <(python3 - "${noise_csv}" "${vni_int}" <<'PYEOF'
-import math, sys
-
-path, vni_int = sys.argv[1], float(sys.argv[2])
-freqs, dens = [], []
-with open(path) as f:
-    for line in f:
-        parts = line.split()
-        if len(parts) < 4:
-            continue
-        # wrdata column layout: (scale,value) pair per requested vector --
-        # col1=freq (inoise_spectrum's own scale), col2=inoise_spectrum,
-        # col3=freq (dup), col4=onoise_spectrum. Same gotcha
-        # sim/gm-id-characterization/README.md documents once for the
-        # whole repo.
-        freqs.append(float(parts[0]))
-        dens.append(float(parts[1]))       # V/sqrt(Hz), input-referred
-
-if len(freqs) != 81:
-    raise SystemExit(f"expected 81 swept points, got {len(freqs)}")
-
-# Spot frequencies: assert, do not imply (dec 20 from exactly 100 Hz).
-spots = []
-for idx, want in ((0, 1e2), (20, 1e3), (40, 1e4), (60, 1e5), (80, 1e6)):
-    got = freqs[idx]
-    if abs(got - want) / want > 1e-6:
-        raise SystemExit(f"spot index {idx} is {got} Hz, expected {want} Hz")
-    spots.append(dens[idx])
-
-# Weighted least-squares fit of S(f) = A/f + B to the measured POWER
-# density S = dens^2 (V^2/Hz). Relative (1/S^2) weighting so the fit is
-# not dominated by the flicker-heavy low-frequency decade.
-S = [d * d for d in dens]
-sa = sb = sab = ra = rb = 0.0
-for fq, s in zip(freqs, S):
-    x1, x2, w = 1.0 / fq, 1.0, 1.0 / (s * s)
-    sa += w * x1 * x1
-    sab += w * x1 * x2
-    sb += w * x2 * x2
-    ra += w * x1 * s
-    rb += w * x2 * s
-det = sa * sb - sab * sab
-A = (ra * sb - rb * sab) / det
-B = (rb * sa - ra * sab) / det
-
-flo, fhi = freqs[0], freqs[-1]
-msq_flicker = A * math.log(fhi / flo) if A > 0 else 0.0
-msq_thermal = B * (fhi - flo) if B > 0 else 0.0
-ffrac = msq_flicker / (msq_flicker + msq_thermal) if (msq_flicker + msq_thermal) > 0 else float("nan")
-fcorner = A / B if (A > 0 and B > 0) else float("nan")
-thermal_floor = math.sqrt(B) if B > 0 else float("nan")
-
-# Trapezoidal cross-check of ngspice's own inoise_total: integrate the
-# measured power density over the band and compare RMS values.
-msq = 0.0
-for i in range(1, len(freqs)):
-    msq += 0.5 * (S[i - 1] + S[i]) * (freqs[i] - freqs[i - 1])
-cross_ratio = math.sqrt(msq) / vni_int if vni_int > 0 else float("nan")
-
-def fmt(x):
-    return "nan" if x != x else f"{x:.6g}"
-
-print(" ".join(fmt(v) for v in (
-    cross_ratio, spots[0], spots[1], spots[2], spots[3], spots[4],
-    A, thermal_floor, fcorner, ffrac)))
-PYEOF
-)
+      # The definitions live in noise_post.py (stdlib only), shared with the
+      # offline raw-evidence audit in signoff/characterization/generate.py
+      # (issue #213) so the bench and the audit cannot diverge.
+      read -r cs_ratio s100 s1k s10k s100k s1m acoef bfloor fcorner ffrac < <(python3 "${EXPERIMENT_DIR}/noise_post.py" "${noise_csv}" "${vni_int}")
+      if [[ -z "${ffrac:-}" ]]; then
+        echo "run_noise_sweep.sh: SIM FAILED ${point_id} -- noise post-processing rejected ${noise_csv}" >&2
+        sim_fail_points+=("${point_id}")
+        continue
+      fi
 
       echo "${point_id},${corner},${temp},${vdd},${vcm},${op_pass},${vout},${vd1},${vd2},${vtail},${vibias},${ivdd},${clgain_lo},${clgain_hi},${vni_int},${cs_ratio},${s100},${s1k},${s10k},${s100k},${s1m},${acoef},${bfloor},${fcorner},${ffrac}" >> "${CSV_OUT}.raw"
 

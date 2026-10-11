@@ -78,6 +78,9 @@ class Fixture:
                 files.add(rec["draws_csv"])
             if "mc_samples" in rec:
                 files.update(e["path"] for e in rec["mc_samples"]["files"].values())
+            if "noise_raw" in rec:
+                for entry in rec["noise_raw"]["files"].values():
+                    files.update(pin["path"] for pin in entry.values())
         files.update({generate.SELECTION_REL, generate.GENERATOR_REL})
         for rel in files:
             dst = self.root / rel
@@ -113,9 +116,22 @@ class Fixture:
         rec["definition_checks"] = [c for c in rec["definition_checks"] if c != "cmrr_mc_statistics"]
         self.save_selection()
 
+    keep_noise_audit = False
+
+    def detach_noise_population(self) -> None:
+        """Controls that perturb the input-noise summary for THEIR OWN purpose
+        (a bound comparison) drop the raw-noise audit (issue #213);
+        NoiseRawAudit tests that audit itself."""
+        rec = self.selection["records"]["input-noise"]
+        rec.pop("noise_raw", None)
+        rec["definition_checks"] = [c for c in rec.get("definition_checks", []) if c != "noise_raw_audit"]
+        self.save_selection()
+
     def rewrite_csv(self, key: str, transform, repin: bool = True) -> None:
         if key == "open-loop-ac" and not self.keep_cmrr_audit:
             self.detach_cmrr_population()
+        if key == "input-noise" and not self.keep_noise_audit:
+            self.detach_noise_population()
         path = self.csv_path(key)
         lines = path.read_text(encoding="utf-8").splitlines()
         path.write_text("\n".join(transform(lines)) + "\n", encoding="utf-8")
@@ -1333,6 +1349,291 @@ class LoadCondition(unittest.TestCase):
 
     def test_conditions_prose_is_labelled_descriptive(self):
         self.assertIn("descriptive", self.build_row("gbw")["conditions_provenance"])
+
+
+class NoiseRawAudit(unittest.TestCase):
+    """Issue #213: the input-noise summary is audited against hash-pinned raw
+    logs and in-band spectra; the logged integrated figure and the
+    spectrum-derived quantities are checked independently."""
+
+    RECORD = "input-noise"
+    POINT = "mos_tt_27C_1.20V"
+
+    def setUp(self) -> None:
+        self.fx = Fixture()
+        self.fx.keep_noise_audit = True
+
+    def tearDown(self) -> None:
+        self.fx.close()
+
+    def errors(self, content: dict) -> list:
+        out = list(content["errors"])
+        for row in content["rows"]:
+            out.extend(row["errors"])
+        return out
+
+    def assert_error(self, *fragments: str) -> list:
+        content = self.fx.build()
+        errors = self.errors(content)
+        self.assertEqual(content["overall"]["verdict"], "ERROR", errors)
+        for fragment in fragments:
+            self.assertTrue(any(fragment in e for e in errors), (fragment, errors))
+        return errors
+
+    def entry(self, kind, pid=None) -> dict:
+        return self.fx.selection["records"][self.RECORD]["noise_raw"]["files"][pid or self.POINT][kind]
+
+    def edit_raw(self, kind, transform, pid=None, repin=True) -> None:
+        entry = self.entry(kind, pid)
+        path = self.fx.root / entry["path"]
+        lines = path.read_text(encoding="utf-8").splitlines()
+        path.write_text("\n".join(transform(lines)) + "\n", encoding="utf-8")
+        if repin:
+            entry["sha256"] = generate.sha256_file(path)
+            self.fx.save_selection()
+
+    def cell(self, column, pid=None) -> str:
+        return next(r for r in generate.read_csv_rows(self.fx.csv_path(self.RECORD))[1]
+                    if r["point_id"] == (pid or self.POINT))[column]
+
+    def only_problem(self, tag: str, other: str) -> None:
+        """The point fails the audit on `tag` and NOT on `other`."""
+        errors = [e for e in self.assert_error(f"point {self.POINT} fails definition check noise_raw_audit")]
+        self.assertTrue(any(f"[{tag}]" in e for e in errors), errors)
+        self.assertFalse(any(f"[{other}]" in e for e in errors), errors)
+
+    # --- committed evidence -------------------------------------------------
+
+    def test_committed_population_audits_offline(self):
+        content = self.fx.build()
+        self.assertEqual(self.errors(content), [])
+        raw = content["sources"][self.RECORD]["noise_raw"]
+        self.assertEqual(raw["status"], "verified")
+        self.assertEqual(raw["points"], 45)
+        self.assertTrue(raw["pins_sha256"].startswith("sha256:"))
+        self.assertIn("noise_raw_audit", content["sources"][self.RECORD]["definition_checks"])
+
+    def test_report_exposes_audit_status_and_rule(self):
+        content = self.fx.build()
+        self.assertIn("Input-noise raw-evidence audit", content["noise_audit_rule"])
+        self.assertIn("pinned log+spectrum pairs", generate.render_markdown(generate.make_report(content, "20260101-000000-abcd", self.fx.root)))
+
+    def test_shared_module_reproduces_every_committed_cell(self):
+        import noise_post
+        for row in generate.read_csv_rows(self.fx.csv_path(self.RECORD))[1]:
+            pid = row["point_id"]
+            log = (self.fx.root / self.entry("log", pid)["path"]).read_text(encoding="utf-8")
+            spec = (self.fx.root / self.entry("spectrum", pid)["path"]).read_text(encoding="utf-8")
+            token, value = noise_post.parse_log_total(log)
+            freqs, dens = noise_post.parse_spectrum(spec)
+            self.assertEqual(token, row["vni_int_vrms"], pid)
+            got = [noise_post.serialize(x) for x in noise_post.derive(freqs, dens, value)]
+            self.assertEqual(got, [row[f] for f in noise_post.SPECTRUM_FIELDS], pid)
+
+    # --- integrated-log vs spectrum-derived, independently -------------------
+
+    def test_integrated_disagreement_with_refreshed_hash_fails_only_the_log_check(self):
+        self.fx.set_cell(self.RECORD, self.POINT, "vni_int_vrms", "7.5E-05")  # repinned csv
+        self.only_problem("integrated-log", "spectrum")
+
+    def test_spectrum_derived_disagreement_with_refreshed_hash_fails_only_the_spectrum_check(self):
+        for field in ("vni_1khz_v_rthz", "flicker_coeff_v2", "thermal_floor_v_rthz",
+                      "flicker_corner_hz", "flicker_frac_of_msq", "vni_int_crosscheck_ratio"):
+            with self.subTest(field=field):
+                fx = Fixture()
+                fx.keep_noise_audit = True
+                try:
+                    fx.set_cell(self.RECORD, self.POINT, field, "1.5")
+                    self.fx, keep = fx, self.fx
+                    self.only_problem("spectrum", "integrated-log")
+                    errors = self.errors(fx.build())
+                    self.assertTrue(any(field in e and self.POINT in e for e in errors), errors)
+                    self.fx = keep
+                finally:
+                    fx.close()
+
+    def test_changed_log_value_fails_the_log_check_not_the_spectrum_derivation(self):
+        # the raw log is re-pinned (deliberate re-selection) but disagrees with
+        # the summary; the spot/fit cells still follow from the spectrum.
+        tok = self.cell("vni_int_vrms")
+        self.edit_raw("log", lambda ls: [l.replace(tok, "9.99999E-05") if l.startswith("NOISE_INOISE_TOTAL") else l for l in ls])
+        errors = self.assert_error(f"point {self.POINT} fails definition check noise_raw_audit")
+        self.assertTrue(any("[integrated-log]" in e for e in errors), errors)
+        # the cross-check ratio is derived from the LOGGED total, so it moves
+        # with the log -- the only spectrum-tagged complaint
+        spectrum_fields = {e.split("[spectrum] ")[1].split(" ")[0] for e in errors if "[spectrum]" in e}
+        self.assertEqual(spectrum_fields, {"vni_int_crosscheck_ratio"})
+
+    def test_changed_spectrum_sample_fails_only_spectrum_derived_cells(self):
+        def bump(ls):
+            parts = ls[30].split()
+            parts[1] = "%.8e" % (float(parts[1]) * 1.01)
+            return ls[:30] + ["  " + "  ".join(parts) + " "] + ls[31:]
+        self.edit_raw("spectrum", bump)
+        self.only_problem("spectrum", "integrated-log")
+
+    # --- serialization boundaries ------------------------------------------
+
+    def test_integrated_cell_is_exact_at_the_verbatim_token(self):
+        tok = Decimal(self.cell("vni_int_vrms"))
+        self.fx.set_cell(self.RECORD, self.POINT, "vni_int_vrms", format(tok, "f") + "0000")  # same value, longer
+        self.assertEqual(self.errors(self.fx.build()), [])
+        self.fx.set_cell(self.RECORD, self.POINT, "vni_int_vrms", format(tok + Decimal("1E-10"), "f"))  # 6th sig digit +1
+        self.assert_error("[integrated-log]")
+
+    def test_spectrum_cells_accept_the_serialization_and_reject_one_ulp_of_it(self):
+        old = Decimal(self.cell("vni_1khz_v_rthz"))
+        step = Decimal(1).scaleb(old.adjusted() - 5)  # one unit in the 6th significant digit
+        self.fx.set_cell(self.RECORD, self.POINT, "vni_1khz_v_rthz", format(old, "f") + "000")
+        self.assertEqual(self.errors(self.fx.build()), [])
+        self.fx.set_cell(self.RECORD, self.POINT, "vni_1khz_v_rthz", format(old + step, "f"))
+        self.assert_error("[spectrum] vni_1khz_v_rthz", self.POINT)
+        self.fx.set_cell(self.RECORD, self.POINT, "vni_1khz_v_rthz", format(old - step, "f"))
+        self.assert_error("[spectrum] vni_1khz_v_rthz")
+
+    def test_summary_cannot_be_blank_or_non_numeric(self):
+        for column, tag in (("vni_int_vrms", "integrated-log"), ("flicker_frac_of_msq", "spectrum")):
+            with self.subTest(column=column):
+                self.fx.set_cell(self.RECORD, self.POINT, column, "abc")
+                self.assert_error(f"[{tag}]")
+
+    def test_undefined_quantity_must_serialize_as_nan(self):
+        import noise_post
+        self.assertIsNone(generate._noise_cell_problem("x", "nan", float("nan")))
+        self.assertIsNotNone(generate._noise_cell_problem("x", "1.0", float("nan")))
+        self.assertIsNotNone(generate._noise_cell_problem("x", "nan", 1.0))
+        self.assertEqual(noise_post.serialize(float("nan")), "nan")
+        self.assertEqual(noise_post.serialize(0.1 + 0.2), "0.3")
+
+    # --- raw artifact problems (all point-specific) -------------------------
+
+    def test_changed_raw_pins_fail(self):
+        for kind in ("log", "spectrum"):
+            with self.subTest(kind=kind):
+                fx = Fixture()
+                try:
+                    path = fx.root / fx.selection["records"][self.RECORD]["noise_raw"]["files"][self.POINT][kind]["path"]
+                    path.write_text(path.read_text(encoding="utf-8") + "\n\n", encoding="utf-8")
+                    errors = fx.build()["errors"] + [x for r in fx.build()["rows"] for x in r["errors"]]
+                    self.assertTrue(any(self.POINT in e and "does not match its selection pin" in e for e in errors), errors)
+                finally:
+                    fx.close()
+
+    def test_missing_point_association_fails(self):
+        del self.fx.selection["records"][self.RECORD]["noise_raw"]["files"][self.POINT]
+        self.fx.save_selection()
+        self.assert_error(f"point {self.POINT}: no pinned raw noise log/spectrum")
+
+    def test_pin_outside_the_grid_fails(self):
+        files = self.fx.selection["records"][self.RECORD]["noise_raw"]["files"]
+        files["mos_tt_99C_1.20V"] = files[self.POINT]
+        self.fx.save_selection()
+        self.assert_error("'mos_tt_99C_1.20V', which is outside the expected grid")
+
+    def test_duplicate_association_fails(self):
+        files = self.fx.selection["records"][self.RECORD]["noise_raw"]["files"]
+        other = "mos_tt_27C_1.32V"
+        files[other] = json.loads(json.dumps(files[self.POINT]))
+        self.fx.save_selection()
+        errors = self.assert_error("is pinned twice", "belongs to another point")
+        self.assertTrue(any(other in e for e in errors), errors)
+
+    def test_duplicate_json_key_is_a_selection_error(self):
+        text = self.fx.selection_path.read_text(encoding="utf-8")
+        needle = f'"{self.POINT}": {{"log"'
+        broken = text.replace(needle, f'"{self.POINT}": {{}}, ' + needle, 1) if needle in text else None
+        if broken is None:  # indent=2 layout: duplicate the key by hand
+            idx = text.index(f'"{self.POINT}": {{\n')
+            broken = text[:idx] + f'"{self.POINT}": {{}},\n' + text[idx:]
+        self.fx.selection_path.write_text(broken, encoding="utf-8")
+        with self.assertRaises(generate.SelectionError):
+            self.fx.build()
+
+    def test_missing_raw_file_fails(self):
+        (self.fx.root / self.entry("spectrum")["path"]).unlink()
+        self.assert_error(f"point {self.POINT}: missing raw noise spectrum")
+
+    def test_duplicate_log_total_line_fails(self):
+        self.edit_raw("log", lambda ls: ls + ["NOISE_INOISE_TOTAL 1.0E-04"])
+        self.assert_error(f"point {self.POINT}: invalid noise log", "2 NOISE_INOISE_TOTAL lines")
+
+    def test_missing_log_total_line_fails(self):
+        self.edit_raw("log", lambda ls: [l for l in ls if not l.startswith("NOISE_INOISE_TOTAL")])
+        self.assert_error(f"point {self.POINT}: invalid noise log", "no NOISE_INOISE_TOTAL line")
+
+    def test_non_finite_log_total_fails(self):
+        for bad in ("nan", "inf", "1e999", "-1.0E-05", "0"):
+            with self.subTest(bad=bad):
+                fx = Fixture()
+                self.fx, keep = fx, self.fx
+                try:
+                    self.edit_raw("log", lambda ls: [("NOISE_INOISE_TOTAL " + bad) if l.startswith("NOISE_INOISE_TOTAL") else l for l in ls])
+                    self.assert_error(f"point {self.POINT}: invalid noise log")
+                finally:
+                    self.fx = keep
+                    fx.close()
+
+    def test_non_finite_spectrum_sample_fails(self):
+        for bad in ("nan", "inf", "1e999", "-1e-6", "0"):
+            with self.subTest(bad=bad):
+                fx = Fixture()
+                self.fx, keep = fx, self.fx
+                try:
+                    def poison(ls):
+                        parts = ls[10].split()
+                        parts[1] = bad
+                        return ls[:10] + [" ".join(parts)] + ls[11:]
+                    self.edit_raw("spectrum", poison)
+                    self.assert_error(f"point {self.POINT}: invalid noise spectrum")
+                finally:
+                    self.fx = keep
+                    fx.close()
+
+    def test_truncated_spectrum_fails(self):
+        self.edit_raw("spectrum", lambda ls: ls[:-1])
+        self.assert_error(f"point {self.POINT}: invalid noise spectrum", "expected 81 swept points, got 80")
+
+    def test_malformed_row_fails(self):
+        self.edit_raw("spectrum", lambda ls: ls[:5] + [" ".join(ls[5].split()[:3])] + ls[6:])
+        self.assert_error(f"point {self.POINT}: invalid noise spectrum", "expected 4")
+
+    def test_unordered_frequency_grid_fails(self):
+        self.edit_raw("spectrum", lambda ls: ls[:7] + [ls[8], ls[7]] + ls[9:])
+        self.assert_error(f"point {self.POINT}: invalid noise spectrum", "not strictly increasing")
+
+    def test_wrong_band_grid_fails(self):
+        def stretch(ls):
+            out = []
+            for l in ls:
+                p = l.split()
+                p[0] = p[2] = "%.8e" % (float(p[0]) * 1.5)
+                out.append(" ".join(p))
+            return out
+        self.edit_raw("spectrum", stretch)
+        self.assert_error(f"point {self.POINT}: invalid noise spectrum", "grid point 0 is")
+
+    def test_audit_requires_pinned_raw_artifacts(self):
+        del self.fx.selection["records"][self.RECORD]["noise_raw"]
+        self.fx.save_selection()
+        with self.assertRaises(generate.SelectionError):
+            self.fx.build()
+
+    def test_band_must_match_the_documented_band(self):
+        self.fx.selection["records"][self.RECORD]["noise_raw"]["band"]["points"] = 41
+        self.fx.save_selection()
+        with self.assertRaises(generate.SelectionError):
+            self.fx.build()
+
+    def test_unpinned_artifact_entry_is_rejected(self):
+        del self.entry("log")["sha256"]
+        self.fx.save_selection()
+        with self.assertRaises(generate.SelectionError):
+            self.fx.build()
+
+    def test_runner_uses_the_shared_module(self):
+        runner = (REPO / "sim" / "input-noise" / "run_noise_sweep.sh").read_text(encoding="utf-8")
+        self.assertIn("noise_post.py", runner)
+        self.assertNotIn("PYEOF", runner.split("noise_post.py")[1].split("done")[0])
 
 
 if __name__ == "__main__":
