@@ -2,6 +2,35 @@
 
 <!-- Maintained by the Loom Guide role. Newest entries first. -->
 
+### 2026-10-11
+
+- **PR #211**: sim: refuse record finalization when model identity drifts during a run
+- **Issue #209** (closed): sim: refuse record finalization when model identity drifts during a sweep
+- **PR #210**: characterization: audit CMRR statistics against pinned raw sample populations
+- **Issue #208** (closed): characterization: audit CMRR statistics against pinned raw sample populations
+- **PR #207**: characterization: serialize mint publication behind a no-clobber store lock
+- **Issue #205** (closed): characterization: reserve report publication to prevent concurrent mint overwrite
+- **PR #206**: record-paths: exclude concurrent writers of one record (flock)
+- **Issue #204** (closed): cmrr-mismatch: exclude concurrent writers when resuming a campaign
+- **PR #202**: ci: gate byte-for-byte layout regeneration on the pinned PDK and klt
+- **Issue #201** (closed): ci: run layout/opamp_core generate.py --check now that the PDK is provisioned in CI
+- **PR #203**: characterization: audit offset MC statistics against the pinned draws
+- **Issue #199** (closed): characterization: verify offset MC statistics against the recorded draws
+- **PR #197**: ci: fail simulation test discovery on partial enumeration errors
+- **Issue #195** (closed): ci: fail simulation test discovery on partial enumeration errors
+- **PR #200**: characterization: validate reported load against selected source evidence
+- **Issue #194** (closed): characterization: validate reported load against selected source evidence
+- **Issue #193** (closed): Auditor guard telemetry: gh-api-rawfield-body-literal-at
+- **PR #192**: characterization: bind PDK identity to finalized simulation records
+- **Issue #191** (closed): characterization: bind PDK identity to finalized simulation records
+- **PR #196**: ci: verify schematic-to-netlist regeneration (#190)
+- **Issue #190** (closed): ci: verify schematic-to-netlist regeneration before trusting downstream evidence
+- **PR #189**: ci(signoff): discover signoff tests per directory (incl. test_regenerate.py)
+- **Issue #180** (closed): CI: signoff/test_regenerate.py is never run; discover all tests instead of hand-listing
+- **Issue #170** (closed): Auditor guard telemetry: gh-api-rawfield-body-literal-at
+- **PR #198**: sim: pin output-swing integrity bounds in the envelope gate
+- **Issue #154** (closed): sim: pin output-swing integrity bounds in the envelope gate
+
 ### 2026-10-10
 
 - **PR #186**: input-cmr: consolidate raw-curve reader and fine hi-bound crossing into cmr_analysis.py

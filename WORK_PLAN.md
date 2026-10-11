@@ -20,12 +20,13 @@ _None._
 Human-approved issues ready for implementation (`loom:issue`).
 
 - **#85**: sim: express the open-loop AC bench as a `klt sim` request, the first gradable envelope toward T1 item 5
+- **#214**: sim: bind native input-noise records to observed model identity
 
 ## In Progress
 
 Issues currently being built (`loom:building`).
 
-_None._
+- **#213**: characterization: audit input-noise summaries against pinned logs and spectra
 
 ## PRs Awaiting Review
 
@@ -53,11 +54,11 @@ Issues carrying `loom:curated`.
 - **#99**: sim: express the PSRR bench as a klt sim request (T1 item 5 coverage, follow-up to #85) *(curated)*
 - **#100**: sim: express the output-swing bench as a klt sim request (T1 item 5 coverage, follow-up to #85) *(curated)*
 - **#105**: signoff: express the statistical rows as klt yield evidence for T1 item 6 (offset MC, mismatch CMRR) *(curated)*
+- **#161**: ci: protect nested klt record trees with the append-only evidence gate *(curated)*
 
 ## Proposed (Architect / Hermit)
 
 - **#105**: signoff: express the statistical rows as klt yield evidence for T1 item 6 (offset MC, mismatch CMRR) *(architect)*
-- **#180**: CI: signoff/test_regenerate.py is never run; discover all tests instead of hand-listing *(architect)*
 
 ## Epics
 
@@ -69,11 +70,11 @@ _None._
 |------|-------|
 | Operator merge-risk holds | 1 |
 | Operator priority | 0 |
-| Ready (`loom:issue`) | 1 |
-| In Progress (`loom:building`) | 0 |
+| Ready (`loom:issue`) | 2 |
+| In Progress (`loom:building`) | 1 |
 | PRs awaiting review | 1 |
 | Approved PRs awaiting merge | 1 |
-| Curated | 10 |
-| Architect / Hermit proposals | 2 |
+| Curated | 11 |
+| Architect / Hermit proposals | 1 |
 | Active epics | 0 |
 <!-- guide:plan-body:end -->
