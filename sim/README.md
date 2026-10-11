@@ -161,6 +161,19 @@ On success the finalized consumer record carries `records/<id>.env.json`
 `records/<id>.ac-join.json` binding the accepted source's CSV, sidecar and
 DUT-snapshot sha256 plus the compatibility basis; its `.md` points at both.
 
+**Frozen source (issue #226).** Admission reads the selected CSV once into a
+single byte buffer; the checks, the recorded `csv_sha256` and a private
+read-only snapshot (`<id>.ac-source.csv` in the run's scratch dir) all come
+from that buffer, so replacing the file during or after admission cannot make
+validated rows and recorded hash differ. Consumers read per-point values only
+through `sg13g2_ac_lookup` (snapshot hash re-verified on every lookup); a
+missing or corrupted snapshot fails the run (status 4) and never falls back
+to the original path. A snapshot that cannot be created stops the run before
+the first solver. `ac-join.json` records `source.selection_path` (the original
+path), `source.csv_sha256` and `source.snapshot_sha256` (equal by
+construction). Not covered: `input-cmr` (no admission check) and
+`cmrr-mismatch` read their own sources.
+
 **Legacy sources.** Records minted before the identity lifecycle have no
 sidecar (all committed `open-loop-ac` records today). They stay as historical
 evidence, unmodified, but are *refused* for a new join: no identity is guessed

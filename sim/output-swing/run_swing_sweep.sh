@@ -260,9 +260,9 @@ PYEOF
       fi
 
       # --- sibling-record cross-reference inputs ------------------------
-      av0_db_ac="$(sg13g2_csv_lookup "${AC_RECORD_CSV}" av0_db "${point_id}")"
+      av0_db_ac="$(sg13g2_ac_lookup av0_db "${point_id}")"
       [[ -n "${av0_db_ac}" ]] || av0_db_ac="nan"
-      ivdd_ac="$(sg13g2_csv_lookup "${AC_RECORD_CSV}" ivdd_total_a "${point_id}")"
+      ivdd_ac="$(sg13g2_ac_lookup ivdd_total_a "${point_id}")"
       [[ -n "${ivdd_ac}" ]] || ivdd_ac="nan"
       vos_off="nan"
       if [[ -n "${OFFSET_RECORD_CSV}" ]]; then
@@ -462,7 +462,7 @@ fi
 # accepted source's hashes/compatibility basis as records/<id>.ac-join.json.
 sg13g2_env_identity_finalize "${RECORD_ID}" "${ENV_BEGIN}" "${RECORDS_DIR}/${RECORD_ID}.env.json"
 sg13g2_ac_join_publish "${AC_JOIN_PROV}" "${RECORDS_DIR}/${RECORD_ID}.ac-join.json"
-rm -f "${ENV_SCRATCH}/${RECORD_ID}.env.json" "${ENV_SCRATCH}/${RECORD_ID}.ac-join.json"
+rm -f "${ENV_SCRATCH}/${RECORD_ID}.env.json" "${ENV_SCRATCH}/${RECORD_ID}.ac-join.json" "${ENV_SCRATCH}/${RECORD_ID}.ac-source.csv"
 rmdir "${ENV_SCRATCH}" 2>/dev/null || true
 
 mv "${CSV_OUT}.raw" "${CSV_OUT}"
