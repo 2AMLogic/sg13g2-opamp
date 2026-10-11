@@ -651,5 +651,98 @@ class NegativeControls(unittest.TestCase):
         self.assertIsNone(generate.latest_report(self.fx.root / generate.REPORTS_REL))
 
 
+class LoadCondition(unittest.TestCase):
+    """The reported CL is validated, not copied (issue #194)."""
+
+    def setUp(self) -> None:
+        self.fx = Fixture()
+
+    def tearDown(self) -> None:
+        self.fx.close()
+
+    def row(self, rid: str) -> dict:
+        return next(r for r in self.fx.selection["rows"] if r["id"] == rid)
+
+    def build_row(self, rid: str) -> dict:
+        self.fx.save_selection()
+        return rows_by_id(self.fx.build())[rid]
+
+    def test_committed_ac_rows_are_verified_against_source(self):
+        row = self.build_row("gbw")
+        self.assertEqual(row["load_check"]["status"], "verified")
+        self.assertIn("2e-12 F", row["load"])
+        self.assertEqual(row["verdict"], "PASS")
+
+    def test_wrong_label_is_error_not_a_verified_claim(self):
+        self.row("gbw")["load_condition"]["cl"] = "200 pF"
+        row = self.build_row("gbw")
+        self.assertEqual(row["verdict"], "ERROR")
+        self.assertEqual(row["load_check"]["status"], "contradicted")
+        self.assertTrue(any("ratified" in e for e in row["errors"]))
+        self.assertTrue(any("selected record" in e for e in row["errors"]))
+        self.assertNotIn("verified:", row["load"])
+
+    def test_contradiction_is_diagnosed_independent_of_electrical_pass_fail(self):
+        # dc_gain currently FAILs electrically; the load error must still be named.
+        self.row("dc_gain")["load_condition"]["cl"] = "5 pF"
+        row = self.build_row("dc_gain")
+        self.assertEqual(row["verdict"], "ERROR")
+        self.assertTrue(any("contradicts" in e for e in row["errors"]))
+
+    def test_equivalent_units_compare_equal(self):
+        for text in ("2e-12 F", "2000 fF", "0.002 nF", "2.0 pF"):
+            self.row("gbw")["load_condition"]["cl"] = text
+            row = self.build_row("gbw")
+            self.assertEqual(row["load_check"]["status"], "verified", text)
+            self.assertEqual(row["verdict"], "PASS", text)
+
+    def test_bad_unit_is_error(self):
+        self.row("gbw")["load_condition"]["cl"] = "2 henries"
+        self.assertEqual(self.build_row("gbw")["verdict"], "ERROR")
+
+    def test_missing_source_metadata_is_disclosed_unverified(self):
+        md = self.fx.root / self.fx.selection["records"]["open-loop-ac"]["md"]
+        md.write_text(md.read_text(encoding="utf-8").replace("CL = 2e-12 F", "load stated elsewhere"), encoding="utf-8")
+        self.fx.selection["records"]["open-loop-ac"]["md_sha256"] = generate.sha256_file(md)
+        self.fx.save_selection()
+        row = self.build_row("gbw")
+        self.assertEqual(row["load_check"]["status"], "unverified")
+        self.assertIn("UNVERIFIED", row["load"])
+        self.assertEqual(row["verdict"], "PASS")
+
+    def test_source_contradicting_ratified_load_is_error(self):
+        md = self.fx.root / self.fx.selection["records"]["open-loop-ac"]["md"]
+        md.write_text(md.read_text(encoding="utf-8").replace("CL = 2e-12 F", "CL = 2e-10 F"), encoding="utf-8")
+        self.fx.selection["records"]["open-loop-ac"]["md_sha256"] = generate.sha256_file(md)
+        self.fx.save_selection()
+        row = self.build_row("gbw")
+        self.assertEqual(row["verdict"], "ERROR")
+        self.assertTrue(any("selected record" in e for e in row["errors"]))
+
+    def test_dc_rows_claim_no_load(self):
+        row = self.build_row("offset_systematic")
+        self.assertEqual(row["load_check"]["status"], "not_applicable")
+        self.assertIn("DC analysis", row["load"])
+        self.assertNotIn("verified", row["load"])
+
+    def test_dc_applicability_is_not_a_way_around_a_contradicting_source(self):
+        row_sel = self.row("quiescent_current")
+        row_sel["load_condition"]["applicability"] = "applies"
+        row_sel["load_condition"]["cl"] = "9 pF"
+        self.assertEqual(self.build_row("quiescent_current")["verdict"], "ERROR")
+
+    def test_unknown_applicability_and_free_text_load_rejected(self):
+        self.row("gbw")["load_condition"]["applicability"] = "whatever"
+        self.assertEqual(self.build_row("gbw")["verdict"], "ERROR")
+        self.row("gbw")["load_condition"]["applicability"] = "applies"
+        self.row("gbw")["load"] = "CL = 200 pF"
+        self.fx.save_selection()
+        with self.assertRaises(generate.SelectionError):
+            self.fx.build()
+
+    def test_conditions_prose_is_labelled_descriptive(self):
+        self.assertIn("descriptive", self.build_row("gbw")["conditions_provenance"])
+
+
 if __name__ == "__main__":
     unittest.main()

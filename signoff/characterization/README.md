@@ -137,3 +137,22 @@ discover -s signoff/characterization`, `-s sim/tools -p test_env_identity.py`).
 Only the `open-loop-ac` harness and the shared klt wrapper
 (`sim/tools/klt_run_common.sh`) write sidecars so far; other bespoke
 `run_*.sh` harnesses are legacy until they call the helper.
+
+## Load (CL) validation
+
+A row's displayed load is **derived**, not copied. Each non-pending row in
+`selection.json` carries `load_condition: {cl, applicability, note}`; free-text
+`load` is rejected. The generator parses `cl` (so `2 pF`, `2e-12 F` and
+`2000 fF` are the same load) and checks it against
+
+1. the ratified `Load capacitance, CL` row of `spec/target-spec.md` section 1, and
+2. every `CL = <value> <unit>` the sha256-pinned source record's `.md` states.
+
+Any disagreement is an `ERROR` naming the contradiction, regardless of whether
+the row passes or fails electrically. `applicability` is `applies` (AC, slew,
+noise, swing, ... rows) or `dc_ignored` (DC analyses, where attached
+capacitance does not affect the result; the report makes no load claim there).
+A legacy `applies` record that states no CL is disclosed as `UNVERIFIED`
+(matches the spec only) rather than given invented provenance; records are not
+rewritten, and future finalized records should state `CL = <value> <unit>`.
+Other condition prose (`conditions`) is labelled descriptive and unverified.

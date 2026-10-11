@@ -20,6 +20,11 @@
     "                pass/fail verdict;",
     "  pending    -- a spec row with no evidence by construction (Area).",
     "",
+    "`load_condition` is structured ({cl, applicability: applies|dc_ignored,",
+    "note}); the displayed load is derived after `cl` is checked against the",
+    "ratified spec CL and the pinned source record's stated CL (README.md,",
+    "\"Load (CL) validation\"). `conditions` stays descriptive prose.",
+    "",
     "`bound.value` is copied VERBATIM from the ratified spec text and the",
     "generator refuses a row whose `spec_check.text` (which must contain that",
     "literal) is not present on the named spec/target-spec.md row. It is also",
@@ -159,7 +164,7 @@
       "scale": "1",
       "extremum": "min",
       "bound": {"op": ">=", "value": "37.8"},
-      "load": "CL = 2 pF [DR-1], no resistive load",
+      "load_condition": {"cl": "2 pF", "applicability": "applies", "note": "no resistive load"},
       "conditions": "open-loop AC, Vcm = VDD/2; Av0 read at the low-frequency shelf"
     },
     {
@@ -176,7 +181,7 @@
       "scale": "1e-6",
       "extremum": "min",
       "bound": {"op": ">=", "value": "4.74"},
-      "load": "CL = 2 pF [DR-1], no resistive load",
+      "load_condition": {"cl": "2 pF", "applicability": "applies", "note": "no resistive load"},
       "conditions": "open-loop AC, Vcm = VDD/2; unity-gain crossing of the open-loop response"
     },
     {
@@ -193,7 +198,7 @@
       "scale": "1",
       "extremum": "min",
       "bound": {"op": ">=", "value": "60"},
-      "load": "CL = 2 pF [DR-1], no resistive load",
+      "load_condition": {"cl": "2 pF", "applicability": "applies", "note": "no resistive load"},
       "conditions": "open-loop AC, Vcm = VDD/2; phase margin at the GBW crossing"
     },
     {
@@ -210,7 +215,7 @@
       "scale": "1",
       "extremum": "min",
       "bound": {"op": ">=", "value": "7.51"},
-      "load": "CL = 2 pF [DR-1], no resistive load",
+      "load_condition": {"cl": "2 pF", "applicability": "applies", "note": "no resistive load"},
       "conditions": "large-signal step, input common mode Vcm = VDD/2, ±0.3 V-per-input antiphase drive, measured in the VDD/2 ± 0.15 V window; worse of the rising and falling edge per point",
       "context": [
         {"label": "rising edge alone, worst", "column": "sr_rise_v_per_us", "extremum": "min", "unit": "V/µs", "scale": "1"},
@@ -231,7 +236,7 @@
       "scale": "1e6",
       "extremum": "max",
       "bound": {"op": "<=", "value": "108.9"},
-      "load": "CL = 2 pF [DR-1], no resistive load",
+      "load_condition": {"cl": "2 pF", "applicability": "applies", "note": "no resistive load"},
       "conditions": "unity-gain closed-loop .noise analysis, integrated over 100 Hz – 1 MHz (the band is part of the number); nominal devices, ideal ibias contributes no noise",
       "context": [
         {"label": "spot density @ 100 Hz, worst", "column": "vni_100hz_v_rthz", "extremum": "max", "unit": "µV/√Hz", "scale": "1e6"},
@@ -253,7 +258,7 @@
       "scale": "1e3",
       "extremum": "absmax",
       "bound": {"op": "<=", "value": "21.9"},
-      "load": "CL = 2 pF [DR-1] attached (a DC analysis ignores it), no resistive load",
+      "load_condition": {"cl": "2 pF", "applicability": "dc_ignored", "note": "no resistive load"},
       "conditions": "DC, Vcm = VDD/2, perfectly matched (nominal) devices; magnitude of the null-method offset, cross-checked per point by a closed-loop method (xcheck_pass)",
       "context": [
         {"label": "largest disagreement between the two methods", "column": "vos_method_delta_v", "extremum": "absmax", "unit": "mV", "scale": "1e3"}
@@ -273,7 +278,7 @@
       "scale": "1",
       "extremum": "min",
       "bound": {"op": ">=", "value": "26.68"},
-      "load": "CL = 2 pF [DR-1], no resistive load",
+      "load_condition": {"cl": "2 pF", "applicability": "applies", "note": "no resistive load"},
       "conditions": "per point: joined open-loop Av0 minus the +3σ point of the 300-draw common-mode-gain distribution, mean + 3σ taken in the LINEAR domain (DR-0004); SG13G2 per-corner mismatch decks + process corners; DC shelf",
       "context": [
         {"label": "worst single drawn sample (dB-domain minimum, not the ratified statistic)", "column": "cmrr_db_min", "extremum": "min", "unit": "dB", "scale": "1"},
@@ -294,7 +299,7 @@
       "scale": "1",
       "extremum": "min",
       "bound": {"op": ">=", "value": "30.75"},
-      "load": "CL = 2 pF [DR-1], no resistive load",
+      "load_condition": {"cl": "2 pF", "applicability": "applies", "note": "no resistive load"},
       "conditions": "perfectly matched devices; joined open-loop Av0 divided by the in-phase common-mode gain; DC shelf (10 mHz read)"
     },
     {
@@ -311,7 +316,7 @@
       "scale": "1",
       "extremum": "min",
       "bound": {"op": ">=", "value": "1.87"},
-      "load": "CL = 2 pF [DR-1], no resistive load",
+      "load_condition": {"cl": "2 pF", "applicability": "applies", "note": "no resistive load"},
       "conditions": "joined open-loop Av0 divided by the VDD-to-output gain (PSRR+; vss is ground), DC shelf (10 mHz read); ideal external 10 µA ibias contributes no supply ripple. Strongly frequency-dependent: the in-band figure below is part of the ratified number's context",
       "context": [
         {"label": "in-band PSRR+ at 1 kHz, worst", "column": "psrr_1khz_db", "extremum": "min", "unit": "dB", "scale": "1"}
@@ -331,7 +336,7 @@
       "scale": "1e3",
       "extremum": "min",
       "bound": {"op": ">=", "value": "251"},
-      "load": "CL = 2 pF [DR-1], NO resistive load (an upper bound; a loaded-row decision is separate)",
+      "load_condition": {"cl": "2 pF", "applicability": "applies", "note": "NO resistive load (an upper bound; a loaded-row decision is separate)"},
       "conditions": "open-loop differential DC transfer curve, −6 dB incremental-gain criterion"
     },
     {
@@ -348,7 +353,7 @@
       "scale": "1e3",
       "extremum": "min",
       "bound": {"op": ">=", "value": "141"},
-      "load": "CL = 2 pF [DR-1], NO resistive load (an upper bound; a loaded-row decision is separate)",
+      "load_condition": {"cl": "2 pF", "applicability": "applies", "note": "NO resistive load (an upper bound; a loaded-row decision is separate)"},
       "conditions": "open-loop differential DC transfer curve, −6 dB incremental-gain criterion"
     },
     {
@@ -365,7 +370,7 @@
       "scale": "1",
       "extremum": "min",
       "bound": {"op": ">=", "value": "0.571"},
-      "load": "CL = 2 pF [DR-1], NO resistive load (an upper bound; a loaded-row decision is separate)",
+      "load_condition": {"cl": "2 pF", "applicability": "applies", "note": "NO resistive load (an upper bound; a loaded-row decision is separate)"},
       "conditions": "open-loop differential DC transfer curve, −6 dB incremental-gain criterion"
     },
     {
@@ -382,7 +387,7 @@
       "scale": "1e6",
       "extremum": "max",
       "bound": {"op": "<=", "value": "119.7"},
-      "load": "CL = 2 pF [DR-1] attached (DC operating point), no resistive load",
+      "load_condition": {"cl": "2 pF", "applicability": "dc_ignored", "note": "no resistive load"},
       "conditions": "total VDD current at the open-loop bench's DC operating point, INCLUDING the external 10 µA ibias reference",
       "context": [
         {"label": "signal-path-only current (excl. ibias), worst", "column": "ivdd_signal_path_a", "extremum": "max", "unit": "µA", "scale": "1e6"}
@@ -401,7 +406,7 @@
       "unit": "mV",
       "scale": "1e3",
       "extremum": "max",
-      "load": "CL = 2 pF [DR-1] attached (a DC analysis ignores it), no resistive load",
+      "load_condition": {"cl": "2 pF", "applicability": "dc_ignored", "note": "no resistive load"},
       "conditions": "device-mismatch Monte Carlo, N = 300 draws per point, campaign seed 20260921; SG13G2 <corner>_mismatch sections layered on the process corners; FIXED 1.20 V supply",
       "context": [
         {"label": "σ(Vos), smallest", "column": "sigma_vos_v", "extremum": "min", "unit": "mV", "scale": "1e3"},
@@ -422,7 +427,7 @@
       "unit": "mV",
       "scale": "1e3",
       "extremum": "max",
-      "load": "CL = 2 pF [DR-1] attached (a DC analysis ignores it), no resistive load",
+      "load_condition": {"cl": "2 pF", "applicability": "dc_ignored", "note": "no resistive load"},
       "conditions": "per point: |systematic offset at the same corner/temperature, 1.20 V| + 3σ of the drawn distribution; FIXED 1.20 V supply"
     },
     {
@@ -438,7 +443,7 @@
       "unit": "V",
       "scale": "1",
       "extremum": "min",
-      "load": "CL = 2 pF [DR-1], no resistive load",
+      "load_condition": {"cl": "2 pF", "applicability": "applies", "note": "no resistive load"},
       "conditions": "open-loop common-mode sweep, differential input pinned at zero; lower bound at the measured Vdsat(M5) knee (m5_headroom), upper bound at pair saturation (pair_saturation); nominal matched devices",
       "context": [
         {"label": "points where the measured range excludes the nominal Vcm = VDD/2", "column": "contains_vcm", "count_equal": "0"}
@@ -457,7 +462,7 @@
       "unit": "V",
       "scale": "1",
       "extremum": "max",
-      "load": "CL = 2 pF [DR-1], no resistive load",
+      "load_condition": {"cl": "2 pF", "applicability": "applies", "note": "no resistive load"},
       "conditions": "worst (highest) lower common-mode bound, m5_headroom criterion"
     },
     {
@@ -473,7 +478,7 @@
       "unit": "V",
       "scale": "1",
       "extremum": "min",
-      "load": "CL = 2 pF [DR-1], no resistive load",
+      "load_condition": {"cl": "2 pF", "applicability": "applies", "note": "no resistive load"},
       "conditions": "worst (lowest) upper common-mode bound, pair_saturation criterion"
     },
     {
