@@ -15,12 +15,15 @@ CI enforces the rule above rather than trusting it:
 (run by `.github/workflows/signoff.yml`) compares the previous Git tree with
 the tested tree and fails if any previously committed file under
 `sim/<experiment>/records/`, `netlist-snapshots/` or `corners/`,
-`signoff/reports/` or `signoff/characterization/reports/` was modified,
+`sim/<bench>/klt/records/` (klt envelopes, comparisons and raw `<id>.shards/`
+artifacts) or `sim/<bench>/klt/prototype/` (prototype envelopes, not signoff
+evidence), `signoff/reports/` or `signoff/characterization/reports/` was modified,
 deleted, renamed (no rename detection: the old path must still exist) or had
 its mode changed. The failure names the path. New files are always allowed, and
 so are edits to everything outside those directories (selectors such as
 `signoff/characterization/selection.json`, manifests, generators, `run_*.sh`,
-testbenches, READMEs). The comparison is PR base vs the tested tree on pull
+testbenches, READMEs, and klt request templates, comparators, runners and
+selectors beside the klt record trees). The comparison is PR base vs the tested tree on pull
 requests and the push's `before` vs `after` on pushes; the first push of a
 branch (all-zero `before`) has nothing to compare and is gated by its PR. There
 is no bypass label. Run it locally with

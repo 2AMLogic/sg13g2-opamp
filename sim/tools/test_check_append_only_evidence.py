@@ -26,7 +26,15 @@ CREP = "signoff/characterization/reports/20260101-000000-aaaaaaa.json"
 SEL = "signoff/characterization/selection.json"
 GEN = "signoff/characterization/generate.py"
 RUN = "sim/open-loop-ac/run_pvt_sweep.sh"
-ALL = (REC, OLD, SNAP, CORN, SREP, CREP)
+KENV = "sim/cmrr-psrr/klt/records/20261010-094256-469573d.sim.json"
+KCMP = "sim/cmrr-psrr/klt/records/20261010-094256-469573d.compare.json"
+KSHARD = "sim/cmrr-psrr/klt/records/20261010-094256-469573d.shards/mos_tt/report.json"
+KPROTO = "sim/input-noise/klt/prototype/20261010-053635-c0c112a.tt27-1v20.sim.json"
+KMUT = ("sim/cmrr-psrr/klt/psrr.request.json", "sim/cmrr-psrr/klt/compare.py",
+        "sim/cmrr-psrr/klt/run.sh", "sim/cmrr-psrr/klt/shard.py",
+        "sim/cmrr-psrr/klt/tb_psrr.body.spice")
+KLT = (KENV, KCMP, KSHARD, KPROTO)
+ALL = (REC, OLD, SNAP, CORN, SREP, CREP) + KLT
 
 
 class Repo:
@@ -68,6 +76,8 @@ class GateTest(unittest.TestCase):
         self.r = Repo(self._td.name)
         for p in ALL:
             self.r.write(p, f"data {p}\n")
+        for p in KMUT:
+            self.r.write(p, f"mutable {p}\n")
         self.r.write(SEL, '{"sel": "a"}\n')
         self.r.write(GEN, "print(1)\n")
         self.r.write(RUN, "#!/bin/sh\n", 0o755)
@@ -88,6 +98,8 @@ class GateTest(unittest.TestCase):
     def test_new_records_pass(self):
         self.r.write("sim/open-loop-ac/records/20270101-000000-ccccccc.csv", "n\n")
         self.r.write("sim/new-bench/corners/x/y.csv", "n\n")
+        self.r.write("sim/cmrr-psrr/klt/records/20270101-000000-ccccccc.sim.json", "{}\n")
+        self.r.write("sim/cmrr-psrr/klt/records/20270101-000000-ccccccc.shards/a/r.json", "{}\n")
         self.r.write("signoff/reports/20270101-000000-ccccccc.signoff.json", "{}\n")
         self.r.commit()
         rc, out, err = self.check()
@@ -101,6 +113,8 @@ class GateTest(unittest.TestCase):
         self.r.write(SEL, '{"sel": "b"}\n')
         self.r.write(GEN, "print(2)\n")
         self.r.write(RUN, "#!/bin/sh\necho hi\n", 0o755)
+        for p in KMUT:
+            self.r.write(p, f"edited {p}\n")
         self.r.write("sim/open-loop-ac/README.md", "doc\n")
         self.r.write("sim/open-loop-ac/testbench/tb.spice", "tb\n")
         self.r.commit()
@@ -142,6 +156,19 @@ class GateTest(unittest.TestCase):
         self.assertFailsNaming(REC)
         rc, _, err = self.check()
         self.assertIn("mode changed", err)
+
+    def test_klt_envelope_rename_and_mode_change_fail(self):
+        self.r.g("mv", KENV, KENV + ".moved")
+        self.assertFailsNaming(KENV)
+        self.r.g("reset", "-q", "--hard", self.base)
+        (self.r.root / KENV).chmod(0o755)
+        self.assertFailsNaming(KENV)
+        _, _, err = self.check()
+        self.assertIn("mode changed", err)
+
+    def test_klt_shard_artifact_change_fails(self):
+        self.r.write(KSHARD, "tampered\n")
+        self.assertFailsNaming(KSHARD)
 
     def test_unselected_historical_record_protected(self):
         # SEL says nothing about OLD, yet it is protected.

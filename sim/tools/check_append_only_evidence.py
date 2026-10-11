@@ -16,12 +16,16 @@ Protected scope (every file under):
   sim/<experiment>/records/
   sim/<experiment>/netlist-snapshots/
   sim/<experiment>/corners/
+  sim/<bench>/klt/records/   (klt envelopes, comparisons, raw <id>.shards/)
+  sim/<bench>/klt/prototype/ (prototype klt envelopes; not signoff evidence)
   signoff/reports/
   signoff/characterization/reports/
 No `corners/` directory holds intentionally mutable definitions: every file
 there lives under a per-record `<record-id>/` directory written by a run.
-Mutable definitions (testbench/, selection.json, generators, run_*.sh, READMEs)
-are outside the scope.
+Mutable definitions (testbench/, selection.json, generators, run_*.sh, READMEs,
+and klt request templates, comparators, runners and selectors that sit beside
+-- not inside -- the klt record trees) are outside the scope. The klt rule is
+explicit (`klt/records/`, `klt/prototype/`), not a blanket `klt/` freeze.
 
 Usage:
   check_append_only_evidence.py --base <rev> [--head <rev>] [--repo <dir>]
@@ -46,6 +50,7 @@ PROTECTED = (
     re.compile(r"^sim/[^/]+/records/"),
     re.compile(r"^sim/[^/]+/netlist-snapshots/"),
     re.compile(r"^sim/[^/]+/corners/"),
+    re.compile(r"^sim/[^/]+/klt/(records|prototype)/"),
     re.compile(r"^signoff/reports/"),
     re.compile(r"^signoff/characterization/reports/"),
 )

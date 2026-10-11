@@ -48,7 +48,7 @@ jobs:
       - name: Evidence is append-only against the previous tree (offline)
         # Rejects modification, deletion, rename or mode change of any
         # previously committed file under sim/*/{records,netlist-snapshots,
-        # corners}/, signoff/reports/ or signoff/characterization/reports/.
+        # corners}/, sim/*/klt/{records,prototype}/, signoff/reports/ or signoff/characterization/reports/.
         # New paths and edits to selectors/generators/READMEs pass. Explicit
         # comparison commits: pull_request -> PR base SHA vs the tested tree
         # (HEAD, the merge commit); push -> event `before` vs HEAD (the whole
