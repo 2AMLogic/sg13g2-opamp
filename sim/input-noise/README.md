@@ -183,6 +183,63 @@ built-in-model PDK. The flicker/thermal fit above is the decomposition
 that *is* available here, and it is a spectral decomposition, not a
 per-device one.
 
+### Run-time PDK/model identity (`records/<record-id>.env.json`)
+
+A record minted by `run_noise_sweep.sh` carries a run-time PDK/model
+identity sidecar, `records/<record-id>.env.json` (issue #191's schema,
+contract in [`../env-identity.sh`](../env-identity.sh); see
+[`../README.md`](../README.md) "Run-time PDK/model identity" for the full
+guarantee). Since issue #214 this bench runs the same begin/finalize
+lifecycle `sim/open-loop-ac/run_pvt_sweep.sh` and the `klt sim` wrappers
+run (issue #209):
+
+- The identity — the hashed model/`.include` closure the install actually
+  loads, the OSDI `.build-manifest`, the observed release marker, the
+  ngspice build and the configured `sim/pdk.json` pin — is captured into
+  private scratch **before the first solver launch** (here the units-check
+  deck), so a begin-capture failure exits 3 before anything is simulated.
+- After the last DUT solve and **before any record file is finalized**, a
+  fresh capture is compared against the begin capture. On any persistent
+  change the run exits 4 and publishes nothing that looks finalized — no
+  `records/<id>.csv`, `.md` or `.env.json`. What stays for inspection:
+  `corners/<record-id>/` (units-check and per-point logs and spectra),
+  the provisional `records/<id>.csv.raw`, and the begin capture in the
+  scratch directory named on stderr. Only on a match is the **begin**
+  capture published (no-clobber) as the sidecar, and only then are
+  `records/<id>.csv` / `.md` written; the record's Markdown names it.
+  Exit statuses: 0 record finalized; 1 units check failed / no point
+  passed; 3 preflight or begin-capture failure (nothing simulated);
+  4 identity drift or sidecar publication failure (record not finalized).
+  A refused run's artifacts are never rewritten — re-run under a fresh
+  record id once the environment is stable, and that run finalizes under
+  the identity it actually started with.
+
+**Limitation.** This is a before/after comparison, not an immutable
+snapshot of the PDK: a file changed and restored before the final recheck
+is not detected, and the sidecar cannot prove which bytes each individual
+solver invocation read (PDK snapshotting is deliberate future work —
+`sim/README.md`).
+
+**New records vs. the committed historical record.** This bench's
+committed record
+[`20260918-203850-90844d2`](records/20260918-203850-90844d2.md) predates
+this lifecycle and has **no sidecar**: in the characterization report's
+grading (`signoff/characterization/README.md`) it is `legacy-unverified` —
+its numbers and electrical verdicts stand unchanged, but PDK provenance is
+*not claimed* for it. That is never fixed retroactively: no sidecar is
+manufactured for a historical record, because provenance requires a capture
+taken before the run's first solver. A **rerun** of this bench mints a new
+record id that does carry the sidecar and grades `verified` (if selected).
+
+**Selecting a new record for characterization.** Nothing is discovered by
+globbing: `signoff/characterization/selection.json` names every record the
+report reads by path, pinned by SHA-256. A new noise record is selected by
+adding its `csv`/`md` pins *plus* `env_sidecar` + `env_sidecar_sha256`
+(both or neither) to a `records` entry — the sidecar pin is what upgrades
+the rows from `legacy-unverified` to `verified`. The historical record's
+existing selection stays as-is until a new run's evidence is deliberately
+substituted for it.
+
 ## Cold-start invocation
 
 ```bash
@@ -199,7 +256,9 @@ committed, pre-netlisted artifact. Runs the full 45-point grid in about
 2 minutes on a modern laptop (110 s wall on the machine that produced the
 committed record). Writes a new, timestamped, append-only record
 under `netlist-snapshots/<record-id>/`, `corners/<record-id>/` and
-`records/<record-id>.{csv,md}` — never overwriting a prior run.
+`records/<record-id>.{csv,md,env.json}` — never overwriting a prior run
+(the `.env.json` sidecar is the run-time PDK/model identity described
+above; a refused run publishes none of the three).
 
 ## What was actually measured (this repo's committed record)
 
