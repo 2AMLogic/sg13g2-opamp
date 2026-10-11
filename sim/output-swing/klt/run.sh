@@ -29,7 +29,8 @@
 #
 # Exit status: 0 records written and the join agrees; 3 preflight failed
 # (PDK/OSDI/ngspice/klt missing -- nothing written); 4 the run produced no
-# gradable envelope (klt error, errored/inconclusive, incomplete coverage,
+# gradable envelope (PDK/model identity drifted during the run, issue #209;
+# klt error, errored/inconclusive, incomplete coverage,
 # failed validation -- nothing written to records/, the raw output is kept in
 # a scratch dir named on stderr); 5 records written but compare.py found a
 # point outside tolerance or an unexplained verdict disagreement (see the

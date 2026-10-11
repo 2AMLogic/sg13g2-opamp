@@ -1743,8 +1743,8 @@ def _stage_text(dest: Path, text: str) -> Path:
 
 def _link_no_clobber(tmp: Path, dest: Path) -> None:
     """Publish the staged file at dest without ever replacing or truncating
-    an existing dest (the Python twin of klt_publish_noclobber in
-    sim/tools/klt_run_common.sh). The hard link either lands whole on a free
+    an existing dest (the Python twin of sg13g2_publish_noclobber in
+    sim/record-paths.sh). The hard link either lands whole on a free
     name or refuses with CollisionError; dest is never opened for writing.
     The staging file is always removed."""
     try:

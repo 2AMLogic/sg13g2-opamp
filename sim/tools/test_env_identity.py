@@ -136,5 +136,102 @@ class EnvIdentity(unittest.TestCase):
         self.assertEqual(ei.main(argv), 1)
 
 
+class Compare(unittest.TestCase):
+    """compare(): begin vs finalize capture of one run (#209)."""
+
+    def setUp(self) -> None:
+        self._tmp = tempfile.TemporaryDirectory()
+        self.tmp = Path(self._tmp.name)
+        make_install(self.tmp / "a")
+        self.inst = self.tmp / "a" / "ihp-sg13g2"
+
+    def tearDown(self) -> None:
+        self._tmp.cleanup()
+
+    def cap(self, root=None, pin=PIN, rid=RID, ngspice="ngspice-46") -> dict:
+        return ei.capture(root or self.tmp / "a", "ihp-sg13g2", pin, rid, ngspice)
+
+    def test_unchanged_install_has_no_drift(self):
+        self.assertEqual(ei.compare(self.cap(), self.cap()), [])
+
+    def test_changed_used_include_byte_names_the_file(self):
+        before = self.cap()
+        (self.inst / ei.MODELS_SUBDIR / "sub/mos.inc").write_text("* mos tt, edited mid-run\n", encoding="utf-8")
+        errs = ei.compare(before, self.cap())
+        self.assertTrue(any("libs.tech/ngspice/models/sub/mos.inc" in e and "changed" in e for e in errs), errs)
+        self.assertTrue(any("identity_sha256" in e for e in errs), errs)
+
+    def test_closure_growth_and_shrink_are_drift(self):
+        before = self.cap()
+        (self.inst / ei.MODELS_SUBDIR / "cornerCAP.lib").write_text('.include "extra.inc"\n', encoding="utf-8")
+        (self.inst / ei.MODELS_SUBDIR / "extra.inc").write_text("* extra\n", encoding="utf-8")
+        after = self.cap()
+        self.assertTrue(any("added to the closure" in e and "extra.inc" in e for e in ei.compare(before, after)))
+        self.assertTrue(any("removed from the closure" in e and "extra.inc" in e for e in ei.compare(after, before)))
+
+    def test_unresolved_include_change_is_drift(self):
+        before = self.cap()
+        (self.inst / ei.MODELS_SUBDIR / "sub/mos.inc").unlink()
+        errs = ei.compare(before, self.cap())
+        self.assertTrue(any("unresolved" in e for e in errs), errs)
+
+    def test_osdi_manifest_change_is_drift(self):
+        before = self.cap()
+        (self.inst / ei.OSDI_MANIFEST_REL).write_text("schema=1\noutput.psp103.osdi=deadbeef\n", encoding="utf-8")
+        errs = ei.compare(before, self.cap())
+        self.assertTrue(any("OSDI build-manifest" in e for e in errs), errs)
+
+    def test_release_marker_change_is_drift(self):
+        before = self.cap()
+        (self.inst / ".fetched-version").write_text("0.3.1\n", encoding="utf-8")
+        errs = ei.compare(before, self.cap())
+        self.assertTrue(any("release marker" in e for e in errs), errs)
+
+    def test_configured_pin_change_is_drift(self):
+        before = self.cap()
+        for key, value in (("release_tag", "v9.9.9"), ("source", "elsewhere"), ("variant", "other")):
+            errs = ei.compare(before, self.cap(pin=dict(PIN, **{key: value})))
+            self.assertTrue(any(f"configured {key}" in e for e in errs), (key, errs))
+
+    def test_ngspice_change_is_drift(self):
+        errs = ei.compare(self.cap(), self.cap(ngspice="ngspice-47"))
+        self.assertTrue(any("ngspice" in e for e in errs), errs)
+
+    def test_host_path_only_change_is_not_drift(self):
+        make_install(self.tmp / "elsewhere" / "deeper")
+        self.assertEqual(ei.compare(self.cap(), self.cap(root=self.tmp / "elsewhere" / "deeper")), [])
+
+    def test_record_id_alone_is_not_drift(self):
+        self.assertEqual(ei.compare(self.cap(), self.cap(rid="20260202-000000-0000abc")), [])
+
+    def test_non_object_is_error(self):
+        self.assertTrue(ei.compare([], self.cap()))
+
+    def cli(self, before: Path, root: Path | None = None) -> int:
+        return ei.main(["compare", "--before", str(before), "--pdk-root", str(root or self.tmp / "a"),
+                        "--pdk", "ihp-sg13g2", "--pin", str(HERE.parent / "pdk.json"), "--ngspice", "ngspice-46"])
+
+    def test_cli_compare_passes_unchanged_and_fails_on_drift(self):
+        before = self.tmp / "begin.env.json"
+        before.write_text(ei.canonical_json(self.cap()), encoding="utf-8")
+        self.assertEqual(self.cli(before), 0)
+        make_install(self.tmp / "moved")
+        self.assertEqual(self.cli(before, self.tmp / "moved"), 0)
+        (self.inst / ei.MODELS_SUBDIR / "sub/mos.inc").write_text("* drifted\n", encoding="utf-8")
+        self.assertEqual(self.cli(before), 1)
+
+    def test_cli_compare_uses_begin_model_roots(self):
+        side = ei.capture(self.tmp / "a", "ihp-sg13g2", PIN, RID, "ngspice-46", models=("cornerCAP.lib",))
+        before = self.tmp / "begin.env.json"
+        before.write_text(ei.canonical_json(side), encoding="utf-8")
+        self.assertEqual(self.cli(before), 0)  # would differ under DEFAULT_MODELS
+
+    def test_cli_compare_unreadable_before_is_error(self):
+        self.assertEqual(self.cli(self.tmp / "missing.env.json"), 1)
+        bad = self.tmp / "bad.env.json"
+        bad.write_text("[]", encoding="utf-8")
+        self.assertEqual(self.cli(bad), 1)
+
+
 if __name__ == "__main__":
     unittest.main()

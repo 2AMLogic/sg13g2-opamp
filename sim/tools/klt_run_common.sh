@@ -19,13 +19,24 @@
 #                                          -> REPO_GIT_SHA, RECORD_ID,
 #                                             RECORDS_DIR, SCRATCH; cds to
 #                                             REPO_ROOT (exit 3 if the record
-#                                             id already exists)
+#                                             id already exists). Also
+#                                             captures the before-run PDK/
+#                                             model identity into SCRATCH
+#                                             via sg13g2_env_identity_begin
+#                                             (issue #209; exit 3 if that
+#                                             capture fails, before any
+#                                             solver runs)
 #   klt_run_request <req> <out> <err> [<klt sim args>...]
 #                                          -> runs `klt sim`; sets `incomplete`
 #   klt_validate_envelope <out> [<validate args>...]
 #   klt_require_complete                   -> exit 4 if `incomplete` is set
-#   klt_write_envelope <out>               -> copies into records/ (+ the
-#                                             <id>.env.json PDK identity sidecar, #191)
+#   klt_write_envelope <out>               -> rechecks the model identity
+#                                             against the begin capture
+#                                             (issue #209; drift exits 4
+#                                             before anything is
+#                                             published), then copies into
+#                                             records/ (+ the <id>.env.json
+#                                             PDK identity sidecar, #191)
 #   KLT_PROVENANCE_EXTRA=(key=value ...)   -> optional, placed before pdk=
 #   klt_compare_and_finish <compare args>...
 #                                          -> compare; exit 0 / 5
@@ -41,11 +52,14 @@
 # (empty, so never tracked by git). The owner then refuses -- releasing the
 # reservation and exiting 3, before any klt call -- if records/<id><suffix>
 # .sim.json, .compare.json or .shards already exists, so a comparison-only
-# leftover is protected too. Files are published by klt_publish_noclobber
-# (copy to a hidden temp in records/, then `ln`, which fails on an existing
-# destination, then unlink the temp): a destination is never truncated or
-# replaced. compare.py writes its report to scratch and it is published the
-# same way.
+# leftover is protected too. Files are published by sg13g2_publish_noclobber
+# (sim/record-paths.sh, sourced below; copy to a hidden temp in records/,
+# then `ln`, which fails on an existing destination, then unlink the temp):
+# a destination is never truncated or replaced. compare.py writes its report
+# to scratch and it is published the same way. The model-identity sidecar is
+# published through the same primitive by sg13g2_env_identity_finalize --
+# only after a fresh capture matched the begin capture (#209), and before
+# the sim envelope is published, so a drifted run publishes nothing.
 #
 # Cleanup/retention: an EXIT trap rmdirs the reservation on every normal exit
 # (0, 3, 4, 5). A failed or incomplete run therefore leaves no reservation,
@@ -59,13 +73,26 @@
 # <record-suffix> (default empty) goes between the record id and `.sim.json` /
 # `.compare.json`, e.g. ".nominal". KLT_OK_NOTE overrides the exit-0 message
 # parenthetical. Exit statuses are those documented in each run.sh header:
-# 3 preflight, 4 no gradable envelope, 5 compare disagreed or could not join.
+# 3 preflight (including a failed before-run identity capture, #209),
+# 4 no gradable envelope or drifted model identity (nothing published),
+# 5 compare disagreed or could not join.
 
 incomplete=0
 KLT_RESERVATION=""
 RECORD_SUFFIX=""
 KLT_OK_NOTE="all points within tolerance"
 KLT_PROVENANCE_EXTRA=()
+
+# Publication primitive: sg13g2_publish_noclobber lives in
+# sim/record-paths.sh -- the offline-sourceable split of sim/preflight.sh
+# that every caller has already sourced before this file. Sourcing it again
+# here (idempotent: only definitions), located relative to THIS file, keeps
+# this file standalone for its offline tests. The identity lifecycle
+# (sg13g2_env_identity_begin/_finalize, sim/env-identity.sh) is NOT sourced
+# here: it comes from sim/preflight.sh, and offline tests provide it
+# explicitly (stubbed, or the real file against a fake PDK install).
+# shellcheck source=/dev/null
+source "$(dirname "${BASH_SOURCE[0]}")/../record-paths.sh"
 
 klt_check_client() {
   read -r -a KLT_CMD <<< "${KLT:-klt}"
@@ -107,6 +134,12 @@ klt_begin_record() {
   # klt reports netlist/model paths relative to the invoking repo; run from its root.
   cd "${REPO_ROOT}" || exit
   SCRATCH="$(mktemp -d "${TMPDIR:-/tmp}/${scratch_prefix}-klt-${RECORD_ID}.XXXXXX")"
+  # Run-time PDK/model identity, BEFORE any solver can run (issue #209):
+  # captured into this run's private scratch; klt_write_envelope rechecks it
+  # against a fresh capture before publishing anything. A capture failure is
+  # a preflight failure (exit 3, reservation released by the EXIT trap): the
+  # record would claim provenance it cannot vouch for, so nothing simulates.
+  sg13g2_env_identity_begin "${RECORD_ID}" "${SCRATCH}/${RECORD_ID}.env.json"
 }
 
 klt_release_reservation() {
@@ -114,23 +147,6 @@ klt_release_reservation() {
     rmdir "${KLT_RESERVATION}" 2>/dev/null || true
     KLT_RESERVATION=""
   fi
-}
-
-# klt_publish_noclobber <src> <dest>: put a copy of <src> at <dest> without
-# ever replacing or truncating an existing <dest>. Returns 1 if it exists.
-klt_publish_noclobber() {
-  local src="$1" dest="$2" tmp rc=0
-  tmp="$(mktemp "$(dirname "${dest}")/.publish.XXXXXX")" || return 1
-  if cp "${src}" "${tmp}"; then
-    ln "${tmp}" "${dest}" 2>/dev/null || rc=1
-  else
-    rc=1
-  fi
-  unlink "${tmp}" 2>/dev/null || true
-  if [[ "${rc}" -ne 0 ]]; then
-    echo "run.sh: could not publish ${dest} (already exists?) -- not replaced; records are append-only." >&2
-  fi
-  return "${rc}"
 }
 
 klt_run_request() {
@@ -165,17 +181,15 @@ klt_require_complete() {
 }
 
 klt_write_envelope() {
-  klt_publish_noclobber "$1" "${RECORDS_DIR}/${RECORD_ID}${RECORD_SUFFIX}.sim.json" || exit 4
-  # Run-time PDK/model identity sidecar (issue #191): one per record id, bound
-  # to it; later suffixed envelopes of the same id reuse the first.
-  local side="${RECORDS_DIR}/${RECORD_ID}.env.json"
-  if [[ ! -e "${side}" ]]; then
-    sg13g2_capture_env_identity "${RECORD_ID}" "${SCRATCH}/${RECORD_ID}.env.json" &&
-      klt_publish_noclobber "${SCRATCH}/${RECORD_ID}.env.json" "${side}" || {
-      echo "run.sh: could not publish the PDK identity sidecar ${side}" >&2
-      exit 4
-    }
-  fi
+  # Run-time PDK/model identity sidecar (issues #191, #209): one per record
+  # id, bound to it. Recheck the begin capture against the live install
+  # BEFORE the envelope is published, so a drifted run leaves no
+  # finalized-looking records/<id>.sim.json (exit 4; the raw envelope and
+  # begin capture stay in SCRATCH). A later suffixed envelope of the same
+  # id reuses the first sidecar, which must equal this run's begin capture.
+  sg13g2_env_identity_finalize "${RECORD_ID}" "${SCRATCH}/${RECORD_ID}.env.json" \
+    "${RECORDS_DIR}/${RECORD_ID}.env.json"
+  sg13g2_publish_noclobber "$1" "${RECORDS_DIR}/${RECORD_ID}${RECORD_SUFFIX}.sim.json" || exit 4
 }
 
 klt_compare_and_finish() {
@@ -196,7 +210,7 @@ klt_compare_and_finish() {
 
   # compare.py wrote into scratch; publish without replacing (issue #171).
   if [[ -e "${SCRATCH}/${rec}.compare.json" ]] &&
-     ! klt_publish_noclobber "${SCRATCH}/${rec}.compare.json" "${RECORDS_DIR}/${rec}.compare.json"; then
+     ! sg13g2_publish_noclobber "${SCRATCH}/${rec}.compare.json" "${RECORDS_DIR}/${rec}.compare.json"; then
     echo "run.sh: comparison not written; raw copy kept in ${SCRATCH}" >&2
     exit 5
   fi
