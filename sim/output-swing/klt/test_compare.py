@@ -9,8 +9,10 @@ baseline agrees" would be circular. The baseline is here only as the control
 that every negative case perturbs; the tests that carry weight are the negative
 controls (reordered, missing, duplicate, extra, null, NaN, wrong unit, absent
 metric, skipped/errored/inconclusive coverage, nothing_checked, relaxed or
-inconsistent limits, failed integrity check, perturbed value), each of which
-must fail and name the point/metric it failed on. None of this is evidence
+inconsistent ratified limits, removed or relaxed pinned integrity limits, a
+status contradicting a pinned integrity bound, failed integrity check,
+perturbed value), each of which must fail and name the point/metric it
+failed on. None of this is evidence
 about the circuit -- the envelope in records/ is.
 """
 
@@ -77,7 +79,7 @@ def _envelope(rows):
                         "temperature_c": int(r["temp_c"]),
                         "status": "fail" if any(m["status"] == "fail" for m in ms) else "pass",
                         "measurements": ms})
-    top = [{"name": n, "limits": limits[n], "status": "pass"} for n in C.RATIFIED]
+    top = [{"name": n, "limits": limits[n], "status": "pass"} for n in C.MEASUREMENTS]
     failed = sum(1 for c in corners if c["status"] == "fail")
     return {"status": "fail" if failed else "pass", "corner_count": len(corners),
             "passed": len(corners) - failed, "failed": failed, "errored": 0, "inconclusive": 0,
@@ -206,6 +208,14 @@ class TestValidJoins(Base):
         self.assertEqual(C.RATIFIED_LIMITS, {"headroom_hi_v": {"min": 0.251}, "headroom_lo_v": {"min": 0.141},
                                              "swing_span_v": {"min": 0.571}})
         self.assertEqual({n: l for n, l in _request_limits().items() if n in C.RATIFIED}, C.RATIFIED_LIMITS)
+
+    def test_integrity_limits_are_pinned_to_the_request(self):
+        # The four integrity bounds are pinned, literally, to the committed
+        # request's grading of them (issue #154).
+        self.assertEqual(C.INTEGRITY_LIMITS, {"gpk_vv": {"min": 10.0}, "mono_min_dv_v": {"min": -1e-09},
+                                              "lo_idx": {"min": 1}, "hi_idx": {"max": 4998}})
+        self.assertEqual({n: l for n, l in _request_limits().items() if n in C.INTEGRITY_LIMITS},
+                         C.INTEGRITY_LIMITS)
 
 
 class TestEnvelopeRejections(Base):
@@ -356,6 +366,49 @@ class TestEnvelopeRejections(Base):
             m = self.meas(self.corner(env), name)
             m["value"], m["status"] = val, "fail"
             self.assertRejects(env, f"integrity measurement {name}", NOM)
+
+    def test_relaxed_integrity_limit_is_not_evidence(self):
+        # The Observed-table mutations (issue #154): one integrity bound
+        # relaxed at top level and the value weakened to match, status still
+        # pass. The gate must reject the envelope before any grading happens.
+        for name, val, relaxed in (("gpk_vv", 1.0, {"min": 0}), ("mono_min_dv_v", -0.1, {"min": -1}),
+                                   ("lo_idx", 0.0, {"min": 0}), ("hi_idx", 4999.0, {"max": 4999})):
+            env = self.nom_env()
+            self.meas(self.corner(env), name)["value"] = val
+            top = next(m for m in env["measurements"] if m["name"] == name)
+            top["limits"] = relaxed
+            self.assertRejects(env, f"{name}: envelope limits {relaxed!r} != literal integrity bound", NOM)
+
+    def test_relaxed_integrity_limit_with_fail_status_is_still_not_evidence(self):
+        # Even an honestly failing verdict under a relaxed bound is rejected:
+        # the relaxed bound itself already disqualifies the envelope.
+        env = self.nom_env()
+        m = self.meas(self.corner(env), "lo_idx")
+        m["value"], m["status"] = 0.0, "fail"
+        next(mm for mm in env["measurements"] if mm["name"] == "lo_idx")["limits"] = {"min": 0}
+        self.assertRejects(env, "lo_idx: envelope limits {'min': 0} != literal integrity bound", NOM)
+
+    def test_removed_integrity_limit_is_not_evidence(self):
+        for name in C.INTEGRITY:
+            env = self.nom_env()
+            env["measurements"] = [m for m in env["measurements"] if m["name"] != name]
+            self.assertRejects(env, f"{name}: envelope limits None", NOM)
+
+    def test_extra_limit_key_on_integrity_is_not_evidence(self):
+        # A bound carrying an extra key is not the pinned bound either.
+        env = self.nom_env()
+        next(m for m in env["measurements"] if m["name"] == "lo_idx")["limits"] = {"min": 1, "max": 4998}
+        self.assertRejects(env, "lo_idx: envelope limits {'min': 1, 'max': 4998} != literal integrity bound", NOM)
+
+    def test_integrity_status_contradicting_value(self):
+        # Limits kept pinned, only the value weakened: a pass status then
+        # contradicts the literal bound, per measurement, same rule shape as
+        # the ratified rows.
+        for name, val in (("gpk_vv", 1.0), ("mono_min_dv_v", -0.1), ("lo_idx", 0.0), ("hi_idx", 4999.0)):
+            env = self.nom_env()
+            self.meas(self.corner(env), name)["value"] = val
+            self.assertRejects(env, f"measurement {name} status 'pass' contradicts value {val!r} "
+                                    f"against the literal bound {C.INTEGRITY_LIMITS[name]!r}", NOM)
 
     def test_vcm_not_mid_rail(self):
         env = self.nom_env()

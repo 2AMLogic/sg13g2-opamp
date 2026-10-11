@@ -25,12 +25,13 @@ is not exactly the requested one (missing, duplicate, unexpected points);
 `coverage.nothing_checked` not false or anything skipped; an aggregate or
 per-corner status other than pass/fail (errored, inconclusive, not_checked);
 a declared measurement that is absent, duplicated, non-finite, carries a
-status other than pass/fail, or reports the wrong unit; a ratified
-measurement whose `limits` differ from the literal ratified bounds
-(RATIFIED_LIMITS -- a request that relaxed a bound is not evidence); a
-verdict that contradicts the literal bound applied to the reported value; an
-integrity measurement (window-edge, monotonic, plausible-gain) that failed
-(its tracking bounds would then be window artifacts); and Vcm != VDD/2.
+status other than pass/fail, or reports the wrong unit; a measurement whose
+`limits` differ from the pinned literal bounds (RATIFIED_LIMITS and
+INTEGRITY_LIMITS -- a request that relaxed or removed a bound is not
+evidence); a verdict that contradicts the literal bound applied to the
+reported value; an integrity measurement (window-edge, monotonic,
+plausible-gain) that failed (its tracking bounds would then be window
+artifacts); and Vcm != VDD/2.
 A complete run in which a ratified row FAILS its literal bound (for example a
 span just below 0.571 V) is VALID evidence: validate accepts it, because a
 bound miss is a result, not a data fault.
@@ -81,6 +82,21 @@ RATIFIED_LIMITS = {
     "swing_span_v": {"min": 0.571},
 }
 
+# The integrity bounds, LITERAL and pinned to exactly how the committed
+# request (swing.nominal.request.json) grades them; they mirror the harness's
+# own sanity rules (run_swing_sweep.sh: peak_gain_implausible,
+# fine_sweep_non_monotonic, linear_region_touches_window_edge): plausible peak
+# gain, a monotonic transfer curve, and a tracking region strictly inside the
+# sweep window. Pinned for the same reason as RATIFIED_LIMITS: a request that
+# relaxed or removed one describes a weak peak, a nonmonotonic curve or a
+# truncated tracking region, and its envelope must not pass this gate.
+INTEGRITY_LIMITS = {
+    "gpk_vv": {"min": 10.0},
+    "mono_min_dv_v": {"min": -1e-09},
+    "lo_idx": {"min": 1},
+    "hi_idx": {"max": 4998},
+}
+
 # ----------------------------------------------------------- measurements
 # name -> unit. The unit is part of the contract (a V value reported in mV is
 # a 1000x error that no finiteness check would see).
@@ -101,7 +117,7 @@ RATIFIED = tuple(RATIFIED_LIMITS)
 # Integrity measurements: graded by the tool against the harness's own sanity
 # rules. A FAIL here means the ratified numbers are window/curve artifacts, so
 # the envelope is not evidence (unlike a ratified-row FAIL).
-INTEGRITY = ("gpk_vv", "mono_min_dv_v", "lo_idx", "hi_idx")
+INTEGRITY = tuple(INTEGRITY_LIMITS)
 
 # ------------------------------------------------------------- tolerances
 # Comparison tolerance (|tool - harness| <= abs + rel*|harness| + extra), NOT a
@@ -156,7 +172,8 @@ def literal_verdict(value: float, limits: Dict[str, float]) -> str:
 # --------------------------------------------------------------- envelopes
 def _check_envelope(env: dict, label: str, problems: List[str]) -> None:
     """Envelope-level rules beyond the shared gate: nothing errored or
-    inconclusive, and the ratified rows carry exactly the literal bounds."""
+    inconclusive, and the ratified and integrity rows carry exactly the
+    pinned literal bounds."""
     for field in ("errored", "inconclusive"):
         if env.get(field) not in (0, None):
             raise InputError(f"{label}: {field} = {env.get(field)!r}, expected 0")
@@ -165,18 +182,27 @@ def _check_envelope(env: dict, label: str, problems: List[str]) -> None:
         got = (top.get(n) or {}).get("limits")
         if got != lim:
             problems.append(f"{n}: envelope limits {got!r} != literal ratified bound {lim!r}")
+    for n, lim in INTEGRITY_LIMITS.items():
+        got = (top.get(n) or {}).get("limits")
+        if got != lim:
+            problems.append(f"{n}: envelope limits {got!r} != literal integrity bound {lim!r}")
 
 
 def _check_measurement(k: Key, n: str, m: dict, v: float, problems: List[str]) -> bool:
     """Per-measurement rules beyond the shared gate: the unit, a ratified
-    row's verdict against its literal bound, and an integrity measurement's
-    pass. Returns whether the value may be kept."""
+    row's verdict against its literal bound, an integrity measurement's
+    verdict against its pinned bound and its pass. Returns whether the value
+    may be kept."""
     if m.get("unit") != MEASUREMENT_UNITS[n]:
         problems.append(f"{key_str(k)}: measurement {n} unit {m.get('unit')!r} != {MEASUREMENT_UNITS[n]!r}")
         return False
     if n in RATIFIED_LIMITS and m["status"] != literal_verdict(v, RATIFIED_LIMITS[n]):
         problems.append(f"{key_str(k)}: measurement {n} status {m['status']!r} contradicts value {v!r} "
                         f"against the literal bound {RATIFIED_LIMITS[n]!r}")
+        return False
+    if n in INTEGRITY_LIMITS and m["status"] != literal_verdict(v, INTEGRITY_LIMITS[n]):
+        problems.append(f"{key_str(k)}: measurement {n} status {m['status']!r} contradicts value {v!r} "
+                        f"against the literal bound {INTEGRITY_LIMITS[n]!r}")
         return False
     if n in INTEGRITY and m["status"] != "pass":
         problems.append(f"{key_str(k)}: integrity measurement {n} = {v!r} failed -- the tracking bounds "
