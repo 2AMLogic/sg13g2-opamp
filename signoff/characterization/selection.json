@@ -328,7 +328,284 @@
       "md_sha256": "sha256:5fe5cfc2c58ba3ff93648e1f910f0dcb22b2e1e1e2fc0a173b9c772b130902d1",
       "netlist_snapshot": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/opamp_core.spice",
       "grid": "pvt45",
-      "valid_when": [["op_pass", "==", "1"]]
+      "valid_when": [["op_pass", "==", "1"]],
+      "definition_checks": ["swing_raw_audit"],
+      "swing_raw": {
+        "config": {"coarse_start_v": "-0.1", "coarse_stop_v": "0.1", "coarse_step_v": "500e-6",
+                   "fine_halfspan_v": "25e-3", "fine_step_v": "10e-6", "criterion_frac": "0.5"},
+        "files": {
+          "mos_ff_-40C_1.08V": {
+            "coarse_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_ff_-40C_1.08V_coarse.csv", "sha256": "sha256:b3a01a42a05ecafcd9e06745a694565c36e6eb9daa0e8f3bddf0ee072d6861a6"},
+            "coarse_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_ff_-40C_1.08V_coarse.spice", "sha256": "sha256:c1c18644f1b54c8a4598796f3d79253f3d16028edc872c75ffe74aaf28137aa5"},
+            "fine_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_ff_-40C_1.08V_fine.csv", "sha256": "sha256:63538dddf0e7a15f46666e24a3bc1a729dd743fd11273ed47ba8160bbfe58ec5"},
+            "fine_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_ff_-40C_1.08V_fine.spice", "sha256": "sha256:dcf9097d933707682011dd1d0ecd63b11b08bd49442990d8ae35f10a51cfd9f0"}
+          },
+          "mos_ff_-40C_1.20V": {
+            "coarse_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_ff_-40C_1.20V_coarse.csv", "sha256": "sha256:a1cec7d5ca4c68a74fa1e02fc3d5f7b6079c361891cd9a2aa546fca9150889bd"},
+            "coarse_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_ff_-40C_1.20V_coarse.spice", "sha256": "sha256:ab6eba6572532a20dd77e60cb9c3b0a63cde346ae7aa6af08d9fa72ecb83f971"},
+            "fine_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_ff_-40C_1.20V_fine.csv", "sha256": "sha256:70942a57f89df7d663640249090ad8d60790e59409f625305e6d588f45a803cd"},
+            "fine_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_ff_-40C_1.20V_fine.spice", "sha256": "sha256:5db6d351ba300411c1d8bdf243fbfd3e41e172141237651cadea2057eedbc232"}
+          },
+          "mos_ff_-40C_1.32V": {
+            "coarse_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_ff_-40C_1.32V_coarse.csv", "sha256": "sha256:1d35769753602becbfa081c97fe57a28e9e0271f0f3feb3d6a8c763d0f0c9516"},
+            "coarse_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_ff_-40C_1.32V_coarse.spice", "sha256": "sha256:145b263ea99a33ab274bb322733498b16314c18de2e2ac94ab3863558276eb38"},
+            "fine_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_ff_-40C_1.32V_fine.csv", "sha256": "sha256:da2c721b2e6f05f024ada61afe223a7fa0fcc9ea1b30d31de15e3436f45dc0db"},
+            "fine_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_ff_-40C_1.32V_fine.spice", "sha256": "sha256:8b8204fd75000c78cd094b88f5670dfdbc65cbff67649b822accf1e1ff6170ae"}
+          },
+          "mos_ff_125C_1.08V": {
+            "coarse_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_ff_125C_1.08V_coarse.csv", "sha256": "sha256:4f5236dd39801cba3b28a05cf773665f3533c6c54ca0dfd104c57f6de3b03b71"},
+            "coarse_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_ff_125C_1.08V_coarse.spice", "sha256": "sha256:cd1b45219d90b99b921985e3cbeca3f0f61453269224e27e704e91369064e4e1"},
+            "fine_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_ff_125C_1.08V_fine.csv", "sha256": "sha256:4430a88915bc0f45a66ec709718108eef57f717b0878e2686ebda0c002f3e85e"},
+            "fine_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_ff_125C_1.08V_fine.spice", "sha256": "sha256:df422a36380b017331feb1e40ee677fe861a608ffbece25869afbd5bef258e27"}
+          },
+          "mos_ff_125C_1.20V": {
+            "coarse_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_ff_125C_1.20V_coarse.csv", "sha256": "sha256:b92a9b30fadc1c8c8e59e465b8ac3e253e1921f7d7939652f3f2bc5a75518958"},
+            "coarse_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_ff_125C_1.20V_coarse.spice", "sha256": "sha256:e1d51e1d87771fe46e6b34a97555d30ea0b28d9e5f29bd66584213c67e4fb084"},
+            "fine_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_ff_125C_1.20V_fine.csv", "sha256": "sha256:61e20cb72053c7f0d744df326a0f80c89be63792594fe217e0187e6e3aad3808"},
+            "fine_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_ff_125C_1.20V_fine.spice", "sha256": "sha256:2698cdd48c800a82e57f44e0b1ffabca467ec5df0ccc22864e9527c61deffaf8"}
+          },
+          "mos_ff_125C_1.32V": {
+            "coarse_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_ff_125C_1.32V_coarse.csv", "sha256": "sha256:d72289d602e94c44c77f3a454134a4460d9d01a4e15fbfafdd829987f0cf4a8c"},
+            "coarse_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_ff_125C_1.32V_coarse.spice", "sha256": "sha256:15ceee858a81071ee7c1362320077cbe9af635fd7bf64b5892b56eb62660cf9e"},
+            "fine_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_ff_125C_1.32V_fine.csv", "sha256": "sha256:a69c95051a46a5628921ac98a4c530da9806f582f800859439b125943a400d1a"},
+            "fine_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_ff_125C_1.32V_fine.spice", "sha256": "sha256:d8b4fcc68be1511c9b289e86b658acf601d37be4ebb8e698e680a760d911df09"}
+          },
+          "mos_ff_27C_1.08V": {
+            "coarse_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_ff_27C_1.08V_coarse.csv", "sha256": "sha256:a910a62b915b2978fc8873efccd6540a38ae6e9146b2f239393213dcbf789050"},
+            "coarse_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_ff_27C_1.08V_coarse.spice", "sha256": "sha256:718b7b03b8e9f296dd4e1e8122cb17ade9d8a00398efbdc64cfab28790278686"},
+            "fine_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_ff_27C_1.08V_fine.csv", "sha256": "sha256:88d53419a5fb2ed47f29e76e4a94958263f04e4cd3463183b1dd48c964aa98d2"},
+            "fine_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_ff_27C_1.08V_fine.spice", "sha256": "sha256:fbaf18630fd9892c2199811b4ee9466b608ccf08eb962964403a118f3990b2c3"}
+          },
+          "mos_ff_27C_1.20V": {
+            "coarse_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_ff_27C_1.20V_coarse.csv", "sha256": "sha256:e0d1d191268161a026cfe37e3614299a66df277a646359f1814cf03b7cdbde7f"},
+            "coarse_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_ff_27C_1.20V_coarse.spice", "sha256": "sha256:a3d909bd3c556e91248263d4a90d9c09621b8755398bd56dfc0268c914b34987"},
+            "fine_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_ff_27C_1.20V_fine.csv", "sha256": "sha256:0c578b05a9b11f9ba73627e0df927e9336c84220f1d75b6b7db6252e0fccf297"},
+            "fine_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_ff_27C_1.20V_fine.spice", "sha256": "sha256:4fa7ebfe9c3b49d1b8d7c35df8c33ba18787563fa2ce56d638cd67fe7f0e330a"}
+          },
+          "mos_ff_27C_1.32V": {
+            "coarse_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_ff_27C_1.32V_coarse.csv", "sha256": "sha256:5a6ecdd8e7e5cda4aa3e10eeb1afc5f9456cf2712b56296484711e9f017e5e6d"},
+            "coarse_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_ff_27C_1.32V_coarse.spice", "sha256": "sha256:3136f82cc181b77304b3dceb4ab752c7c9fd4ade66eab9127a374d3c13815c7e"},
+            "fine_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_ff_27C_1.32V_fine.csv", "sha256": "sha256:c64f0dffefbe287051fcad7a045356a30d48b1ad5972793587c77928aebd4e4b"},
+            "fine_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_ff_27C_1.32V_fine.spice", "sha256": "sha256:8c0ea48f29f6e9769a645ee282e20b019e0ac12dba177740b9dc7cb8b27fc995"}
+          },
+          "mos_fs_-40C_1.08V": {
+            "coarse_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_fs_-40C_1.08V_coarse.csv", "sha256": "sha256:49d77c65981d846d539c04470d601af9fb4644fb72200a752ad906ecb42a7d45"},
+            "coarse_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_fs_-40C_1.08V_coarse.spice", "sha256": "sha256:63cd0baca3560d546ad713b8c186749ac01a00b003f1736f781604e12d882992"},
+            "fine_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_fs_-40C_1.08V_fine.csv", "sha256": "sha256:dad9994e17f65c419462479a7905b6253065f6c4da5ea06cf563adf945844af0"},
+            "fine_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_fs_-40C_1.08V_fine.spice", "sha256": "sha256:0cd7fc9db954a5135728285bc52efbcdf52db0a97044bc8ee5aa6d72e8fa2b1d"}
+          },
+          "mos_fs_-40C_1.20V": {
+            "coarse_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_fs_-40C_1.20V_coarse.csv", "sha256": "sha256:2886afc8099ca9cbb877bab7fb3df01527fee9de918153bd2f5a901cdd775932"},
+            "coarse_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_fs_-40C_1.20V_coarse.spice", "sha256": "sha256:e181925f0c1f6167101076a147cb799fd1def94e67e68d9b2d68f8e79004225c"},
+            "fine_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_fs_-40C_1.20V_fine.csv", "sha256": "sha256:2e23f4d40718e88f6570dc2fcbd3728897ddcd5117e8edf7e16178246e1764a6"},
+            "fine_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_fs_-40C_1.20V_fine.spice", "sha256": "sha256:55ed2c8fb8066c68a24779baf1f7f2b9eeec59d021d6d2582ace5e78c59ffbac"}
+          },
+          "mos_fs_-40C_1.32V": {
+            "coarse_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_fs_-40C_1.32V_coarse.csv", "sha256": "sha256:d25e1835e47095efccf348158f20e7a6e233fca4cd6843227c8c5020dc709429"},
+            "coarse_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_fs_-40C_1.32V_coarse.spice", "sha256": "sha256:18587265fea7fc5a8009cf6ea83f275760e0bb3e2151c43040d498d2da836096"},
+            "fine_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_fs_-40C_1.32V_fine.csv", "sha256": "sha256:e963d377b23bb88fea163a5295a53b6ef5aa29b36612929f6ce3fa638d56dc15"},
+            "fine_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_fs_-40C_1.32V_fine.spice", "sha256": "sha256:882668e2f67e4640d58d0a6f933183a6f876360d23caf0259fa3b081e27ba913"}
+          },
+          "mos_fs_125C_1.08V": {
+            "coarse_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_fs_125C_1.08V_coarse.csv", "sha256": "sha256:9d19388e68f3957b756f5988e438c4972adc5ca1fceb8e86e50aefa35bb3ad32"},
+            "coarse_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_fs_125C_1.08V_coarse.spice", "sha256": "sha256:47bda2643432efe632adac6dac5cb78c19cadef94c6174cd9ebb623b3959eae2"},
+            "fine_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_fs_125C_1.08V_fine.csv", "sha256": "sha256:3b581538bf7c4a678e590ee293c310f6af65cd1f0e24ba5e9eff3860b8e293e5"},
+            "fine_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_fs_125C_1.08V_fine.spice", "sha256": "sha256:3f7deefa31a59c99ee057f4f4cab680b0acd64ec095bcbda17d54bde91f65852"}
+          },
+          "mos_fs_125C_1.20V": {
+            "coarse_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_fs_125C_1.20V_coarse.csv", "sha256": "sha256:13f3c8282d8d2063bc5577e95c201bae353adf53162d878f957f67d5f45c2cd8"},
+            "coarse_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_fs_125C_1.20V_coarse.spice", "sha256": "sha256:ad3aa5f3848423d3652131682832d0ed5d509ae1d56f42a43c4b5904b76f071b"},
+            "fine_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_fs_125C_1.20V_fine.csv", "sha256": "sha256:130a6f14d9e1746f2fa33bcb359e8436668917aa72879bc832ae966f4216d57e"},
+            "fine_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_fs_125C_1.20V_fine.spice", "sha256": "sha256:ab3fd47e9ba14832c1ab418c3464e915f623ac64069c8cfaa5d89e900e198e80"}
+          },
+          "mos_fs_125C_1.32V": {
+            "coarse_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_fs_125C_1.32V_coarse.csv", "sha256": "sha256:a5a3067f628dadb2387e99f15eeca27eb925f743157d221ebc48b1aa84c502e7"},
+            "coarse_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_fs_125C_1.32V_coarse.spice", "sha256": "sha256:baacafee8ca6b6f74bf4c18156a1b9ee09d945585d70a30e0345030ac4ee9dc6"},
+            "fine_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_fs_125C_1.32V_fine.csv", "sha256": "sha256:d6c8e478dffb75708a0d04589b711197b07ea9492633998cf40a0466b8503fda"},
+            "fine_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_fs_125C_1.32V_fine.spice", "sha256": "sha256:c510836d832e3610565490b8a3d4203f5975e61738c3955f24e212e6fcbee6fd"}
+          },
+          "mos_fs_27C_1.08V": {
+            "coarse_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_fs_27C_1.08V_coarse.csv", "sha256": "sha256:8b03e7c98e788724b655fe6b2dd9d3caf3e9f0f69fdffa7e2404974a6261627f"},
+            "coarse_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_fs_27C_1.08V_coarse.spice", "sha256": "sha256:74163a644574c87371951ad33545230cc989b32ca4b75be3415333cc6b33f228"},
+            "fine_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_fs_27C_1.08V_fine.csv", "sha256": "sha256:8f32662c15bb7b3575249142c55d91ea736ae21c2bd716347ce4a8546a2a50d6"},
+            "fine_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_fs_27C_1.08V_fine.spice", "sha256": "sha256:32f263b00f9723b722eb4dc85c77b1e4600d53e0a2ecaec3bb5464d1dec99cd7"}
+          },
+          "mos_fs_27C_1.20V": {
+            "coarse_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_fs_27C_1.20V_coarse.csv", "sha256": "sha256:82c8339eb6e2d2783eac7e219044e9dd8fd7a0bcf031b372095cbe10da68447d"},
+            "coarse_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_fs_27C_1.20V_coarse.spice", "sha256": "sha256:e1a2fdba954adc9721d21b0343e9cfd03d42ebc159ab9a8a9c29cd50ccd89c00"},
+            "fine_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_fs_27C_1.20V_fine.csv", "sha256": "sha256:b12e1efcbf75842afbc9b045840a2693407686536fcbc0eed9f9a9f390966840"},
+            "fine_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_fs_27C_1.20V_fine.spice", "sha256": "sha256:3b8b8d88550771664609ceb9b71ff162550ca5464f8f36d4485b87e4b632e229"}
+          },
+          "mos_fs_27C_1.32V": {
+            "coarse_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_fs_27C_1.32V_coarse.csv", "sha256": "sha256:943a80f552f5cf13377a765ffe6d0772c016c9e84eb00e587de996d23d09fc91"},
+            "coarse_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_fs_27C_1.32V_coarse.spice", "sha256": "sha256:cc9d7444001443d4ddc2278cbf49fd8debb473b7180af20cf2edae38fb25a157"},
+            "fine_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_fs_27C_1.32V_fine.csv", "sha256": "sha256:a46de97e433d59d8420fba81aa79ed0a8211ce0fc0898525717e3d9c72098b9b"},
+            "fine_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_fs_27C_1.32V_fine.spice", "sha256": "sha256:dacbb59088b990c74f07566174be15eaee1c9ca61d8a0bad793415cb5fba189c"}
+          },
+          "mos_sf_-40C_1.08V": {
+            "coarse_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_sf_-40C_1.08V_coarse.csv", "sha256": "sha256:cb64953b7f52ff0f3bdf211937da40247e1961c0d10dcbf57f705f38f9fa36ea"},
+            "coarse_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_sf_-40C_1.08V_coarse.spice", "sha256": "sha256:98c4d1be93ce31f8d531e4385cee9f95b823d4493b930a29711790e54b8f061f"},
+            "fine_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_sf_-40C_1.08V_fine.csv", "sha256": "sha256:ff76a30f577fef86c65204200076aebc3cb65553ad4756c6c637d41c978f988e"},
+            "fine_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_sf_-40C_1.08V_fine.spice", "sha256": "sha256:e2a5072884905306035ec506a6938e4fe158afe2b02333652faa437ffae92617"}
+          },
+          "mos_sf_-40C_1.20V": {
+            "coarse_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_sf_-40C_1.20V_coarse.csv", "sha256": "sha256:c5d809a9ac640be0fc4a9d63fec45cf301a838e2b5154567c10c099dfcd329d3"},
+            "coarse_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_sf_-40C_1.20V_coarse.spice", "sha256": "sha256:258d2c339c07a81509e48097d4223e9fc043735ba5b8c71f0e65204a43ce5c70"},
+            "fine_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_sf_-40C_1.20V_fine.csv", "sha256": "sha256:110580dc1c03bae80290f792e79b42bab74309fe181dd90d34c9b71a036f19a9"},
+            "fine_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_sf_-40C_1.20V_fine.spice", "sha256": "sha256:7d46d50296cb1d34cf2c540d3bc3a21f1e2326d8e2d76b04222925abd21e436d"}
+          },
+          "mos_sf_-40C_1.32V": {
+            "coarse_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_sf_-40C_1.32V_coarse.csv", "sha256": "sha256:94c09dd6063a44ee424be4b7fdfefc585dd11444ef5a0abc3554ba39250f3910"},
+            "coarse_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_sf_-40C_1.32V_coarse.spice", "sha256": "sha256:aab9cce6f7ba1f213a3773c6ce3565efb25cb630b4ba308357e28e37b64737a2"},
+            "fine_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_sf_-40C_1.32V_fine.csv", "sha256": "sha256:6598de09d94aedaeb89382f3bb9566d5aa464fd05bea1ff8953ec7fde5e16034"},
+            "fine_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_sf_-40C_1.32V_fine.spice", "sha256": "sha256:40f1a97be5b2512d8bc60a511d1a3762d61fe829b4b6e7776f6d8626687064b7"}
+          },
+          "mos_sf_125C_1.08V": {
+            "coarse_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_sf_125C_1.08V_coarse.csv", "sha256": "sha256:b0b84d1a98783f49be73eb0194e492feeedb1d5783b7e3a14cb87a659b1cbb9d"},
+            "coarse_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_sf_125C_1.08V_coarse.spice", "sha256": "sha256:ffe30a7a73a727a9fb287f51b5673572809944ef76318e58baf31405849d9fca"},
+            "fine_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_sf_125C_1.08V_fine.csv", "sha256": "sha256:9108f952ecd158f3af4aef7ff2df73f7ae583453bc687c3c11fe4fdb68b04213"},
+            "fine_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_sf_125C_1.08V_fine.spice", "sha256": "sha256:067e361a904f208f55265ecd5423428f19133d69d0daa02b3107e858c851b7ec"}
+          },
+          "mos_sf_125C_1.20V": {
+            "coarse_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_sf_125C_1.20V_coarse.csv", "sha256": "sha256:ec48ca4ba4d971adc18245d3039b98c692a998b15b8226dc06fce07166d90e8e"},
+            "coarse_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_sf_125C_1.20V_coarse.spice", "sha256": "sha256:d1aaadead9e838c893030521026f5bf00753e35a7c31ca1c842f8f30c28ff144"},
+            "fine_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_sf_125C_1.20V_fine.csv", "sha256": "sha256:26f62afbc846b1eabe93eb4a4e839014cad7f4e2d3acbfef1353ffb023d1ea14"},
+            "fine_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_sf_125C_1.20V_fine.spice", "sha256": "sha256:299c071b384368d17abd48aef1f5161c3316d453107efedfa673e9d7667f28d7"}
+          },
+          "mos_sf_125C_1.32V": {
+            "coarse_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_sf_125C_1.32V_coarse.csv", "sha256": "sha256:13a77bf63827a58073380884b1a01cba033010499e5a92854cc22866fbc45033"},
+            "coarse_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_sf_125C_1.32V_coarse.spice", "sha256": "sha256:60777acdfc268a5355bdfff2d19e9f7d54252016b4dee9637efe95edc142ff9c"},
+            "fine_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_sf_125C_1.32V_fine.csv", "sha256": "sha256:3d846d2481289a280ac84760dad61fd7780abdc494b35c510becaf7f49c26e82"},
+            "fine_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_sf_125C_1.32V_fine.spice", "sha256": "sha256:33aa18d4dda1388c1a7faaf3295eb337da45d0849cf82e7e63f0199838d026c0"}
+          },
+          "mos_sf_27C_1.08V": {
+            "coarse_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_sf_27C_1.08V_coarse.csv", "sha256": "sha256:fd080e2d2bcc662fbc22d73d43b5e2e48435824edf5880b54551cc4d9626b83c"},
+            "coarse_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_sf_27C_1.08V_coarse.spice", "sha256": "sha256:f18e54b0c7aab840ae2ad9d48fc522894516c9a6fee7dab86d19f2519d07fae9"},
+            "fine_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_sf_27C_1.08V_fine.csv", "sha256": "sha256:457f0f0bb49c1c1e801db832f44e595dabca942d7d221a4ad13e7204971473ae"},
+            "fine_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_sf_27C_1.08V_fine.spice", "sha256": "sha256:9ae76089a56e8156d482342127ee71cb9ac25423c4b209eace6e02e837a0c2ca"}
+          },
+          "mos_sf_27C_1.20V": {
+            "coarse_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_sf_27C_1.20V_coarse.csv", "sha256": "sha256:8624fa3e396667d85fa76cee0524e9354496960091d7220d583ca3b29844f055"},
+            "coarse_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_sf_27C_1.20V_coarse.spice", "sha256": "sha256:d05af3cc86c037102d09d7ddefdbec63710f7a90e80d37731cc3da83b3e0659b"},
+            "fine_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_sf_27C_1.20V_fine.csv", "sha256": "sha256:a27e8b0365b6325d1f5b232eb3cb339b64b68be0e106f5bc939434aa690ed69b"},
+            "fine_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_sf_27C_1.20V_fine.spice", "sha256": "sha256:cd9985890ea0db2b4398f3ad1a1e3d2212c39449bd5a6db36f4b6da2f9076966"}
+          },
+          "mos_sf_27C_1.32V": {
+            "coarse_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_sf_27C_1.32V_coarse.csv", "sha256": "sha256:c642d7e497b04567081c1239dea3abfc91f2fcb2edfbb0f44ea557c6f3260fe3"},
+            "coarse_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_sf_27C_1.32V_coarse.spice", "sha256": "sha256:b8125de54089afa5a4cefbaa5cab9f2e623df87df986683070f4d377b7d1b551"},
+            "fine_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_sf_27C_1.32V_fine.csv", "sha256": "sha256:b1f450e45b31598117be6c3d6edc229dc5c2d9ae4ba9e6a72b8e1eb1e04e344f"},
+            "fine_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_sf_27C_1.32V_fine.spice", "sha256": "sha256:94c3ed2df2fc39b5d9c52ce542291ff29b8cf5cf9ec80eaa185fcb3108a4dba3"}
+          },
+          "mos_ss_-40C_1.08V": {
+            "coarse_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_ss_-40C_1.08V_coarse.csv", "sha256": "sha256:cb00e548b6725810fdf67ddd11ff63671477cb68c418134b0acf5af9b6907901"},
+            "coarse_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_ss_-40C_1.08V_coarse.spice", "sha256": "sha256:c2a9a581e9a8a022162ab02ad1a02579590d735be0e6e936e4dc3506e2b3889d"},
+            "fine_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_ss_-40C_1.08V_fine.csv", "sha256": "sha256:2be988050a3bab0892d91be9791b9b32b3c23255e1de0dde937f8d393c95d3bb"},
+            "fine_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_ss_-40C_1.08V_fine.spice", "sha256": "sha256:9c1a7b67becab4eae13bb5cc9b011189d4cc52b84dafb80609e8428ac29cf126"}
+          },
+          "mos_ss_-40C_1.20V": {
+            "coarse_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_ss_-40C_1.20V_coarse.csv", "sha256": "sha256:a056158eb4be70d5bc8d0c2f825f4e9a8d23e9c75443d1a8118ec2f872d837b1"},
+            "coarse_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_ss_-40C_1.20V_coarse.spice", "sha256": "sha256:cc8d9fe8278f3b12bff3c6cc115da9b45f6f1a311828c80d76894a4b3c532439"},
+            "fine_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_ss_-40C_1.20V_fine.csv", "sha256": "sha256:14e88b398a209fa7954deb80d0dbf39118ca10ed65504df58b23e9e55c2f7164"},
+            "fine_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_ss_-40C_1.20V_fine.spice", "sha256": "sha256:a87985f3b4659e65179c4ade77df59a7b974983a1b0ad872003464092ef4f168"}
+          },
+          "mos_ss_-40C_1.32V": {
+            "coarse_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_ss_-40C_1.32V_coarse.csv", "sha256": "sha256:969b865738a51742416940e653da518cb61e601f754a9e7f0fd8ef7728a0c8ca"},
+            "coarse_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_ss_-40C_1.32V_coarse.spice", "sha256": "sha256:6277467f25e61be75033779f5e53b1ed40a9cb017cd229239a9992abad2f73fb"},
+            "fine_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_ss_-40C_1.32V_fine.csv", "sha256": "sha256:b58b98227f6292869879d87bb9c9686b6fc370c9fc383bcdfeeb01e1b6dda72b"},
+            "fine_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_ss_-40C_1.32V_fine.spice", "sha256": "sha256:20ed9ae6a300737ce8dd655df4de549d33c31956a25e55b247be679e2f91ee8b"}
+          },
+          "mos_ss_125C_1.08V": {
+            "coarse_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_ss_125C_1.08V_coarse.csv", "sha256": "sha256:9e0b579eb29b62faf7ca5cc84a6a90513d227cbdb68158b3acb8a0ad4b727c78"},
+            "coarse_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_ss_125C_1.08V_coarse.spice", "sha256": "sha256:8ebada31713d97dc0e3aeb79c1675e6d56902fabc9b4b63d6a948a618be0a91d"},
+            "fine_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_ss_125C_1.08V_fine.csv", "sha256": "sha256:aae92fd730eeb74f2a17100d4806c0a7785c0798e3518878d91f4078843848c0"},
+            "fine_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_ss_125C_1.08V_fine.spice", "sha256": "sha256:af0fd07f51f547d6ec61594b49f770e32992f219deca0870ebe7fcabe65a955f"}
+          },
+          "mos_ss_125C_1.20V": {
+            "coarse_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_ss_125C_1.20V_coarse.csv", "sha256": "sha256:77b84ffa155570c94620b4a566ee969dd910d9de837d85650c6b0ed58ff15904"},
+            "coarse_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_ss_125C_1.20V_coarse.spice", "sha256": "sha256:c858c2ac5d76035baecf11efbce328689b4ee1f82c77cb9281de80401b594232"},
+            "fine_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_ss_125C_1.20V_fine.csv", "sha256": "sha256:c4a6f75a1ce182ffa7eb91a8c432c2b9922cb6aaae65c6be94eb5ae01eb5ed34"},
+            "fine_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_ss_125C_1.20V_fine.spice", "sha256": "sha256:b0385543b83df91c490e07560ee71a7126bce3362890c5250d171e34f568a6ff"}
+          },
+          "mos_ss_125C_1.32V": {
+            "coarse_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_ss_125C_1.32V_coarse.csv", "sha256": "sha256:180a8b25c931e5542c1f4b857ddcc88985666fccefb64b11e8ddfb4aee62c240"},
+            "coarse_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_ss_125C_1.32V_coarse.spice", "sha256": "sha256:12a1cfd0af5a2b47e0c2209bc71cafdb5b2b8e5df17c82b72dd1cceb033973e7"},
+            "fine_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_ss_125C_1.32V_fine.csv", "sha256": "sha256:4e033c983e10aa5a0d39c0903f66bf731285a30a085d4f307ceffa24525989bc"},
+            "fine_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_ss_125C_1.32V_fine.spice", "sha256": "sha256:4ef8bb80145c58876f9fee4b40daa58207c397d19e78401bffa002b8880a3549"}
+          },
+          "mos_ss_27C_1.08V": {
+            "coarse_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_ss_27C_1.08V_coarse.csv", "sha256": "sha256:4fbfc727ab1922cb419ceecb461229e1702c5f22e6a23c52a9d29e018f736b2f"},
+            "coarse_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_ss_27C_1.08V_coarse.spice", "sha256": "sha256:2c088498892fa84bfb41c4c2c50f9d1017b8378867c65c20e0e41c710e811fc3"},
+            "fine_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_ss_27C_1.08V_fine.csv", "sha256": "sha256:398d30ad911fb74200011b5ad480a5be19ded28df318c2fb38aab904b70ff745"},
+            "fine_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_ss_27C_1.08V_fine.spice", "sha256": "sha256:dbf468dc013dbb1e89d3fa06dc2a1447a34d0eaab076cb13bbd38ef57a3ae3f2"}
+          },
+          "mos_ss_27C_1.20V": {
+            "coarse_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_ss_27C_1.20V_coarse.csv", "sha256": "sha256:829b712eaa8f09ff2ff5c0cb3bb396e0ea90360d49ed2b4ba974436dd458a8a0"},
+            "coarse_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_ss_27C_1.20V_coarse.spice", "sha256": "sha256:516b84d420c2285f7ce9e5ca7f2d33f18a193f1a47f468d2ebd934346105846f"},
+            "fine_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_ss_27C_1.20V_fine.csv", "sha256": "sha256:91f1603d65cc5d4e7c5c997830c61aa1c412716a6649b3eadfb9c0e3e28aa5ce"},
+            "fine_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_ss_27C_1.20V_fine.spice", "sha256": "sha256:662e6daeed2fb0e41b9150591f47fef245a088acffca1bc5a882ef575d14f99e"}
+          },
+          "mos_ss_27C_1.32V": {
+            "coarse_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_ss_27C_1.32V_coarse.csv", "sha256": "sha256:e044545a3ec07e58e8493152fd80bc3496c6039dfb3cc02fc678a1b5559d4152"},
+            "coarse_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_ss_27C_1.32V_coarse.spice", "sha256": "sha256:96ec75c07cbac7725d020fe8899d75cb82fd95ea939f36cd8047634be4953509"},
+            "fine_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_ss_27C_1.32V_fine.csv", "sha256": "sha256:a756b6603444155c59591376ac8e4fe72556e442d5f1ce7f389f4c0df56b440a"},
+            "fine_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_ss_27C_1.32V_fine.spice", "sha256": "sha256:34e442c0b2e4324a83bfc6fcd054e098fb58966dbdb2b06a1615611a0656d3c6"}
+          },
+          "mos_tt_-40C_1.08V": {
+            "coarse_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_tt_-40C_1.08V_coarse.csv", "sha256": "sha256:cb288120b0a5213b1bb7797aa263c10d75c1faa7b81aa8341e96cddcb93c3cf7"},
+            "coarse_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_tt_-40C_1.08V_coarse.spice", "sha256": "sha256:344390c277dcababb840a80da2fa9af34668cc873b4fdc28cf5e5bfcfb4ad99b"},
+            "fine_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_tt_-40C_1.08V_fine.csv", "sha256": "sha256:562c40009600f96d5211da691a6b5f20bcaeb17f7865394a9d7bb3574f4594e2"},
+            "fine_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_tt_-40C_1.08V_fine.spice", "sha256": "sha256:3dde6c96f0df0f8fc0b3ffe007d8d03699bc6d1b67fa4857e8f7b84660a13d2e"}
+          },
+          "mos_tt_-40C_1.20V": {
+            "coarse_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_tt_-40C_1.20V_coarse.csv", "sha256": "sha256:c2759275929523a20c8c2a26dfd1f5e8ea4ebc7b830da3222bc2b9e68e9d077c"},
+            "coarse_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_tt_-40C_1.20V_coarse.spice", "sha256": "sha256:ee17d911ccf4a0c46a490771801759a5f98e55482fc7ff08276fc4e3a5d2c270"},
+            "fine_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_tt_-40C_1.20V_fine.csv", "sha256": "sha256:143dd885e99f0f9b2101597c86b7118d2b3eb597f2fe2def298f277a4c70d0c8"},
+            "fine_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_tt_-40C_1.20V_fine.spice", "sha256": "sha256:64bb328896c93164349ce3d887a71a5276471cd6c0ee02016295ba3fbca5a4a2"}
+          },
+          "mos_tt_-40C_1.32V": {
+            "coarse_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_tt_-40C_1.32V_coarse.csv", "sha256": "sha256:21de9ae10d574f681e483b278bfb5a62d1fbe944c7f7aac82a79f4acd6d47aa9"},
+            "coarse_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_tt_-40C_1.32V_coarse.spice", "sha256": "sha256:299f0d7e447f02eee6eeb2e25a35edbde8ff5162f883cdbff3b1cb55a02c6943"},
+            "fine_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_tt_-40C_1.32V_fine.csv", "sha256": "sha256:2c92bb323c1db8c8702e93ec019c619da21115e15c4acbe8a431a22a19842c4e"},
+            "fine_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_tt_-40C_1.32V_fine.spice", "sha256": "sha256:9d762e5742233628d47f390f534b6c1d09d4c5e73790434aaf334b7d71af2f69"}
+          },
+          "mos_tt_125C_1.08V": {
+            "coarse_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_tt_125C_1.08V_coarse.csv", "sha256": "sha256:aca90c043d55475d9defb414304b03869db7095f79e0b4055a98968f0919df33"},
+            "coarse_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_tt_125C_1.08V_coarse.spice", "sha256": "sha256:549425d0e3e1f20a94d529e27259638f5f603c872943847447ec2f3020f89e14"},
+            "fine_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_tt_125C_1.08V_fine.csv", "sha256": "sha256:bc3c12623870f52708f793c632a8d1b27839aacd77c1ea5dbc4cee12463430f0"},
+            "fine_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_tt_125C_1.08V_fine.spice", "sha256": "sha256:fdfee52dc080aba3db305f948a5f6d78e8df0d966c45e04af4036f8cb9034150"}
+          },
+          "mos_tt_125C_1.20V": {
+            "coarse_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_tt_125C_1.20V_coarse.csv", "sha256": "sha256:6b98247d350b5c61a6e2aa5bf20b91821bb4defe001c411f20b8e57c503a3aed"},
+            "coarse_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_tt_125C_1.20V_coarse.spice", "sha256": "sha256:a3cec67a4017d98fa49d841339fc6586dc02e5ee88ceeaeb3f7e23737638eb30"},
+            "fine_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_tt_125C_1.20V_fine.csv", "sha256": "sha256:40914f12977a3710ec7b004acb90bb8342660f66d3b86b5a6bcafa44640965e4"},
+            "fine_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_tt_125C_1.20V_fine.spice", "sha256": "sha256:8575fe8ad080dcf9bbf8d13c98b062d886cb616c3c373c9fb770965a4f3c629d"}
+          },
+          "mos_tt_125C_1.32V": {
+            "coarse_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_tt_125C_1.32V_coarse.csv", "sha256": "sha256:f5528dfa4e2de1f14a283bac8559355c2f9a0abb80353d7abd61bec97ba79259"},
+            "coarse_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_tt_125C_1.32V_coarse.spice", "sha256": "sha256:b42d1ab254700aa6ed0bdaf47142ff65b0295502adda3b24563e30cdb5be28db"},
+            "fine_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_tt_125C_1.32V_fine.csv", "sha256": "sha256:d6c87c45a9e9ef8f90769eca40c62a8ca7ee7a4f1258a377b3cfcafc922755eb"},
+            "fine_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_tt_125C_1.32V_fine.spice", "sha256": "sha256:b5dc69f1a863e2ee794e2c2dd6a32e5e044c93625c4f5efb897b91d1c898f5d7"}
+          },
+          "mos_tt_27C_1.08V": {
+            "coarse_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_tt_27C_1.08V_coarse.csv", "sha256": "sha256:07e407a3c5914d919b66d69fed7d103708f17ed633814a3fd680ce903305377a"},
+            "coarse_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_tt_27C_1.08V_coarse.spice", "sha256": "sha256:c40066ac38e04010794df2f290247daff8445e9a80f9902e1c6d31c29bb6361c"},
+            "fine_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_tt_27C_1.08V_fine.csv", "sha256": "sha256:90dce973a8d64a79b87243bf219d53df3e10fb1a66db166fee9ce9523aaa7f71"},
+            "fine_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_tt_27C_1.08V_fine.spice", "sha256": "sha256:7fd7d32c4b394982fafc1679514d7a22c2b03c0b7672b6a6236ca1b77109f5c2"}
+          },
+          "mos_tt_27C_1.20V": {
+            "coarse_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_tt_27C_1.20V_coarse.csv", "sha256": "sha256:831b1629f1caa6256598ad9da617735f1ed2d186875e8a2bd15d999927caa816"},
+            "coarse_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_tt_27C_1.20V_coarse.spice", "sha256": "sha256:249149a42becbd22ccabbf44d3169f0144d92a53eb6a573a6eee5272f3b6e536"},
+            "fine_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_tt_27C_1.20V_fine.csv", "sha256": "sha256:4b385faf48c732e70cbf3e4d84227ce919b0aa712104ce0fe5ff4e7a28dbf630"},
+            "fine_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_tt_27C_1.20V_fine.spice", "sha256": "sha256:9ba3aa65d7f50b2af27b3168ee641329cb0c12464c1903008ebede7a1634f6f5"}
+          },
+          "mos_tt_27C_1.32V": {
+            "coarse_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_tt_27C_1.32V_coarse.csv", "sha256": "sha256:2a1439568aca3af915354a3cd682cdb06387aef3b662b4f263a1905e63b738b9"},
+            "coarse_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_tt_27C_1.32V_coarse.spice", "sha256": "sha256:f9f657d05abeb3d6108f3d51bd72562bb8c3eb8a00f6c6c57e718f455852cc94"},
+            "fine_csv": {"path": "sim/output-swing/corners/20260921-151759-707b34c/mos_tt_27C_1.32V_fine.csv", "sha256": "sha256:bd100538d05fb3e70592e61da99c7bf1f6c001c58b7140a7ef965963677d53b2"},
+            "fine_netlist": {"path": "sim/output-swing/netlist-snapshots/20260921-151759-707b34c/mos_tt_27C_1.32V_fine.spice", "sha256": "sha256:2179e0d3407a2e4f6b540b30565f4638ab9c40de1d26977924a8761a87f19c60"}
+          }
+        }
+      }
     }
   },
   "rows": [

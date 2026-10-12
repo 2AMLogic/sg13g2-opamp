@@ -114,6 +114,24 @@ Per grid point, `run_swing_sweep.sh` renders the one template twice:
    brackets both −6 dB boundaries with >4x margin; the 10 µV step keeps
    each boundary read to ~1–2 mV of output volts at the worst gain.
 
+### One shared estimator (`swing_post.py`)
+
+Both passes' post-processing lives in [`swing_post.py`](swing_post.py) —
+pure, stdlib-only, and the single definition of every curve-derived
+number. `run_swing_sweep.sh` calls its CLI per point (`swing_post.py
+coarse <csv> <vcm>`, then `swing_post.py fine ...`); nothing in the
+runner embeds its own copy of the math any more, so the bench and the
+offline characterization audit (issue #230, which pins each point's
+coarse/fine curves and rendered netlists into
+`signoff/characterization/selection.json`) cannot diverge. The module
+also *strictly* parses the wrdata files — exact column count, finite
+values, strictly increasing sweep scale, and agreement of the duplicate
+scale columns a multi-vector `wrdata` writes — and parses each rendered
+netlist's actual measurement inputs (supply, `Vcm = VDD/2`, corner
+section, sweep window, recorded vectors, wrdata target). The pinned
+configuration (coarse window, fine half-span/step, the 0.5 criterion) is
+`CONFIG` in that module; the audit refuses any other.
+
 ### Bias and load conventions
 
 Identical to `sim/open-loop-ac/`'s and `sim/input-offset/`'s, so all

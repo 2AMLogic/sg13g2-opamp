@@ -57,6 +57,9 @@ import noise_post  # noqa: E402
 # Shared slew post-processing (issue #227): the SAME module run_slew_sweep.sh runs.
 sys.path.insert(0, str(DEFAULT_REPO_ROOT / "sim" / "slew-rate"))
 import slew_post  # noqa: E402
+# Shared output-swing post-processing (issue #230): the SAME module run_swing_sweep.sh runs.
+sys.path.insert(0, str(DEFAULT_REPO_ROOT / "sim" / "output-swing"))
+import swing_post  # noqa: E402
 SELECTION_REL = "signoff/characterization/selection.json"
 REPORTS_REL = "signoff/characterization/reports"
 ENVELOPE_REL = "signoff/evidence/characterization.json"
@@ -173,6 +176,37 @@ SLEW_AUDIT_RULE = (
     "needed crossings cannot yield a passing measurement. A summary edited "
     "coherently (rise, fall and worst together, hash refreshed) still fails "
     "while the pinned waveforms disagree."
+)
+
+SWING_AUDIT_RULE = (
+    "Output-swing raw-evidence audit (issue #230): a record that selects raw "
+    "DC evidence (`swing_raw`, one sha256-pinned coarse and one fine "
+    "transfer-curve wrdata file and one sha256-pinned rendered bench netlist "
+    "per pass and grid point, plus the measurement configuration) is audited "
+    "offline against it, with the measurement in sim/output-swing/swing_post.py "
+    "-- the module run_swing_sweep.sh itself runs. The configuration (coarse "
+    "window, fine half-span and step, the 0.5 x peak criterion) must be "
+    "exactly the bench's, and each pinned rendered netlist must agree with "
+    "it: supply, common mode (VDD/2), corner section, temperature, sweep "
+    "window, recorded vectors, wrdata target and pass label -- the fine "
+    "window centred on the coarse crossing recomputed from the pinned coarse "
+    "curve, and each curve exactly as many samples as its netlist's sweep "
+    "declares. Per point the unique-crossing and plateau checks, the "
+    "tracking bounds at the sampled 0.5-times-peak region, both headrooms, "
+    "the span, the fine interpolated crossing, the peak incremental gain and "
+    "the mid-swing supply current are recomputed, and each committed cell "
+    "must equal the recomputed value as the bench serializes it (printf %.9g, "
+    "nine significant digits; op_pass 0/1), with no tolerance beyond that "
+    "serialization. Curves are strictly parsed: missing, truncated, malformed "
+    "or non-finite samples, repeated or reversed sweep scales and mismatched "
+    "wrdata scale columns are errors naming the point and file, as are "
+    "multiple or missing coarse crossings and a fine window that truncates "
+    "the accepted region. A summary edited coherently (bounds, headrooms and "
+    "span together, hash refreshed) still fails while the pinned curves "
+    "disagree. The record's cross-bench diagnostic columns "
+    "(vos_offset_record_v, vos_delta_v, av0_ac_record_db, av0_ratio, "
+    "ivdd_ac_record_a, ivdd_ratio) are logged, not gated (the bench README's "
+    "\"Cross-checks\") and stay outside this audit."
 )
 
 NOT_CLAIMED = [
@@ -340,6 +374,8 @@ def load_selection(path: Path) -> dict:
             _validate_noise_raw_selection(key, rec["noise_raw"])
         if "slew_raw" in rec:
             _validate_slew_raw_selection(key, rec["slew_raw"])
+        if "swing_raw" in rec:
+            _validate_swing_raw_selection(key, rec["swing_raw"])
         for name in rec.get("definition_checks", []):
             if name not in DEFINITION_CHECKS:
                 raise SelectionError(f"selection: record {key}: unknown definition check {name!r}")
@@ -363,6 +399,11 @@ def load_selection(path: Path) -> dict:
                 raise SelectionError(
                     f"selection: record {key}: definition check {name!r} verifies raw "
                     "noise artifacts; name hash-pinned `noise_raw` beside the summary"
+                )
+            if need == "swing" and rec.get("swing_raw") is None:
+                raise SelectionError(
+                    f"selection: record {key}: definition check {name!r} verifies raw "
+                    "DC curves; name hash-pinned `swing_raw` beside the summary"
                 )
     return selection
 
@@ -450,6 +491,36 @@ def _validate_slew_raw_selection(key: str, sr) -> None:
         if not isinstance(entry, dict) or sorted(entry) != sorted(SLEW_PIN_KINDS):
             raise SelectionError(f"{where}.files[{pid!r}] needs exactly {list(SLEW_PIN_KINDS)}")
         for kind in SLEW_PIN_KINDS:
+            pin = entry[kind]
+            if not (isinstance(pin, dict) and isinstance(pin.get("path"), str) and isinstance(pin.get("sha256"), str)):
+                raise SelectionError(
+                    f"{where}.files[{pid!r}].{kind} needs string `path` and `sha256` "
+                    "(a raw artifact is never named without its pin)"
+                )
+
+
+SWING_PIN_KINDS = ("coarse_csv", "coarse_netlist", "fine_csv", "fine_netlist")
+
+
+def _validate_swing_raw_selection(key: str, sw) -> None:
+    """Shape of a record's `swing_raw` pin: the measurement configuration, plus
+    per point one pinned coarse and one fine transfer curve and their rendered
+    netlists."""
+    where = f"selection: record {key}: `swing_raw`"
+    if not isinstance(sw, dict):
+        raise SelectionError(f"{where} must be an object")
+    if sw.get("config") != swing_post.CONFIG:
+        raise SelectionError(
+            f"{where}.config must be exactly {swing_post.CONFIG} (the measurement configuration of "
+            "sim/output-swing/run_swing_sweep.sh that the shared post-processing is defined for)"
+        )
+    files = sw.get("files")
+    if not isinstance(files, dict) or not files:
+        raise SelectionError(f"{where}.files must be a non-empty object of point_id -> {list(SWING_PIN_KINDS)}")
+    for pid, entry in files.items():
+        if not isinstance(entry, dict) or sorted(entry) != sorted(SWING_PIN_KINDS):
+            raise SelectionError(f"{where}.files[{pid!r}] needs exactly {list(SWING_PIN_KINDS)}")
+        for kind in SWING_PIN_KINDS:
             pin = entry[kind]
             if not (isinstance(pin, dict) and isinstance(pin.get("path"), str) and isinstance(pin.get("sha256"), str)):
                 raise SelectionError(
@@ -644,6 +715,69 @@ def _check_slew_raw(point: dict, pop: dict | None) -> str | None:
     return "; ".join(problems) or None
 
 
+def _swing_cell_problem(field: str, cell: str | None, printed: str) -> str | None:
+    """Why `cell` is not `printed` (the bench's serialization of the recomputed value)."""
+    text = (cell or "").strip()
+    if printed == "nan":
+        return None if text.lower() == "nan" else f"{field} {text!r} but the pinned curves give an undefined (nan) value"
+    value, why = parse_decimal(cell)
+    if value is None:
+        return f"{field}: {why}"
+    if value != Decimal(printed):
+        return (
+            f"{field} {value} is not {printed} recomputed from the pinned raw curves "
+            "(the bench writes this quantity with printf %.9g; the cell must be that "
+            "serialization, with no tolerance beyond its 9 digits)"
+        )
+    return None
+
+
+def _check_swing_raw(point: dict, pop: dict | None) -> str | None:
+    """The output-swing summary must follow from the pinned raw DC curves and
+    rendered netlists (SWING_AUDIT_RULE): every curve-derived cell is
+    recomputed by the shared swing_post module and compared as the bench
+    serializes it."""
+    if pop is None:
+        return "cannot evaluate (no raw swing population available)"
+    pid = (point.get("point_id") or "").strip()
+    raw = pop.get(pid)
+    if raw is None:
+        return "cannot evaluate (no pinned raw swing artifacts for this point)"
+    where = f"({raw['coarse_csv']}, {raw['fine_csv']})"
+    problems = []
+    for field, expect in (("vdd_v", raw["vdd"]), ("vcm_v", raw["vcm"])):
+        problem = _swing_cell_problem(field, point.get(field), swing_post.serialize(expect))
+        if problem:
+            problems.append(f"{problem} (pinned rendered netlist {raw['fine_netlist']})")
+    fine = raw["fine"]
+    if fine["fail"] is not None:
+        problems.append(
+            f"fine analysis failed: {fine['fail']} {where}; no passing measurement exists "
+            "from the pinned curves")
+        return "; ".join(problems) or None
+    coarse = raw["coarse"]
+    recomputed = {
+        "op_pass": str(fine["op_pass"]),
+        "vout_max_track_v": swing_post.serialize(fine["vout_max_track"]),
+        "vout_min_track_v": swing_post.serialize(fine["vout_min_track"]),
+        "headroom_hi_v": swing_post.serialize(fine["headroom_hi"]),
+        "headroom_lo_v": swing_post.serialize(fine["headroom_lo"]),
+        "swing_span_v": swing_post.serialize(fine["span"]),
+        "vout_clip_high_v": swing_post.serialize(coarse["clip_high"]),
+        "vout_clip_low_v": swing_post.serialize(coarse["clip_low"]),
+        "vos_crossing_v": swing_post.serialize(fine["vos_crossing"]),
+        "peak_inc_gain_v_v": swing_post.serialize(fine["g_pk"]),
+        "ivdd_center_a": swing_post.serialize(fine["ivdd_center"]),
+    }
+    for field in swing_post.AUDIT_FIELDS:
+        if field in ("vdd_v", "vcm_v"):
+            continue  # compared above, against the pinned netlist
+        problem = _swing_cell_problem(field, point.get(field), recomputed[field])
+        if problem:
+            problems.append(f"{problem} {where}")
+    return "; ".join(problems) or None
+
+
 def _check_offset_magnitude(point: dict, draws) -> str | None:
     signed, _ = parse_decimal(point.get("vos_null_v"))
     magnitude, _ = parse_decimal(point.get("vos_abs_v"))
@@ -752,6 +886,7 @@ DEFINITION_CHECKS = {
     "noise_raw_audit": (_check_noise_raw, "noise"),
     "slew_worse_edge": (_check_slew_worse_edge, False),
     "slew_raw_audit": (_check_slew_raw, "slew"),
+    "swing_raw_audit": (_check_swing_raw, "swing"),
     "offset_magnitude": (_check_offset_magnitude, False),
     "offset_mc_statistics": (_check_offset_mc_statistics, "draws"),
 }
@@ -1095,6 +1230,161 @@ def _load_slew_population(repo: Path, key: str, sr: dict, expected: list, errors
     return None if len(errors) > n_err else points
 
 
+_SWING_PID_RE = re.compile(r"^(?P<corner>.+)_(?P<temp>-?\d+(?:\.\d+)?)C_(?P<vdd>\d+(?:\.\d+)?)V$")
+
+
+def _swing_pass_problems(pid: str, rc: dict, vectors: tuple, pass_label: str,
+                         window: tuple, csv_rel: str) -> list[str]:
+    """How one pinned rendered netlist disagrees with the pinned measurement
+    configuration and the point it is pinned to."""
+    parts = _SWING_PID_RE.match(pid)
+    bad = []
+    if parts is None:
+        bad.append(f"point id {pid!r} is not <corner>_<temp>C_<vdd>V")
+    else:
+        if rc["corner"] != parts["corner"]:
+            bad.append(f"corner {rc['corner']} (netlist) != {parts['corner']} (point id)")
+        if rc["temp_c"] != float(parts["temp"]):
+            bad.append(f"temperature {rc['temp_c']:g} (netlist) != {parts['temp']} (point id)")
+        if rc["vdd_v"] != float(parts["vdd"]):
+            bad.append(f"supply {rc['vdd_v']:g} V (netlist) != {parts['vdd']} (point id)")
+        if rc["mos_section"] != parts["corner"]:
+            bad.append(f"cornerMOSlv.lib section {rc['mos_section']} (netlist) != {parts['corner']} (point id)")
+    if rc["pass"] != pass_label:
+        bad.append(f"pass label {rc['pass']!r} (netlist) != {pass_label!r} (pinned configuration)")
+    if rc["vectors"] != tuple(vectors):
+        bad.append(f"recorded vectors {' '.join(rc['vectors'])} (netlist) != {' '.join(vectors)} (pinned configuration)")
+    names = ("start", "stop", "step")
+    got = tuple(rc[name] for name in names)
+    if got != window:
+        bad.append(
+            f"sweep window {got[0]:g}..{got[1]:g} step {got[2]:g} (netlist) != "
+            f"{window[0]:g}..{window[1]:g} step {window[2]:g} (pinned configuration)")
+    if Path(rc["wrdata"]).name != Path(csv_rel).name:
+        bad.append(f"wrdata target {Path(rc['wrdata']).name} is not the pinned curve {Path(csv_rel).name}")
+    return bad
+
+
+def _load_swing_population(repo: Path, key: str, sw: dict, expected: list, errors: list) -> dict | None:
+    """Pin-check and strictly parse each grid point's coarse and fine DC
+    transfer curves and rendered netlists, and refuse a netlist that
+    disagrees with the pinned measurement configuration, the point it is
+    pinned to, or the crossing recomputed from the pinned coarse curve.
+    None when anything is wrong; problems name point and file."""
+    n_err = len(errors)
+    files = sw["files"]
+    cfg = {k: float(v) for k, v in sw["config"].items()}
+    coarse_window = (cfg["coarse_start_v"], cfg["coarse_stop_v"], cfg["coarse_step_v"])
+    fine_step = cfg["fine_step_v"]
+    halfspan = cfg["fine_halfspan_v"]
+    expected_ids = [pid for pid, _ in expected]
+    for pid in sorted(set(files) - set(expected_ids)):
+        errors.append(f"record {key}: raw swing artifacts pinned for {pid!r}, which is outside the expected grid")
+    seen_paths: dict[str, str] = {}
+    for pid in expected_ids:
+        entry = files.get(pid)
+        if entry is None:
+            continue
+        for kind in SWING_PIN_KINDS:
+            rel = entry[kind]["path"]
+            owner = f"point {pid} {kind}"
+            if rel in seen_paths:
+                errors.append(f"record {key}: {rel} is pinned twice ({seen_paths[rel]} and {owner}); one raw artifact per point and kind")
+            seen_paths[rel] = owner
+            want = f"{pid}_{'coarse' if kind.startswith('coarse') else 'fine'}{'.csv' if kind.endswith('csv') else '.spice'}"
+            if Path(rel).name != want:
+                errors.append(f"record {key}: point {pid}: {kind} pin names {rel}, which belongs to another point (expected file {want})")
+    points: dict = {}
+    for pid in expected_ids:
+        entry = files.get(pid)
+        if entry is None:
+            errors.append(f"record {key}: point {pid}: no pinned raw swing curves/netlists (every grid point needs all four)")
+            continue
+        pt_err = len(errors)
+        texts = {}
+        for kind in SWING_PIN_KINDS:
+            rel, pinned = entry[kind]["path"], entry[kind]["sha256"]
+            path = repo / rel
+            if not path.is_file():
+                errors.append(f"record {key}: point {pid}: missing raw swing {kind} {rel}")
+                continue
+            actual = sha256_file(path)
+            if actual != pinned:
+                errors.append(
+                    f"record {key}: point {pid}: {rel} does not match its selection pin "
+                    f"(pinned {pinned}, actual {actual}) -- re-select deliberately, "
+                    "never re-read silently"
+                )
+                continue
+            try:
+                texts[kind] = path.read_text(encoding="utf-8")
+            except (OSError, UnicodeDecodeError) as exc:
+                errors.append(f"record {key}: point {pid}: cannot read {rel} ({exc})")
+        if len(texts) != len(SWING_PIN_KINDS):
+            continue
+        cc_rel, cn_rel = entry["coarse_csv"]["path"], entry["coarse_netlist"]["path"]
+        fc_rel, fn_rel = entry["fine_csv"]["path"], entry["fine_netlist"]["path"]
+        try:
+            cvid, (cvout,) = swing_post.parse_wrdata(texts["coarse_csv"], swing_post.COARSE_VECTORS, cc_rel)
+            fvid, (fvout, fivdd) = swing_post.parse_wrdata(texts["fine_csv"], swing_post.FINE_VECTORS, fc_rel)
+        except swing_post.SwingError as exc:
+            errors.append(f"record {key}: point {pid}: invalid swing curve: {exc}")
+            continue
+        try:
+            cc = swing_post.rendered_config(texts["coarse_netlist"], cn_rel)
+            fc = swing_post.rendered_config(texts["fine_netlist"], fn_rel)
+        except swing_post.SwingError as exc:
+            errors.append(f"record {key}: point {pid}: invalid rendered netlist: {exc}")
+            continue
+        for rc, net_rel, vectors, label, window, csv_rel, n_samples in (
+                (cc, cn_rel, swing_post.COARSE_VECTORS, "coarse", coarse_window, cc_rel, len(cvid)),
+                (fc, fn_rel, swing_post.FINE_VECTORS, "fine", (fc["start"], fc["stop"], fine_step), fc_rel, len(fvid))):
+            bad = _swing_pass_problems(pid, rc, vectors, label, window, csv_rel)
+            want = swing_post.sweep_count(rc["start"], rc["stop"], rc["step"])
+            if n_samples != want:
+                bad.append(f"{label} curve has {n_samples} samples; the rendered sweep declares {want}")
+            if bad:
+                errors.append(f"record {key}: point {pid}: measurement configuration mismatch in {net_rel}: " + "; ".join(bad))
+        if cc["vdd_v"] != fc["vdd_v"] or cc["vcm_v"] != fc["vcm_v"]:
+            errors.append(
+                f"record {key}: point {pid}: measurement configuration mismatch: the coarse pass "
+                f"runs {cc['vdd_v']:g} V / {cc['vcm_v']:g} V but the fine pass runs "
+                f"{fc['vdd_v']:g} V / {fc['vcm_v']:g} V")
+        if len(errors) > pt_err:
+            continue
+        coarse = swing_post.coarse_measure(cvid, cvout, fc["vcm_v"])
+        if coarse["n_crossings"] != 1:
+            errors.append(
+                f"record {key}: point {pid}: coarse curve {cc_rel} has {coarse['n_crossings']} "
+                "Vout=Vcm crossings (expected exactly 1)")
+            continue
+        # The fine window was rendered from the coarse crossing as the runner
+        # serialized it (printf %.9g); reproduce that exact hop, then require
+        # the pinned netlist's window to be the pinned half-span about it.
+        vos9 = float(swing_post.serialize(coarse["vos"]))
+        if fc["start"] != vos9 - halfspan or fc["stop"] != vos9 + halfspan:
+            errors.append(
+                f"record {key}: point {pid}: measurement configuration mismatch in {fn_rel}: "
+                f"fine window {fc['start']!r}..{fc['stop']!r} is not the coarse crossing "
+                f"{swing_post.serialize(coarse['vos'])} +/- {halfspan:g} V (pinned configuration)")
+            continue
+        fine = swing_post.fine_measure(
+            fvid, fvout, fivdd, fc["vdd_v"], fc["vcm_v"],
+            float(swing_post.serialize(coarse["clip_high"])),
+            float(swing_post.serialize(coarse["clip_low"])),
+            coarse["plateau_ok"], vos9,
+            float("nan"), float("nan"), float("nan"),
+            cfg["criterion_frac"])
+        points[pid] = {
+            "coarse": coarse, "fine": fine,
+            "vdd": fc["vdd_v"], "vcm": fc["vcm_v"],
+            "criterion": cfg["criterion_frac"],
+            "coarse_csv": cc_rel, "coarse_netlist": cn_rel,
+            "fine_csv": fc_rel, "fine_netlist": fn_rel,
+        }
+    return None if len(errors) > n_err else points
+
+
 def load_record(repo: Path, key: str, spec: dict, grid: dict, env: dict, records: dict | None = None) -> dict:
     """Read and audit one selected record. Never raises on bad evidence."""
     state = {
@@ -1328,13 +1618,26 @@ def load_record(repo: Path, key: str, spec: dict, grid: dict, env: dict, records
             "config": sr["config"],
         }
 
+    # 3f. raw DC transfer curves (issue #230): both passes' pinned wrdata
+    # curves and rendered netlists per grid point, strictly parsed.
+    swing_pop: dict | None = None
+    swr = spec.get("swing_raw")
+    if swr is not None:
+        swing_pop = _load_swing_population(repo, key, swr, expected, errors)
+        src["swing_raw"] = {
+            "status": "verified" if swing_pop is not None else "error",
+            "points": len(swr["files"]),
+            "pins_sha256": sha256_bytes(canonical_json(swr["files"]).encode("utf-8")),
+            "config": swr["config"],
+        }
+
     # 4. validity flags and definitions, per point
     conditions = spec.get("valid_when", [])
 
     def run_definition_checks(pid: str, row: dict) -> None:
         for name in spec.get("definition_checks", []):
             check, needs = DEFINITION_CHECKS[name]
-            pop = {"draws": draws_pass, "samples": sample_pop, "noise": noise_pop, "slew": slew_pop}.get(needs)
+            pop = {"draws": draws_pass, "samples": sample_pop, "noise": noise_pop, "slew": slew_pop, "swing": swing_pop}.get(needs)
             if needs and pop is None:
                 continue  # the population load above already reported why
             problem = check(row, pop)
@@ -1822,6 +2125,7 @@ def build_content(repo: Path, selection_path: Path) -> dict:
         "samples_audit_rule": SAMPLES_AUDIT_RULE,
         "noise_audit_rule": NOISE_AUDIT_RULE,
         "slew_audit_rule": SLEW_AUDIT_RULE,
+        "swing_audit_rule": SWING_AUDIT_RULE,
         "environment": {
             "pdk_provenance": pdk_provenance_summary(records),
             "ngspice_pin": env.get("ngspice"),
@@ -2064,6 +2368,13 @@ def render_markdown(report: dict) -> str:
         claim = "verified for every selected record" if prov["pdk_reproducibility_verified"] else "**NOT claimed** (not every selected record has checked run-time PDK identity)"
         w(f"PDK reproducibility is {claim}. {prov['note']}.\n\n")
     def _draws_cell(src: dict) -> str:
+        swing = src.get("swing_raw")
+        if swing:
+            return (
+                f"{swing['points']} pinned coarse/fine curve+netlist sets (`{_short(swing['pins_sha256'])}`, "
+                f"{swing['status']}: criterion {swing['config']['criterion_frac']} x peak, "
+                f"coarse {swing['config']['coarse_step_v']} V step, fine +/-{swing['config']['fine_halfspan_v']} V)"
+            )
         slew = src.get("slew_raw")
         if slew:
             return (
@@ -2116,6 +2427,9 @@ def render_markdown(report: dict) -> str:
     slew_rule = content.get("slew_audit_rule")
     if slew_rule and any(src.get("slew_raw") for src in content["sources"].values()):
         w(f"\n{slew_rule}\n\n")
+    swing_rule = content.get("swing_audit_rule")
+    if swing_rule and any(src.get("swing_raw") for src in content["sources"].values()):
+        w(f"\n{swing_rule}\n\n")
     w("\nSpec section 2 rows covered: ")
     w(", ".join(f"{r['row']}{'' if r['covered'] else ' (NOT COVERED)'}" for r in content["spec_coverage"]) + ".\n")
     w("Item 9 inventory rows covered: ")

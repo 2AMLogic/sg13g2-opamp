@@ -39,6 +39,9 @@ import mc_samples  # noqa: E402
 sys.path.insert(0, str(HERE.parent.parent / "sim" / "slew-rate"))
 import slew_post  # noqa: E402
 
+sys.path.insert(0, str(HERE.parent.parent / "sim" / "output-swing"))
+import swing_post  # noqa: E402
+
 REPO = HERE.parent.parent
 SELECTION = REPO / generate.SELECTION_REL
 
@@ -89,6 +92,9 @@ class Fixture:
             if "slew_raw" in rec:
                 for entry in rec["slew_raw"]["files"].values():
                     files.update(pin["path"] for pin in entry.values())
+            if "swing_raw" in rec:
+                for entry in rec["swing_raw"]["files"].values():
+                    files.update(pin["path"] for pin in entry.values())
         files.update({generate.SELECTION_REL, generate.GENERATOR_REL})
         for rel in files:
             dst = self.root / rel
@@ -135,11 +141,24 @@ class Fixture:
         rec["definition_checks"] = [c for c in rec.get("definition_checks", []) if c != "noise_raw_audit"]
         self.save_selection()
 
+    keep_swing_audit = False
+
+    def detach_swing_population(self) -> None:
+        """Controls that perturb the output-swing summary for THEIR OWN purpose
+        (a bound comparison) drop the raw-curve audit (issue #230);
+        SwingRawAudit tests that audit itself."""
+        rec = self.selection["records"]["output-swing"]
+        rec.pop("swing_raw", None)
+        rec["definition_checks"] = [c for c in rec.get("definition_checks", []) if c != "swing_raw_audit"]
+        self.save_selection()
+
     def rewrite_csv(self, key: str, transform, repin: bool = True) -> None:
         if key == "open-loop-ac" and not self.keep_cmrr_audit:
             self.detach_cmrr_population()
         if key == "input-noise" and not self.keep_noise_audit:
             self.detach_noise_population()
+        if key == "output-swing" and not self.keep_swing_audit:
+            self.detach_swing_population()
         path = self.csv_path(key)
         lines = path.read_text(encoding="utf-8").splitlines()
         path.write_text("\n".join(transform(lines)) + "\n", encoding="utf-8")
@@ -1942,6 +1961,414 @@ class SlewRawAudit(unittest.TestCase):
         bad.write_text(" 0 nan \n 1e-9 0.5 \n", encoding="utf-8")
         res = subprocess.run([sys.executable, "-I", str(REPO / "sim" / "slew-rate" / "slew_post.py"),
                               str(bad), "0.6", "0.15", "0.075", "300", "550", "800"], capture_output=True, text=True)
+        self.assertEqual((res.returncode, res.stdout), (1, ""))
+        self.assertIn("non-finite", res.stderr)
+
+
+class SwingRawAudit(unittest.TestCase):
+    """Issue #230: the output-swing summary is audited against hash-pinned
+    coarse/fine DC transfer curves and rendered netlists with the SAME
+    measurement the bench runs (sim/output-swing/swing_post.py)."""
+
+    RECORD = "output-swing"
+    POINT = "mos_tt_27C_1.20V"
+
+    def setUp(self) -> None:
+        self.fx = Fixture()
+        self.fx.keep_swing_audit = True
+
+    def tearDown(self) -> None:
+        self.fx.close()
+
+    def fresh(self) -> None:
+        self.fx.close()
+        self.fx = Fixture()
+        self.fx.keep_swing_audit = True
+
+    def raw(self) -> dict:
+        return self.fx.selection["records"][self.RECORD]["swing_raw"]
+
+    def errors(self, content: dict) -> list:
+        out = list(content["errors"])
+        for row in content["rows"]:
+            out.extend(row["errors"])
+        return out
+
+    def assert_error(self, *fragments: str) -> list:
+        content = self.fx.build()
+        errors = self.errors(content)
+        self.assertEqual(content["overall"]["verdict"], "ERROR", errors)
+        for fragment in fragments:
+            self.assertTrue(any(fragment in e for e in errors), (fragment, errors))
+        return errors
+
+    def entry(self, kind, pid=None) -> dict:
+        return self.raw()["files"][pid or self.POINT][kind]
+
+    def edit_raw(self, kind, transform, pid=None, repin=True) -> None:
+        entry = self.entry(kind, pid)
+        path = self.fx.root / entry["path"]
+        lines = path.read_text(encoding="utf-8").splitlines()
+        path.write_text("\n".join(transform(lines)) + "\n", encoding="utf-8")
+        if repin:
+            entry["sha256"] = generate.sha256_file(path)
+            self.fx.save_selection()
+
+    def cell(self, column, pid=None) -> str:
+        return next(r for r in generate.read_csv_rows(self.fx.csv_path(self.RECORD))[1]
+                    if r["point_id"] == (pid or self.POINT))[column]
+
+    def definition_error(self) -> list:
+        return self.assert_error(f"point {self.POINT} fails definition check swing_raw_audit")
+
+    def recompute(self, pid=None):
+        """The shared measurement, in-process, from the pinned artifacts."""
+        pid = pid or self.POINT
+        entry = self.raw()["files"][pid]
+        cvid, (cvout,) = swing_post.parse_wrdata(
+            (self.fx.root / entry["coarse_csv"]["path"]).read_text(encoding="utf-8"),
+            swing_post.COARSE_VECTORS)
+        fvid, (fvout, fivdd) = swing_post.parse_wrdata(
+            (self.fx.root / entry["fine_csv"]["path"]).read_text(encoding="utf-8"),
+            swing_post.FINE_VECTORS)
+        rc = swing_post.rendered_config(
+            (self.fx.root / entry["fine_netlist"]["path"]).read_text(encoding="utf-8"))
+        coarse = swing_post.coarse_measure(cvid, cvout, rc["vcm_v"])
+        fine = swing_post.fine_measure(
+            fvid, fvout, fivdd, rc["vdd_v"], rc["vcm_v"],
+            float(swing_post.serialize(coarse["clip_high"])),
+            float(swing_post.serialize(coarse["clip_low"])),
+            coarse["plateau_ok"], float(swing_post.serialize(coarse["vos"])),
+            float("nan"), float("nan"), float("nan"),
+            float(swing_post.CONFIG["criterion_frac"]))
+        return coarse, fine, rc
+
+    def recomputed_cells(self, coarse, fine) -> dict:
+        return {
+            "op_pass": str(fine["op_pass"]),
+            "vout_max_track_v": swing_post.serialize(fine["vout_max_track"]),
+            "vout_min_track_v": swing_post.serialize(fine["vout_min_track"]),
+            "headroom_hi_v": swing_post.serialize(fine["headroom_hi"]),
+            "headroom_lo_v": swing_post.serialize(fine["headroom_lo"]),
+            "swing_span_v": swing_post.serialize(fine["span"]),
+            "vout_clip_high_v": swing_post.serialize(coarse["clip_high"]),
+            "vout_clip_low_v": swing_post.serialize(coarse["clip_low"]),
+            "vos_crossing_v": swing_post.serialize(fine["vos_crossing"]),
+            "peak_inc_gain_v_v": swing_post.serialize(fine["g_pk"]),
+            "ivdd_center_a": swing_post.serialize(fine["ivdd_center"]),
+        }
+
+    # --- committed evidence -------------------------------------------------
+
+    def test_committed_population_rederives_offline(self):
+        content = self.fx.build()
+        self.assertEqual(self.errors(content), [])
+        raw = content["sources"][self.RECORD]["swing_raw"]
+        self.assertEqual((raw["status"], raw["points"]), ("verified", 45))
+        self.assertEqual(content["sources"][self.RECORD]["definition_checks"], ["swing_raw_audit"])
+        self.assertEqual(content["sources"][self.RECORD]["valid_points"], 45)
+
+    def test_report_exposes_audit_rule_and_status(self):
+        content = self.fx.build()
+        self.assertIn("Output-swing raw-evidence audit", content["swing_audit_rule"])
+        md = generate.render_markdown(generate.make_report(content, "20260101-000000-abcd", self.fx.root))
+        self.assertIn("pinned coarse/fine curve+netlist sets", md)
+        self.assertIn("swing_post.py", md)
+
+    def test_every_committed_cell_is_the_shared_serialization(self):
+        for pid in sorted(self.raw()["files"]):
+            coarse, fine, _ = self.recompute(pid)
+            row = next(r for r in generate.read_csv_rows(self.fx.csv_path(self.RECORD))[1]
+                       if r["point_id"] == pid)
+            for field, expect in self.recomputed_cells(coarse, fine).items():
+                self.assertEqual(row[field], expect, (pid, field))
+
+    def test_netlist_vdd_and_vcm_cells_follow_the_netlists(self):
+        coarse, fine, rc = self.recompute()
+        row = next(r for r in generate.read_csv_rows(self.fx.csv_path(self.RECORD))[1]
+                   if r["point_id"] == self.POINT)
+        # cells carry the runner's literal supply/common-mode strings ("1.20",
+        # "0.6"); the audit compares them numerically to the netlist values
+        self.assertEqual(Decimal(row["vdd_v"]), Decimal(swing_post.serialize(rc["vdd_v"])))
+        self.assertEqual(Decimal(row["vcm_v"]), Decimal(swing_post.serialize(rc["vcm_v"])))
+
+    # --- coherent summary tampering ----------------------------------------
+
+    def test_coordinated_bounds_headroom_and_span_edit_fails(self):
+        # max_track, headroom_hi and span moved together (all algebraic
+        # identities preserved): the raw curve still disagrees on all three.
+        vdd = float(self.cell("vdd_v"))
+        old_max = float(self.cell("vout_max_track_v"))
+        old_min = float(self.cell("vout_min_track_v"))
+        new_max = old_max * 1.01
+        self.fx.set_cell(self.RECORD, self.POINT, "vout_max_track_v", swing_post.serialize(new_max))
+        self.fx.set_cell(self.RECORD, self.POINT, "headroom_hi_v", swing_post.serialize(vdd - new_max))
+        self.fx.set_cell(self.RECORD, self.POINT, "swing_span_v", swing_post.serialize(new_max - old_min))
+        errors = self.definition_error()
+        for field in ("vout_max_track_v", "headroom_hi_v", "swing_span_v"):
+            self.assertTrue(any(field in e and "recomputed from the pinned raw curves" in e for e in errors), (field, errors))
+        self.assertTrue(any(self.entry("fine_csv")["path"] in e for e in errors), errors)
+
+    def test_one_digit_beyond_serialization_fails(self):
+        for field in ("vout_clip_high_v", "vout_clip_low_v", "vos_crossing_v",
+                      "peak_inc_gain_v_v", "ivdd_center_a"):
+            with self.subTest(field=field):
+                self.fresh()
+                cell = self.cell(field)
+                bumped = format(float(cell) * 1.00001 + (1e-12 if float(cell) == 0 else 0), ".9g")
+                self.fx.set_cell(self.RECORD, self.POINT, field, bumped)
+                self.assert_error(f"point {self.POINT} fails definition check swing_raw_audit", field)
+
+    def test_vcm_cell_disagreeing_with_netlist_fails(self):
+        self.fx.set_cell(self.RECORD, self.POINT, "vcm_v", "0.61")
+        errors = self.definition_error()
+        self.assertTrue(any("vcm_v" in e and self.entry("fine_netlist")["path"] in e for e in errors), errors)
+
+    def test_summary_claiming_pass_on_a_degenerate_curve_fails(self):
+        # peak incremental gain squashed below the 10 V/V floor by rescaling
+        # the output deviation: the recomputed measurement cannot pass, so the
+        # summary's op_pass=1 cannot stand
+        vcm = float(self.cell("vcm_v"))
+        self.edit_raw("fine_csv", lambda ls: [
+            " ".join([p[0], repr(vcm + (float(p[1]) - vcm) * 0.02)] + p[2:])
+            for p in (l.split() for l in ls)])
+        errors = self.definition_error()
+        self.assertTrue(any("fine analysis failed: peak_gain_implausible" in e for e in errors), errors)
+
+    # --- curve evidence -------------------------------------------------------
+
+    def test_changed_curve_without_repin_fails(self):
+        self.edit_raw("fine_csv", lambda ls: ls[:-1], repin=False)
+        self.assert_error(f"point {self.POINT}: {self.entry('fine_csv')['path']} does not match its selection pin")
+
+    def test_changed_curve_repinned_disagrees_with_summary(self):
+        # compress the curve's output deviation around Vcm by 2%: the crossing
+        # (and so the fine window centring) is preserved, the tracking bounds
+        # are not -- a pure definition-check disagreement
+        vcm = float(self.cell("vcm_v"))
+        self.edit_raw("fine_csv", lambda ls: [
+            " ".join([ls_part for ls_part in [p[0], repr(vcm + (float(p[1]) - vcm) * 0.98)] + p[2:]])
+            for p in (l.split() for l in ls)])
+        self.definition_error()
+
+    def test_missing_curve_fails(self):
+        (self.fx.root / self.entry("fine_csv")["path"]).unlink()
+        self.assert_error(f"point {self.POINT}: missing raw swing fine_csv {self.entry('fine_csv')['path']}")
+
+    def test_missing_netlist_fails(self):
+        (self.fx.root / self.entry("coarse_netlist")["path"]).unlink()
+        self.assert_error(f"point {self.POINT}: missing raw swing coarse_netlist {self.entry('coarse_netlist')['path']}")
+
+    def test_missing_point_association_fails(self):
+        del self.raw()["files"][self.POINT]
+        self.fx.save_selection()
+        self.assert_error(f"point {self.POINT}: no pinned raw swing curves/netlists")
+
+    def test_pin_outside_the_grid_fails(self):
+        self.raw()["files"]["mos_tt_99C_1.20V"] = self.raw()["files"][self.POINT]
+        self.fx.save_selection()
+        self.assert_error("'mos_tt_99C_1.20V', which is outside the expected grid")
+
+    def test_duplicate_assignment_fails(self):
+        other = "mos_tt_27C_1.32V"
+        self.raw()["files"][other] = json.loads(json.dumps(self.raw()["files"][self.POINT]))
+        self.fx.save_selection()
+        errors = self.assert_error("is pinned twice", "belongs to another point")
+        self.assertTrue(any(other in e for e in errors), errors)
+
+    def test_non_finite_and_malformed_samples_fail(self):
+        for bad in (" 1.0e-02 nan 1.0e-02 -1.8e-05 ", " 1.0e-02 inf 1.0e-02 -1.8e-05 ",
+                    " nan 0.5 nan -1.8e-05 ", " 1.0e-02 0.5 1.0e-02 -Infinity ",
+                    " 1.0e-02 abc 1.0e-02 -1.8e-05 ", " 1.0e-02 0.5 "):
+            with self.subTest(bad=bad):
+                self.fresh()
+                self.edit_raw("fine_csv", lambda ls, bad=bad: ls[:5] + [bad] + ls[5:])
+                errors = self.assert_error(f"point {self.POINT}: invalid swing curve")
+                self.assertTrue(any(f"{self.entry('fine_csv')['path']}:6" in e for e in errors), errors)
+
+    def test_scale_order_violations_fail(self):
+        def swap(lines):
+            return lines[:5] + [lines[6], lines[5]] + lines[7:]
+        self.edit_raw("fine_csv", swap)
+        self.assert_error(f"point {self.POINT}: invalid swing curve", "does not increase")
+
+    def test_duplicate_scale_stamp_fails(self):
+        self.edit_raw("fine_csv", lambda ls: ls[:5] + [ls[5]] + ls[5:])
+        self.assert_error(f"point {self.POINT}: invalid swing curve", "does not increase")
+
+    def test_truncated_curve_fails_on_the_declared_sample_count(self):
+        self.edit_raw("fine_csv", lambda ls: ls[:-1])
+        errors = self.assert_error("measurement configuration mismatch",
+                                   "fine curve has 5000 samples; the rendered sweep declares 5001")
+        self.assertTrue(any(self.entry("fine_netlist")["path"] in e for e in errors), errors)
+
+    def test_mismatched_wrdata_scales_fail(self):
+        def bad_scale(lines):
+            out = []
+            for i, line in enumerate(lines):
+                if i == 5:
+                    parts = line.split()
+                    parts[2] = "9.9"
+                    line = " ".join(parts)
+                out.append(line)
+            return out
+        self.edit_raw("fine_csv", bad_scale)
+        self.assert_error(f"point {self.POINT}: invalid swing curve", "mismatched wrdata scales")
+
+    def test_no_coarse_crossing_fails(self):
+        self.edit_raw("coarse_csv", lambda ls: [f"{l.split()[0]} 0.2" for l in ls])
+        self.assert_error(f"point {self.POINT}: coarse curve {self.entry('coarse_csv')['path']} "
+                          "has 0 Vout=Vcm crossings (expected exactly 1)")
+
+    def test_multiple_coarse_crossings_fail(self):
+        import math as _math
+
+        def wiggle(lines):
+            out = [lines[0]]
+            for line in lines[1:]:
+                vid = float(line.split()[0])
+                out.append(f"{vid!r} {0.6 + 0.001 * _math.sin(2 * _math.pi * vid / 0.002)!r}")
+            return out
+        self.edit_raw("coarse_csv", wiggle)
+        self.assert_error(f"point {self.POINT}: coarse curve {self.entry('coarse_csv')['path']}",
+                          "Vout=Vcm crossings (expected exactly 1)")
+
+    def test_fine_window_truncating_the_region_fails(self):
+        # a synthetic fine curve whose 0.5x-peak region still qualifies at both
+        # window edges: the audit must refuse it as a window artifact
+        coarse, _, rc = self.recompute()
+        vos9 = float(swing_post.serialize(coarse["vos"]))
+        half = float(swing_post.CONFIG["fine_halfspan_v"])
+        step = float(swing_post.CONFIG["fine_step_v"])
+        vcm = rc["vcm_v"]
+
+        def synth(lines):
+            out = []
+            n = swing_post.sweep_count(vos9 - half, vos9 + half, step)
+            for k in range(n):
+                vid = vos9 - half + k * step
+                vout = vcm + 0.35 * math.tanh((vid - vos9) / 0.03)
+                out.append(f"{vid!r} {vout!r} {vid!r} -1.0e-04")
+            return out
+        self.edit_raw("fine_csv", synth)
+        errors = self.definition_error()
+        self.assertTrue(any("fine analysis failed: linear_region_touches_window_edge" in e for e in errors), errors)
+
+    # --- measurement configuration -------------------------------------------
+
+    def test_selection_config_mismatch_is_refused(self):
+        for field, value in (("coarse_step_v", "490e-6"), ("fine_halfspan_v", "20e-3"),
+                             ("fine_step_v", "5e-6"), ("criterion_frac", "0.6"),
+                             ("coarse_start_v", "-0.2")):
+            with self.subTest(field=field):
+                self.fresh()
+                self.raw()["config"][field] = value
+                self.fx.save_selection()
+                with self.assertRaises(generate.SelectionError):
+                    self.fx.build()
+
+    def test_missing_config_is_refused(self):
+        del self.raw()["config"]
+        self.fx.save_selection()
+        with self.assertRaises(generate.SelectionError):
+            self.fx.build()
+
+    def test_netlist_window_disagreeing_with_config_is_refused(self):
+        self.edit_raw("coarse_netlist", lambda ls: [l.replace("500e-6", "490e-6") for l in ls])
+        self.assert_error(f"point {self.POINT}: measurement configuration mismatch",
+                          "step 0.00049 (netlist) != -0.1..0.1 step 0.0005 (pinned configuration)")
+
+    def test_netlist_common_mode_not_mid_rail_is_refused(self):
+        self.edit_raw("fine_netlist", lambda ls: [l.replace("Vcm cm 0 dc 0.6", "Vcm cm 0 dc 0.7") for l in ls])
+        self.assert_error(f"point {self.POINT}: invalid rendered netlist", "is not VDD/2")
+
+    def test_netlist_for_another_corner_section_is_refused(self):
+        self.edit_raw("coarse_netlist", lambda ls: [l.replace('cornerMOSlv.lib" mos_tt', 'cornerMOSlv.lib" mos_ff') for l in ls])
+        self.assert_error(f"point {self.POINT}: measurement configuration mismatch",
+                          "cornerMOSlv.lib section mos_ff (netlist) != mos_tt (point id)")
+
+    def test_netlist_writing_another_curve_is_refused(self):
+        self.edit_raw("fine_netlist", lambda ls: [l.replace(f"{self.POINT}_fine.csv", "mos_tt_27C_1.32V_fine.csv") for l in ls])
+        self.assert_error(f"point {self.POINT}: measurement configuration mismatch", "wrdata target")
+
+    def test_netlist_window_off_the_coarse_crossing_is_refused(self):
+        # shift the fine window +100 uV, dc line and Sweep comment together:
+        # self-consistent, correctly sized, but no longer centred on the
+        # coarse crossing recomputed from the pinned coarse curve
+        import re as _re
+
+        def shift(lines):
+            out = []
+            for line in lines:
+                if line.startswith("dc Vid "):
+                    _, _, s, e, st = line.split()
+                    out.append(f"dc Vid {float(s) + 1e-4!r} {float(e) + 1e-4!r} {st}")
+                elif line.startswith("* Sweep: Vid from "):
+                    m = _re.match(r"\* Sweep: Vid from (\S+) V to (\S+) V, step (\S+) V$", line)
+                    out.append(f"* Sweep: Vid from {float(m.group(1)) + 1e-4!r} V to "
+                               f"{float(m.group(2)) + 1e-4!r} V, step {m.group(3)} V")
+                else:
+                    out.append(line)
+            return out
+        self.edit_raw("fine_netlist", shift)
+        self.assert_error(f"point {self.POINT}: measurement configuration mismatch",
+                          "is not the coarse crossing")
+
+    def test_malformed_netlist_fails(self):
+        self.edit_raw("coarse_netlist", lambda ls: [l for l in ls if not l.startswith("Vdd")])
+        self.assert_error(f"point {self.POINT}: invalid rendered netlist")
+
+    def test_unpinned_artifact_entry_is_rejected(self):
+        del self.entry("fine_csv")["sha256"]
+        self.fx.save_selection()
+        with self.assertRaises(generate.SelectionError):
+            self.fx.build()
+
+    def test_audit_without_pins_is_rejected(self):
+        del self.fx.selection["records"][self.RECORD]["swing_raw"]
+        self.fx.save_selection()
+        with self.assertRaises(generate.SelectionError):
+            self.fx.build()
+
+    # --- the shared module and runner ------------------------------------------
+
+    def test_runner_uses_the_shared_module_and_its_constants(self):
+        runner = (REPO / "sim" / "output-swing" / "run_swing_sweep.sh").read_text(encoding="utf-8")
+        self.assertIn("swing_post.py", runner)
+        self.assertNotIn("def seg_gain(", runner)
+        self.assertNotIn("def fail(", runner)
+        for var, key in (("COARSE_START", "coarse_start_v"), ("COARSE_STOP", "coarse_stop_v"),
+                         ("COARSE_STEP", "coarse_step_v"), ("FINE_HALFSPAN", "fine_halfspan_v"),
+                         ("FINE_STEP", "fine_step_v"), ("CRITERION_FRAC", "criterion_frac")):
+            self.assertIn(f'{var}="{swing_post.CONFIG[key]}"', runner)
+
+    def test_cli_matches_the_committed_summary(self):
+        row = next(r for r in generate.read_csv_rows(self.fx.csv_path(self.RECORD))[1]
+                   if r["point_id"] == self.POINT)
+        coarse_csv = REPO / self.entry("coarse_csv")["path"]
+        fine_csv = REPO / self.entry("fine_csv")["path"]
+        out = subprocess.run(
+            [sys.executable, "-I", str(REPO / "sim" / "output-swing" / "swing_post.py"),
+             "coarse", str(coarse_csv), row["vcm_v"]], capture_output=True, text=True, check=True).stdout.split()
+        vos, n_cross, clip_high, clip_low, plateau = out
+        self.assertEqual(n_cross, "1")
+        self.assertEqual([clip_high, clip_low], [row["vout_clip_high_v"], row["vout_clip_low_v"]])
+        fields = subprocess.run(
+            [sys.executable, "-I", str(REPO / "sim" / "output-swing" / "swing_post.py"),
+             "fine", str(fine_csv), row["vdd_v"], row["vcm_v"], clip_high, clip_low, plateau, vos,
+             row["av0_ac_record_db"], row["ivdd_ac_record_a"], row["vos_offset_record_v"], "0.5"],
+            capture_output=True, text=True, check=True).stdout.split()
+        expected_cols = ("op_pass", "vout_max_track_v", "vout_min_track_v", "headroom_hi_v",
+                         "headroom_lo_v", "swing_span_v", "vout_clip_high_v", "vout_clip_low_v",
+                         "vos_crossing_v", "vos_offset_record_v", "vos_delta_v", "peak_inc_gain_v_v",
+                         "av0_ac_record_db", "av0_ratio", "ivdd_center_a", "ivdd_ac_record_a", "ivdd_ratio")
+        self.assertEqual(fields, [row[c] for c in expected_cols])
+
+    def test_cli_reports_a_bad_curve_with_no_stdout(self):
+        bad = self.fx.root / "bad_coarse.csv"
+        bad.write_text(" 0 nan \n 1e-3 0.5 \n", encoding="utf-8")
+        res = subprocess.run([sys.executable, "-I", str(REPO / "sim" / "output-swing" / "swing_post.py"),
+                              "coarse", str(bad), "0.6"], capture_output=True, text=True)
         self.assertEqual((res.returncode, res.stdout), (1, ""))
         self.assertIn("non-finite", res.stderr)
 
