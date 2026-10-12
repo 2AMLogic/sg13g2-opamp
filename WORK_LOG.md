@@ -2,8 +2,28 @@
 
 <!-- Maintained by the Loom Guide role. Newest entries first. -->
 
+### 2026-10-12
+
+- **PR #231**: Audit output-swing summary against pinned DC curves (#230)
+- **Issue #230** (closed): characterization: audit output-swing summaries against pinned DC curves
+
 ### 2026-10-11
 
+- **PR #229**: Audit slew-rate summary against pinned transient waveforms (#227)
+- **Issue #223** (closed): Auditor guard review: keep gh-api-rawfield-body-literal-at flagged
+- **Issue #227** (closed): characterization: rederive slew measurements from pinned transient waveforms
+- **PR #228**: sim: freeze admitted AC source bytes for all consumer lookups
+- **Issue #226** (closed): sim: freeze admitted AC source bytes for all consumer lookups
+- **PR #225**: sim: admission check for cross-record AC joins (#224)
+- **Issue #224** (closed): sim: validate circuit and model compatibility before joining AC evidence
+- **PR #220**: sim: refresh observed ngspice version before finalizing records
+- **Issue #212** (closed): sim: refresh observed ngspice version before finalizing records
+- **PR #219**: sim: detect live OSDI binary replacement at record finalization
+- **Issue #218** (closed): sim: detect live OSDI binary replacement at record finalization
+- **PR #217**: sim: bind native input-noise records to observed model identity
+- **Issue #214** (closed): sim: bind native input-noise records to observed model identity
+- **PR #216**: characterization: audit input-noise summaries against pinned logs and spectra
+- **Issue #213** (closed): characterization: audit input-noise summaries against pinned logs and spectra
 - **PR #211**: sim: refuse record finalization when model identity drifts during a run
 - **Issue #209** (closed): sim: refuse record finalization when model identity drifts during a sweep
 - **PR #210**: characterization: audit CMRR statistics against pinned raw sample populations
