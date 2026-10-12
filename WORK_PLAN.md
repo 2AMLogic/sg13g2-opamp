@@ -20,13 +20,12 @@ _None._
 Human-approved issues ready for implementation (`loom:issue`).
 
 - **#85**: sim: express the open-loop AC bench as a `klt sim` request, the first gradable envelope toward T1 item 5
-- **#214**: sim: bind native input-noise records to observed model identity
 
 ## In Progress
 
 Issues currently being built (`loom:building`).
 
-- **#213**: characterization: audit input-noise summaries against pinned logs and spectra
+_None._
 
 ## PRs Awaiting Review
 
@@ -70,8 +69,8 @@ _None._
 |------|-------|
 | Operator merge-risk holds | 1 |
 | Operator priority | 0 |
-| Ready (`loom:issue`) | 2 |
-| In Progress (`loom:building`) | 1 |
+| Ready (`loom:issue`) | 1 |
+| In Progress (`loom:building`) | 0 |
 | PRs awaiting review | 1 |
 | Approved PRs awaiting merge | 1 |
 | Curated | 11 |
