@@ -140,6 +140,37 @@ pins, non-finite samples and malformed frequency grids are point-specific
 errors; the report's sources table shows the audit status and the pin-set hash.
 Historical sim records are untouched; only a new report is minted.
 
+## Output-swing raw-evidence audit (issue #230)
+
+The `output-swing` record pins, per PVT point, its raw DC evidence under
+`swing_raw` in [`selection.json`](selection.json): one sha256-pinned coarse
+and one fine transfer-curve `wrdata` file, one sha256-pinned rendered bench
+netlist per pass, and the measurement configuration (coarse window, fine
+half-span and step, the 0.5 x peak criterion — which must be exactly
+[`sim/output-swing/swing_post.py`](../../sim/output-swing/swing_post.py)
+`CONFIG`). Definition check `swing_raw_audit` re-derives the summary offline
+(stdlib only) with that module — the same code `run_swing_sweep.sh` runs, so
+bench and audit share one definition of the sampled estimator. The pinned
+netlists must agree with the configuration and the point they are pinned to
+(supply, `Vcm = VDD/2`, corner section, temperature, sweep window, recorded
+vectors, wrdata target, pass label), the fine window must be centred on the
+coarse crossing recomputed from the pinned coarse curve, and each curve must
+carry exactly as many samples as its netlist's sweep declares. Per point the
+audit recomputes the unique-crossing and plateau checks, the tracking bounds
+at the sampled 0.5-times-peak region, both headrooms, the span, the fine
+interpolated crossing, the peak incremental gain and the mid-swing supply
+current, and holds each committed cell to the bench's `printf %.9g`
+serialization of that value. Curves are strictly parsed (finite samples,
+increasing scales, agreeing duplicate scale columns, exact column count);
+missing, truncated, malformed or non-finite evidence, multiple or missing
+coarse crossings and a fine window that truncates the accepted region are
+errors naming the point and file. A summary edited coherently — bounds,
+headrooms and span together, hash refreshed — still fails while the pinned
+curves disagree. The record's cross-bench diagnostic columns
+(`vos_offset_record_v`, `vos_delta_v`, `av0_ac_record_db`, `av0_ratio`,
+`ivdd_ac_record_a`, `ivdd_ratio`) are logged, not gated, and stay outside
+the audit. Historical sim records are untouched; only a new report is minted.
+
 ## Minting a new record, and the item 8 citation
 
 ```bash

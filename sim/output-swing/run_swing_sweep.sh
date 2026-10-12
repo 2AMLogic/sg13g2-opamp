@@ -181,59 +181,11 @@ for corner in "${CORNERS[@]}"; do
       # Coarse post-processing in one python read: the unique Vout = Vcm
       # crossing (same uniqueness rule as sim/input-offset/'s coarse pass)
       # and both hard-clipped plateau levels.
-      read -r vos_coarse n_cross_coarse clip_high clip_low plateau_ok < <(python3 - "${coarse_csv}" "${vcm}" <<'PYEOF'
-import sys
-# wrdata column layout: one (scale,value) pair per requested vector, in the
-# order requested by the testbench's own wrdata line. The coarse pass
-# requests v(out) alone, so col0 = Vid (v(out)'s own scale) and
-# col1 = v(out). See sim/gm-id-characterization/README.md "wrdata column
-# layout" for this gotcha documented once for the whole tree.
-path, target = sys.argv[1], float(sys.argv[2])
-clip_high = clip_low = "nan"
-plateau_ok = 0
-vid, vout = [], []
-for line in open(path):
-    p = line.split()
-    if len(p) < 2:
-        continue
-    vid.append(float(p[0]))
-    vout.append(float(p[1]))
-crossings = []
-for i in range(1, len(vid)):
-    a, b = vout[i - 1] - target, vout[i] - target
-    if (a <= 0 < b) or (a >= 0 > b):
-        frac = (target - vout[i - 1]) / (vout[i] - vout[i - 1])
-        crossings.append(vid[i - 1] + frac * (vid[i] - vid[i - 1]))
-# Clipped plateau levels = the extremes the output actually reached at the
-# far ends of the (hard-railed) coarse window; plateau_ok additionally
-# requires both window ends to sit on a CLIPPED, not amplifying, part of
-# the curve, judged by slope ratio rather than absolute flatness: the
-# incremental slope over the outermost stretch of each end must be <= 1%
-# of the curve's own peak segment slope (a mid-curve point -- the linear
-# region is 500+ segments wide -- so the comparison is self-calibrating
-# per corner). An absolute mV-flatness rule was tried first and is WRONG
-# at hot corners: at 125 C the "railed" output still creeps ~0.3 mV per
-# mV of Vid (leakage-fed), which is ~1e-6 of the peak gain -- clearly
-# clipped -- but breaches any absolute millivolt threshold.
-def seg_gain(i):
-    dv = vout[i] - vout[i - 1]
-    di = vid[i] - vid[i - 1]
-    return dv / di if di != 0 else 0.0
-if vout:
-    clip_high = max(vout)
-    clip_low = min(vout)
-    flat_n = max(2, len(vid) // 50)
-    peak = abs(max((seg_gain(i) for i in range(1, len(vid))), key=abs)) if len(vid) > 2 else 0.0
-    if peak > 0:
-        slope_lo = abs(vout[flat_n] - vout[0]) / abs(vid[flat_n] - vid[0])
-        slope_hi = abs(vout[-1] - vout[-1 - flat_n]) / abs(vid[-1] - vid[-1 - flat_n])
-        plateau_ok = 1 if (slope_lo <= 0.01 * peak and slope_hi <= 0.01 * peak) else 0
-if len(crossings) != 1:
-    print(f"nan {len(crossings)} {clip_high:.9g} {clip_low:.9g} {plateau_ok}")
-else:
-    print(f"{crossings[0]:.9g} 1 {clip_high:.9g} {clip_low:.9g} {plateau_ok}")
-PYEOF
-)
+      # and both hard-clipped plateau levels. The definition lives in
+      # swing_post.py (stdlib only), shared with the offline raw-evidence
+      # audit in signoff/characterization/generate.py (issue #230); the
+      # audit refuses any other COARSE_*/FINE_* configuration.
+      read -r vos_coarse n_cross_coarse clip_high clip_low plateau_ok < <(python3 "${SCRIPT_DIR}/swing_post.py" coarse "${coarse_csv}" "${vcm}" || true)
       if [[ "${n_cross_coarse}" != "1" || "${vos_coarse}" == "nan" ]]; then
         echo "run_swing_sweep.sh: ANALYSIS FAILED ${point_id} -- coarse sweep has ${n_cross_coarse} Vout=Vcm crossings (expected exactly 1), see ${coarse_csv}" >&2
         sim_fail_points+=("${point_id}:coarse_crossings=${n_cross_coarse}")
@@ -275,163 +227,15 @@ PYEOF
       # to both rail-ward boundaries of the linear region, reads the
       # mid-swing operating point, and applies the per-point sanity rule
       # (README.md "Per-point sanity checks").
-      row="$(python3 - "${fine_csv}" "${vdd}" "${vcm}" "${clip_high}" "${clip_low}" "${plateau_ok}" "${vos_coarse}" "${av0_db_ac}" "${ivdd_ac}" "${vos_off}" "${CRITERION_FRAC}" <<'PYEOF'
-import math, sys
-
-fine_path = sys.argv[1]
-vdd = float(sys.argv[2])
-vcm = float(sys.argv[3])
-clip_high = float(sys.argv[4])
-clip_low = float(sys.argv[5])
-plateau_ok = int(sys.argv[6])
-vos_coarse = float(sys.argv[7])
-av0_db_ac = float(sys.argv[8]) if sys.argv[8] != "nan" else float("nan")
-ivdd_ac = float(sys.argv[9]) if sys.argv[9] != "nan" else float("nan")
-vos_off = float(sys.argv[10]) if sys.argv[10] != "nan" else float("nan")
-criterion = float(sys.argv[11])
-
-# wrdata column layout (see the coarse-pass note above): 2 vectors ->
-# 4 columns, each a (scale, value) pair in wrdata argument order:
-# v(out), i(vdd).
-vid, vout, ivdd = [], [], []
-for line in open(fine_path):
-    p = line.split()
-    if len(p) < 4:
-        continue
-    vid.append(float(p[0]))
-    vout.append(float(p[1]))
-    ivdd.append(float(p[3]))
-
-def fmt(x):
-    return "nan" if x != x else f"{x:.9g}"
-
-def fail(reason):
-    # Emit exactly the same 17 whitespace-separated fields as the success
-    # print below (the caller `read`s them positionally), with op_pass=0
-    # and every not-yet-derived quantity as nan; the human-readable reason
-    # goes to stderr so the bash caller's own log names it.
-    print(reason, file=sys.stderr)
-    fields = ["0",
-              "nan", "nan", "nan", "nan", "nan",
-              f"{clip_high:.9g}", f"{clip_low:.9g}",
-              fmt(vos_coarse), fmt(vos_off), "nan", "nan",
-              fmt(av0_db_ac), "nan", "nan", fmt(ivdd_ac), "nan"]
-    print(" ".join(fields))
-    raise SystemExit(0)
-
-n = len(vid)
-if n < 10:
-    fail("fine_sweep_too_short")
-
-idx = None
-for i in range(1, n):
-    a, b = vout[i - 1] - vcm, vout[i] - vcm
-    if (a <= 0 < b) or (a >= 0 > b):
-        idx = i
-        break
-if idx is None:
-    fail("fine_sweep_no_crossing")
-# The crossing must sit strictly inside the fine window, not on its edge --
-# an edge crossing would mean the coarse locate pass was wrong by more than
-# the fine half-span and the fine read is not trustworthy (same rule as
-# sim/input-offset/).
-if idx <= 1 or idx >= n - 1:
-    fail("fine_sweep_crossing_at_edge")
-
-# Monotonic S-curve check: v(out) must never decrease (beyond fp wiggle) --
-# a non-monotonic transfer curve would make "the linear region" ambiguous.
-for i in range(1, n):
-    if vout[i] < vout[i - 1] - 1e-9:
-        fail("fine_sweep_non_monotonic")
-
-# Incremental gain per segment; peak segment and the contiguous block of
-# segments around it still above the criterion fraction of the peak (the
-# -6 dB rule -- README.md "The swing criterion").
-g = [(vout[i] - vout[i - 1]) / (vid[i] - vid[i - 1]) for i in range(1, n)]
-peak_i = max(range(len(g)), key=lambda i: g[i])
-g_pk = g[peak_i]
-if not (g_pk == g_pk and g_pk >= 10.0):
-    fail("peak_gain_implausible")
-lo = peak_i
-while lo > 0 and g[lo - 1] >= criterion * g_pk:
-    lo -= 1
-hi = peak_i
-while hi < len(g) - 1 and g[hi + 1] >= criterion * g_pk:
-    hi += 1
-# The -6 dB region must be strictly inside the fine window: an edge-touching
-# region means the fine window truncated the boundary and the reported
-# swing bound is an artifact of the window, not the amplifier.
-if lo <= 0 or hi >= len(g) - 1:
-    fail("linear_region_touches_window_edge")
-
-# Samples inside the linear region: segment i spans samples i..i+1.
-vout_region = vout[lo:hi + 2]
-vout_max_track = max(vout_region)
-vout_min_track = min(vout_region)
-headroom_hi = vdd - vout_max_track
-headroom_lo = vout_min_track
-span = vout_max_track - vout_min_track
-
-# Mid-swing operating point: the simulator's own solution at the swept
-# sample nearest the Vout = Vcm crossing (at most half a fine step, 5 uV
-# of Vid, away) -- unmodified ngspice output, not a derived quantity,
-# same convention as sim/input-offset/'s `*_sample_*` columns. The supply
-# current there cross-checks sim/open-loop-ac/'s per-point Iq (same bias,
-# same grid point).
-s = idx - 1 if abs(vid[idx - 1] - vos_coarse) <= abs(vid[idx] - vos_coarse) else idx
-ivdd_center = -ivdd[s]              # i(vdd) is into the source; report drawn
-
-# Crossing (interpolated in the fine pass) vs the offset record's own
-# null for this point -- an independent bench's measurement of the same
-# quantity (README.md "Cross-checks"). Logged, never gated.
-frac = (vcm - vout[idx - 1]) / (vout[idx] - vout[idx - 1])
-vos_crossing = vid[idx - 1] + frac * (vid[idx] - vid[idx - 1])
-vos_delta = abs(vos_crossing - vos_off) if vos_off == vos_off else float("nan")
-
-# Cross-check ratios (logged, never gated): peak incremental DC gain vs
-# the AC bench's 1 Hz Av0 at this point; mid-swing Iq vs the AC bench's
-# total Iq at this point.
-if av0_db_ac == av0_db_ac:
-    av_ac = 10 ** (av0_db_ac / 20.0)
-    av0_ratio = g_pk / av_ac
-else:
-    av0_ratio = float("nan")
-ivdd_ratio = ivdd_center / ivdd_ac if ivdd_ac == ivdd_ac and ivdd_ac != 0 else float("nan")
-
-# --- per-point sanity rule (README.md "Per-point sanity checks") --------
-op_pass = 1
-# Coarse window must actually have clipped on both ends for the plateau
-# levels to mean anything.
-if plateau_ok != 1:
-    op_pass = 0
-# Plateaus must straddle mid-rail and contain the tracking bounds.
-if not (clip_low < vcm < clip_high):
-    op_pass = 0
-if not (clip_low < vout_min_track <= vout_max_track < clip_high):
-    op_pass = 0
-# Headrooms must be physical: strictly positive and strictly inside the
-# supply span (a bound outside the rails is an extraction artifact).
-if not (0.0 < headroom_hi < vdd and 0.0 < headroom_lo < vdd):
-    op_pass = 0
-# The tracking bounds must sit a real distance inside the hard-clip
-# plateaus -- the -6 dB boundary by construction lies before the plateau.
-if not (vout_max_track < clip_high - 1e-6 and vout_min_track > clip_low + 1e-6):
-    op_pass = 0
-# Peak incremental gain must be a real amplifying point (same floor as
-# sim/input-offset/'s rule).
-if not (g_pk == g_pk and g_pk >= 10.0):
-    op_pass = 0
-
-fields = [str(op_pass),
-          f"{vout_max_track:.9g}", f"{vout_min_track:.9g}",
-          f"{headroom_hi:.9g}", f"{headroom_lo:.9g}", f"{span:.9g}",
-          f"{clip_high:.9g}", f"{clip_low:.9g}",
-          f"{vos_crossing:.9g}", fmt(vos_off), fmt(vos_delta),
-          f"{g_pk:.9g}", fmt(av0_db_ac), fmt(av0_ratio),
-          f"{ivdd_center:.9g}", fmt(ivdd_ac), fmt(ivdd_ratio)]
-print(" ".join(fields))
-PYEOF
-)"
+      # Reads the fine sweep via the shared swing_post.py module (issue
+      # #230): applies the -6 dB incremental-gain criterion to both
+      # rail-ward boundaries of the linear region, reads the mid-swing
+      # operating point, and applies the per-point sanity rule (README.md
+      # "Per-point sanity checks"). An analysis that cannot be made still
+      # prints the 17-field row, with op_pass=0 and the reason on stderr.
+      row="$(python3 "${SCRIPT_DIR}/swing_post.py" fine "${fine_csv}" "${vdd}" "${vcm}" \
+        "${clip_high}" "${clip_low}" "${plateau_ok}" "${vos_coarse}" \
+        "${av0_db_ac}" "${ivdd_ac}" "${vos_off}" "${CRITERION_FRAC}")"
 
       # Split the python block's whitespace-separated fields positionally.
       read -r op_pass vout_max_track vout_min_track headroom_hi headroom_lo swing_span \
