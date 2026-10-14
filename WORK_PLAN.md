@@ -7,13 +7,19 @@ This roadmap is generated from the repository's current GitHub label state.
 
 Judge-approved PRs stuck under a `loom:operator` merge-risk hold — implementation work is done, only a human merge decision is missing.
 
-- **#164**: ci: protect nested klt record trees with the append-only evidence gate
+_None._
 
-## Operator Priority
+## Very Important
 
-Issues the operator starred (`loom:operator-priority`); land these first.
+`loom:very-important` (one counts per workspace); every stage takes these first.
 
 _None._
+
+## Important
+
+`loom:important`; taken before unlabelled work.
+
+- **#85**: sim: express the open-loop AC bench as a `klt sim` request, the first gradable envelope toward T1 item 5
 
 ## Ready
 
@@ -31,20 +37,19 @@ _None._
 
 PRs waiting on Judge (`loom:review-requested`).
 
-- **#102**: sim: open-loop AC bench as klt sim AC + OP requests with a harness comparison (no envelope yet: fleet runner klt 0.5.0)
+_None._
 
 ## Approved (Awaiting Merge)
 
 PRs that passed review and are queued for Champion auto-merge (`loom:pr`).
 
-- **#164**: ci: protect nested klt record trees with the append-only evidence gate
+- **#102**: sim: open-loop AC bench as klt sim AC + OP requests with a harness comparison (no envelope yet: fleet runner klt 0.5.0)
 
 ## Proposed
 
 Issues carrying `loom:curated`.
 
 - **#3**: Track the gap to T1 sim-validated / bronze (klayout-tools design-evidence tiers) *(curated)*
-- **#43**: README: embed the fleet burndown chart (one line) *(curated)*
 - **#85**: sim: express the open-loop AC bench as a `klt sim` request, the first gradable envelope toward T1 item 5 *(curated)*
 - **#86**: signoff: first `klt pex` post-layout run on opamp_core.gds (T1 item 7) *(curated)*
 - **#95**: sim: express the slew-rate bench as a klt sim request (T1 item 5 coverage, follow-up to #85) *(curated)*
@@ -53,7 +58,6 @@ Issues carrying `loom:curated`.
 - **#99**: sim: express the PSRR bench as a klt sim request (T1 item 5 coverage, follow-up to #85) *(curated)*
 - **#100**: sim: express the output-swing bench as a klt sim request (T1 item 5 coverage, follow-up to #85) *(curated)*
 - **#105**: signoff: express the statistical rows as klt yield evidence for T1 item 6 (offset MC, mismatch CMRR) *(curated)*
-- **#161**: ci: protect nested klt record trees with the append-only evidence gate *(curated)*
 
 ## Proposed (Architect / Hermit)
 
@@ -65,15 +69,16 @@ _None._
 
 ## Backlog Balance
 
-| Tier | Count |
+| Bucket | Count |
 |------|-------|
-| Operator merge-risk holds | 1 |
-| Operator priority | 0 |
+| Operator merge-risk holds | 0 |
+| Very important | 0 |
+| Important | 1 |
 | Ready (`loom:issue`) | 1 |
 | In Progress (`loom:building`) | 0 |
-| PRs awaiting review | 1 |
+| PRs awaiting review | 0 |
 | Approved PRs awaiting merge | 1 |
-| Curated | 11 |
+| Curated | 9 |
 | Architect / Hermit proposals | 1 |
 | Active epics | 0 |
 <!-- guide:plan-body:end -->

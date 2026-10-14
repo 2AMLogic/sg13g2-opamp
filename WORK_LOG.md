@@ -2,6 +2,15 @@
 
 <!-- Maintained by the Loom Guide role. Newest entries first. -->
 
+### 2026-10-14
+
+- **Issue #43** (closed): README: embed the fleet burndown chart (one line)
+
+### 2026-10-13
+
+- **PR #164**: ci: protect nested klt record trees with the append-only evidence gate
+- **Issue #161** (closed): ci: protect nested klt record trees with the append-only evidence gate
+
 ### 2026-10-12
 
 - **PR #231**: Audit output-swing summary against pinned DC curves (#230)
