@@ -1,0 +1,71 @@
+* sg13g2-opamp -- input-offset (systematic half) bench as a `klt sim` circuit body (issue #97)
+*
+* The SAME test circuit as ../testbench/tb_offset_null.spice.tmpl (the harness
+* path's PRIMARY method, sim/input-offset/run_offset_sweep.sh; the committed
+* record's vos_null_v column is this method), re-expressed in the shape
+* `klt sim` requires: a circuit body with no .control/.end of its own
+* (klayout-tools docs/cli/sim.md, "Netlist convention"). klt generates the
+* per-corner wrapper deck around this file and adds, per corner: the process
+* `.lib` cards (cornerMOSlv.lib mos_<corner> plus cornerCAP.lib cap_typ),
+* `.temp`, `alter vdd=<V>` and `alter vinp=<V/2>` (swept together by index,
+* so Vcm = VDD/2 exactly as the harness's `vcm = vdd/2`), `pre_osdi` for the
+* four OSDI libraries, and the one analysis the request declares
+* (`dc Vid 0.004 0.034 4u`).
+*
+* Element-for-element the template's circuit: flat DUT include (no X
+* instance), one common-mode source (named Vinp so klt's per-corner `vinp`
+* sweep drives it; the template calls it Vcm), a swept differential source
+* Vid, and the two input B-sources
+*     V(inp) = Vcm + Vid/2        V(inn) = Vcm - Vid/2
+* so the input common mode is exactly Vcm at every swept Vid. NO feedback.
+* CL = 2 pF [DR-1] (no effect on a DC analysis; kept so the DUT environment
+* matches the other benches), the 10 uA external ibias sunk from vdd.
+*
+* Offset is the Vid at which Vout = Vcm: node `orel` = v(out) - v(cm) is a
+* B-source (no loading) so ONE literal level (`when v(orel)=0`) serves every
+* corner. ngspice linearly interpolates the crossing between adjacent sweep
+* points, the harness's own read of its fine pass.
+*
+* Sweep window: the harness runs a wide coarse locate pass (+-100 mV at
+* 500 uV) and a +-0.5 mV fine pass at 4 uV around the coarse crossing. A
+* request cannot adapt a window to a result, so this is ONE pass at the fine
+* pass's 4 uV step over 4..34 mV (7501 points), a window that brackets the
+* whole committed envelope (+11.4..+21.9 mV) with >= 6 mV of margin each
+* side. A corner whose null fell outside it would show orel with no sign
+* change: the crossing-count measurement then reports 0, which the request
+* grades as a failure (never a silent extrapolation).
+*
+* Per-point sanity nodes (the harness's op_pass rule: Vd1, Vd2, Vtail within
+* [0.02, 0.98]*VDD at the null, local gain >= 10 V/V): f* are fractions of
+* VDD, B-sources, read at the null by `.meas ... find`.
+*
+* No solver option is set (DR-0005: ngspice default tolerance).
+*
+* Exactly one .include, of the committed DUT netlist, by a path relative to
+* this file (ngspice resolves a nested .include against the including file's
+* directory; klt's off-host backends stage the same closure).
+
+.include ../../../design/netlist/opamp_core.spice
+
+.options tnom=27
+
+* ngspice's OpenMP device-evaluation threads oversubscribe a batch-fleet
+* instance (2AMLogic/klayout-tools#2970, see sim/slew-rate/klt/tb_slew.body.spice);
+* scheduling only, the solution is unchanged.
+.control
+set num_threads=1
+.endc
+
+Vdd vdd 0 dc 1.2
+Vss vss 0 dc 0
+Iibias vdd ibias dc 10u
+Vinp cm 0 dc 0.6
+Vid id 0 dc 0
+Binp inp 0 v = v(cm) + v(id)/2
+Binn inn 0 v = v(cm) - v(id)/2
+Cload out vss 2e-12
+
+Borel orel 0 v=v(out)-v(cm)
+Bfd1 fd1 0 v=v(d1)/v(vdd)
+Bfd2 fd2 0 v=v(d2)/v(vdd)
+Bftail ftail 0 v=v(tail)/v(vdd)

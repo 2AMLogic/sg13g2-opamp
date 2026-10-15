@@ -256,6 +256,105 @@ testbench superseding a pre-schematic prediction — is expected, and
 `sim/open-loop-ac/README.md` set the precedent for recording it rather than
 quietly overwriting the guess.
 
+## The `klt sim` path (issue #97, T1 item 5)
+
+`klt/` re-expresses the **systematic half** of this bench as a `klt sim`
+request, for the T1 item 5 coverage rule in
+[`../../signoff/README.md`](../../signoff/README.md). The harness above stays
+the reference; this is a second path to the same ratified row, compared
+against the committed harness record
+`records/20260918-203858-90844d2.csv`. The mismatch Monte Carlo half is not
+here (item 6, `klt yield`).
+
+| File | Role |
+|---|---|
+| `klt/offset.request.json` | the 45-point request: grid, analysis, measurements, `limits`, OSDI preload |
+| `klt/tb_offset.body.spice` | the circuit body (one `.include` of `design/netlist/opamp_core.spice`) |
+| `klt/run.sh` | preflight, `klt sim`, validation gate, then writes `klt/records/<UTC>-<sha>.sim.json` and `.compare.json` |
+| `klt/compare.py`, `klt/test_compare.py` | the gate and the join with the harness record; 36 offline tests with negative controls |
+
+### Which harness method
+
+The committed record's systematic number (`vos_null_v`, the column the bound
+was ratified from) is the **open-loop null sweep** (`tb_offset_null.spice.tmpl`):
+the `Vid` at which `Vout = Vcm`. The request is that same method, so no
+measurement-method difference needs quantifying beyond the interpolation
+details below. The closed-loop method (`tb_offset_cl.spice.tmpl`,
+`vos_closed_loop_v`) is the harness's cross-check; it refers an output error
+back through a gain taken from a *different* bench's AC record, so it is not
+expressed here.
+
+### Encoding
+
+- Grid: `mos_tt/ss/ff/sf/fs` x {-40, 27, 125} C x VDD {1.08, 1.20, 1.32} V,
+  each process corner a bundle with `cornerCAP.lib cap_typ`; the common-mode
+  source is named `Vinp` so klt's `vinp` sweep sets `Vcm = VDD/2` by index.
+- Analysis `dc Vid 0.004 0.034 4u`: one 7501-point pass at the harness fine
+  pass's 4 uV step. The harness runs a wide coarse locate pass and a narrow
+  fine pass around its result; a request cannot adapt a window, so the
+  window is fixed to bracket the whole committed envelope (+11.4..+21.9 mV)
+  with at least 6 mV of margin. A null outside it would show up as zero
+  crossings, which the request grades as a failure.
+- `vos_null_v`: `.meas dc ... when v(orel)=0 rise=1`, `orel = v(out) - v(cm)`;
+  limits `min -0.0219`, `max 0.0219` (the ratified magnitude bound, with no
+  rounding or slack added). `vos_crossings_n` (exactly one sign change) and
+  `gain_local_vv` (>= 10 V/V) and the three rail-window fractions reproduce
+  the harness's per-point sanity rule; the node voltages at the null are
+  reported for the join.
+
+### Comparison tolerance
+
+Basis in `klt/compare.py` (`TOLERANCES`). DR-0005 measured 9.9e-4 relative
+between the harness host (macOS/aarch64 ngspice-46) and Linux/x86_64; the
+tolerance for `Vos` is 1 uV + 1e-4 relative, ten times below that figure.
+
+### Result (2026-10-15)
+
+`klt/records/20261015-081722-8e276bc.sim.json`: batch job
+`klt-sim-38b6e4833c62` (spot c6i.8xlarge fleet instance, runner and client both
+klt 0.7.0, `runner_compatibility: match`), 45 unique points, nothing
+skipped, no errored or inconclusive corner. Envelope status **fail**:
+
+- **Ratified row, systematic offset |Vos| <= 21.9 mV: one miss.** Binding
+  corner `mos_fs`, 125 C, 1.08 V: **+21.927 mV**, margin -0.027 mV (tool
+  `fail`). The other 44 points pass; the next-worst is `mos_ss`/125 C/1.08 V
+  at +21.137 mV. The harness record has the same point at +21.9274 mV (its
+  README rounds it to +21.93 mV): DR-2 ratified "+21.9 mV" from the
+  one-decimal rounding of this figure, so the bound as written is 0.027 mV
+  tighter than the measurement that produced it. Per the spec rules the bound
+  is not relaxed and the miss is recorded as a miss; reconciling the
+  ratified number with its own evidence needs a decision record (follow-up
+  issue #239).
+- **Sanity rules:** exactly one crossing, gain >= 10 V/V (lowest 79.6 V/V at
+  `mos_fs`/125 C/1.08 V, i.e. 38.0 dB), all rail fractions in window, at all
+  45 points.
+- **Comparison with the harness record** (`...081722-8e276bc.compare.json`):
+  45 points, status `agree`, 0 comparisons out of tolerance, no bound-verdict
+  disagreement (both paths call the same single point a miss). Largest
+  difference in `Vos`: 0.58 nV (5.1e-8 relative); gain 0.004 dB; node
+  voltages <= 23 uV (the harness reads the nearest sample, the request the
+  interpolated null).
+
+### How it was run
+
+The grid went through `klt sim` on the batch backend (`KLT_SIM_BACKEND=batch`),
+client `uvx --from klayout-tools==0.7.0 klt`. No grid was run locally. It was
+submitted with `klt sim ... --format json` directly and the steps `run.sh`
+automates (validate with `compare.py validate`, then publish the envelope
+and `compare.py compare` output unmodified) were done by hand, because the
+dispatch host's `sim/preflight.sh` cannot pass: it has ngspice-42 and no OSDI
+build (`build-osdi.sh --check`: no build manifest), so `run.sh` exits 3 before
+submitting. Consequence: this record has **no `.env.json` PDK-identity
+sidecar** (`sg13g2_env_identity_begin` is part of the preflight path). The
+fleet runner's own identity is in the envelope's `environment` block. A
+re-run of `klt/run.sh` on a host with the pinned ngspice-46 would add it.
+
+Two encoding fixes were found on 4-corner batch probes before the real run
+(none of them touched the circuit): `deriv` in `.meas dc` produced no value
+(the local gain is an `expr` over the sweep instead), and `sum()`/`vecsum()`
+do not reduce to a scalar in ngspice (the crossing count is
+`mean(...)*7500`). Probe envelopes were not committed.
+
 ## Monte Carlo mismatch campaign (issue #17)
 
 The statistical half of the offset row — the `3σ, mismatch MC N≥300 +
