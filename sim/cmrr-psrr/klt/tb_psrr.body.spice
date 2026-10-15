@@ -13,6 +13,7 @@
 *
 * Element-for-element the template's circuit: flat DUT include (no X
 * instance), Lbreak = 1e18 H from inn to out (DC loop break; open at AC),
+* Cinn_acgnd = 1 F from inn to vss (inn AC ground, issue #241),
 * CL = 2 pF [DR-1], the 10 uA external ibias sunk from vdd (zero ac value, so
 * supply ripple does not ride into the bias reference), Vss = ground.
 *
@@ -44,4 +45,5 @@ Vss vss 0 dc 0
 Iibias vdd ibias dc 10u
 Vinp inp 0 dc 0.6
 Lbreak inn out 1e18
+Cinn_acgnd inn vss 1
 Cload out vss 2e-12
