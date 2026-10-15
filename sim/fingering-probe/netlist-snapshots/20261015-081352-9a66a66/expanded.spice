@@ -1,0 +1,43 @@
+* issue-#237 device-representation probe, variant 'expanded'.
+* One ng=1 card per drawn unit/finger, plus the rail-tied dummy columns.
+* Written by sim/fingering-probe/build_probe_netlists.py -- DO NOT EDIT.
+* Flat netlist (instantiated directly by the open-loop AC bench body).
+XM5_u0 tail ibias vss vss sg13_lv_nmos w=1.1u l=0.52u ng=1 m=1
+XM5_u1 tail ibias vss vss sg13_lv_nmos w=1.1u l=0.52u ng=1 m=1
+XMbias_u0 ibias ibias vss vss sg13_lv_nmos w=1.1u l=0.52u ng=1 m=1
+XMbias_u1 ibias ibias vss vss sg13_lv_nmos w=1.1u l=0.52u ng=1 m=1
+XMtail_pair_dummy0 vss vss vss vss sg13_lv_nmos w=1.1u l=0.52u ng=1 m=1
+XMtail_pair_dummy1 vss vss vss vss sg13_lv_nmos w=1.1u l=0.52u ng=1 m=1
+XM1_u0 d1 inn tail vss sg13_lv_nmos w=1.6u l=0.13u ng=1 m=1
+XM1_u1 d1 inn tail vss sg13_lv_nmos w=1.6u l=0.13u ng=1 m=1
+XM2_u0 d2 inp tail vss sg13_lv_nmos w=1.6u l=0.13u ng=1 m=1
+XM2_u1 d2 inp tail vss sg13_lv_nmos w=1.6u l=0.13u ng=1 m=1
+XMinput_pair_dummy0 vss vss vss vss sg13_lv_nmos w=1.6u l=0.13u ng=1 m=1
+XMinput_pair_dummy1 vss vss vss vss sg13_lv_nmos w=1.6u l=0.13u ng=1 m=1
+XM3_u0 d1 d1 vdd vdd sg13_lv_pmos w=0.52u l=0.52u ng=1 m=1
+XM3_u1 d1 d1 vdd vdd sg13_lv_pmos w=0.52u l=0.52u ng=1 m=1
+XM4_u0 d2 d1 vdd vdd sg13_lv_pmos w=0.52u l=0.52u ng=1 m=1
+XM4_u1 d2 d1 vdd vdd sg13_lv_pmos w=0.52u l=0.52u ng=1 m=1
+XMmirror_dummy0 vdd vdd vdd vdd sg13_lv_pmos w=0.52u l=0.52u ng=1 m=1
+XMmirror_dummy1 vdd vdd vdd vdd sg13_lv_pmos w=0.52u l=0.52u ng=1 m=1
+XM7_f0 out ibias vss vss sg13_lv_nmos w=1.7u l=0.52u ng=1 m=1
+XM7_f1 out ibias vss vss sg13_lv_nmos w=1.7u l=0.52u ng=1 m=1
+XM7_f2 out ibias vss vss sg13_lv_nmos w=1.7u l=0.52u ng=1 m=1
+XM7_f3 out ibias vss vss sg13_lv_nmos w=1.7u l=0.52u ng=1 m=1
+XM7_f4 out ibias vss vss sg13_lv_nmos w=1.7u l=0.52u ng=1 m=1
+XM7_f5 out ibias vss vss sg13_lv_nmos w=1.7u l=0.52u ng=1 m=1
+XM7_f6 out ibias vss vss sg13_lv_nmos w=1.7u l=0.52u ng=1 m=1
+XM6_f0 out d2 vdd vdd sg13_lv_pmos w=2.75u l=1.04u ng=1 m=1
+XM6_f1 out d2 vdd vdd sg13_lv_pmos w=2.75u l=1.04u ng=1 m=1
+XM6_f2 out d2 vdd vdd sg13_lv_pmos w=2.75u l=1.04u ng=1 m=1
+XM6_f3 out d2 vdd vdd sg13_lv_pmos w=2.75u l=1.04u ng=1 m=1
+XM6_f4 out d2 vdd vdd sg13_lv_pmos w=2.75u l=1.04u ng=1 m=1
+XM6_f5 out d2 vdd vdd sg13_lv_pmos w=2.75u l=1.04u ng=1 m=1
+XM6_f6 out d2 vdd vdd sg13_lv_pmos w=2.75u l=1.04u ng=1 m=1
+XM6_f7 out d2 vdd vdd sg13_lv_pmos w=2.75u l=1.04u ng=1 m=1
+XM6_f8 out d2 vdd vdd sg13_lv_pmos w=2.75u l=1.04u ng=1 m=1
+XM6_f9 out d2 vdd vdd sg13_lv_pmos w=2.75u l=1.04u ng=1 m=1
+XM6_f10 out d2 vdd vdd sg13_lv_pmos w=2.75u l=1.04u ng=1 m=1
+XM6_f11 out d2 vdd vdd sg13_lv_pmos w=2.75u l=1.04u ng=1 m=1
+XCc out d2 cap_cmim w=25.7u l=25.7u m=1
+.end

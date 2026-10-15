@@ -1,0 +1,3 @@
+sg13g2: PDK_ROOT=/home/ubuntu/share/pdk PDK=ihp-sg13g2
+klt_measure: batch job klt-sim-4742c77a79c4 (done)
+klt_measure: batch job klt-sim-10379a87fefc (done)

@@ -283,12 +283,21 @@ so these deltas cannot be attributed to parasitics:
   AS/AD/PS/PD. In the PSP model these are different devices: narrow-width
   effects and diffusion geometry differ, and the bias-mirror ratios are now set
   by fingers of *different* unit widths (Mbias 2 x 1.1 um vs M7 7 x 1.7 um).
-  This is the leading explanation for the DC deltas (Iq, and with it gain and
-  GBW). It has **not been quantified**: this host cannot load the OSDI models
-  for a local probe, and a multi-corner probe belongs on the batch fleet.
-  [#237](https://github.com/2AMLogic/sg13g2-opamp/issues/237) records the probe
-  and the two reconciliation routes: put the drawn fingering into the
-  schematic via a decision record, or give pex a finger-expanded reference leg.
+  This was the leading explanation for the DC deltas, and the #237 probe has
+  now quantified it (`sim/fingering-probe/`, five MOS corners at
+  27 C / 1.20 V on the batch fleet). Lumped -> drawn fingering carries the
+  whole Iq delta (-24.9..-26.7 %) and +7.6..+9.0 % gain. The dummies and the
+  extracted diffusion geometry move nothing (under 0.4 %).
+- **The remaining AC deltas are a bench artifact, not parasitics.** The
+  open-loop AC bench leaves `inn` AC-floating (`Lbreak` with no C to ground),
+  so any capacitance on `inn` changes Av0/GBW. With `inn` AC-grounded, the
+  parasitics move GBW -0.4 %, PM -0.8 % and Av0 0.00 %. The same diagnostic
+  shows the bench roughly halves GBW and overstates PM by 12-14 deg. That
+  defect is tracked in [#241](https://github.com/2AMLogic/sg13g2-opamp/issues/241).
+  [Decision record 0008](../spec/decision-records/0008-drawn-fingering-device-representation.md)
+  chooses to put the drawn fingering into the schematic, and orders the
+  remaining work: fix the bench, change the netlist together with the
+  pre-layout re-runs, then re-run pex.
 
 So the absolute pass describes a circuit whose devices are represented
 differently from the circuit sized and characterized pre-layout (items 5 and
@@ -296,7 +305,8 @@ differently from the circuit sized and characterized pre-layout (items 5 and
 the representation change. For the same reason, the schematic leg's worst
 corner (37.78 dB, 0.02 dB under the gain bound) and the extracted leg clearing
 the bound are not a before/after comparison. Item 7 stays `unmet /
-no_evidence` until #237 makes the legs comparable and the run is repeated.
+no_evidence` until #237 makes the legs comparable (DR 0008), #241 fixes the
+bench loop break, and the run is repeated.
 
 *Report fields, stated as the envelope carries them (informational; uncited).*
 `body_bias.status: "biased"` (0 unbiased devices, no unbiased nets, no unbiased

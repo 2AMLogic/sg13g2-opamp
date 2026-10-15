@@ -1,0 +1,137 @@
+{
+ "netlist": "tb_openloop_ac.body.spice",
+ "netlist_source": "schematic",
+ "engine": "ngspice",
+ "backend": "batch",
+ "models": {
+  "pdk": "ihp-sg13g2",
+  "lib": "libs.tech/ngspice/models/cornerMOSlv.lib"
+ },
+ "corners": {
+  "process": [
+   {
+    "name": "mos_tt",
+    "sections": [
+     "mos_tt",
+     {
+      "lib": "libs.tech/ngspice/models/cornerCAP.lib",
+      "section": "cap_typ"
+     }
+    ]
+   },
+   {
+    "name": "mos_ss",
+    "sections": [
+     "mos_ss",
+     {
+      "lib": "libs.tech/ngspice/models/cornerCAP.lib",
+      "section": "cap_typ"
+     }
+    ]
+   },
+   {
+    "name": "mos_ff",
+    "sections": [
+     "mos_ff",
+     {
+      "lib": "libs.tech/ngspice/models/cornerCAP.lib",
+      "section": "cap_typ"
+     }
+    ]
+   },
+   {
+    "name": "mos_sf",
+    "sections": [
+     "mos_sf",
+     {
+      "lib": "libs.tech/ngspice/models/cornerCAP.lib",
+      "section": "cap_typ"
+     }
+    ]
+   },
+   {
+    "name": "mos_fs",
+    "sections": [
+     "mos_fs",
+     {
+      "lib": "libs.tech/ngspice/models/cornerCAP.lib",
+      "section": "cap_typ"
+     }
+    ]
+   }
+  ],
+  "supply_v": {
+   "vdd": [
+    1.2
+   ],
+   "vinp": [
+    0.6
+   ]
+  },
+  "temperature_c": [
+   27
+  ]
+ },
+ "analysis": {
+  "kind": "op",
+  "args": ""
+ },
+ "measurements": [
+  {
+   "name": "ivdd_total_a",
+   "expr": "-i(vdd)",
+   "unit": "A"
+  },
+  {
+   "name": "vout_dc_v",
+   "expr": "v(out)",
+   "unit": "V"
+  },
+  {
+   "name": "op_vcm_frac",
+   "expr": "v(inp)/v(vdd)",
+   "limits": {
+    "min": 0.4999,
+    "max": 0.5001
+   }
+  },
+  {
+   "name": "op_vout_offset_frac",
+   "expr": "abs(v(out) - v(vdd)/2)/v(vdd)",
+   "limits": {
+    "max": 0.15
+   }
+  },
+  {
+   "name": "op_vout_rail_frac",
+   "expr": "v(out)/v(vdd)",
+   "limits": {
+    "min": 0.02,
+    "max": 0.98
+   }
+  }
+ ],
+ "options": {
+  "timeout_s": 300,
+  "keep_artifacts": false,
+  "osdi_preload": [
+   "$PDK_ROOT/ihp-sg13g2/libs.tech/ngspice/osdi/psp103.osdi",
+   "$PDK_ROOT/ihp-sg13g2/libs.tech/ngspice/osdi/psp103_nqs.osdi",
+   "$PDK_ROOT/ihp-sg13g2/libs.tech/ngspice/osdi/mosvar.osdi",
+   "$PDK_ROOT/ihp-sg13g2/libs.tech/ngspice/osdi/r3_cmc.osdi"
+  ],
+  "stage_model_inputs": true,
+  "fail_on_diagnostic": [
+   "singular_matrix",
+   "nonconvergence"
+  ],
+  "node_voltage_bounds": {
+   "min": -0.1,
+   "max": 1.42
+  },
+  "ngspice_init": [
+   "set measureprec=12",
+   "set numdgt=12"
+  ]
+ }
+}
