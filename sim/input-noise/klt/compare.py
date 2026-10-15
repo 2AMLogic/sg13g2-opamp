@@ -35,9 +35,8 @@ Comparison tolerances never touch a pass/fail limit. The ratified bound
 (NOISE_BOUND_VRMS) is graded by `klt sim` itself; this script only reports
 whether the two measurement paths agree, and whether they agree about the bound.
 
-The tolerances here are PROVISIONAL: they are derived from DR-0005's
-cross-host figure, not from a measured envelope (none exists yet). They must be
-re-justified from the first real comparison before it is cited.
+The tolerances are justified from the first real full-grid comparison
+(records/20261015-061719-80878d7.compare.json); see TOL_REL below.
 """
 
 from __future__ import annotations
@@ -92,22 +91,18 @@ BAND_HI_HZ = 1e6
 # ------------------------------------------------------------- tolerances
 # Per-metric comparison tolerance: |tool - harness| <= abs + rel * |harness|.
 #
-# PROVISIONAL (no measured envelope yet; README.md "Comparison tolerance"):
-#
-# * Same circuit, same analysis, same ngspice default solver tolerance
-#   (DR-0005). The harness record was produced on macOS/aarch64 ngspice-46;
-#   the envelope is produced wherever `klt sim` runs it. DR-0005 measured a
-#   9.9e-4 relative drain-current difference between that host and
-#   Linux/x86_64 default-tolerance records of this PDK. Noise power follows
-#   device bias currents/gm, so ~1e-3 relative is the cross-host allowance
-#   carried over; 2e-3 is allowed (the figure doubled, as in sim/slew-rate/klt).
-# * Measurement method: both paths read ngspice's own noise2.inoise_total and
-#   noise1.inoise_spectrum[k] at identical frequencies (dec 20 from exactly
-#   100 Hz); there is no waveform post-processing to differ. The harness CSV
-#   prints 6 significant digits (<= 5e-6 relative quantisation).
-# * These numbers are to be replaced by a measured justification once a real
-#   envelope exists; until then a pass here is not evidence of agreement.
-TOL_REL = 2e-3
+# Measured (2026-10-15, 45 points x 6 metrics, fleet envelope vs the macOS/
+# aarch64 harness record): the largest relative |tool - harness| is 4.7e-6
+# (integrated, mos_ss_125C_1.20V); the spot densities peak at 4.6e-6. That is
+# the harness CSV's own printing resolution (6 significant digits, <= 5e-6
+# relative), i.e. the two paths solve the same circuit to the precision the
+# record carries; no cross-host solver drift is visible at default tolerance
+# (DR-0005's 9.9e-4 drain-current figure did not show up in the noise
+# numbers). Tolerance is 2e-5 relative: ~4x the largest measured delta, which
+# covers rounding of a mantissa near 1.0 plus last-digit solver noise, and is
+# 20x tighter than the 4.5e-4 margin by which the harness-worst point misses
+# the bound, so a verdict flip at the bound is never absorbed by it.
+TOL_REL = 2e-5
 TOLERANCES = {INTEGRATED: {"abs": 0.0, "rel": TOL_REL, "unit": "Vrms"}}
 for _m in SPOTS:
     TOLERANCES[_m] = {"abs": 0.0, "rel": TOL_REL, "unit": "V/rtHz"}
@@ -200,7 +195,7 @@ def compare(tool: Dict[Key, Dict[str, object]], harness: Dict[Key, Dict[str, obj
         "schema": "sg13g2-opamp/input-noise/klt-compare/1",
         "points_compared": len(points),
         "tolerances": TOLERANCES,
-        "tolerances_provisional": True,
+        "tolerances_provisional": False,
         "not_compared": ["op_pass / clgain_* (need a second analysis per corner; klt sim runs one)",
                          "flicker/thermal split and crosscheck columns (derived by the harness from the written spectrum)"],
         "out_of_tolerance": out_of_tol,
@@ -215,7 +210,7 @@ def compare(tool: Dict[Key, Dict[str, object]], harness: Dict[Key, Dict[str, obj
 def _text_summary(rep: dict) -> str:
     r = rep["row"]
     hw = r["harness_worst"]
-    lines = [f"compare: {rep['points_compared']} points, status {rep['status']} (tolerances provisional)",
+    lines = [f"compare: {rep['points_compared']} points, status {rep['status']}",
              f"  input_referred_noise bound {r['bound']}: harness worst {hw['point']} = {hw['value']:.6g} ({hw['verdict']})"]
     for n, e in (r.get("tool") or {}).items():
         wc = e.get("worst_case") or {}
