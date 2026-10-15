@@ -52,6 +52,17 @@
 
 .options tnom=27 interp
 
+* ngspice's OpenMP device-evaluation threads oversubscribe a batch-fleet
+* instance (one ngspice per core, each with its own thread team): without
+* this every one of the 45 transient corners ran into the 300 s per-corner
+* timeout on the fleet while taking ~2.4 s locally (2AMLogic/klayout-tools
+* #2970). `num_threads` changes scheduling only, not the solution (A/B on
+* that tracker: bit-identical .meas values). Runs before klt's generated
+* analysis `.control` block, in deck order.
+.control
+set num_threads=1
+.endc
+
 Vdd vdd 0 dc 1.2
 Vss vss 0 dc 0
 Iibias vdd ibias dc 10u
