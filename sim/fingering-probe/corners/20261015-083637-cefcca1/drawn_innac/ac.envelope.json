@@ -1,0 +1,550 @@
+{
+  "schema_version": 3,
+  "netlist": {
+    "path": "sim/fingering-probe/corners/20261015-083637-cefcca1/drawn_innac/tb_openloop_ac.body.spice",
+    "scope": "repo"
+  },
+  "status": "pass",
+  "corner_count": 5,
+  "passed": 5,
+  "failed": 0,
+  "errored": 0,
+  "inconclusive": 0,
+  "diagnostic_counts": {
+    "by_code": {},
+    "by_severity": {},
+    "corners_with_diagnostics": 0
+  },
+  "metrics": {
+    "sim__corner__count": 5,
+    "sim__corner__passed_count": 5,
+    "sim__corner__failed_count": 0,
+    "sim__corner__errored_count": 0,
+    "sim__corner__inconclusive_count": 0
+  },
+  "environment": {
+    "engine": "ngspice",
+    "engine_version": "46",
+    "ngspice_binary": "/home/ubuntu/.local/bin/ngspice",
+    "models_lib": {
+      "path": null,
+      "scope": "external"
+    },
+    "models_lib_sha256": "03d505847c880d233b341be115a1e5460edf4d8e9b3e8a7df791a52fa4455d67",
+    "netlist_sha256": "22b523cd889b4744949103eb6aed9fecd7536a24fa5a72209e704ed412029d98",
+    "netlist_closure": [
+      {
+        "path": "sim/fingering-probe/corners/20261015-083637-cefcca1/drawn_innac/tb_openloop_ac.body.spice",
+        "scope": "repo",
+        "sha256": "22b523cd889b4744949103eb6aed9fecd7536a24fa5a72209e704ed412029d98"
+      },
+      {
+        "path": "sim/fingering-probe/netlist-snapshots/20261015-083637-cefcca1/drawn_innac.spice",
+        "scope": "repo",
+        "sha256": "bc3af863fcbfd5618da5018885bc8a90314f0273a3d010064b8124d5648d6ab2"
+      }
+    ],
+    "netlist_source": "schematic",
+    "osdi_preload": [
+      {
+        "name": "psp103.osdi",
+        "path": null,
+        "scope": "external",
+        "sha256": "2e4299c4683997e26469410dc1ab36b02ced924b1ac0972d6c4eae360e1fc796"
+      },
+      {
+        "name": "psp103_nqs.osdi",
+        "path": null,
+        "scope": "external",
+        "sha256": "839b164483205601c09032951f6c41d3580f15e506dc40a7202950d3afbdfc7d"
+      },
+      {
+        "name": "mosvar.osdi",
+        "path": null,
+        "scope": "external",
+        "sha256": "25e64a374ab523dbfeb7ffed75dcb8b086ee10f06120a9074bd68b92d7b0fb41"
+      },
+      {
+        "name": "r3_cmc.osdi",
+        "path": null,
+        "scope": "external",
+        "sha256": "4fead17bc2e9cbfe3df6f106e9dbd6f2cdcd48c002af9c56c2ca0b0712fce350"
+      }
+    ],
+    "corner_section_libs": [
+      {
+        "name": "cornerCAP.lib",
+        "path": null,
+        "scope": "external",
+        "sha256": "4fc4a0f17ca2aef66ca38c2d2e7cead3307b69508d304ed073129565ec1c3e56"
+      }
+    ],
+    "staged_model_inputs": [
+      {
+        "name": "cornerMOSlv.lib",
+        "field": "models.lib",
+        "kind": "library",
+        "sha256": "07f15f24b990ab9eff8e1000457ad180a5199b48fc17217ac3572bdcdfbf5f72",
+        "rewritten": true
+      },
+      {
+        "name": "cornerCAP.lib",
+        "field": "corners.process[0].sections[1].lib",
+        "kind": "library",
+        "sha256": "b4f1beef8a6723b1bea9866bfe96730d0e01660232a39ab3dd9c256df4116109",
+        "rewritten": true
+      },
+      {
+        "name": "psp103.osdi",
+        "field": "options.osdi_preload[0]",
+        "kind": "osdi",
+        "sha256": "2e4299c4683997e26469410dc1ab36b02ced924b1ac0972d6c4eae360e1fc796",
+        "rewritten": false
+      },
+      {
+        "name": "psp103_nqs.osdi",
+        "field": "options.osdi_preload[1]",
+        "kind": "osdi",
+        "sha256": "839b164483205601c09032951f6c41d3580f15e506dc40a7202950d3afbdfc7d",
+        "rewritten": false
+      },
+      {
+        "name": "mosvar.osdi",
+        "field": "options.osdi_preload[2]",
+        "kind": "osdi",
+        "sha256": "25e64a374ab523dbfeb7ffed75dcb8b086ee10f06120a9074bd68b92d7b0fb41",
+        "rewritten": false
+      },
+      {
+        "name": "r3_cmc.osdi",
+        "field": "options.osdi_preload[3]",
+        "kind": "osdi",
+        "sha256": "4fead17bc2e9cbfe3df6f106e9dbd6f2cdcd48c002af9c56c2ca0b0712fce350",
+        "rewritten": false
+      },
+      {
+        "name": "sg13g2_moslv_mod.lib",
+        "field": "models.lib",
+        "kind": "dependency",
+        "sha256": "0aa1a5630a7c8fb8ae896c57c475954ff5885c4831311f8cd9c9e64d6cbb8332",
+        "rewritten": true
+      },
+      {
+        "name": "sg13g2_moslv_mismatch.lib",
+        "field": "models.lib",
+        "kind": "dependency",
+        "sha256": "2d3251e2d42eadb0f8af152a4915fdc60a68bceb95a2d17a52f90cfb34b7e63e",
+        "rewritten": false
+      },
+      {
+        "name": "sg13g2_moslv_mod_mismatch.lib",
+        "field": "models.lib",
+        "kind": "dependency",
+        "sha256": "28f681005831113ad5377f1b867d8869b78f329a7f52aa821ff56aa1e648b68b",
+        "rewritten": true
+      },
+      {
+        "name": "sg13g2_moslv_stat.lib",
+        "field": "models.lib",
+        "kind": "dependency",
+        "sha256": "7f4cf8df714e327348ba3975a2630e9d7dd7ae1a7a88817df4890e82745f0f52",
+        "rewritten": false
+      },
+      {
+        "name": "capacitors_mod.lib",
+        "field": "corners.process[0].sections[1].lib",
+        "kind": "dependency",
+        "sha256": "94b569e695fd8a223a5a49a5b5a6b0d8a62408820bf0c2ed9dbcb0a8ab7d957e",
+        "rewritten": false
+      },
+      {
+        "name": "capacitors_mod_mismatch.lib",
+        "field": "corners.process[0].sections[1].lib",
+        "kind": "dependency",
+        "sha256": "8ebc8369966951cfec0e91d603685f1975fbf9ceff2eef493a25357ce9ae5492",
+        "rewritten": false
+      },
+      {
+        "name": "capacitors_stat.lib",
+        "field": "corners.process[0].sections[1].lib",
+        "kind": "dependency",
+        "sha256": "68d2ef41174bcfae5997b355c4fd3dbe4f2b8ec4be30ff79d474052b3be1715a",
+        "rewritten": false
+      },
+      {
+        "name": "sg13g2_moslv_parm.lib",
+        "field": "models.lib",
+        "kind": "dependency",
+        "sha256": "cbf10b8453a18bb70b8ad0d6e40faa0937338e699b5460947a94900db6c92a6e",
+        "rewritten": false
+      }
+    ],
+    "remote": {
+      "provider": "aws-batch-fleet",
+      "job_id": "klt-sim-06bc9346185d",
+      "bucket": "2am-batch-jobs-221082181346",
+      "region": "us-east-1",
+      "instance_id": "i-091ff221012c0ee2f",
+      "instance_type": "m7i.4xlarge",
+      "availability_zone": "us-east-1b",
+      "ami_id": "ami-0e0bec04ad8e81877",
+      "lifecycle": "spot",
+      "spot": true,
+      "state": "done",
+      "exit_code": "0",
+      "concurrency": "1",
+      "physical_cores": "8",
+      "elapsed_seconds": 8,
+      "runner_klt_version": "0.7.0",
+      "client_klt_version": "0.7.1.dev498+g3516934e9a21",
+      "runner_compatibility": "match",
+      "worker_environment": {
+        "capture": "ok",
+        "simulator": {
+          "requested_binary": "ngspice",
+          "binary_source": "PATH",
+          "selected_path": "/usr/local/bin/ngspice",
+          "version_banner": "******\n** ngspice-46 : Circuit level simulation program\n** Compiled with KLU Direct Linear Solver\n** The U. C. Berkeley CAD Group\n** Copyright 1985-1994, Regents of the University of California.\n** Copyright 2001-2025, The ngspice team.\n** Please get your ngspice manual from https://ngspice.sourceforge.io/docs.html\n** Please file your bug-reports at http://ngspice.sourceforge.net/bugrep.html\n** Creation Date: Thu Oct  1 23:51:59 UTC 2026\n******\n",
+          "version_probe": "ok"
+        },
+        "pdk": {
+          "variant": "ihp-sg13g2",
+          "root": "/opt/pdk",
+          "stamp_scheme": null,
+          "stamp_sha256": null,
+          "stamp_text": null,
+          "models_staged": true
+        },
+        "cpu_model": "Intel(R) Xeon(R) Platinum 8488C",
+        "omp_num_threads": null,
+        "image_manifest": null,
+        "diagnostics": [
+          "pdk stamp unreadable: FileNotFoundError"
+        ],
+        "pdk_stamp_comparison": {
+          "status": "not_comparable"
+        }
+      },
+      "job_ceiling": {
+        "basis": "conservative_serial_bound",
+        "unit_count": 5,
+        "per_unit_timeout_s": 300,
+        "overhead_s": 120.0,
+        "job_bound_s": 1620.0,
+        "max_job_seconds": 3600.0,
+        "max_job_seconds_source": "fleet_config",
+        "exceeds_ceiling": false,
+        "check": "warn",
+        "max_units_per_job": 11,
+        "recommended_hosts": 1
+      }
+    }
+  },
+  "coverage": {
+    "corners_simulated": 5,
+    "measurements_declared": 3,
+    "measurements_with_limits": 3,
+    "unrecognized_limit_keys": [],
+    "schema_version": 1,
+    "known": true,
+    "checked": [
+      "limit:[0,\"mos_tt/vdd=1.200_vinp=0.600V/27C\",\"av0_db\",\"min\"]",
+      "limit:[0,\"mos_tt/vdd=1.200_vinp=0.600V/27C\",\"gbw_hz\",\"min\"]",
+      "limit:[0,\"mos_tt/vdd=1.200_vinp=0.600V/27C\",\"phase_at_ugf_rad\",\"max\"]",
+      "limit:[0,\"mos_tt/vdd=1.200_vinp=0.600V/27C\",\"phase_at_ugf_rad\",\"min\"]",
+      "limit:[1,\"mos_ss/vdd=1.200_vinp=0.600V/27C\",\"av0_db\",\"min\"]",
+      "limit:[1,\"mos_ss/vdd=1.200_vinp=0.600V/27C\",\"gbw_hz\",\"min\"]",
+      "limit:[1,\"mos_ss/vdd=1.200_vinp=0.600V/27C\",\"phase_at_ugf_rad\",\"max\"]",
+      "limit:[1,\"mos_ss/vdd=1.200_vinp=0.600V/27C\",\"phase_at_ugf_rad\",\"min\"]",
+      "limit:[2,\"mos_ff/vdd=1.200_vinp=0.600V/27C\",\"av0_db\",\"min\"]",
+      "limit:[2,\"mos_ff/vdd=1.200_vinp=0.600V/27C\",\"gbw_hz\",\"min\"]",
+      "limit:[2,\"mos_ff/vdd=1.200_vinp=0.600V/27C\",\"phase_at_ugf_rad\",\"max\"]",
+      "limit:[2,\"mos_ff/vdd=1.200_vinp=0.600V/27C\",\"phase_at_ugf_rad\",\"min\"]",
+      "limit:[3,\"mos_sf/vdd=1.200_vinp=0.600V/27C\",\"av0_db\",\"min\"]",
+      "limit:[3,\"mos_sf/vdd=1.200_vinp=0.600V/27C\",\"gbw_hz\",\"min\"]",
+      "limit:[3,\"mos_sf/vdd=1.200_vinp=0.600V/27C\",\"phase_at_ugf_rad\",\"max\"]",
+      "limit:[3,\"mos_sf/vdd=1.200_vinp=0.600V/27C\",\"phase_at_ugf_rad\",\"min\"]",
+      "limit:[4,\"mos_fs/vdd=1.200_vinp=0.600V/27C\",\"av0_db\",\"min\"]",
+      "limit:[4,\"mos_fs/vdd=1.200_vinp=0.600V/27C\",\"gbw_hz\",\"min\"]",
+      "limit:[4,\"mos_fs/vdd=1.200_vinp=0.600V/27C\",\"phase_at_ugf_rad\",\"max\"]",
+      "limit:[4,\"mos_fs/vdd=1.200_vinp=0.600V/27C\",\"phase_at_ugf_rad\",\"min\"]"
+    ],
+    "skipped": [],
+    "inapplicable": [],
+    "unknown": [],
+    "nothing_checked": false,
+    "nothing_checked_reasons": []
+  },
+  "provenance": {
+    "klt_version": "0.7.1.dev498+g3516934e9a21",
+    "klayout_version": "0.30.12",
+    "pdk": {
+      "name": "ihp-sg13g2",
+      "source": "PDK_ROOT environment variable",
+      "version": null
+    },
+    "deck": {
+      "name": "cornerMOSlv.lib",
+      "content_hash": "sha256:03d505847c880d233b341be115a1e5460edf4d8e9b3e8a7df791a52fa4455d67",
+      "released": false
+    },
+    "input": {
+      "content_hash": "sha256:22b523cd889b4744949103eb6aed9fecd7536a24fa5a72209e704ed412029d98",
+      "role": "netlist"
+    }
+  },
+  "measurements": [
+    {
+      "name": "av0_db",
+      "unit": "dB",
+      "limits": {
+        "min": 37.8
+      },
+      "status": "pass",
+      "worst_case": {
+        "corner_id": "mos_fs/vdd=1.200_vinp=0.600V/27C",
+        "value": 46.08961557729,
+        "margin": 8.28961557729
+      }
+    },
+    {
+      "name": "gbw_hz",
+      "unit": "Hz",
+      "limits": {
+        "min": 4740000.0
+      },
+      "status": "pass",
+      "worst_case": {
+        "corner_id": "mos_ss/vdd=1.200_vinp=0.600V/27C",
+        "value": 11136512.65567,
+        "margin": 6396512.65567
+      }
+    },
+    {
+      "name": "phase_at_ugf_rad",
+      "unit": "rad",
+      "limits": {
+        "min": -2.0943951023931953,
+        "max": 0.0
+      },
+      "status": "pass",
+      "worst_case": {
+        "corner_id": "mos_ff/vdd=1.200_vinp=0.600V/27C",
+        "value": -2.063276641407,
+        "margin": 0.031118460986195196
+      }
+    }
+  ],
+  "corners": [
+    {
+      "corner_id": "mos_tt/vdd=1.200_vinp=0.600V/27C",
+      "process": "mos_tt",
+      "supply_v": {
+        "vdd": 1.2,
+        "vinp": 0.6
+      },
+      "temperature_c": 27,
+      "status": "pass",
+      "runtime_s": 2.581,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 46.72047776243,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 8.920477762430004
+        },
+        {
+          "name": "gbw_hz",
+          "value": 11466300.30032,
+          "unit": "Hz",
+          "status": "pass",
+          "margin": 6726300.300319999
+        },
+        {
+          "name": "phase_at_ugf_rad",
+          "value": -2.045398079736,
+          "unit": "rad",
+          "status": "pass",
+          "margin": 0.04899702265719519
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_ss/vdd=1.200_vinp=0.600V/27C",
+      "process": "mos_ss",
+      "supply_v": {
+        "vdd": 1.2,
+        "vinp": 0.6
+      },
+      "temperature_c": 27,
+      "status": "pass",
+      "runtime_s": 2.578,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 47.51622939664,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 9.716229396640003
+        },
+        {
+          "name": "gbw_hz",
+          "value": 11136512.65567,
+          "unit": "Hz",
+          "status": "pass",
+          "margin": 6396512.65567
+        },
+        {
+          "name": "phase_at_ugf_rad",
+          "value": -2.035774866759,
+          "unit": "rad",
+          "status": "pass",
+          "margin": 0.05862023563419516
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_ff/vdd=1.200_vinp=0.600V/27C",
+      "process": "mos_ff",
+      "supply_v": {
+        "vdd": 1.2,
+        "vinp": 0.6
+      },
+      "temperature_c": 27,
+      "status": "pass",
+      "runtime_s": 2.529,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 46.70161557444,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 8.901615574440001
+        },
+        {
+          "name": "gbw_hz",
+          "value": 12029621.53725,
+          "unit": "Hz",
+          "status": "pass",
+          "margin": 7289621.537249999
+        },
+        {
+          "name": "phase_at_ugf_rad",
+          "value": -2.063276641407,
+          "unit": "rad",
+          "status": "pass",
+          "margin": 0.031118460986195196
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_sf/vdd=1.200_vinp=0.600V/27C",
+      "process": "mos_sf",
+      "supply_v": {
+        "vdd": 1.2,
+        "vinp": 0.6
+      },
+      "temperature_c": 27,
+      "status": "pass",
+      "runtime_s": 2.583,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 47.71636563863,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 9.916365638630005
+        },
+        {
+          "name": "gbw_hz",
+          "value": 11540156.1854,
+          "unit": "Hz",
+          "status": "pass",
+          "margin": 6800156.1854
+        },
+        {
+          "name": "phase_at_ugf_rad",
+          "value": -2.048658599666,
+          "unit": "rad",
+          "status": "pass",
+          "margin": 0.045736502727195205
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_fs/vdd=1.200_vinp=0.600V/27C",
+      "process": "mos_fs",
+      "supply_v": {
+        "vdd": 1.2,
+        "vinp": 0.6
+      },
+      "temperature_c": 27,
+      "status": "pass",
+      "runtime_s": 1.982,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 46.08961557729,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 8.28961557729
+        },
+        {
+          "name": "gbw_hz",
+          "value": 11582175.75365,
+          "unit": "Hz",
+          "status": "pass",
+          "margin": 6842175.75365
+        },
+        {
+          "name": "phase_at_ugf_rad",
+          "value": -2.049171399396,
+          "unit": "rad",
+          "status": "pass",
+          "margin": 0.04522370299719514
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    }
+  ]
+}

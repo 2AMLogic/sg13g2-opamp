@@ -1,0 +1,109 @@
+{
+ "corners": [
+  {
+   "corner_id": "mos_ff/1.20V/27C",
+   "measurements": [
+    {
+     "name": "av0_db",
+     "value": 46.70161557444
+    },
+    {
+     "name": "gbw_hz",
+     "value": 12029621.53725
+    },
+    {
+     "name": "pm_deg",
+     "value": 61.7829564794515
+    },
+    {
+     "name": "iq_a",
+     "value": 8.224749279977e-05
+    }
+   ]
+  },
+  {
+   "corner_id": "mos_fs/1.20V/27C",
+   "measurements": [
+    {
+     "name": "av0_db",
+     "value": 46.08961557729
+    },
+    {
+     "name": "gbw_hz",
+     "value": 11582175.75365
+    },
+    {
+     "name": "pm_deg",
+     "value": 62.59112731569242
+    },
+    {
+     "name": "iq_a",
+     "value": 8.186048430119e-05
+    }
+   ]
+  },
+  {
+   "corner_id": "mos_sf/1.20V/27C",
+   "measurements": [
+    {
+     "name": "av0_db",
+     "value": 47.71636563863
+    },
+    {
+     "name": "gbw_hz",
+     "value": 11540156.1854
+    },
+    {
+     "name": "pm_deg",
+     "value": 62.620508575956876
+    },
+    {
+     "name": "iq_a",
+     "value": 8.102166121269e-05
+    }
+   ]
+  },
+  {
+   "corner_id": "mos_ss/1.20V/27C",
+   "measurements": [
+    {
+     "name": "av0_db",
+     "value": 47.51622939664
+    },
+    {
+     "name": "gbw_hz",
+     "value": 11136512.65567
+    },
+    {
+     "name": "pm_deg",
+     "value": 63.35869209590179
+    },
+    {
+     "name": "iq_a",
+     "value": 8.038541954348e-05
+    }
+   ]
+  },
+  {
+   "corner_id": "mos_tt/1.20V/27C",
+   "measurements": [
+    {
+     "name": "av0_db",
+     "value": 46.72047776243
+    },
+    {
+     "name": "gbw_hz",
+     "value": 11466300.30032
+    },
+    {
+     "name": "pm_deg",
+     "value": 62.80732260696416
+    },
+    {
+     "name": "iq_a",
+     "value": 8.149188292251e-05
+    }
+   ]
+  }
+ ]
+}
