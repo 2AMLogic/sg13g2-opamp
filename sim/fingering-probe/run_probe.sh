@@ -43,7 +43,7 @@ VARIANTS=(lumped drawn expanded extracted_nopar extracted)
 sg13g2_preflight_record_paths
 echo "record ${RECORD_ID}" >&2
 
-python3 -I "${SCRIPT_DIR}/build_probe_netlists.py" "${SNAPSHOTS_OUT}" >&2
+python3 "${SCRIPT_DIR}/build_probe_netlists.py" "${SNAPSHOTS_OUT}" >&2
 
 n_corners="$(python3 -I - "${POINTS}" <<'PY'
 import sys
