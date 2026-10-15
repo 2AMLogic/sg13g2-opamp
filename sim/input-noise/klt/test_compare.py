@@ -237,7 +237,7 @@ class TestBaselineControl(Base):
         self.assertEqual(rep["points_compared"], 45)
         self.assertEqual(rep["out_of_tolerance"], [])
         self.assertEqual(rep["bound_verdict_disagreements"], [])
-        self.assertTrue(rep["tolerances_provisional"])
+        self.assertFalse(rep["tolerances_provisional"])
 
     def test_bound_miss_stays_a_miss(self):
         # the harness worst (108.949 uVrms) is above the literal 108.9 uVrms
@@ -382,7 +382,7 @@ class TestComparisonNegativeControls(Base):
 
     def test_perturbation_inside_tolerance_is_accepted(self):
         env = self.env()
-        self._scale(env, MID, C.INTEGRATED, 1.0015)
+        self._scale(env, MID, C.INTEGRATED, 1.00001)
         self.assertEqual(self.compare(env)["status"], "agree")
 
     def test_perturbed_spot_density_outside_tolerance_is_named(self):
@@ -415,9 +415,10 @@ class TestBoundVerdicts(Base):
         self.assertEqual(rep["unexplained_bound_verdict_disagreements"], 1)
         self.assertEqual(rep["status"], "disagree")
 
-    def test_flip_within_tolerance_of_bound_is_explained_not_hidden(self):
+    def test_flip_beyond_tolerance_of_bound_is_unexplained(self):
         # the harness-worst sits 4.5e-4 relative above the bound (failing); a
-        # tool value 1e-3 lower passes the bound, inside the 2e-3 tolerance.
+        # tool value 1e-4 below the bound passes it, but that is far outside
+        # the 2e-5 tolerance, so the flip is reported, never absorbed.
         env = self.env()
         c, m = self.find(env, WORST, C.INTEGRATED)
         m["value"] = BOUND * 0.9999
@@ -425,8 +426,9 @@ class TestBoundVerdicts(Base):
         self.assertEqual(m["status"], "pass")
         rep = self.compare(env)
         self.assertEqual(len(rep["bound_verdict_disagreements"]), 1)
-        self.assertTrue(rep["bound_verdict_disagreements"][0]["explained_by_tolerance"])
-        self.assertEqual(rep["unexplained_bound_verdict_disagreements"], 0)
+        self.assertFalse(rep["bound_verdict_disagreements"][0]["explained_by_tolerance"])
+        self.assertEqual(rep["unexplained_bound_verdict_disagreements"], 1)
+        self.assertEqual(rep["status"], "disagree")
 
     def test_tool_passes_everywhere_is_reported_where_harness_fails(self):
         env = self.env()
