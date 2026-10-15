@@ -32,9 +32,19 @@ OP including the external 10 uA ibias.
 
 The 45-corner run was done: `bash layout/opamp_core/run_pex.sh` wrote
 `layout/opamp_core/pex_report.json` (180 `delta[]` rows, all pass) and
-`layout/opamp_core/opamp_core_pex.spice`; `check_bounds.py` grades all four rows
-PASS against the ratified bounds. The verdict, the caveats on the size of the
-deltas, and the rows not covered are in `signoff/README.md` (item 7).
+`layout/opamp_core/opamp_core_pex.spice`. `check_bounds.py` grades all four
+extracted rows PASS against the ratified bounds. **The run is not cited for T1
+item 7.** The schematic leg simulates lumped `ng=1` devices, while the
+extracted leg simulates the drawn unit/finger devices, plus dummies. The
+legs are therefore not comparable, and the large gain, GBW and Iq deltas cannot
+be attributed to parasitics. The leading hypothesis is the representation
+difference itself, which has not been quantified. See `signoff/README.md` (item 7) and #237 for the reconciliation.
+
+The requests declare `backend: "batch"`. The report records no
+`environment.remote` or job id, and the per-corner `klt sim` envelopes went to
+a scratch directory that was not kept, so nothing committed proves where the
+simulations ran beyond that declaration. A future run should keep the `klt
+sim` envelopes, or their `environment.remote` job ids, with the report.
 
 History: earlier attempts were rejected by the fleet with
 `batch_runner_version_mismatch` (runner klt 0.5.0 vs client 0.7.x;
