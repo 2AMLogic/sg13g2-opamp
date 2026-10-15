@@ -4,6 +4,7 @@
 
 ### 2026-10-15
 
+- **PR #102**: sim: open-loop AC bench as klt sim AC + OP requests with a harness comparison (no envelope yet: fleet runner klt 0.5.0)
 - **PR #243**: sim: AC-ground inn in the open-loop AC and PSRR benches; re-run 45 corners on the batch fleet
 - **Issue #241** (closed): sim: open-loop AC bench leaves inn AC-floating (Lbreak with no C to ground) -- GBW about halved, PM overstated, parasitic-sensitive
 - **PR #242**: sim: #237 fingering probe (inn-grounded diagnostic) + DR 0008 option 1; bench defect filed as #241
