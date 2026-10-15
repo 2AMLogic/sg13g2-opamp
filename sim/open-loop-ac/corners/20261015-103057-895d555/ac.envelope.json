@@ -1,0 +1,2391 @@
+{
+  "schema_version": 3,
+  "netlist": {
+    "path": "sim/open-loop-ac/corners/20261015-103057-895d555/tb_openloop_ac.body.spice",
+    "scope": "repo"
+  },
+  "status": "pass",
+  "corner_count": 45,
+  "passed": 45,
+  "failed": 0,
+  "errored": 0,
+  "inconclusive": 0,
+  "diagnostic_counts": {
+    "by_code": {},
+    "by_severity": {},
+    "corners_with_diagnostics": 0
+  },
+  "metrics": {
+    "sim__corner__count": 45,
+    "sim__corner__passed_count": 45,
+    "sim__corner__failed_count": 0,
+    "sim__corner__errored_count": 0,
+    "sim__corner__inconclusive_count": 0
+  },
+  "environment": {
+    "engine": "ngspice",
+    "engine_version": "46",
+    "ngspice_binary": "/home/ubuntu/.local/bin/ngspice",
+    "models_lib": {
+      "path": null,
+      "scope": "external"
+    },
+    "models_lib_sha256": "03d505847c880d233b341be115a1e5460edf4d8e9b3e8a7df791a52fa4455d67",
+    "netlist_sha256": "d0fad9c3687603cd69c8c76243be70e32e9e02d1c0728c1b8592f386c3ce9598",
+    "netlist_closure": [
+      {
+        "path": "sim/open-loop-ac/corners/20261015-103057-895d555/tb_openloop_ac.body.spice",
+        "scope": "repo",
+        "sha256": "d0fad9c3687603cd69c8c76243be70e32e9e02d1c0728c1b8592f386c3ce9598"
+      },
+      {
+        "path": "sim/open-loop-ac/netlist-snapshots/20261015-103057-895d555/opamp_core.spice",
+        "scope": "repo",
+        "sha256": "4cddebec6a043f682bb74a463ac3e72112f33ad341d19575a0606f276e18db37"
+      }
+    ],
+    "netlist_source": "schematic",
+    "osdi_preload": [
+      {
+        "name": "psp103.osdi",
+        "path": null,
+        "scope": "external",
+        "sha256": "2e4299c4683997e26469410dc1ab36b02ced924b1ac0972d6c4eae360e1fc796"
+      },
+      {
+        "name": "psp103_nqs.osdi",
+        "path": null,
+        "scope": "external",
+        "sha256": "839b164483205601c09032951f6c41d3580f15e506dc40a7202950d3afbdfc7d"
+      },
+      {
+        "name": "mosvar.osdi",
+        "path": null,
+        "scope": "external",
+        "sha256": "25e64a374ab523dbfeb7ffed75dcb8b086ee10f06120a9074bd68b92d7b0fb41"
+      },
+      {
+        "name": "r3_cmc.osdi",
+        "path": null,
+        "scope": "external",
+        "sha256": "4fead17bc2e9cbfe3df6f106e9dbd6f2cdcd48c002af9c56c2ca0b0712fce350"
+      }
+    ],
+    "corner_section_libs": [
+      {
+        "name": "cornerCAP.lib",
+        "path": null,
+        "scope": "external",
+        "sha256": "4fc4a0f17ca2aef66ca38c2d2e7cead3307b69508d304ed073129565ec1c3e56"
+      }
+    ],
+    "staged_model_inputs": [
+      {
+        "name": "cornerMOSlv.lib",
+        "field": "models.lib",
+        "kind": "library",
+        "sha256": "07f15f24b990ab9eff8e1000457ad180a5199b48fc17217ac3572bdcdfbf5f72",
+        "rewritten": true
+      },
+      {
+        "name": "cornerCAP.lib",
+        "field": "corners.process[0].sections[1].lib",
+        "kind": "library",
+        "sha256": "b4f1beef8a6723b1bea9866bfe96730d0e01660232a39ab3dd9c256df4116109",
+        "rewritten": true
+      },
+      {
+        "name": "psp103.osdi",
+        "field": "options.osdi_preload[0]",
+        "kind": "osdi",
+        "sha256": "2e4299c4683997e26469410dc1ab36b02ced924b1ac0972d6c4eae360e1fc796",
+        "rewritten": false
+      },
+      {
+        "name": "psp103_nqs.osdi",
+        "field": "options.osdi_preload[1]",
+        "kind": "osdi",
+        "sha256": "839b164483205601c09032951f6c41d3580f15e506dc40a7202950d3afbdfc7d",
+        "rewritten": false
+      },
+      {
+        "name": "mosvar.osdi",
+        "field": "options.osdi_preload[2]",
+        "kind": "osdi",
+        "sha256": "25e64a374ab523dbfeb7ffed75dcb8b086ee10f06120a9074bd68b92d7b0fb41",
+        "rewritten": false
+      },
+      {
+        "name": "r3_cmc.osdi",
+        "field": "options.osdi_preload[3]",
+        "kind": "osdi",
+        "sha256": "4fead17bc2e9cbfe3df6f106e9dbd6f2cdcd48c002af9c56c2ca0b0712fce350",
+        "rewritten": false
+      },
+      {
+        "name": "sg13g2_moslv_mod.lib",
+        "field": "models.lib",
+        "kind": "dependency",
+        "sha256": "0aa1a5630a7c8fb8ae896c57c475954ff5885c4831311f8cd9c9e64d6cbb8332",
+        "rewritten": true
+      },
+      {
+        "name": "sg13g2_moslv_mismatch.lib",
+        "field": "models.lib",
+        "kind": "dependency",
+        "sha256": "2d3251e2d42eadb0f8af152a4915fdc60a68bceb95a2d17a52f90cfb34b7e63e",
+        "rewritten": false
+      },
+      {
+        "name": "sg13g2_moslv_mod_mismatch.lib",
+        "field": "models.lib",
+        "kind": "dependency",
+        "sha256": "28f681005831113ad5377f1b867d8869b78f329a7f52aa821ff56aa1e648b68b",
+        "rewritten": true
+      },
+      {
+        "name": "sg13g2_moslv_stat.lib",
+        "field": "models.lib",
+        "kind": "dependency",
+        "sha256": "7f4cf8df714e327348ba3975a2630e9d7dd7ae1a7a88817df4890e82745f0f52",
+        "rewritten": false
+      },
+      {
+        "name": "capacitors_mod.lib",
+        "field": "corners.process[0].sections[1].lib",
+        "kind": "dependency",
+        "sha256": "94b569e695fd8a223a5a49a5b5a6b0d8a62408820bf0c2ed9dbcb0a8ab7d957e",
+        "rewritten": false
+      },
+      {
+        "name": "capacitors_mod_mismatch.lib",
+        "field": "corners.process[0].sections[1].lib",
+        "kind": "dependency",
+        "sha256": "8ebc8369966951cfec0e91d603685f1975fbf9ceff2eef493a25357ce9ae5492",
+        "rewritten": false
+      },
+      {
+        "name": "capacitors_stat.lib",
+        "field": "corners.process[0].sections[1].lib",
+        "kind": "dependency",
+        "sha256": "68d2ef41174bcfae5997b355c4fd3dbe4f2b8ec4be30ff79d474052b3be1715a",
+        "rewritten": false
+      },
+      {
+        "name": "sg13g2_moslv_parm.lib",
+        "field": "models.lib",
+        "kind": "dependency",
+        "sha256": "cbf10b8453a18bb70b8ad0d6e40faa0937338e699b5460947a94900db6c92a6e",
+        "rewritten": false
+      }
+    ],
+    "remote": {
+      "provider": "aws-batch-fleet",
+      "job_id": "klt-sim-2e841aaa76e0",
+      "bucket": "2am-batch-jobs-221082181346",
+      "region": "us-east-1",
+      "instance_id": "i-0764f0bb96c10230f",
+      "instance_type": "c6i.8xlarge",
+      "availability_zone": "us-east-1f",
+      "ami_id": "ami-0e0bec04ad8e81877",
+      "lifecycle": "spot",
+      "spot": true,
+      "state": "done",
+      "exit_code": "0",
+      "concurrency": "2",
+      "physical_cores": "16",
+      "elapsed_seconds": 23,
+      "runner_klt_version": "0.7.0",
+      "client_klt_version": "0.7.1.dev499+g1724fa083353",
+      "runner_compatibility": "match",
+      "worker_environment": {
+        "capture": "ok",
+        "simulator": {
+          "requested_binary": "ngspice",
+          "binary_source": "PATH",
+          "selected_path": "/usr/local/bin/ngspice",
+          "version_banner": "******\n** ngspice-46 : Circuit level simulation program\n** Compiled with KLU Direct Linear Solver\n** The U. C. Berkeley CAD Group\n** Copyright 1985-1994, Regents of the University of California.\n** Copyright 2001-2025, The ngspice team.\n** Please get your ngspice manual from https://ngspice.sourceforge.io/docs.html\n** Please file your bug-reports at http://ngspice.sourceforge.net/bugrep.html\n** Creation Date: Thu Oct  1 23:51:59 UTC 2026\n******\n",
+          "version_probe": "ok"
+        },
+        "pdk": {
+          "variant": "ihp-sg13g2",
+          "root": "/opt/pdk",
+          "stamp_scheme": null,
+          "stamp_sha256": null,
+          "stamp_text": null,
+          "models_staged": true
+        },
+        "cpu_model": "Intel(R) Xeon(R) Platinum 8375C CPU @ 2.90GHz",
+        "omp_num_threads": null,
+        "image_manifest": null,
+        "diagnostics": [
+          "pdk stamp unreadable: FileNotFoundError"
+        ],
+        "pdk_stamp_comparison": {
+          "status": "not_comparable"
+        }
+      },
+      "job_ceiling": {
+        "basis": "conservative_serial_bound",
+        "unit_count": 45,
+        "per_unit_timeout_s": 300,
+        "overhead_s": 120.0,
+        "job_bound_s": 13620.0,
+        "max_job_seconds": 3600.0,
+        "max_job_seconds_source": "fleet_config",
+        "exceeds_ceiling": true,
+        "check": "warn",
+        "max_units_per_job": 11,
+        "recommended_hosts": 5,
+        "warning": "batch job bound 13620s (options.timeout_s 300s x 45 units + 120s; a conservative fully-serial upper bound, not a runtime estimate) exceeds the fleet's whole-job ceiling of 3600s (max_job_seconds from fleet_config); a job still running at the ceiling is killed and every unit is reported batch_job_timeout. Set request.remote.hosts to at least 5 to run one job per shard of at most 11 units, each within the ceiling"
+      }
+    }
+  },
+  "coverage": {
+    "corners_simulated": 45,
+    "measurements_declared": 3,
+    "measurements_with_limits": 3,
+    "unrecognized_limit_keys": [],
+    "schema_version": 1,
+    "known": true,
+    "checked": [
+      "limit:[0,\"mos_tt/vdd=1.080_vinp=0.540V/-40C\",\"av0_db\",\"min\"]",
+      "limit:[0,\"mos_tt/vdd=1.080_vinp=0.540V/-40C\",\"gbw_hz\",\"min\"]",
+      "limit:[0,\"mos_tt/vdd=1.080_vinp=0.540V/-40C\",\"phase_at_ugf_rad\",\"max\"]",
+      "limit:[0,\"mos_tt/vdd=1.080_vinp=0.540V/-40C\",\"phase_at_ugf_rad\",\"min\"]",
+      "limit:[1,\"mos_tt/vdd=1.080_vinp=0.540V/27C\",\"av0_db\",\"min\"]",
+      "limit:[1,\"mos_tt/vdd=1.080_vinp=0.540V/27C\",\"gbw_hz\",\"min\"]",
+      "limit:[1,\"mos_tt/vdd=1.080_vinp=0.540V/27C\",\"phase_at_ugf_rad\",\"max\"]",
+      "limit:[1,\"mos_tt/vdd=1.080_vinp=0.540V/27C\",\"phase_at_ugf_rad\",\"min\"]",
+      "limit:[10,\"mos_ss/vdd=1.080_vinp=0.540V/27C\",\"av0_db\",\"min\"]",
+      "limit:[10,\"mos_ss/vdd=1.080_vinp=0.540V/27C\",\"gbw_hz\",\"min\"]",
+      "limit:[10,\"mos_ss/vdd=1.080_vinp=0.540V/27C\",\"phase_at_ugf_rad\",\"max\"]",
+      "limit:[10,\"mos_ss/vdd=1.080_vinp=0.540V/27C\",\"phase_at_ugf_rad\",\"min\"]",
+      "limit:[11,\"mos_ss/vdd=1.080_vinp=0.540V/125C\",\"av0_db\",\"min\"]",
+      "limit:[11,\"mos_ss/vdd=1.080_vinp=0.540V/125C\",\"gbw_hz\",\"min\"]",
+      "limit:[11,\"mos_ss/vdd=1.080_vinp=0.540V/125C\",\"phase_at_ugf_rad\",\"max\"]",
+      "limit:[11,\"mos_ss/vdd=1.080_vinp=0.540V/125C\",\"phase_at_ugf_rad\",\"min\"]",
+      "limit:[12,\"mos_ss/vdd=1.200_vinp=0.600V/-40C\",\"av0_db\",\"min\"]",
+      "limit:[12,\"mos_ss/vdd=1.200_vinp=0.600V/-40C\",\"gbw_hz\",\"min\"]",
+      "limit:[12,\"mos_ss/vdd=1.200_vinp=0.600V/-40C\",\"phase_at_ugf_rad\",\"max\"]",
+      "limit:[12,\"mos_ss/vdd=1.200_vinp=0.600V/-40C\",\"phase_at_ugf_rad\",\"min\"]",
+      "limit:[13,\"mos_ss/vdd=1.200_vinp=0.600V/27C\",\"av0_db\",\"min\"]",
+      "limit:[13,\"mos_ss/vdd=1.200_vinp=0.600V/27C\",\"gbw_hz\",\"min\"]",
+      "limit:[13,\"mos_ss/vdd=1.200_vinp=0.600V/27C\",\"phase_at_ugf_rad\",\"max\"]",
+      "limit:[13,\"mos_ss/vdd=1.200_vinp=0.600V/27C\",\"phase_at_ugf_rad\",\"min\"]",
+      "limit:[14,\"mos_ss/vdd=1.200_vinp=0.600V/125C\",\"av0_db\",\"min\"]",
+      "limit:[14,\"mos_ss/vdd=1.200_vinp=0.600V/125C\",\"gbw_hz\",\"min\"]",
+      "limit:[14,\"mos_ss/vdd=1.200_vinp=0.600V/125C\",\"phase_at_ugf_rad\",\"max\"]",
+      "limit:[14,\"mos_ss/vdd=1.200_vinp=0.600V/125C\",\"phase_at_ugf_rad\",\"min\"]",
+      "limit:[15,\"mos_ss/vdd=1.320_vinp=0.660V/-40C\",\"av0_db\",\"min\"]",
+      "limit:[15,\"mos_ss/vdd=1.320_vinp=0.660V/-40C\",\"gbw_hz\",\"min\"]",
+      "limit:[15,\"mos_ss/vdd=1.320_vinp=0.660V/-40C\",\"phase_at_ugf_rad\",\"max\"]",
+      "limit:[15,\"mos_ss/vdd=1.320_vinp=0.660V/-40C\",\"phase_at_ugf_rad\",\"min\"]",
+      "limit:[16,\"mos_ss/vdd=1.320_vinp=0.660V/27C\",\"av0_db\",\"min\"]",
+      "limit:[16,\"mos_ss/vdd=1.320_vinp=0.660V/27C\",\"gbw_hz\",\"min\"]",
+      "limit:[16,\"mos_ss/vdd=1.320_vinp=0.660V/27C\",\"phase_at_ugf_rad\",\"max\"]",
+      "limit:[16,\"mos_ss/vdd=1.320_vinp=0.660V/27C\",\"phase_at_ugf_rad\",\"min\"]",
+      "limit:[17,\"mos_ss/vdd=1.320_vinp=0.660V/125C\",\"av0_db\",\"min\"]",
+      "limit:[17,\"mos_ss/vdd=1.320_vinp=0.660V/125C\",\"gbw_hz\",\"min\"]",
+      "limit:[17,\"mos_ss/vdd=1.320_vinp=0.660V/125C\",\"phase_at_ugf_rad\",\"max\"]",
+      "limit:[17,\"mos_ss/vdd=1.320_vinp=0.660V/125C\",\"phase_at_ugf_rad\",\"min\"]",
+      "limit:[18,\"mos_ff/vdd=1.080_vinp=0.540V/-40C\",\"av0_db\",\"min\"]",
+      "limit:[18,\"mos_ff/vdd=1.080_vinp=0.540V/-40C\",\"gbw_hz\",\"min\"]",
+      "limit:[18,\"mos_ff/vdd=1.080_vinp=0.540V/-40C\",\"phase_at_ugf_rad\",\"max\"]",
+      "limit:[18,\"mos_ff/vdd=1.080_vinp=0.540V/-40C\",\"phase_at_ugf_rad\",\"min\"]",
+      "limit:[19,\"mos_ff/vdd=1.080_vinp=0.540V/27C\",\"av0_db\",\"min\"]",
+      "limit:[19,\"mos_ff/vdd=1.080_vinp=0.540V/27C\",\"gbw_hz\",\"min\"]",
+      "limit:[19,\"mos_ff/vdd=1.080_vinp=0.540V/27C\",\"phase_at_ugf_rad\",\"max\"]",
+      "limit:[19,\"mos_ff/vdd=1.080_vinp=0.540V/27C\",\"phase_at_ugf_rad\",\"min\"]",
+      "limit:[2,\"mos_tt/vdd=1.080_vinp=0.540V/125C\",\"av0_db\",\"min\"]",
+      "limit:[2,\"mos_tt/vdd=1.080_vinp=0.540V/125C\",\"gbw_hz\",\"min\"]",
+      "limit:[2,\"mos_tt/vdd=1.080_vinp=0.540V/125C\",\"phase_at_ugf_rad\",\"max\"]",
+      "limit:[2,\"mos_tt/vdd=1.080_vinp=0.540V/125C\",\"phase_at_ugf_rad\",\"min\"]",
+      "limit:[20,\"mos_ff/vdd=1.080_vinp=0.540V/125C\",\"av0_db\",\"min\"]",
+      "limit:[20,\"mos_ff/vdd=1.080_vinp=0.540V/125C\",\"gbw_hz\",\"min\"]",
+      "limit:[20,\"mos_ff/vdd=1.080_vinp=0.540V/125C\",\"phase_at_ugf_rad\",\"max\"]",
+      "limit:[20,\"mos_ff/vdd=1.080_vinp=0.540V/125C\",\"phase_at_ugf_rad\",\"min\"]",
+      "limit:[21,\"mos_ff/vdd=1.200_vinp=0.600V/-40C\",\"av0_db\",\"min\"]",
+      "limit:[21,\"mos_ff/vdd=1.200_vinp=0.600V/-40C\",\"gbw_hz\",\"min\"]",
+      "limit:[21,\"mos_ff/vdd=1.200_vinp=0.600V/-40C\",\"phase_at_ugf_rad\",\"max\"]",
+      "limit:[21,\"mos_ff/vdd=1.200_vinp=0.600V/-40C\",\"phase_at_ugf_rad\",\"min\"]",
+      "limit:[22,\"mos_ff/vdd=1.200_vinp=0.600V/27C\",\"av0_db\",\"min\"]",
+      "limit:[22,\"mos_ff/vdd=1.200_vinp=0.600V/27C\",\"gbw_hz\",\"min\"]",
+      "limit:[22,\"mos_ff/vdd=1.200_vinp=0.600V/27C\",\"phase_at_ugf_rad\",\"max\"]",
+      "limit:[22,\"mos_ff/vdd=1.200_vinp=0.600V/27C\",\"phase_at_ugf_rad\",\"min\"]",
+      "limit:[23,\"mos_ff/vdd=1.200_vinp=0.600V/125C\",\"av0_db\",\"min\"]",
+      "limit:[23,\"mos_ff/vdd=1.200_vinp=0.600V/125C\",\"gbw_hz\",\"min\"]",
+      "limit:[23,\"mos_ff/vdd=1.200_vinp=0.600V/125C\",\"phase_at_ugf_rad\",\"max\"]",
+      "limit:[23,\"mos_ff/vdd=1.200_vinp=0.600V/125C\",\"phase_at_ugf_rad\",\"min\"]",
+      "limit:[24,\"mos_ff/vdd=1.320_vinp=0.660V/-40C\",\"av0_db\",\"min\"]",
+      "limit:[24,\"mos_ff/vdd=1.320_vinp=0.660V/-40C\",\"gbw_hz\",\"min\"]",
+      "limit:[24,\"mos_ff/vdd=1.320_vinp=0.660V/-40C\",\"phase_at_ugf_rad\",\"max\"]",
+      "limit:[24,\"mos_ff/vdd=1.320_vinp=0.660V/-40C\",\"phase_at_ugf_rad\",\"min\"]",
+      "limit:[25,\"mos_ff/vdd=1.320_vinp=0.660V/27C\",\"av0_db\",\"min\"]",
+      "limit:[25,\"mos_ff/vdd=1.320_vinp=0.660V/27C\",\"gbw_hz\",\"min\"]",
+      "limit:[25,\"mos_ff/vdd=1.320_vinp=0.660V/27C\",\"phase_at_ugf_rad\",\"max\"]",
+      "limit:[25,\"mos_ff/vdd=1.320_vinp=0.660V/27C\",\"phase_at_ugf_rad\",\"min\"]",
+      "limit:[26,\"mos_ff/vdd=1.320_vinp=0.660V/125C\",\"av0_db\",\"min\"]",
+      "limit:[26,\"mos_ff/vdd=1.320_vinp=0.660V/125C\",\"gbw_hz\",\"min\"]",
+      "limit:[26,\"mos_ff/vdd=1.320_vinp=0.660V/125C\",\"phase_at_ugf_rad\",\"max\"]",
+      "limit:[26,\"mos_ff/vdd=1.320_vinp=0.660V/125C\",\"phase_at_ugf_rad\",\"min\"]",
+      "limit:[27,\"mos_sf/vdd=1.080_vinp=0.540V/-40C\",\"av0_db\",\"min\"]",
+      "limit:[27,\"mos_sf/vdd=1.080_vinp=0.540V/-40C\",\"gbw_hz\",\"min\"]",
+      "limit:[27,\"mos_sf/vdd=1.080_vinp=0.540V/-40C\",\"phase_at_ugf_rad\",\"max\"]",
+      "limit:[27,\"mos_sf/vdd=1.080_vinp=0.540V/-40C\",\"phase_at_ugf_rad\",\"min\"]",
+      "limit:[28,\"mos_sf/vdd=1.080_vinp=0.540V/27C\",\"av0_db\",\"min\"]",
+      "limit:[28,\"mos_sf/vdd=1.080_vinp=0.540V/27C\",\"gbw_hz\",\"min\"]",
+      "limit:[28,\"mos_sf/vdd=1.080_vinp=0.540V/27C\",\"phase_at_ugf_rad\",\"max\"]",
+      "limit:[28,\"mos_sf/vdd=1.080_vinp=0.540V/27C\",\"phase_at_ugf_rad\",\"min\"]",
+      "limit:[29,\"mos_sf/vdd=1.080_vinp=0.540V/125C\",\"av0_db\",\"min\"]",
+      "limit:[29,\"mos_sf/vdd=1.080_vinp=0.540V/125C\",\"gbw_hz\",\"min\"]",
+      "limit:[29,\"mos_sf/vdd=1.080_vinp=0.540V/125C\",\"phase_at_ugf_rad\",\"max\"]",
+      "limit:[29,\"mos_sf/vdd=1.080_vinp=0.540V/125C\",\"phase_at_ugf_rad\",\"min\"]",
+      "limit:[3,\"mos_tt/vdd=1.200_vinp=0.600V/-40C\",\"av0_db\",\"min\"]",
+      "limit:[3,\"mos_tt/vdd=1.200_vinp=0.600V/-40C\",\"gbw_hz\",\"min\"]",
+      "limit:[3,\"mos_tt/vdd=1.200_vinp=0.600V/-40C\",\"phase_at_ugf_rad\",\"max\"]",
+      "limit:[3,\"mos_tt/vdd=1.200_vinp=0.600V/-40C\",\"phase_at_ugf_rad\",\"min\"]",
+      "limit:[30,\"mos_sf/vdd=1.200_vinp=0.600V/-40C\",\"av0_db\",\"min\"]",
+      "limit:[30,\"mos_sf/vdd=1.200_vinp=0.600V/-40C\",\"gbw_hz\",\"min\"]",
+      "limit:[30,\"mos_sf/vdd=1.200_vinp=0.600V/-40C\",\"phase_at_ugf_rad\",\"max\"]",
+      "limit:[30,\"mos_sf/vdd=1.200_vinp=0.600V/-40C\",\"phase_at_ugf_rad\",\"min\"]",
+      "limit:[31,\"mos_sf/vdd=1.200_vinp=0.600V/27C\",\"av0_db\",\"min\"]",
+      "limit:[31,\"mos_sf/vdd=1.200_vinp=0.600V/27C\",\"gbw_hz\",\"min\"]",
+      "limit:[31,\"mos_sf/vdd=1.200_vinp=0.600V/27C\",\"phase_at_ugf_rad\",\"max\"]",
+      "limit:[31,\"mos_sf/vdd=1.200_vinp=0.600V/27C\",\"phase_at_ugf_rad\",\"min\"]",
+      "limit:[32,\"mos_sf/vdd=1.200_vinp=0.600V/125C\",\"av0_db\",\"min\"]",
+      "limit:[32,\"mos_sf/vdd=1.200_vinp=0.600V/125C\",\"gbw_hz\",\"min\"]",
+      "limit:[32,\"mos_sf/vdd=1.200_vinp=0.600V/125C\",\"phase_at_ugf_rad\",\"max\"]",
+      "limit:[32,\"mos_sf/vdd=1.200_vinp=0.600V/125C\",\"phase_at_ugf_rad\",\"min\"]",
+      "limit:[33,\"mos_sf/vdd=1.320_vinp=0.660V/-40C\",\"av0_db\",\"min\"]",
+      "limit:[33,\"mos_sf/vdd=1.320_vinp=0.660V/-40C\",\"gbw_hz\",\"min\"]",
+      "limit:[33,\"mos_sf/vdd=1.320_vinp=0.660V/-40C\",\"phase_at_ugf_rad\",\"max\"]",
+      "limit:[33,\"mos_sf/vdd=1.320_vinp=0.660V/-40C\",\"phase_at_ugf_rad\",\"min\"]",
+      "limit:[34,\"mos_sf/vdd=1.320_vinp=0.660V/27C\",\"av0_db\",\"min\"]",
+      "limit:[34,\"mos_sf/vdd=1.320_vinp=0.660V/27C\",\"gbw_hz\",\"min\"]",
+      "limit:[34,\"mos_sf/vdd=1.320_vinp=0.660V/27C\",\"phase_at_ugf_rad\",\"max\"]",
+      "limit:[34,\"mos_sf/vdd=1.320_vinp=0.660V/27C\",\"phase_at_ugf_rad\",\"min\"]",
+      "limit:[35,\"mos_sf/vdd=1.320_vinp=0.660V/125C\",\"av0_db\",\"min\"]",
+      "limit:[35,\"mos_sf/vdd=1.320_vinp=0.660V/125C\",\"gbw_hz\",\"min\"]",
+      "limit:[35,\"mos_sf/vdd=1.320_vinp=0.660V/125C\",\"phase_at_ugf_rad\",\"max\"]",
+      "limit:[35,\"mos_sf/vdd=1.320_vinp=0.660V/125C\",\"phase_at_ugf_rad\",\"min\"]",
+      "limit:[36,\"mos_fs/vdd=1.080_vinp=0.540V/-40C\",\"av0_db\",\"min\"]",
+      "limit:[36,\"mos_fs/vdd=1.080_vinp=0.540V/-40C\",\"gbw_hz\",\"min\"]",
+      "limit:[36,\"mos_fs/vdd=1.080_vinp=0.540V/-40C\",\"phase_at_ugf_rad\",\"max\"]",
+      "limit:[36,\"mos_fs/vdd=1.080_vinp=0.540V/-40C\",\"phase_at_ugf_rad\",\"min\"]",
+      "limit:[37,\"mos_fs/vdd=1.080_vinp=0.540V/27C\",\"av0_db\",\"min\"]",
+      "limit:[37,\"mos_fs/vdd=1.080_vinp=0.540V/27C\",\"gbw_hz\",\"min\"]",
+      "limit:[37,\"mos_fs/vdd=1.080_vinp=0.540V/27C\",\"phase_at_ugf_rad\",\"max\"]",
+      "limit:[37,\"mos_fs/vdd=1.080_vinp=0.540V/27C\",\"phase_at_ugf_rad\",\"min\"]",
+      "limit:[38,\"mos_fs/vdd=1.080_vinp=0.540V/125C\",\"av0_db\",\"min\"]",
+      "limit:[38,\"mos_fs/vdd=1.080_vinp=0.540V/125C\",\"gbw_hz\",\"min\"]",
+      "limit:[38,\"mos_fs/vdd=1.080_vinp=0.540V/125C\",\"phase_at_ugf_rad\",\"max\"]",
+      "limit:[38,\"mos_fs/vdd=1.080_vinp=0.540V/125C\",\"phase_at_ugf_rad\",\"min\"]",
+      "limit:[39,\"mos_fs/vdd=1.200_vinp=0.600V/-40C\",\"av0_db\",\"min\"]",
+      "limit:[39,\"mos_fs/vdd=1.200_vinp=0.600V/-40C\",\"gbw_hz\",\"min\"]",
+      "limit:[39,\"mos_fs/vdd=1.200_vinp=0.600V/-40C\",\"phase_at_ugf_rad\",\"max\"]",
+      "limit:[39,\"mos_fs/vdd=1.200_vinp=0.600V/-40C\",\"phase_at_ugf_rad\",\"min\"]",
+      "limit:[4,\"mos_tt/vdd=1.200_vinp=0.600V/27C\",\"av0_db\",\"min\"]",
+      "limit:[4,\"mos_tt/vdd=1.200_vinp=0.600V/27C\",\"gbw_hz\",\"min\"]",
+      "limit:[4,\"mos_tt/vdd=1.200_vinp=0.600V/27C\",\"phase_at_ugf_rad\",\"max\"]",
+      "limit:[4,\"mos_tt/vdd=1.200_vinp=0.600V/27C\",\"phase_at_ugf_rad\",\"min\"]",
+      "limit:[40,\"mos_fs/vdd=1.200_vinp=0.600V/27C\",\"av0_db\",\"min\"]",
+      "limit:[40,\"mos_fs/vdd=1.200_vinp=0.600V/27C\",\"gbw_hz\",\"min\"]",
+      "limit:[40,\"mos_fs/vdd=1.200_vinp=0.600V/27C\",\"phase_at_ugf_rad\",\"max\"]",
+      "limit:[40,\"mos_fs/vdd=1.200_vinp=0.600V/27C\",\"phase_at_ugf_rad\",\"min\"]",
+      "limit:[41,\"mos_fs/vdd=1.200_vinp=0.600V/125C\",\"av0_db\",\"min\"]",
+      "limit:[41,\"mos_fs/vdd=1.200_vinp=0.600V/125C\",\"gbw_hz\",\"min\"]",
+      "limit:[41,\"mos_fs/vdd=1.200_vinp=0.600V/125C\",\"phase_at_ugf_rad\",\"max\"]",
+      "limit:[41,\"mos_fs/vdd=1.200_vinp=0.600V/125C\",\"phase_at_ugf_rad\",\"min\"]",
+      "limit:[42,\"mos_fs/vdd=1.320_vinp=0.660V/-40C\",\"av0_db\",\"min\"]",
+      "limit:[42,\"mos_fs/vdd=1.320_vinp=0.660V/-40C\",\"gbw_hz\",\"min\"]",
+      "limit:[42,\"mos_fs/vdd=1.320_vinp=0.660V/-40C\",\"phase_at_ugf_rad\",\"max\"]",
+      "limit:[42,\"mos_fs/vdd=1.320_vinp=0.660V/-40C\",\"phase_at_ugf_rad\",\"min\"]",
+      "limit:[43,\"mos_fs/vdd=1.320_vinp=0.660V/27C\",\"av0_db\",\"min\"]",
+      "limit:[43,\"mos_fs/vdd=1.320_vinp=0.660V/27C\",\"gbw_hz\",\"min\"]",
+      "limit:[43,\"mos_fs/vdd=1.320_vinp=0.660V/27C\",\"phase_at_ugf_rad\",\"max\"]",
+      "limit:[43,\"mos_fs/vdd=1.320_vinp=0.660V/27C\",\"phase_at_ugf_rad\",\"min\"]",
+      "limit:[44,\"mos_fs/vdd=1.320_vinp=0.660V/125C\",\"av0_db\",\"min\"]",
+      "limit:[44,\"mos_fs/vdd=1.320_vinp=0.660V/125C\",\"gbw_hz\",\"min\"]",
+      "limit:[44,\"mos_fs/vdd=1.320_vinp=0.660V/125C\",\"phase_at_ugf_rad\",\"max\"]",
+      "limit:[44,\"mos_fs/vdd=1.320_vinp=0.660V/125C\",\"phase_at_ugf_rad\",\"min\"]",
+      "limit:[5,\"mos_tt/vdd=1.200_vinp=0.600V/125C\",\"av0_db\",\"min\"]",
+      "limit:[5,\"mos_tt/vdd=1.200_vinp=0.600V/125C\",\"gbw_hz\",\"min\"]",
+      "limit:[5,\"mos_tt/vdd=1.200_vinp=0.600V/125C\",\"phase_at_ugf_rad\",\"max\"]",
+      "limit:[5,\"mos_tt/vdd=1.200_vinp=0.600V/125C\",\"phase_at_ugf_rad\",\"min\"]",
+      "limit:[6,\"mos_tt/vdd=1.320_vinp=0.660V/-40C\",\"av0_db\",\"min\"]",
+      "limit:[6,\"mos_tt/vdd=1.320_vinp=0.660V/-40C\",\"gbw_hz\",\"min\"]",
+      "limit:[6,\"mos_tt/vdd=1.320_vinp=0.660V/-40C\",\"phase_at_ugf_rad\",\"max\"]",
+      "limit:[6,\"mos_tt/vdd=1.320_vinp=0.660V/-40C\",\"phase_at_ugf_rad\",\"min\"]",
+      "limit:[7,\"mos_tt/vdd=1.320_vinp=0.660V/27C\",\"av0_db\",\"min\"]",
+      "limit:[7,\"mos_tt/vdd=1.320_vinp=0.660V/27C\",\"gbw_hz\",\"min\"]",
+      "limit:[7,\"mos_tt/vdd=1.320_vinp=0.660V/27C\",\"phase_at_ugf_rad\",\"max\"]",
+      "limit:[7,\"mos_tt/vdd=1.320_vinp=0.660V/27C\",\"phase_at_ugf_rad\",\"min\"]",
+      "limit:[8,\"mos_tt/vdd=1.320_vinp=0.660V/125C\",\"av0_db\",\"min\"]",
+      "limit:[8,\"mos_tt/vdd=1.320_vinp=0.660V/125C\",\"gbw_hz\",\"min\"]",
+      "limit:[8,\"mos_tt/vdd=1.320_vinp=0.660V/125C\",\"phase_at_ugf_rad\",\"max\"]",
+      "limit:[8,\"mos_tt/vdd=1.320_vinp=0.660V/125C\",\"phase_at_ugf_rad\",\"min\"]",
+      "limit:[9,\"mos_ss/vdd=1.080_vinp=0.540V/-40C\",\"av0_db\",\"min\"]",
+      "limit:[9,\"mos_ss/vdd=1.080_vinp=0.540V/-40C\",\"gbw_hz\",\"min\"]",
+      "limit:[9,\"mos_ss/vdd=1.080_vinp=0.540V/-40C\",\"phase_at_ugf_rad\",\"max\"]",
+      "limit:[9,\"mos_ss/vdd=1.080_vinp=0.540V/-40C\",\"phase_at_ugf_rad\",\"min\"]"
+    ],
+    "skipped": [],
+    "inapplicable": [],
+    "unknown": [],
+    "nothing_checked": false,
+    "nothing_checked_reasons": []
+  },
+  "provenance": {
+    "klt_version": "0.7.1.dev499+g1724fa083353",
+    "klayout_version": "0.30.12",
+    "pdk": {
+      "name": "ihp-sg13g2",
+      "source": "PDK_ROOT environment variable",
+      "version": null
+    },
+    "deck": {
+      "name": "cornerMOSlv.lib",
+      "content_hash": "sha256:03d505847c880d233b341be115a1e5460edf4d8e9b3e8a7df791a52fa4455d67",
+      "released": false
+    },
+    "input": {
+      "content_hash": "sha256:d0fad9c3687603cd69c8c76243be70e32e9e02d1c0728c1b8592f386c3ce9598",
+      "role": "netlist"
+    }
+  },
+  "measurements": [
+    {
+      "name": "av0_db",
+      "unit": "dB",
+      "limits": {
+        "min": 37.8
+      },
+      "status": "pass",
+      "worst_case": {
+        "corner_id": "mos_fs/vdd=1.080_vinp=0.540V/125C",
+        "value": 38.22934570799,
+        "margin": 0.42934570799000227
+      }
+    },
+    {
+      "name": "gbw_hz",
+      "unit": "Hz",
+      "limits": {
+        "min": 4740000.0
+      },
+      "status": "pass",
+      "worst_case": {
+        "corner_id": "mos_ss/vdd=1.080_vinp=0.540V/-40C",
+        "value": 8062387.604867,
+        "margin": 3322387.604867
+      }
+    },
+    {
+      "name": "phase_at_ugf_rad",
+      "unit": "rad",
+      "limits": {
+        "min": -2.0943951023931953,
+        "max": 0.0
+      },
+      "status": "pass",
+      "worst_case": {
+        "corner_id": "mos_ff/vdd=1.320_vinp=0.660V/125C",
+        "value": -2.059712309425,
+        "margin": 0.03468279296819521
+      }
+    }
+  ],
+  "corners": [
+    {
+      "corner_id": "mos_tt/vdd=1.080_vinp=0.540V/-40C",
+      "process": "mos_tt",
+      "supply_v": {
+        "vdd": 1.08,
+        "vinp": 0.54
+      },
+      "temperature_c": -40,
+      "status": "pass",
+      "runtime_s": 11.299,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 43.49304457716,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 5.693044577160002
+        },
+        {
+          "name": "gbw_hz",
+          "value": 10724270.43843,
+          "unit": "Hz",
+          "status": "pass",
+          "margin": 5984270.43843
+        },
+        {
+          "name": "phase_at_ugf_rad",
+          "value": -1.937352286742,
+          "unit": "rad",
+          "status": "pass",
+          "margin": 0.15704281565119516
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_tt/vdd=1.080_vinp=0.540V/27C",
+      "process": "mos_tt",
+      "supply_v": {
+        "vdd": 1.08,
+        "vinp": 0.54
+      },
+      "temperature_c": 27,
+      "status": "pass",
+      "runtime_s": 5.306,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 41.71211460366,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 3.912114603660001
+        },
+        {
+          "name": "gbw_hz",
+          "value": 10225118.72013,
+          "unit": "Hz",
+          "status": "pass",
+          "margin": 5485118.72013
+        },
+        {
+          "name": "phase_at_ugf_rad",
+          "value": -1.972878688341,
+          "unit": "rad",
+          "status": "pass",
+          "margin": 0.12151641405219515
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_tt/vdd=1.080_vinp=0.540V/125C",
+      "process": "mos_tt",
+      "supply_v": {
+        "vdd": 1.08,
+        "vinp": 0.54
+      },
+      "temperature_c": 125,
+      "status": "pass",
+      "runtime_s": 5.952,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 39.42293726718,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 1.6229372671799993
+        },
+        {
+          "name": "gbw_hz",
+          "value": 9067556.666403,
+          "unit": "Hz",
+          "status": "pass",
+          "margin": 4327556.666402999
+        },
+        {
+          "name": "phase_at_ugf_rad",
+          "value": -1.994338044352,
+          "unit": "rad",
+          "status": "pass",
+          "margin": 0.10005705804119525
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_tt/vdd=1.200_vinp=0.600V/-40C",
+      "process": "mos_tt",
+      "supply_v": {
+        "vdd": 1.2,
+        "vinp": 0.6
+      },
+      "temperature_c": -40,
+      "status": "pass",
+      "runtime_s": 11.667,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 44.59050058032,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 6.79050058032
+        },
+        {
+          "name": "gbw_hz",
+          "value": 12190059.15961,
+          "unit": "Hz",
+          "status": "pass",
+          "margin": 7450059.1596099995
+        },
+        {
+          "name": "phase_at_ugf_rad",
+          "value": -1.982759971324,
+          "unit": "rad",
+          "status": "pass",
+          "margin": 0.1116351310691952
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_tt/vdd=1.200_vinp=0.600V/27C",
+      "process": "mos_tt",
+      "supply_v": {
+        "vdd": 1.2,
+        "vinp": 0.6
+      },
+      "temperature_c": 27,
+      "status": "pass",
+      "runtime_s": 5.405,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 42.87273094762,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 5.072730947620002
+        },
+        {
+          "name": "gbw_hz",
+          "value": 11178817.91066,
+          "unit": "Hz",
+          "status": "pass",
+          "margin": 6438817.9106600005
+        },
+        {
+          "name": "phase_at_ugf_rad",
+          "value": -2.006065828915,
+          "unit": "rad",
+          "status": "pass",
+          "margin": 0.08832927347819508
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_tt/vdd=1.200_vinp=0.600V/125C",
+      "process": "mos_tt",
+      "supply_v": {
+        "vdd": 1.2,
+        "vinp": 0.6
+      },
+      "temperature_c": 125,
+      "status": "pass",
+      "runtime_s": 4.998,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 40.8551165987,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 3.0551165987000033
+        },
+        {
+          "name": "gbw_hz",
+          "value": 9727420.947819,
+          "unit": "Hz",
+          "status": "pass",
+          "margin": 4987420.947819
+        },
+        {
+          "name": "phase_at_ugf_rad",
+          "value": -2.022277584825,
+          "unit": "rad",
+          "status": "pass",
+          "margin": 0.0721175175681954
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_tt/vdd=1.320_vinp=0.660V/-40C",
+      "process": "mos_tt",
+      "supply_v": {
+        "vdd": 1.32,
+        "vinp": 0.66
+      },
+      "temperature_c": -40,
+      "status": "pass",
+      "runtime_s": 11.707,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 45.65279840599,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 7.852798405990001
+        },
+        {
+          "name": "gbw_hz",
+          "value": 12925592.58079,
+          "unit": "Hz",
+          "status": "pass",
+          "margin": 8185592.58079
+        },
+        {
+          "name": "phase_at_ugf_rad",
+          "value": -2.003098883028,
+          "unit": "rad",
+          "status": "pass",
+          "margin": 0.09129621936519516
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_tt/vdd=1.320_vinp=0.660V/27C",
+      "process": "mos_tt",
+      "supply_v": {
+        "vdd": 1.32,
+        "vinp": 0.66
+      },
+      "temperature_c": 27,
+      "status": "pass",
+      "runtime_s": 5.299,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 43.99699181373,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 6.196991813730001
+        },
+        {
+          "name": "gbw_hz",
+          "value": 11845483.35624,
+          "unit": "Hz",
+          "status": "pass",
+          "margin": 7105483.356240001
+        },
+        {
+          "name": "phase_at_ugf_rad",
+          "value": -2.027592695458,
+          "unit": "rad",
+          "status": "pass",
+          "margin": 0.06680240693519535
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_tt/vdd=1.320_vinp=0.660V/125C",
+      "process": "mos_tt",
+      "supply_v": {
+        "vdd": 1.32,
+        "vinp": 0.66
+      },
+      "temperature_c": 125,
+      "status": "pass",
+      "runtime_s": 6.501,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 42.09495567249,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 4.294955672490005
+        },
+        {
+          "name": "gbw_hz",
+          "value": 10260980.68338,
+          "unit": "Hz",
+          "status": "pass",
+          "margin": 5520980.68338
+        },
+        {
+          "name": "phase_at_ugf_rad",
+          "value": -2.043682054853,
+          "unit": "rad",
+          "status": "pass",
+          "margin": 0.050713047540195344
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_ss/vdd=1.080_vinp=0.540V/-40C",
+      "process": "mos_ss",
+      "supply_v": {
+        "vdd": 1.08,
+        "vinp": 0.54
+      },
+      "temperature_c": -40,
+      "status": "pass",
+      "runtime_s": 14.423,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 44.54311265863,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 6.743112658630004
+        },
+        {
+          "name": "gbw_hz",
+          "value": 8062387.604867,
+          "unit": "Hz",
+          "status": "pass",
+          "margin": 3322387.604867
+        },
+        {
+          "name": "phase_at_ugf_rad",
+          "value": -1.843558903872,
+          "unit": "rad",
+          "status": "pass",
+          "margin": 0.2508361985211953
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_ss/vdd=1.080_vinp=0.540V/27C",
+      "process": "mos_ss",
+      "supply_v": {
+        "vdd": 1.08,
+        "vinp": 0.54
+      },
+      "temperature_c": 27,
+      "status": "pass",
+      "runtime_s": 12.073,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 42.55065497556,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 4.750654975560003
+        },
+        {
+          "name": "gbw_hz",
+          "value": 8800813.221169,
+          "unit": "Hz",
+          "status": "pass",
+          "margin": 4060813.2211690005
+        },
+        {
+          "name": "phase_at_ugf_rad",
+          "value": -1.916134142643,
+          "unit": "rad",
+          "status": "pass",
+          "margin": 0.17826095975019518
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_ss/vdd=1.080_vinp=0.540V/125C",
+      "process": "mos_ss",
+      "supply_v": {
+        "vdd": 1.08,
+        "vinp": 0.54
+      },
+      "temperature_c": 125,
+      "status": "pass",
+      "runtime_s": 5.196,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 40.04173187305,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 2.24173187305
+        },
+        {
+          "name": "gbw_hz",
+          "value": 8536953.834141,
+          "unit": "Hz",
+          "status": "pass",
+          "margin": 3796953.8341409992
+        },
+        {
+          "name": "phase_at_ugf_rad",
+          "value": -1.972035153026,
+          "unit": "rad",
+          "status": "pass",
+          "margin": 0.12235994936719519
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_ss/vdd=1.200_vinp=0.600V/-40C",
+      "process": "mos_ss",
+      "supply_v": {
+        "vdd": 1.2,
+        "vinp": 0.6
+      },
+      "temperature_c": -40,
+      "status": "pass",
+      "runtime_s": 8.772,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 45.72304849019,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 7.923048490190006
+        },
+        {
+          "name": "gbw_hz",
+          "value": 11724949.90458,
+          "unit": "Hz",
+          "status": "pass",
+          "margin": 6984949.904580001
+        },
+        {
+          "name": "phase_at_ugf_rad",
+          "value": -1.960942371682,
+          "unit": "rad",
+          "status": "pass",
+          "margin": 0.13345273071119523
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_ss/vdd=1.200_vinp=0.600V/27C",
+      "process": "mos_ss",
+      "supply_v": {
+        "vdd": 1.2,
+        "vinp": 0.6
+      },
+      "temperature_c": 27,
+      "status": "pass",
+      "runtime_s": 5.94,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 43.75185306771,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 5.9518530677100046
+        },
+        {
+          "name": "gbw_hz",
+          "value": 10923602.98738,
+          "unit": "Hz",
+          "status": "pass",
+          "margin": 6183602.98738
+        },
+        {
+          "name": "phase_at_ugf_rad",
+          "value": -1.99342280998,
+          "unit": "rad",
+          "status": "pass",
+          "margin": 0.10097229241319527
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_ss/vdd=1.200_vinp=0.600V/125C",
+      "process": "mos_ss",
+      "supply_v": {
+        "vdd": 1.2,
+        "vinp": 0.6
+      },
+      "temperature_c": 125,
+      "status": "pass",
+      "runtime_s": 5.439,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 41.46636592767,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 3.6663659276700002
+        },
+        {
+          "name": "gbw_hz",
+          "value": 9582066.323011,
+          "unit": "Hz",
+          "status": "pass",
+          "margin": 4842066.323011
+        },
+        {
+          "name": "phase_at_ugf_rad",
+          "value": -2.017269907567,
+          "unit": "rad",
+          "status": "pass",
+          "margin": 0.07712519482619529
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_ss/vdd=1.320_vinp=0.660V/-40C",
+      "process": "mos_ss",
+      "supply_v": {
+        "vdd": 1.32,
+        "vinp": 0.66
+      },
+      "temperature_c": -40,
+      "status": "pass",
+      "runtime_s": 14.972,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 46.77840361089,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 8.978403610890005
+        },
+        {
+          "name": "gbw_hz",
+          "value": 13013148.00611,
+          "unit": "Hz",
+          "status": "pass",
+          "margin": 8273148.0061099995
+        },
+        {
+          "name": "phase_at_ugf_rad",
+          "value": -1.998949258547,
+          "unit": "rad",
+          "status": "pass",
+          "margin": 0.09544584384619537
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_ss/vdd=1.320_vinp=0.660V/27C",
+      "process": "mos_ss",
+      "supply_v": {
+        "vdd": 1.32,
+        "vinp": 0.66
+      },
+      "temperature_c": 27,
+      "status": "pass",
+      "runtime_s": 7.786,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 44.85819349188,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 7.0581934918800044
+        },
+        {
+          "name": "gbw_hz",
+          "value": 11845098.95927,
+          "unit": "Hz",
+          "status": "pass",
+          "margin": 7105098.95927
+        },
+        {
+          "name": "phase_at_ugf_rad",
+          "value": -2.024307233663,
+          "unit": "rad",
+          "status": "pass",
+          "margin": 0.07008786873019535
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_ss/vdd=1.320_vinp=0.660V/125C",
+      "process": "mos_ss",
+      "supply_v": {
+        "vdd": 1.32,
+        "vinp": 0.66
+      },
+      "temperature_c": 125,
+      "status": "pass",
+      "runtime_s": 5.007,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 42.67998727206,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 4.879987272060006
+        },
+        {
+          "name": "gbw_hz",
+          "value": 10212835.72008,
+          "unit": "Hz",
+          "status": "pass",
+          "margin": 5472835.720079999
+        },
+        {
+          "name": "phase_at_ugf_rad",
+          "value": -2.042896679955,
+          "unit": "rad",
+          "status": "pass",
+          "margin": 0.051498422438195135
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_ff/vdd=1.080_vinp=0.540V/-40C",
+      "process": "mos_ff",
+      "supply_v": {
+        "vdd": 1.08,
+        "vinp": 0.54
+      },
+      "temperature_c": -40,
+      "status": "pass",
+      "runtime_s": 7.721,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 43.4114548632,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 5.611454863200002
+        },
+        {
+          "name": "gbw_hz",
+          "value": 12048836.30482,
+          "unit": "Hz",
+          "status": "pass",
+          "margin": 7308836.304819999
+        },
+        {
+          "name": "phase_at_ugf_rad",
+          "value": -1.986031893599,
+          "unit": "rad",
+          "status": "pass",
+          "margin": 0.10836320879419525
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_ff/vdd=1.080_vinp=0.540V/27C",
+      "process": "mos_ff",
+      "supply_v": {
+        "vdd": 1.08,
+        "vinp": 0.54
+      },
+      "temperature_c": 27,
+      "status": "pass",
+      "runtime_s": 5.119,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 41.75216213168,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 3.952162131680005
+        },
+        {
+          "name": "gbw_hz",
+          "value": 11062778.59107,
+          "unit": "Hz",
+          "status": "pass",
+          "margin": 6322778.59107
+        },
+        {
+          "name": "phase_at_ugf_rad",
+          "value": -2.006404249369,
+          "unit": "rad",
+          "status": "pass",
+          "margin": 0.08799085302419529
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_ff/vdd=1.080_vinp=0.540V/125C",
+      "process": "mos_ff",
+      "supply_v": {
+        "vdd": 1.08,
+        "vinp": 0.54
+      },
+      "temperature_c": 125,
+      "status": "pass",
+      "runtime_s": 4.728,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 39.62574381412,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 1.8257438141200026
+        },
+        {
+          "name": "gbw_hz",
+          "value": 9612202.630695,
+          "unit": "Hz",
+          "status": "pass",
+          "margin": 4872202.630695
+        },
+        {
+          "name": "phase_at_ugf_rad",
+          "value": -2.017046265235,
+          "unit": "rad",
+          "status": "pass",
+          "margin": 0.0773488371581954
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_ff/vdd=1.200_vinp=0.600V/-40C",
+      "process": "mos_ff",
+      "supply_v": {
+        "vdd": 1.2,
+        "vinp": 0.6
+      },
+      "temperature_c": -40,
+      "status": "pass",
+      "runtime_s": 4.887,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 44.46493156213,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 6.6649315621300005
+        },
+        {
+          "name": "gbw_hz",
+          "value": 12797456.78409,
+          "unit": "Hz",
+          "status": "pass",
+          "margin": 8057456.784089999
+        },
+        {
+          "name": "phase_at_ugf_rad",
+          "value": -2.007111402229,
+          "unit": "rad",
+          "status": "pass",
+          "margin": 0.08728370016419529
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_ff/vdd=1.200_vinp=0.600V/27C",
+      "process": "mos_ff",
+      "supply_v": {
+        "vdd": 1.2,
+        "vinp": 0.6
+      },
+      "temperature_c": 27,
+      "status": "pass",
+      "runtime_s": 4.411,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 42.89246936348,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 5.092469363479999
+        },
+        {
+          "name": "gbw_hz",
+          "value": 11728460.18512,
+          "unit": "Hz",
+          "status": "pass",
+          "margin": 6988460.18512
+        },
+        {
+          "name": "phase_at_ugf_rad",
+          "value": -2.028107264165,
+          "unit": "rad",
+          "status": "pass",
+          "margin": 0.06628783822819528
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_ff/vdd=1.200_vinp=0.600V/125C",
+      "process": "mos_ff",
+      "supply_v": {
+        "vdd": 1.2,
+        "vinp": 0.6
+      },
+      "temperature_c": 125,
+      "status": "pass",
+      "runtime_s": 4.801,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 41.02785068972,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 3.2278506897200003
+        },
+        {
+          "name": "gbw_hz",
+          "value": 10157922.37197,
+          "unit": "Hz",
+          "status": "pass",
+          "margin": 5417922.37197
+        },
+        {
+          "name": "phase_at_ugf_rad",
+          "value": -2.039490650836,
+          "unit": "rad",
+          "status": "pass",
+          "margin": 0.054904451557195255
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_ff/vdd=1.320_vinp=0.660V/-40C",
+      "process": "mos_ff",
+      "supply_v": {
+        "vdd": 1.32,
+        "vinp": 0.66
+      },
+      "temperature_c": -40,
+      "status": "pass",
+      "runtime_s": 4.579,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 45.52083311748,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 7.720833117480005
+        },
+        {
+          "name": "gbw_hz",
+          "value": 13469653.30723,
+          "unit": "Hz",
+          "status": "pass",
+          "margin": 8729653.30723
+        },
+        {
+          "name": "phase_at_ugf_rad",
+          "value": -2.025176234457,
+          "unit": "rad",
+          "status": "pass",
+          "margin": 0.06921886793619514
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_ff/vdd=1.320_vinp=0.660V/27C",
+      "process": "mos_ff",
+      "supply_v": {
+        "vdd": 1.32,
+        "vinp": 0.66
+      },
+      "temperature_c": 27,
+      "status": "pass",
+      "runtime_s": 3.999,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 44.012817648,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 6.212817648000005
+        },
+        {
+          "name": "gbw_hz",
+          "value": 12326869.50316,
+          "unit": "Hz",
+          "status": "pass",
+          "margin": 7586869.50316
+        },
+        {
+          "name": "phase_at_ugf_rad",
+          "value": -2.047019268714,
+          "unit": "rad",
+          "status": "pass",
+          "margin": 0.04737583367919518
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_ff/vdd=1.320_vinp=0.660V/125C",
+      "process": "mos_ff",
+      "supply_v": {
+        "vdd": 1.32,
+        "vinp": 0.66
+      },
+      "temperature_c": 125,
+      "status": "pass",
+      "runtime_s": 4.204,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 42.26143460363,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 4.461434603630003
+        },
+        {
+          "name": "gbw_hz",
+          "value": 10672686.27298,
+          "unit": "Hz",
+          "status": "pass",
+          "margin": 5932686.272980001
+        },
+        {
+          "name": "phase_at_ugf_rad",
+          "value": -2.059712309425,
+          "unit": "rad",
+          "status": "pass",
+          "margin": 0.03468279296819521
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_sf/vdd=1.080_vinp=0.540V/-40C",
+      "process": "mos_sf",
+      "supply_v": {
+        "vdd": 1.08,
+        "vinp": 0.54
+      },
+      "temperature_c": -40,
+      "status": "pass",
+      "runtime_s": 6.104,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 44.43946381663,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 6.6394638166300055
+        },
+        {
+          "name": "gbw_hz",
+          "value": 9927095.844811,
+          "unit": "Hz",
+          "status": "pass",
+          "margin": 5187095.844811
+        },
+        {
+          "name": "phase_at_ugf_rad",
+          "value": -1.911868504909,
+          "unit": "rad",
+          "status": "pass",
+          "margin": 0.1825265974841952
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_sf/vdd=1.080_vinp=0.540V/27C",
+      "process": "mos_sf",
+      "supply_v": {
+        "vdd": 1.08,
+        "vinp": 0.54
+      },
+      "temperature_c": 27,
+      "status": "pass",
+      "runtime_s": 3.987,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 42.68399465672,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 4.883994656720006
+        },
+        {
+          "name": "gbw_hz",
+          "value": 9920728.56313,
+          "unit": "Hz",
+          "status": "pass",
+          "margin": 5180728.563130001
+        },
+        {
+          "name": "phase_at_ugf_rad",
+          "value": -1.96227255034,
+          "unit": "rad",
+          "status": "pass",
+          "margin": 0.13212255205319523
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_sf/vdd=1.080_vinp=0.540V/125C",
+      "process": "mos_sf",
+      "supply_v": {
+        "vdd": 1.08,
+        "vinp": 0.54
+      },
+      "temperature_c": 125,
+      "status": "pass",
+      "runtime_s": 3.947,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 40.58811585497,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 2.788115854970002
+        },
+        {
+          "name": "gbw_hz",
+          "value": 9092268.487685,
+          "unit": "Hz",
+          "status": "pass",
+          "margin": 4352268.4876850005
+        },
+        {
+          "name": "phase_at_ugf_rad",
+          "value": -1.996967860116,
+          "unit": "rad",
+          "status": "pass",
+          "margin": 0.09742724227719535
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_sf/vdd=1.200_vinp=0.600V/-40C",
+      "process": "mos_sf",
+      "supply_v": {
+        "vdd": 1.2,
+        "vinp": 0.6
+      },
+      "temperature_c": -40,
+      "status": "pass",
+      "runtime_s": 6.64,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 45.59007136918,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 7.790071369180005
+        },
+        {
+          "name": "gbw_hz",
+          "value": 12223846.62865,
+          "unit": "Hz",
+          "status": "pass",
+          "margin": 7483846.62865
+        },
+        {
+          "name": "phase_at_ugf_rad",
+          "value": -1.985069373205,
+          "unit": "rad",
+          "status": "pass",
+          "margin": 0.10932572918819528
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_sf/vdd=1.200_vinp=0.600V/27C",
+      "process": "mos_sf",
+      "supply_v": {
+        "vdd": 1.2,
+        "vinp": 0.6
+      },
+      "temperature_c": 27,
+      "status": "pass",
+      "runtime_s": 3.904,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 43.87406022958,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 6.074060229580006
+        },
+        {
+          "name": "gbw_hz",
+          "value": 11270175.46296,
+          "unit": "Hz",
+          "status": "pass",
+          "margin": 6530175.462959999
+        },
+        {
+          "name": "phase_at_ugf_rad",
+          "value": -2.010454083595,
+          "unit": "rad",
+          "status": "pass",
+          "margin": 0.08394101879819527
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_sf/vdd=1.200_vinp=0.600V/125C",
+      "process": "mos_sf",
+      "supply_v": {
+        "vdd": 1.2,
+        "vinp": 0.6
+      },
+      "temperature_c": 125,
+      "status": "pass",
+      "runtime_s": 3.8,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 41.90008146846,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 4.100081468460004
+        },
+        {
+          "name": "gbw_hz",
+          "value": 9860406.334211,
+          "unit": "Hz",
+          "status": "pass",
+          "margin": 5120406.334210999
+        },
+        {
+          "name": "phase_at_ugf_rad",
+          "value": -2.029209800631,
+          "unit": "rad",
+          "status": "pass",
+          "margin": 0.06518530176219528
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_sf/vdd=1.320_vinp=0.660V/-40C",
+      "process": "mos_sf",
+      "supply_v": {
+        "vdd": 1.32,
+        "vinp": 0.66
+      },
+      "temperature_c": -40,
+      "status": "pass",
+      "runtime_s": 5.791,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 46.66605988465,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 8.86605988465
+        },
+        {
+          "name": "gbw_hz",
+          "value": 13111632.94729,
+          "unit": "Hz",
+          "status": "pass",
+          "margin": 8371632.94729
+        },
+        {
+          "name": "phase_at_ugf_rad",
+          "value": -2.010411827652,
+          "unit": "rad",
+          "status": "pass",
+          "margin": 0.08398327474119505
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_sf/vdd=1.320_vinp=0.660V/27C",
+      "process": "mos_sf",
+      "supply_v": {
+        "vdd": 1.32,
+        "vinp": 0.66
+      },
+      "temperature_c": 27,
+      "status": "pass",
+      "runtime_s": 4.053,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 45.01477680849,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 7.214776808490001
+        },
+        {
+          "name": "gbw_hz",
+          "value": 12018060.86559,
+          "unit": "Hz",
+          "status": "pass",
+          "margin": 7278060.8655900005
+        },
+        {
+          "name": "phase_at_ugf_rad",
+          "value": -2.034924297064,
+          "unit": "rad",
+          "status": "pass",
+          "margin": 0.059470805329195464
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_sf/vdd=1.320_vinp=0.660V/125C",
+      "process": "mos_sf",
+      "supply_v": {
+        "vdd": 1.32,
+        "vinp": 0.66
+      },
+      "temperature_c": 125,
+      "status": "pass",
+      "runtime_s": 3.853,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 43.12258408887,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 5.322584088870002
+        },
+        {
+          "name": "gbw_hz",
+          "value": 10438997.77076,
+          "unit": "Hz",
+          "status": "pass",
+          "margin": 5698997.77076
+        },
+        {
+          "name": "phase_at_ugf_rad",
+          "value": -2.052225654035,
+          "unit": "rad",
+          "status": "pass",
+          "margin": 0.04216944835819536
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_fs/vdd=1.080_vinp=0.540V/-40C",
+      "process": "mos_fs",
+      "supply_v": {
+        "vdd": 1.08,
+        "vinp": 0.54
+      },
+      "temperature_c": -40,
+      "status": "pass",
+      "runtime_s": 5.007,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 43.09826553542,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 5.298265535420001
+        },
+        {
+          "name": "gbw_hz",
+          "value": 11396105.38043,
+          "unit": "Hz",
+          "status": "pass",
+          "margin": 6656105.38043
+        },
+        {
+          "name": "phase_at_ugf_rad",
+          "value": -1.95758545366,
+          "unit": "rad",
+          "status": "pass",
+          "margin": 0.13680964873319534
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_fs/vdd=1.080_vinp=0.540V/27C",
+      "process": "mos_fs",
+      "supply_v": {
+        "vdd": 1.08,
+        "vinp": 0.54
+      },
+      "temperature_c": 27,
+      "status": "pass",
+      "runtime_s": 3.694,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 41.12963778173,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 3.32963778173
+        },
+        {
+          "name": "gbw_hz",
+          "value": 10546746.253,
+          "unit": "Hz",
+          "status": "pass",
+          "margin": 5806746.2530000005
+        },
+        {
+          "name": "phase_at_ugf_rad",
+          "value": -1.983257876587,
+          "unit": "rad",
+          "status": "pass",
+          "margin": 0.11113722580619534
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_fs/vdd=1.080_vinp=0.540V/125C",
+      "process": "mos_fs",
+      "supply_v": {
+        "vdd": 1.08,
+        "vinp": 0.54
+      },
+      "temperature_c": 125,
+      "status": "pass",
+      "runtime_s": 3.501,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 38.22934570799,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 0.42934570799000227
+        },
+        {
+          "name": "gbw_hz",
+          "value": 9091055.074166,
+          "unit": "Hz",
+          "status": "pass",
+          "margin": 4351055.074166
+        },
+        {
+          "name": "phase_at_ugf_rad",
+          "value": -1.992316802808,
+          "unit": "rad",
+          "status": "pass",
+          "margin": 0.10207829958519521
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_fs/vdd=1.200_vinp=0.600V/-40C",
+      "process": "mos_fs",
+      "supply_v": {
+        "vdd": 1.2,
+        "vinp": 0.6
+      },
+      "temperature_c": -40,
+      "status": "pass",
+      "runtime_s": 3.794,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 44.11971891634,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 6.319718916340001
+        },
+        {
+          "name": "gbw_hz",
+          "value": 12389541.09413,
+          "unit": "Hz",
+          "status": "pass",
+          "margin": 7649541.09413
+        },
+        {
+          "name": "phase_at_ugf_rad",
+          "value": -1.986753601865,
+          "unit": "rad",
+          "status": "pass",
+          "margin": 0.10764150052819521
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_fs/vdd=1.200_vinp=0.600V/27C",
+      "process": "mos_fs",
+      "supply_v": {
+        "vdd": 1.2,
+        "vinp": 0.6
+      },
+      "temperature_c": 27,
+      "status": "pass",
+      "runtime_s": 2.687,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 42.33164948391,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 4.531649483910002
+        },
+        {
+          "name": "gbw_hz",
+          "value": 11300875.04633,
+          "unit": "Hz",
+          "status": "pass",
+          "margin": 6560875.046329999
+        },
+        {
+          "name": "phase_at_ugf_rad",
+          "value": -2.00878371552,
+          "unit": "rad",
+          "status": "pass",
+          "margin": 0.08561138687319536
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_fs/vdd=1.200_vinp=0.600V/125C",
+      "process": "mos_fs",
+      "supply_v": {
+        "vdd": 1.2,
+        "vinp": 0.6
+      },
+      "temperature_c": 125,
+      "status": "pass",
+      "runtime_s": 2.079,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 40.12023037882,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 2.32023037882
+        },
+        {
+          "name": "gbw_hz",
+          "value": 9742478.477344,
+          "unit": "Hz",
+          "status": "pass",
+          "margin": 5002478.477344001
+        },
+        {
+          "name": "phase_at_ugf_rad",
+          "value": -2.021423707713,
+          "unit": "rad",
+          "status": "pass",
+          "margin": 0.07297139468019509
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_fs/vdd=1.320_vinp=0.660V/-40C",
+      "process": "mos_fs",
+      "supply_v": {
+        "vdd": 1.32,
+        "vinp": 0.66
+      },
+      "temperature_c": -40,
+      "status": "pass",
+      "runtime_s": 2.682,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 45.13282085236,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 7.332820852360001
+        },
+        {
+          "name": "gbw_hz",
+          "value": 13062814.0063,
+          "unit": "Hz",
+          "status": "pass",
+          "margin": 8322814.0063000005
+        },
+        {
+          "name": "phase_at_ugf_rad",
+          "value": -2.004723965388,
+          "unit": "rad",
+          "status": "pass",
+          "margin": 0.08967113700519524
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_fs/vdd=1.320_vinp=0.660V/27C",
+      "process": "mos_fs",
+      "supply_v": {
+        "vdd": 1.32,
+        "vinp": 0.66
+      },
+      "temperature_c": 27,
+      "status": "pass",
+      "runtime_s": 2.633,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 43.41884738292,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 5.618847382920002
+        },
+        {
+          "name": "gbw_hz",
+          "value": 11919210.44306,
+          "unit": "Hz",
+          "status": "pass",
+          "margin": 7179210.4430599995
+        },
+        {
+          "name": "phase_at_ugf_rad",
+          "value": -2.028369448658,
+          "unit": "rad",
+          "status": "pass",
+          "margin": 0.06602565373519509
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_fs/vdd=1.320_vinp=0.660V/125C",
+      "process": "mos_fs",
+      "supply_v": {
+        "vdd": 1.32,
+        "vinp": 0.66
+      },
+      "temperature_c": 125,
+      "status": "pass",
+      "runtime_s": 2.397,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 41.4247631761,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 3.6247631761000036
+        },
+        {
+          "name": "gbw_hz",
+          "value": 10261037.1582,
+          "unit": "Hz",
+          "status": "pass",
+          "margin": 5521037.1581999995
+        },
+        {
+          "name": "phase_at_ugf_rad",
+          "value": -2.042450206939,
+          "unit": "rad",
+          "status": "pass",
+          "margin": 0.05194489545419545
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    }
+  ]
+}

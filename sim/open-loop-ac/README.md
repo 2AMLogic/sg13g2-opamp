@@ -46,9 +46,25 @@ buffer's bias point (`Vout(dc)` close to `Vinp(dc) = Vcm = VDD/2`) — the
 same self-bias a real closed-loop configuration would reach, without
 loading the AC response the way a real (finite) feedback network would.
 
+**AC-grounding `inn` (issue #241)**: `Lbreak` alone leaves `inn`
+AC-floating, because an open `Lbreak` leaves only `M1`'s femtofarad-scale
+gate capacitance on `inn`. `inn` then swings with the input, which roughly
+halves the measured GBW (mos_tt/27 C/1.20 V: 5.49 MHz floating vs 11.18 MHz
+grounded) and overstates PM by 4-14 deg. The bench therefore also carries
+`Cinn_acgnd inn vss 1` (1 F, a DC open, so the `Lbreak` self-bias is
+unchanged; the L-C corner is `1/(2*pi*sqrt(1e18*1)) = 1.6e-10 Hz`). Records
+before `20261015-103057-895d555` (including `20260910-221601-22feaba`) were
+measured without it and are superseded: do not cite their GBW, PM or Av0.
+`run_klt_record.sh` produces the superseding record through `klt sim` on the
+batch fleet (it needs no local grid). Results at all 45 corners: Av0 worst
+38.23 dB (mos_fs/125 C/1.08 V), GBW worst 8.06 MHz (mos_ss/-40 C/1.08 V), PM
+worst 61.99 deg (mos_ff/125 C/1.32 V), all inside the ratified bounds; the
+mos_tt/27 C/1.20 V corner reproduces the #237 probe's lumped `innac` row.
+
 **Choosing `Lbreak`**: the value matters, and a much smaller one *does not
-work here*. `inn`'s only other AC path to ground is `M1`'s own gate
-capacitance (`Cgg`, femtofarad-scale). At `Lbreak = 1e9 H` (the value
+work here*. With `inn` AC-grounded as above, the only thing that sets the
+`Lbreak` corner is the L-C product; before that, `inn`'s only other AC path to
+ground was `M1`'s own gate capacitance (`Cgg`, femtofarad-scale). At `Lbreak = 1e9 H` (the value
 `sg13g2-bandgap/sim/loop-gain-phase-margin/`'s *different* loop-gain
 measurement uses successfully), the `Lbreak`-`Cgg` corner frequency lands
 within this sweep's own 1 Hz - 1 GHz range (confirmed empirically during
@@ -66,7 +82,7 @@ not the DUT).
 
 The AC test signal (`1 V`, so `vdb(out)` **is** `Av(f)` in dB directly) is
 injected at `inp`; `inn` carries no separate AC source (`Lbreak` isolates
-it from `out` at AC). Per `design/opamp_core.sch`'s own "polarity" header
+it from `out` at AC and `Cinn_acgnd` holds it at AC ground). Per `design/opamp_core.sch`'s own "polarity" header
 and `design/opamp_sizing.md`, `inp` is this design's **non-inverting**
 input, so this measures `Av(f) = Vout(f)/Vinp(f)` directly — phase starts
 near `0°` at low frequency (not near `180°`, unlike a loop-gain-style

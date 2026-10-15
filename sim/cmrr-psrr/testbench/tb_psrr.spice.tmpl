@@ -35,9 +35,9 @@
 * signal input is AC-grounded: Vinp (inp to ground, dc VCM) has no "ac"
 * value, so in the .ac solve it contributes no perturbation and pins inp at
 * AC zero -- the standard supply-rejection measurement configuration
-* (input quiet, supply perturbed). inn's AC is ~zero by the same Lbreak
-* argument as the differential bench (Lbreak = open at AC, only the gate
-* remains). PSRR(f) = Av(f)/Avs(f) with Av(f) the open-loop differential
+* (input quiet, supply perturbed). inn is AC-grounded exactly as in the
+* differential bench: Cinn_acgnd = 1 F from inn to vss (issue #241; Lbreak
+* alone left inn AC-floating). PSRR(f) = Av(f)/Avs(f) with Av(f) the open-loop differential
 * gain of the SAME grid point from sim/open-loop-ac/records/*.csv (per
 * issue #14's own wording); run_cmrr_psrr_sweep.sh computes
 * PSRR_db = Av0_db - Avs0_db, with Avs0 = Avs(10 mHz) read from the flat
@@ -99,6 +99,7 @@ Vss vss 0 dc 0
 Iibias vdd ibias dc 10u
 Vinp inp 0 dc @@VCM_V@@
 Lbreak inn out 1e18
+Cinn_acgnd inn vss 1
 Cload out vss @@CL_F@@
 
 .control

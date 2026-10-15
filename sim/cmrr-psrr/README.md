@@ -37,6 +37,24 @@ and, additionally, at **1 kHz** to document in-band behavior. The full
 10 mHz – 1 GHz spectra for both harnesses are committed per point under
 `corners/<record-id>/`.
 
+## Superseded by the inn-AC-grounded PSRR record (issue #241)
+
+The PSRR bench below measured with `inn` AC-floating (`Lbreak` only). That
+let `inn` follow the supply, which is the source of the "~1.5 Hz zero" and
+the ~4 dB in-band degradation described in this README, and of the
+`records/20260921-151815-707b34c.*` and `klt/records/20261010-094256-469573d.*`
+PSRR figures (worst 1.87 dB). `tb_psrr.spice.tmpl` and
+`klt/tb_psrr.body.spice` now carry `Cinn_acgnd inn vss 1`. The superseding
+record is `klt/records/20261015-103521-0f41068.*`, joined to the also
+superseding open-loop record `sim/open-loop-ac/records/20261015-103057-895d555`:
+PSRR+ (DC shelf) is 26.90 dB worst (mos_fs/125 C/1.08 V) to 36.33 dB best,
+all 45 corners above the ratified 1.87 dB, plateau guard 45 of 45. 1 kHz
+PSRR is 26.90 to 36.33 dB, i.e. the 4 dB zero is gone. The ratified spec row is not
+changed here; a change goes through `spec/` with a decision record. The old
+records and the sections below describe the superseded construction and stay as evidence.
+`compare.json` reports every point as outside the old harness record's
+tolerance and every Av0 join as inconsistent; that is the supersession, not a defect.
+
 ## Method
 
 ### DC bias: byte-equal to the open-loop bench

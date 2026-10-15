@@ -40,7 +40,9 @@ legs are therefore not comparable, and the large gain, GBW and Iq deltas cannot
 be attributed to parasitics. The #237 probe (`sim/fingering-probe/`) has
 since quantified this. The representation difference carries the Iq delta
 (about -25 %) and most of the gain delta. The remaining AC deltas come from
-this bench leaving `inn` AC-floating (`Lbreak` with no C to ground; #241):
+this bench leaving `inn` AC-floating (`Lbreak` with no C to ground; fixed
+by #241, `Cinn_acgnd inn vss 1` in `klt/tb_openloop_ac.body.spice`; the
+`pex_report.json` of #236 predates the fix and is superseded):
 with `inn` AC-grounded, the parasitics move GBW -0.4 % and PM -0.8 %. See
 `spec/decision-records/0008-drawn-fingering-device-representation.md` and
 `signoff/README.md` (item 7).

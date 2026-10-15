@@ -26,21 +26,19 @@
 * self-consistently settles near a unity-gain-buffer-like bias point
 * (Vout(dc) close to Vinp(dc) = Vcm = VDD/2) -- the "op point established
 * by the standard large-L feedback trick" this issue's scope names.
-* Empirically (this bench's own dev-time check, see README.md "Choosing
-* Lbreak"), a much smaller L (e.g. 1e9 H, the value
-* sg13g2-bandgap/sim/loop-gain-phase-margin/ uses for a DIFFERENT
-* measurement) is NOT large enough here: inn's only other AC path to
-* ground is M1's femtofarad-scale gate capacitance, so the L-Cgg corner
-* frequency (~sqrt(1/(L*Cgg)) app.) lands within this sweep's own frequency
-* range for L=1e9 H, corrupting exactly the low-frequency Av0 plateau this
-* bench needs to read cleanly. L=1e18 H pushes that corner far below 1 Hz
-* (this template's lowest swept frequency), restoring a flat low-frequency
-* plateau -- confirmed empirically before this template was committed (see
-* README.md).
+* AC ground on inn (issue #241): Cinn_acgnd = 1 F from inn to vss. Lbreak
+* alone leaves inn AC-floating, because an open Lbreak at AC leaves only
+* M1's femtofarad-scale gate capacitance on inn, so inn would swing with
+* the input and roughly halve the measured GBW (the #237 probe measured
+* 5.49 vs 11.18 MHz at mos_tt/27C/1.20V) and overstate PM by 12-14 deg.
+* The 1 F cap pins inn at AC ground. It leaves DC unchanged (a capacitor is
+* open at DC; Lbreak still sets inn = out). The L-C corner is
+* 1/(2*pi*sqrt(L*C)) = 1.6e-10 Hz, far below this sweep's lowest frequency.
+* L still has to be large: see README.md "Choosing Lbreak".
 *
 * The AC test signal (1 V magnitude, so vdb(out) IS Av(f) in dB directly,
 * no extra scaling) is injected at inp; inn carries no separate AC source
-* (Lbreak isolates it from out at AC). Since design/opamp_core.sch's own
+* (Lbreak isolates it from out at AC and Cinn_acgnd grounds inn). Since design/opamp_core.sch's own
 * header ("polarity") and design/opamp_sizing.md establish inp as the
 * NON-inverting input, this measures Av(f) = Vout(f)/Vinp(f) referenced to
 * the non-inverting input directly -- phase starts near 0 deg at low
@@ -79,6 +77,7 @@ Vss vss 0 dc 0
 Iibias vdd ibias dc 10u
 Vinp inp 0 dc @@VCM_V@@ ac 1
 Lbreak inn out 1e18
+Cinn_acgnd inn vss 1
 Cload out vss @@CL_F@@
 
 .control
