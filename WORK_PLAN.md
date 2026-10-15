@@ -5,9 +5,9 @@ This roadmap is generated from the repository's current GitHub label state.
 <!-- guide:plan-body:start -->
 ## Operator Attention: Merge-Risk-Hold Pileup
 
-Judge-approved PRs stuck under a `loom:operator` merge-risk hold — implementation work is done, only a human merge decision is missing.
+Judge-approved PRs under a hold (`loom:blocked` or `loom:operator`) — only a human merge decision is missing.
 
-_None._
+- **#102**: sim: open-loop AC bench as klt sim AC + OP requests with a harness comparison (no envelope yet: fleet runner klt 0.5.0)
 
 ## Very Important
 
@@ -26,6 +26,9 @@ _None._
 Human-approved issues ready for implementation (`loom:issue`).
 
 - **#85**: sim: express the open-loop AC bench as a `klt sim` request, the first gradable envelope toward T1 item 5
+- **#86**: signoff: first `klt pex` post-layout run on opamp_core.gds (T1 item 7)
+- **#95**: sim: express the slew-rate bench as a klt sim request (T1 item 5 coverage, follow-up to #85)
+- **#96**: sim: express the input-noise bench as a klt sim request (T1 item 5 coverage, follow-up to #85)
 
 ## In Progress
 
@@ -71,10 +74,10 @@ _None._
 
 | Bucket | Count |
 |------|-------|
-| Operator merge-risk holds | 0 |
+| Operator merge-risk holds | 1 |
 | Very important | 0 |
 | Important | 1 |
-| Ready (`loom:issue`) | 1 |
+| Ready (`loom:issue`) | 4 |
 | In Progress (`loom:building`) | 0 |
 | PRs awaiting review | 0 |
 | Approved PRs awaiting merge | 1 |
