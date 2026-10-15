@@ -2,6 +2,17 @@
 
 <!-- Maintained by the Loom Guide role. Newest entries first. -->
 
+### 2026-10-15
+
+- **PR #242**: sim: #237 fingering probe (inn-grounded diagnostic) + DR 0008 option 1; bench defect filed as #241
+- **PR #240**: sim: input-offset (systematic) klt sim request and real 45-corner envelope (T1 item 5, #97)
+- **Issue #97** (closed): sim: express the input-offset bench (systematic half) as a klt sim request (T1 item 5 coverage, follow-up to #85)
+- **PR #238**: sim: real 45-corner slew-rate klt sim envelope + harness comparison (T1 item 5, #95)
+- **Issue #95** (closed): sim: express the slew-rate bench as a klt sim request (T1 item 5 coverage, follow-up to #85)
+- **PR #236**: feat(signoff): 45-corner post-layout pex run as uncited evidence; item 7 not met (#86)
+- **PR #235**: sim: real 45-corner input-noise klt envelope + measured comparison (#96)
+- **Issue #96** (closed): sim: express the input-noise bench as a klt sim request (T1 item 5 coverage, follow-up to #85)
+
 ### 2026-10-14
 
 - **Issue #43** (closed): README: embed the fleet burndown chart (one line)
