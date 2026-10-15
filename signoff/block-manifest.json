@@ -21,6 +21,11 @@
       "kind": "lvs",
       "content_hash": "sha256:07fcb21698709178395cb2f04ba998c3752efb6eff24aace7626d9ffc10e553e"
     },
+    "7": {
+      "file": "layout/opamp_core/pex_report.json",
+      "kind": "pex",
+      "content_hash": "sha256:07fcb21698709178395cb2f04ba998c3752efb6eff24aace7626d9ffc10e553e"
+    },
     "8": {
       "file": "signoff/evidence/characterization.json",
       "content_hash": "sha256:2b03a001b32374168133524dd19d18ad0d501d49197b5cd59b713035372de476"

@@ -59,9 +59,14 @@ python3 -I "${SCRIPT_DIR}/klt_measure.py" build "$1" "${ART}"
 
 # klt resolves repo-relative netlist/model paths from the invoking directory.
 cd "${REPO_ROOT}"
+# klt pex holds an outdir lock on the tree KLT_PEX_ARTIFACTS_DIR lives in, and
+# klt sim refuses to write its default `.klt/sim` next to the request inside it
+# (outdir_locked). Point -o at a scratch dir outside that tree.
+SIMOUT="$(mktemp -d "${TMPDIR:-/tmp}/klt-pex-sim.XXXXXX")"
+trap 'rm -rf "${SIMOUT}"' EXIT
 for kind in ac op; do
   rc=0
-  "${KLT_CMD[@]}" sim "${ART}/openloop_${kind}.request.json" --format json \
+  "${KLT_CMD[@]}" sim "${ART}/openloop_${kind}.request.json" -o "${SIMOUT}/${kind}" --format json \
     > "${ART}/${kind}.envelope.json" 2> "${ART}/${kind}.stderr" || rc=$?
   # klt sim: 0 = pass, 3 = ran and a limit failed -- both gradable. Anything
   # else did not produce a gradable envelope.

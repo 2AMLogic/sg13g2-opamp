@@ -73,8 +73,8 @@ A clean DRC, or any pre-layout corner sweep — however thorough — renders
 
 ## What the manifest cites, and what it deliberately does not
 
-**The manifest cites eight items: 1, 9 and 10 (the inventories below),
-8 (the characterization report, below) and 2 (Layout), 3 (DRC clean),
+**The manifest cites nine items: 1, 9 and 10 (the inventories below),
+8 (the characterization report, below), 7 (post-layout, below) and 2 (Layout), 3 (DRC clean),
 4 (LVS clean) and 11 (Power delivery, structural).** The layout items are about the same
 committed stream, `layout/opamp_core/opamp_core.gds`, and every one of them
 pins that stream's own sha256 — because a `drc`, `lvs` or `erc` envelope all
@@ -86,7 +86,7 @@ record the sha256 of the layout they ran on in `provenance.input`:
 | 4 | `layout/opamp_core/lvs_report.json` | `layout/opamp_core/run_lvs.sh` |
 | 11 | **both** `layout/opamp_core/erc_report.json` *and* the same LVS report | `layout/opamp_core/run_erc.sh` (+ the LVS run above) |
 
-Items 5, 6 and 7 still render `unmet` with reason `no_evidence`, which
+Items 5 and 6 still render `unmet` with reason `no_evidence`, which
 remains the honest graded result rather than a placeholder. Item 8 is cited
 but renders `unmet` with reason `check_failed`. Its envelope truthfully
 carries `status: "fail"`, because the characterization report it wraps grades
@@ -231,28 +231,71 @@ accepts without being able to judge its relevance (`topic: not bound` in the
 report); binding it with a `generic` envelope over the GDS is a possible
 follow-up and is not done here.
 
-**Item 7 is uncited because the check has not been run.** `klt extract
---parasitics` + post-layout re-simulation is its own piece of work and none
-has not yet produced a committed report. Tracker:
-[#3](https://github.com/2AMLogic/sg13g2-opamp/issues/3),
-[#86](https://github.com/2AMLogic/sg13g2-opamp/issues/86).
+**Item 7 (post-layout verification) is cited from
+`layout/opamp_core/pex_report.json`** (issue
+[#86](https://github.com/2AMLogic/sg13g2-opamp/issues/86)), produced by
+`bash layout/opamp_core/run_pex.sh`: `klt pex --deck sg13g2` over the committed
+GDS, `--measure-command sim/post-layout/measure_openloop_ac.sh` on both legs
+(`measurement.mode: "command"`), reference `design/netlist/opamp_core.spice`.
+The 45-point PVT grid (5 MOS corners x -40/27/125 C x 1.08/1.20/1.32 V,
+CL = 2 pF) ran on the Spot batch fleet as `klt sim` AC + OP requests; no local
+ngspice loop. The report has 180 `delta[]` rows (45 corners x 4 rows), all
+`status: "pass"`, `corner_count: 45`, `errored: 0`. The pin is the GDS sha256
+(`pex` envelopes record it in `provenance.input`), re-hashed offline via
+`pinned-inputs.json`. `klt-pin.txt` already has `--measure-command`; no bump.
 
-*What is in place (issue #86):* `layout/opamp_core/run_pex.sh` drives
-`klt pex --measure-command` over the committed GDS, measuring the schematic
-(`design/netlist/opamp_core.spice`) and the extracted netlist with
-`sim/post-layout/measure_openloop_ac.sh`: the open-loop AC bench expressed as
-`klt sim` AC + OP requests over the ratified 45-point PVT grid (batch fleet,
-no local ngspice loop), four rows per corner (DC gain, GBW, phase margin, total
-Iq). `sim/post-layout/check_bounds.py` then grades every extracted value
-against the ratified `spec/target-spec.md` Sec 2 bounds (gain >= 37.8 dB, GBW
->= 4.74 MHz, PM >= 60 deg, Iq <= 119.7 uA). **The report has not been
-generated**: the batch fleet rejects the submit with
-`batch_runner_version_mismatch` (runner klt 0.5.0 vs client
-0.7.0+g4cbdfa769875; 2AMLogic/2am#2193), and the host cannot run the OSDI
-models locally. Item 7 therefore stays uncited and `unmet / no_evidence` -- no
-`pex_report.json`, manifest entry or pinned-input was added, and no post-layout
-row verdict, `body_bias` statement or covered-row claim is made yet. The pinned
-klt (`klt-pin.txt`) already has `--measure-command`; no bump is needed.
+*Per-row verdict against `spec/target-spec.md` Sec 2*
+(`python3 sim/post-layout/check_bounds.py layout/opamp_core/pex_report.json`,
+exit 0), worst extracted value over all 45 corners:
+
+| Row | Bound | Worst extracted (corner) | Verdict |
+|---|---|---|---|
+| DC gain | >= 37.8 dB | 42.19 dB (mos_ss/1.32V/27C) | PASS |
+| GBW (CL = 2 pF) | >= 4.74 MHz | 5.956 MHz (mos_fs/1.08V/125C) | PASS |
+| Phase margin | >= 60 deg | 75.19 deg (mos_ff/1.32V/125C) | PASS |
+| Quiescent current (incl. 10 uA ibias) | <= 119.7 uA | 84.84 uA (mos_ff/1.32V/125C) | PASS |
+
+*Read these deltas, do not just count the passes.* Extraction moved the numbers
+substantially and in the favourable direction on gain, GBW and Iq: `delta_pct`
+spans -3.6..+18.7 % (gain), +8.6..+27.8 % (GBW), -1.9..-0.8 % (PM) and
+-31.7..-19.8 % (Iq). A parasitic-only RC annotation would not be expected to
+raise gain by up to 10 dB or cut Iq by a quarter; the report's own
+`model_mismatch.counts` shows the extracted netlist instantiates 19 NMOS / 18
+PMOS where the schematic has 5 / 3 (the layout is fingered/multiplied; LVS
+matches 38 of 38 devices), so part of the delta is the extracted device
+geometry (effective W/L/multiplier as recovered from the layout) rather than
+parasitics, and `reference_only`/`extracted_only` are both empty (same model
+names). The schematic leg itself sits at 37.78 dB at its worst corner, 0.02 dB
+under the 37.8 dB bound (the known pre-layout gain shortfall tracked with the
+item 8 characterization failures); the extracted leg clears it. The passes
+are therefore real against the ratified bounds, but the unusually large
+favourable delta is an open question about extraction fidelity, not a
+confirmation that layout parasitics are benign.
+
+*Report fields, stated as the envelope carries them.*
+`body_bias.status: "biased"` (0 unbiased devices, no unbiased nets, no unbiased
+PMOS bodies). `extraction.model` is a **quasi-static lumped RC** model: one
+frequency-independent R and C per net, resistance a single lumped series
+resistance per net distributed as a star across the net's device terminals
+(not a per-segment RC ladder; `--distributed-rc` / `--critical-net` were not
+used), capacitance net-to-ground from each net's own area/perimeter plus
+net-to-net for vertical-overlap (crossover) coupling. Lateral same-layer
+coupling is modelled only for declared `--critical-net` nets, and none were
+declared, so **no lateral coupling is in this result**; fringe shielding,
+skin effect and distributed transmission-line behaviour are not modelled.
+The extraction deck is `sg13g2` with `deck.released: false` (the curated
+starter deck, not the foundry deck). The source/drain implant layers are not
+drawn by `klt gen mos_array` (klayout-tools#2580, see `layout/README.md`);
+whether that changes the extracted device list or junction capacitance was
+not investigated here (LVS matches 38 of 38 devices). Neither the starter-deck
+nor the implant caveat has been quantified.
+
+*Rows covered vs not covered post-layout.* Covered: DC gain, GBW, phase margin
+and quiescent current (the four AC/OP rows above) at the 45-point grid. **Not
+covered post-layout:** slew rate, input-referred noise, offset (including its
+statistical basis), CMRR, PSRR and output swing; item 7's `met` says nothing
+about those rows. Tracker:
+[#3](https://github.com/2AMLogic/sg13g2-opamp/issues/3).
 
 **Item 11 is the one compound citation, and what it does and does not
 prove.** T1 item 11 (power delivery, structural — klayout-tools#2025) is the
