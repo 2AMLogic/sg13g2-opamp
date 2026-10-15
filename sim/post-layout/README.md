@@ -30,25 +30,26 @@ OP including the external 10 uA ibias.
 
 ## Status (issue #86)
 
-The 45-corner run has NOT been done, and no `layout/opamp_core/pex_report.json`
-exists, so item 7 stays uncited (`unmet / no_evidence`). The batch submit is
-rejected before any simulation:
+The 45-corner run was done: `bash layout/opamp_core/run_pex.sh` wrote
+`layout/opamp_core/pex_report.json` (180 `delta[]` rows, all pass) and
+`layout/opamp_core/opamp_core_pex.spice`. `check_bounds.py` grades all four
+extracted rows PASS against the ratified bounds. **The run is not cited for T1
+item 7.** The schematic leg simulates lumped `ng=1` devices, while the
+extracted leg simulates the drawn unit/finger devices, plus dummies. The
+legs are therefore not comparable, and the large gain, GBW and Iq deltas cannot
+be attributed to parasitics. The leading hypothesis is the representation
+difference itself, which has not been quantified. See `signoff/README.md` (item 7) and #237 for the reconciliation.
 
-    batch_runner_version_mismatch: the fleet runner runs klt 0.5.0 but the
-    submitting client is 0.7.0+g4cbdfa769875 -- the request was not run
+The requests declare `backend: "batch"`. The report records no
+`environment.remote` or job id, and the per-corner `klt sim` envelopes went to
+a scratch directory that was not kept, so nothing committed proves where the
+simulations ran beyond that declaration. A future run should keep the `klt
+sim` envelopes, or their `environment.remote` job ids, with the report.
 
-(`klt sim --backend batch` and the full `bash layout/opamp_core/run_pex.sh`
-both reproduce it; `uvx --from klayout-tools==0.5.0` cannot be used instead,
-that release has no `batch` backend.) The same runner mismatch is
-2AMLogic/2am#2193. The local fallback is also unavailable on the authoring
-host (ngspice-42 cannot load the OSDI models; `sim/tools/build-osdi.sh
---check` fails), and the shared-host rule forbids it for a grid anyway. An
-earlier note here recorded a one-point local probe (gain 41.95 -> 49.68 dB
-etc.); it could not be reproduced on this host and is withdrawn as evidence.
-
-What does work end to end on this host: `klt pex` extraction of the committed
-GDS (deck `sg13g2`, bound to the PDK models; 489-line `.SUBCKT opamp_core`
-netlist), the schematic-side request build, and the batch submit up to the
-runner rejection. Re-run `bash layout/opamp_core/run_pex.sh`, then
-`python3 sim/post-layout/check_bounds.py layout/opamp_core/pex_report.json`,
-once the fleet runner matches the client.
+History: earlier attempts were rejected by the fleet with
+`batch_runner_version_mismatch` (runner klt 0.5.0 vs client 0.7.x;
+2AMLogic/2am#2193). Once that cleared, the first run failed in this harness with
+klt's `outdir_locked`: `klt pex` locks the tree holding `KLT_PEX_ARTIFACTS_DIR`,
+and `klt sim` defaulted its `.klt/sim` output next to the request inside it.
+`measure_openloop_ac.sh` now passes `-o` to a scratch directory outside that
+tree.

@@ -87,7 +87,9 @@ record the sha256 of the layout they ran on in `provenance.input`:
 | 11 | **both** `layout/opamp_core/erc_report.json` *and* the same LVS report | `layout/opamp_core/run_erc.sh` (+ the LVS run above) |
 
 Items 5, 6 and 7 still render `unmet` with reason `no_evidence`, which
-remains the honest graded result rather than a placeholder. Item 8 is cited
+remains the honest graded result rather than a placeholder. For item 7 a
+45-corner `pex_report.json` now exists but is deliberately **not cited**: its
+two legs are not electrically comparable (see "Item 7" below). Item 8 is cited
 but renders `unmet` with reason `check_failed`. Its envelope truthfully
 carries `status: "fail"`, because the characterization report it wraps grades
 four ratified rows FAIL (see below and
@@ -231,28 +233,95 @@ accepts without being able to judge its relevance (`topic: not bound` in the
 report); binding it with a `generic` envelope over the GDS is a possible
 follow-up and is not done here.
 
-**Item 7 is uncited because the check has not been run.** `klt extract
---parasitics` + post-layout re-simulation is its own piece of work and none
-has not yet produced a committed report. Tracker:
-[#3](https://github.com/2AMLogic/sg13g2-opamp/issues/3),
-[#86](https://github.com/2AMLogic/sg13g2-opamp/issues/86).
+**Item 7 (post-layout verification) is NOT cited. A 45-corner pex report
+exists, but its two legs simulate different device geometry, so its deltas
+are not a parasitic measurement.** Issue
+[#86](https://github.com/2AMLogic/sg13g2-opamp/issues/86); reconciliation is
+tracked in [#237](https://github.com/2AMLogic/sg13g2-opamp/issues/237).
 
-*What is in place (issue #86):* `layout/opamp_core/run_pex.sh` drives
-`klt pex --measure-command` over the committed GDS, measuring the schematic
-(`design/netlist/opamp_core.spice`) and the extracted netlist with
-`sim/post-layout/measure_openloop_ac.sh`: the open-loop AC bench expressed as
-`klt sim` AC + OP requests over the ratified 45-point PVT grid (batch fleet,
-no local ngspice loop), four rows per corner (DC gain, GBW, phase margin, total
-Iq). `sim/post-layout/check_bounds.py` then grades every extracted value
-against the ratified `spec/target-spec.md` Sec 2 bounds (gain >= 37.8 dB, GBW
->= 4.74 MHz, PM >= 60 deg, Iq <= 119.7 uA). **The report has not been
-generated**: the batch fleet rejects the submit with
-`batch_runner_version_mismatch` (runner klt 0.5.0 vs client
-0.7.0+g4cbdfa769875; 2AMLogic/2am#2193), and the host cannot run the OSDI
-models locally. Item 7 therefore stays uncited and `unmet / no_evidence` -- no
-`pex_report.json`, manifest entry or pinned-input was added, and no post-layout
-row verdict, `body_bias` statement or covered-row claim is made yet. The pinned
-klt (`klt-pin.txt`) already has `--measure-command`; no bump is needed.
+*What was run.* `bash layout/opamp_core/run_pex.sh` ran `klt pex --deck sg13g2`
+over the committed GDS, with `--measure-command
+sim/post-layout/measure_openloop_ac.sh` on both legs (`measurement.mode:
+"command"`) and reference `design/netlist/opamp_core.spice`. It wrote
+`layout/opamp_core/pex_report.json` and `layout/opamp_core/opamp_core_pex.spice`.
+Both are kept as committed evidence, but they are not in `block-manifest.json`
+or `pinned-inputs.json`. The 45-point PVT grid (5 MOS corners x -40/27/125 C x
+1.08/1.20/1.32 V, CL = 2 pF) was expressed as `klt sim` AC + OP requests that
+declare `backend: "batch"`. No local ngspice loop was run. The report itself
+does not record where the simulations ran: there is no `environment.remote` and
+no batch job id in `pex_report.json`, and the per-corner `klt sim` envelopes
+were written to a scratch directory that was not kept. So the only evidence
+for the batch fleet is the request declaration. The report has 180 `delta[]`
+rows (45 corners x 4 rows), `status: "pass"` on every row, `corner_count: 45`
+and `errored: 0`.
+
+*Why the passes are not cited.* The four AC/OP rows pass the ratified bounds
+on the extracted leg
+(`python3 sim/post-layout/check_bounds.py layout/opamp_core/pex_report.json`,
+exit 0). The worst extracted values are gain 42.19 dB (bound 37.8), GBW
+5.956 MHz (bound 4.74), PM 75.19 deg (bound 60) and Iq 84.84 uA (bound 119.7).
+The deltas against the schematic leg are large and favourable: `delta_pct`
+spans -3.6..+18.7 % (gain), +8.6..+27.8 % (GBW), -1.9..-0.8 % (PM) and
+-31.7..-19.8 % (Iq). The two legs differ in how the devices are represented,
+so these deltas cannot be attributed to parasitics:
+
+- **The active device widths match the schematic exactly.** The extracted
+  netlist has 19 NMOS / 18 PMOS against the schematic's 5 / 3
+  (`model_mismatch.counts`). This is the intended drawn layout: each matched
+  pair is an interdigitated array of half-width units plus two dummy columns,
+  and each wide device is folded (`generate.PAIRS` / `generate.FOLDED`). LVS
+  matches 38/38 against the per-finger reference that `lvs_reference.py`
+  derives. Summing every extracted W gives an apparent 1.5x input pair, a 1.5x
+  mirror load and an extra 2.2 um NMOS. All of that excess is **dummy**
+  devices (gate, drain, source and body tied to the same rail), which carry no
+  current. Per active device: M1/M2 = 2 x 1.6 um (schematic 3.2 um), M3/M4 =
+  2 x 0.52 um (1.04 um), M5/Mbias = 2 x 1.1 um (2.2 um), M7 = 7 x 1.7 um
+  (11.9 um), M6 = 12 x 2.75 um (33 um).
+- **The per-device geometry does not match.** The schematic leg simulates one
+  lumped `ng=1` device of full width per transistor (e.g. a single 11.9 um M7).
+  The extracted leg simulates the drawn narrow instances, each with its own
+  AS/AD/PS/PD. In the PSP model these are different devices: narrow-width
+  effects and diffusion geometry differ, and the bias-mirror ratios are now set
+  by fingers of *different* unit widths (Mbias 2 x 1.1 um vs M7 7 x 1.7 um).
+  This is the leading explanation for the DC deltas (Iq, and with it gain and
+  GBW). It has **not been quantified**: this host cannot load the OSDI models
+  for a local probe, and a multi-corner probe belongs on the batch fleet.
+  [#237](https://github.com/2AMLogic/sg13g2-opamp/issues/237) records the probe
+  and the two reconciliation routes: put the drawn fingering into the
+  schematic via a decision record, or give pex a finger-expanded reference leg.
+
+So the absolute pass describes a circuit whose devices are represented
+differently from the circuit sized and characterized pre-layout (items 5 and
+8). Its margin cannot be read as parasitic robustness, and part of it may be
+the representation change. For the same reason, the schematic leg's worst
+corner (37.78 dB, 0.02 dB under the gain bound) and the extracted leg clearing
+the bound are not a before/after comparison. Item 7 stays `unmet /
+no_evidence` until #237 makes the legs comparable and the run is repeated.
+
+*Report fields, stated as the envelope carries them (informational; uncited).*
+`body_bias.status: "biased"` (0 unbiased devices, no unbiased nets, no unbiased
+PMOS bodies). `extraction.model` is a **quasi-static lumped RC** model: one
+frequency-independent R and C per net, resistance a single lumped series
+resistance per net distributed as a star across the net's device terminals
+(not a per-segment RC ladder; `--distributed-rc` / `--critical-net` were not
+used), capacitance net-to-ground from each net's own area/perimeter plus
+net-to-net for vertical-overlap (crossover) coupling. Lateral same-layer
+coupling is modelled only for declared `--critical-net` nets, and none were
+declared, so **no lateral coupling is in this result**; fringe shielding,
+skin effect and distributed transmission-line behaviour are not modelled.
+The extraction deck is `sg13g2` with `deck.released: false` (the curated
+starter deck, not the foundry deck). The source/drain implant layers are not
+drawn by `klt gen mos_array` (klayout-tools#2580, see `layout/README.md`);
+whether that changes the extracted device list or junction capacitance was
+not investigated here (LVS matches 38 of 38 devices). Neither the starter-deck
+nor the implant caveat has been quantified.
+
+*Rows covered vs not covered post-layout.* Measured by the uncited run: DC gain, GBW, phase margin
+and quiescent current (the four AC/OP rows above) at the 45-point grid. **Not
+covered post-layout:** slew rate, input-referred noise, offset (including its
+statistical basis), CMRR, PSRR and output swing. A future item 7 `met` says nothing
+about those rows either. Tracker:
+[#3](https://github.com/2AMLogic/sg13g2-opamp/issues/3).
 
 **Item 11 is the one compound citation, and what it does and does not
 prove.** T1 item 11 (power delivery, structural — klayout-tools#2025) is the

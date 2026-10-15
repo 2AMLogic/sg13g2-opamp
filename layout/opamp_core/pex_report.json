@@ -1,0 +1,2215 @@
+{
+  "schema_version": 2,
+  "status": "pass",
+  "layout": {
+    "path": "layout/opamp_core/opamp_core.gds",
+    "scope": "repo"
+  },
+  "netlist": {
+    "path": "layout/opamp_core/opamp_core_pex.spice",
+    "scope": "repo"
+  },
+  "reference_netlist": {
+    "path": "design/netlist/opamp_core.spice",
+    "scope": "repo"
+  },
+  "reference_netlist_sha256": "sha256:4cddebec6a043f682bb74a463ac3e72112f33ad341d19575a0606f276e18db37",
+  "extraction": {
+    "deck": "sg13g2",
+    "device_count": 38,
+    "net_count": 9,
+    "netlist_sha256": "03db91a88151fadba6109cc93a950d6c22b11356bbd74c8b74142699975329f2",
+    "model": {
+      "capacitance": "net-to-ground for every net's own (non-coupled) area/perimeter, plus net-to-net for the vertical-overlap coupling `coupling` describes below -- a coupled net pair gets a direct capacitor between their two hub nodes, not just capacitors to the deck's ground/substrate net",
+      "coupling": "vertical overlap (crossover) unconditionally -- where one net's conductor on an adjacent metal level sits directly over another *distinct* net's conductor, that overlap area is charged between the two nets instead of to ground (issue #760) -- plus lateral (same-layer, sidewall) coupling, but only for a net pair naming one of the caller's declared `--critical-net` nets (issue #976): facing-edge length within that layer's own minimum-spacing lookback is charged between the two nets, *additively* (not deducted from either net's substrate fringe term, unlike the vertical case -- a known simplification). Any same-layer pair with neither side named `--critical-net`, and fringe shielding in general, are still not modelled",
+      "resistance": "single lumped series resistance per net, distributed as a star across that net's device terminals (issue #592) -- not a per-segment, distributed RC ladder, *unless* `--distributed-rc` names this net via `--critical-net` (issue #977, Epic #709 Phase 2b): then the net's terminals are ordered along their approximate physical spread and its total R/C is broken into a chain of per-segment resistors (segment length proportional to inter-terminal distance) with a ground capacitor at each terminal node (proportional to its adjacent segment length/2), instead of one star hub -- still an approximation (terminal position is a device-placement proxy, not true per-segment routing geometry), but a strictly finer-grained one than the single-hub star",
+      "frequency": "quasi-static -- one frequency-independent R and C per net; no skin effect, no distributed transmission-line behavior"
+    },
+    "critical_nets": [],
+    "distributed_rc": false,
+    "mom_rlc_override": null,
+    "label_layers": null,
+    "rename_declared_pins": false,
+    "parasitic_integrity": {
+      "short_threshold_ohm": 1.0,
+      "cap_tolerance": {
+        "absolute_ff": 1e-06,
+        "relative": 1e-09
+      },
+      "max_detail_items": 20,
+      "nets_checked": 9,
+      "nets_with_findings": 0,
+      "open_nets": 0,
+      "island_components": 0,
+      "orphan_nodes": 0,
+      "suspicious_resistors": 0,
+      "short_candidates": 0,
+      "capacitance_mismatches": 0,
+      "nets": [
+        {
+          "net": "\\$3",
+          "net_id": 3,
+          "rc_model": "lumped",
+          "integrity": {
+            "open": {
+              "status": "not_applicable",
+              "reason": "lumped model: terminal legs attach to the hub by construction; no distributed segments to check connectivity over",
+              "disconnected_count": 0,
+              "disconnected_terminals": [],
+              "details_truncated": false
+            },
+            "islands": {
+              "count": 0,
+              "details": [],
+              "details_truncated": false,
+              "reason": null
+            },
+            "orphan_nodes": {
+              "count": 0,
+              "details": [],
+              "details_truncated": false,
+              "reason": null
+            },
+            "suspicious_resistors": {
+              "count": 0,
+              "details": [],
+              "details_truncated": false,
+              "reason": null
+            },
+            "short_candidates": {
+              "count": 0,
+              "details": [],
+              "details_truncated": false,
+              "reason": null
+            },
+            "capacitance": {
+              "status": "pass",
+              "declared_ff": 5.059199,
+              "computed_ff": 5.059199,
+              "delta_ff": 0.0,
+              "reason": null,
+              "tolerance": {
+                "absolute_ff": 1e-06,
+                "relative": 1e-09
+              }
+            }
+          }
+        },
+        {
+          "net": "\\$5",
+          "net_id": 5,
+          "rc_model": "lumped",
+          "integrity": {
+            "open": {
+              "status": "not_applicable",
+              "reason": "lumped model: terminal legs attach to the hub by construction; no distributed segments to check connectivity over",
+              "disconnected_count": 0,
+              "disconnected_terminals": [],
+              "details_truncated": false
+            },
+            "islands": {
+              "count": 0,
+              "details": [],
+              "details_truncated": false,
+              "reason": null
+            },
+            "orphan_nodes": {
+              "count": 0,
+              "details": [],
+              "details_truncated": false,
+              "reason": null
+            },
+            "suspicious_resistors": {
+              "count": 0,
+              "details": [],
+              "details_truncated": false,
+              "reason": null
+            },
+            "short_candidates": {
+              "count": 0,
+              "details": [],
+              "details_truncated": false,
+              "reason": null
+            },
+            "capacitance": {
+              "status": "pass",
+              "declared_ff": 7.017582,
+              "computed_ff": 7.017582,
+              "delta_ff": 0.0,
+              "reason": null,
+              "tolerance": {
+                "absolute_ff": 1e-06,
+                "relative": 1e-09
+              }
+            }
+          }
+        },
+        {
+          "net": "\\$6",
+          "net_id": 6,
+          "rc_model": "lumped",
+          "integrity": {
+            "open": {
+              "status": "not_applicable",
+              "reason": "lumped model: terminal legs attach to the hub by construction; no distributed segments to check connectivity over",
+              "disconnected_count": 0,
+              "disconnected_terminals": [],
+              "details_truncated": false
+            },
+            "islands": {
+              "count": 0,
+              "details": [],
+              "details_truncated": false,
+              "reason": null
+            },
+            "orphan_nodes": {
+              "count": 0,
+              "details": [],
+              "details_truncated": false,
+              "reason": null
+            },
+            "suspicious_resistors": {
+              "count": 0,
+              "details": [],
+              "details_truncated": false,
+              "reason": null
+            },
+            "short_candidates": {
+              "count": 0,
+              "details": [],
+              "details_truncated": false,
+              "reason": null
+            },
+            "capacitance": {
+              "status": "pass",
+              "declared_ff": 10.08496,
+              "computed_ff": 10.08496,
+              "delta_ff": 0.0,
+              "reason": null,
+              "tolerance": {
+                "absolute_ff": 1e-06,
+                "relative": 1e-09
+              }
+            }
+          }
+        },
+        {
+          "net": "ibias",
+          "net_id": 2,
+          "rc_model": "lumped",
+          "integrity": {
+            "open": {
+              "status": "not_applicable",
+              "reason": "lumped model: terminal legs attach to the hub by construction; no distributed segments to check connectivity over",
+              "disconnected_count": 0,
+              "disconnected_terminals": [],
+              "details_truncated": false
+            },
+            "islands": {
+              "count": 0,
+              "details": [],
+              "details_truncated": false,
+              "reason": null
+            },
+            "orphan_nodes": {
+              "count": 0,
+              "details": [],
+              "details_truncated": false,
+              "reason": null
+            },
+            "suspicious_resistors": {
+              "count": 0,
+              "details": [],
+              "details_truncated": false,
+              "reason": null
+            },
+            "short_candidates": {
+              "count": 0,
+              "details": [],
+              "details_truncated": false,
+              "reason": null
+            },
+            "capacitance": {
+              "status": "pass",
+              "declared_ff": 5.960358,
+              "computed_ff": 5.960358,
+              "delta_ff": 0.0,
+              "reason": null,
+              "tolerance": {
+                "absolute_ff": 1e-06,
+                "relative": 1e-09
+              }
+            }
+          }
+        },
+        {
+          "net": "inn",
+          "net_id": 7,
+          "rc_model": "lumped",
+          "integrity": {
+            "open": {
+              "status": "not_applicable",
+              "reason": "lumped model: terminal legs attach to the hub by construction; no distributed segments to check connectivity over",
+              "disconnected_count": 0,
+              "disconnected_terminals": [],
+              "details_truncated": false
+            },
+            "islands": {
+              "count": 0,
+              "details": [],
+              "details_truncated": false,
+              "reason": null
+            },
+            "orphan_nodes": {
+              "count": 0,
+              "details": [],
+              "details_truncated": false,
+              "reason": null
+            },
+            "suspicious_resistors": {
+              "count": 0,
+              "details": [],
+              "details_truncated": false,
+              "reason": null
+            },
+            "short_candidates": {
+              "count": 0,
+              "details": [],
+              "details_truncated": false,
+              "reason": null
+            },
+            "capacitance": {
+              "status": "pass",
+              "declared_ff": 1.635448,
+              "computed_ff": 1.635448,
+              "delta_ff": 0.0,
+              "reason": null,
+              "tolerance": {
+                "absolute_ff": 1e-06,
+                "relative": 1e-09
+              }
+            }
+          }
+        },
+        {
+          "net": "inp",
+          "net_id": 8,
+          "rc_model": "lumped",
+          "integrity": {
+            "open": {
+              "status": "not_applicable",
+              "reason": "lumped model: terminal legs attach to the hub by construction; no distributed segments to check connectivity over",
+              "disconnected_count": 0,
+              "disconnected_terminals": [],
+              "details_truncated": false
+            },
+            "islands": {
+              "count": 0,
+              "details": [],
+              "details_truncated": false,
+              "reason": null
+            },
+            "orphan_nodes": {
+              "count": 0,
+              "details": [],
+              "details_truncated": false,
+              "reason": null
+            },
+            "suspicious_resistors": {
+              "count": 0,
+              "details": [],
+              "details_truncated": false,
+              "reason": null
+            },
+            "short_candidates": {
+              "count": 0,
+              "details": [],
+              "details_truncated": false,
+              "reason": null
+            },
+            "capacitance": {
+              "status": "pass",
+              "declared_ff": 1.89146,
+              "computed_ff": 1.89146,
+              "delta_ff": 0.0,
+              "reason": null,
+              "tolerance": {
+                "absolute_ff": 1e-06,
+                "relative": 1e-09
+              }
+            }
+          }
+        },
+        {
+          "net": "out",
+          "net_id": 4,
+          "rc_model": "lumped",
+          "integrity": {
+            "open": {
+              "status": "not_applicable",
+              "reason": "lumped model: terminal legs attach to the hub by construction; no distributed segments to check connectivity over",
+              "disconnected_count": 0,
+              "disconnected_terminals": [],
+              "details_truncated": false
+            },
+            "islands": {
+              "count": 0,
+              "details": [],
+              "details_truncated": false,
+              "reason": null
+            },
+            "orphan_nodes": {
+              "count": 0,
+              "details": [],
+              "details_truncated": false,
+              "reason": null
+            },
+            "suspicious_resistors": {
+              "count": 0,
+              "details": [],
+              "details_truncated": false,
+              "reason": null
+            },
+            "short_candidates": {
+              "count": 0,
+              "details": [],
+              "details_truncated": false,
+              "reason": null
+            },
+            "capacitance": {
+              "status": "pass",
+              "declared_ff": 16.414749,
+              "computed_ff": 16.414749,
+              "delta_ff": 0.0,
+              "reason": null,
+              "tolerance": {
+                "absolute_ff": 1e-06,
+                "relative": 1e-09
+              }
+            }
+          }
+        },
+        {
+          "net": "vdd",
+          "net_id": 9,
+          "rc_model": "lumped",
+          "integrity": {
+            "open": {
+              "status": "not_applicable",
+              "reason": "lumped model: terminal legs attach to the hub by construction; no distributed segments to check connectivity over",
+              "disconnected_count": 0,
+              "disconnected_terminals": [],
+              "details_truncated": false
+            },
+            "islands": {
+              "count": 0,
+              "details": [],
+              "details_truncated": false,
+              "reason": null
+            },
+            "orphan_nodes": {
+              "count": 0,
+              "details": [],
+              "details_truncated": false,
+              "reason": null
+            },
+            "suspicious_resistors": {
+              "count": 0,
+              "details": [],
+              "details_truncated": false,
+              "reason": null
+            },
+            "short_candidates": {
+              "count": 0,
+              "details": [],
+              "details_truncated": false,
+              "reason": null
+            },
+            "capacitance": {
+              "status": "pass",
+              "declared_ff": 20.240201,
+              "computed_ff": 20.240201,
+              "delta_ff": 0.0,
+              "reason": null,
+              "tolerance": {
+                "absolute_ff": 1e-06,
+                "relative": 1e-09
+              }
+            }
+          }
+        },
+        {
+          "net": "vss",
+          "net_id": 10,
+          "rc_model": "lumped",
+          "integrity": {
+            "open": {
+              "status": "not_applicable",
+              "reason": "lumped model: terminal legs attach to the hub by construction; no distributed segments to check connectivity over",
+              "disconnected_count": 0,
+              "disconnected_terminals": [],
+              "details_truncated": false
+            },
+            "islands": {
+              "count": 0,
+              "details": [],
+              "details_truncated": false,
+              "reason": null
+            },
+            "orphan_nodes": {
+              "count": 0,
+              "details": [],
+              "details_truncated": false,
+              "reason": null
+            },
+            "suspicious_resistors": {
+              "count": 0,
+              "details": [],
+              "details_truncated": false,
+              "reason": null
+            },
+            "short_candidates": {
+              "count": 0,
+              "details": [],
+              "details_truncated": false,
+              "reason": null
+            },
+            "capacitance": {
+              "status": "pass",
+              "declared_ff": 23.53043,
+              "computed_ff": 23.53043,
+              "delta_ff": 0.0,
+              "reason": null,
+              "tolerance": {
+                "absolute_ff": 1e-06,
+                "relative": 1e-09
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  "body_bias": {
+    "status": "biased",
+    "unbiased_device_count": 0,
+    "unbiased_nets": [],
+    "unbiased_pmos_body_nets": []
+  },
+  "measurement": {
+    "mode": "command",
+    "command": [
+      "bash",
+      "sim/post-layout/measure_openloop_ac.sh"
+    ],
+    "timeout_s": 7200.0,
+    "sides": {
+      "schematic": {
+        "netlist": {
+          "path": "design/netlist/opamp_core.spice",
+          "scope": "repo"
+        },
+        "exit_status": 0,
+        "corner_count": 45,
+        "measurement_names": [
+          "av0_db",
+          "gbw_hz",
+          "pm_deg",
+          "iq_a"
+        ]
+      },
+      "extracted": {
+        "netlist": {
+          "path": "layout/opamp_core/opamp_core_pex.spice",
+          "scope": "repo"
+        },
+        "exit_status": 0,
+        "corner_count": 45,
+        "measurement_names": [
+          "av0_db",
+          "gbw_hz",
+          "pm_deg",
+          "iq_a"
+        ]
+      }
+    }
+  },
+  "testbenches": [],
+  "corner_count": 45,
+  "delta": [
+    {
+      "spec_row": "av0_db",
+      "corner_id": "mos_ff/1.08V/-40C",
+      "schematic_value": 42.2865530594,
+      "extracted_value": 47.54167701446,
+      "delta_pct": 12.427,
+      "status": "pass"
+    },
+    {
+      "spec_row": "gbw_hz",
+      "corner_id": "mos_ff/1.08V/-40C",
+      "schematic_value": 6110652.735486,
+      "extracted_value": 7540769.79173,
+      "delta_pct": 23.404,
+      "status": "pass"
+    },
+    {
+      "spec_row": "pm_deg",
+      "corner_id": "mos_ff/1.08V/-40C",
+      "schematic_value": 78.0549264849094,
+      "extracted_value": 76.93953527739052,
+      "delta_pct": -1.429,
+      "status": "pass"
+    },
+    {
+      "spec_row": "iq_a",
+      "corner_id": "mos_ff/1.08V/-40C",
+      "schematic_value": 0.0001118058572027,
+      "extracted_value": 7.937959464788e-05,
+      "delta_pct": -29.002,
+      "status": "pass"
+    },
+    {
+      "spec_row": "av0_db",
+      "corner_id": "mos_ff/1.08V/27C",
+      "schematic_value": 40.92273607872,
+      "extracted_value": 45.62538503247,
+      "delta_pct": 11.492,
+      "status": "pass"
+    },
+    {
+      "spec_row": "gbw_hz",
+      "corner_id": "mos_ff/1.08V/27C",
+      "schematic_value": 5555733.803357,
+      "extracted_value": 6931280.227311,
+      "delta_pct": 24.759,
+      "status": "pass"
+    },
+    {
+      "spec_row": "pm_deg",
+      "corner_id": "mos_ff/1.08V/27C",
+      "schematic_value": 77.54389484644872,
+      "extracted_value": 76.40985355742642,
+      "delta_pct": -1.462,
+      "status": "pass"
+    },
+    {
+      "spec_row": "iq_a",
+      "corner_id": "mos_ff/1.08V/27C",
+      "schematic_value": 0.0001066368015688,
+      "extracted_value": 7.998106804297e-05,
+      "delta_pct": -24.997,
+      "status": "pass"
+    },
+    {
+      "spec_row": "av0_db",
+      "corner_id": "mos_ff/1.08V/125C",
+      "schematic_value": 39.07913681724,
+      "extracted_value": 43.10575765498,
+      "delta_pct": 10.304,
+      "status": "pass"
+    },
+    {
+      "spec_row": "gbw_hz",
+      "corner_id": "mos_ff/1.08V/125C",
+      "schematic_value": 4879698.728091,
+      "extracted_value": 6136294.179132,
+      "delta_pct": 25.751,
+      "status": "pass"
+    },
+    {
+      "spec_row": "pm_deg",
+      "corner_id": "mos_ff/1.08V/125C",
+      "schematic_value": 77.0531700594658,
+      "extracted_value": 75.99298700713591,
+      "delta_pct": -1.376,
+      "status": "pass"
+    },
+    {
+      "spec_row": "iq_a",
+      "corner_id": "mos_ff/1.08V/125C",
+      "schematic_value": 0.0001012926684627,
+      "extracted_value": 8.103096696632e-05,
+      "delta_pct": -20.003,
+      "status": "pass"
+    },
+    {
+      "spec_row": "av0_db",
+      "corner_id": "mos_ff/1.20V/-40C",
+      "schematic_value": 43.08932966989,
+      "extracted_value": 48.59428118516,
+      "delta_pct": 12.776,
+      "status": "pass"
+    },
+    {
+      "spec_row": "gbw_hz",
+      "corner_id": "mos_ff/1.20V/-40C",
+      "schematic_value": 6113425.320368,
+      "extracted_value": 7729652.265745,
+      "delta_pct": 26.437,
+      "status": "pass"
+    },
+    {
+      "spec_row": "pm_deg",
+      "corner_id": "mos_ff/1.20V/-40C",
+      "schematic_value": 78.13242029591696,
+      "extracted_value": 76.91678821218511,
+      "delta_pct": -1.556,
+      "status": "pass"
+    },
+    {
+      "spec_row": "iq_a",
+      "corner_id": "mos_ff/1.20V/-40C",
+      "schematic_value": 0.0001150322080817,
+      "extracted_value": 8.185520494086e-05,
+      "delta_pct": -28.841,
+      "status": "pass"
+    },
+    {
+      "spec_row": "av0_db",
+      "corner_id": "mos_ff/1.20V/27C",
+      "schematic_value": 41.99811567992,
+      "extracted_value": 46.70916285273,
+      "delta_pct": 11.217,
+      "status": "pass"
+    },
+    {
+      "spec_row": "gbw_hz",
+      "corner_id": "mos_ff/1.20V/27C",
+      "schematic_value": 5640896.471214,
+      "extracted_value": 7157574.64421,
+      "delta_pct": 26.887,
+      "status": "pass"
+    },
+    {
+      "spec_row": "pm_deg",
+      "corner_id": "mos_ff/1.20V/27C",
+      "schematic_value": 77.41793140267514,
+      "extracted_value": 76.16442522881133,
+      "delta_pct": -1.619,
+      "status": "pass"
+    },
+    {
+      "spec_row": "iq_a",
+      "corner_id": "mos_ff/1.20V/27C",
+      "schematic_value": 0.0001094557420857,
+      "extracted_value": 8.223713453615e-05,
+      "delta_pct": -24.867,
+      "status": "pass"
+    },
+    {
+      "spec_row": "av0_db",
+      "corner_id": "mos_ff/1.20V/125C",
+      "schematic_value": 40.45971220051,
+      "extracted_value": 44.2250621391,
+      "delta_pct": 9.306,
+      "status": "pass"
+    },
+    {
+      "spec_row": "gbw_hz",
+      "corner_id": "mos_ff/1.20V/125C",
+      "schematic_value": 4997510.690576,
+      "extracted_value": 6342619.221226,
+      "delta_pct": 26.916,
+      "status": "pass"
+    },
+    {
+      "spec_row": "pm_deg",
+      "corner_id": "mos_ff/1.20V/125C",
+      "schematic_value": 76.75326404568537,
+      "extracted_value": 75.63952606078719,
+      "delta_pct": -1.451,
+      "status": "pass"
+    },
+    {
+      "spec_row": "iq_a",
+      "corner_id": "mos_ff/1.20V/125C",
+      "schematic_value": 0.0001036395218301,
+      "extracted_value": 8.299848674564e-05,
+      "delta_pct": -19.916,
+      "status": "pass"
+    },
+    {
+      "spec_row": "av0_db",
+      "corner_id": "mos_ff/1.32V/-40C",
+      "schematic_value": 44.1351073894,
+      "extracted_value": 49.64450544249,
+      "delta_pct": 12.483,
+      "status": "pass"
+    },
+    {
+      "spec_row": "gbw_hz",
+      "corner_id": "mos_ff/1.32V/-40C",
+      "schematic_value": 6321416.848035,
+      "extracted_value": 8041889.819812,
+      "delta_pct": 27.217,
+      "status": "pass"
+    },
+    {
+      "spec_row": "pm_deg",
+      "corner_id": "mos_ff/1.32V/-40C",
+      "schematic_value": 77.81005116776701,
+      "extracted_value": 76.50074991444257,
+      "delta_pct": -1.683,
+      "status": "pass"
+    },
+    {
+      "spec_row": "iq_a",
+      "corner_id": "mos_ff/1.32V/-40C",
+      "schematic_value": 0.0001180118244577,
+      "extracted_value": 8.413442566813e-05,
+      "delta_pct": -28.707,
+      "status": "pass"
+    },
+    {
+      "spec_row": "av0_db",
+      "corner_id": "mos_ff/1.32V/27C",
+      "schematic_value": 43.13733615111,
+      "extracted_value": 47.74491776742,
+      "delta_pct": 10.681,
+      "status": "pass"
+    },
+    {
+      "spec_row": "gbw_hz",
+      "corner_id": "mos_ff/1.32V/27C",
+      "schematic_value": 5838161.290296,
+      "extracted_value": 7447639.570731,
+      "delta_pct": 27.568,
+      "status": "pass"
+    },
+    {
+      "spec_row": "pm_deg",
+      "corner_id": "mos_ff/1.32V/27C",
+      "schematic_value": 77.04751222390914,
+      "extracted_value": 75.70922893613923,
+      "delta_pct": -1.737,
+      "status": "pass"
+    },
+    {
+      "spec_row": "iq_a",
+      "corner_id": "mos_ff/1.32V/27C",
+      "schematic_value": 0.0001120787493711,
+      "extracted_value": 8.434203003094e-05,
+      "delta_pct": -24.748,
+      "status": "pass"
+    },
+    {
+      "spec_row": "av0_db",
+      "corner_id": "mos_ff/1.32V/125C",
+      "schematic_value": 41.69229306341,
+      "extracted_value": 45.29576232279,
+      "delta_pct": 8.643,
+      "status": "pass"
+    },
+    {
+      "spec_row": "gbw_hz",
+      "corner_id": "mos_ff/1.32V/125C",
+      "schematic_value": 5158280.120954,
+      "extracted_value": 6578854.978343,
+      "delta_pct": 27.54,
+      "status": "pass"
+    },
+    {
+      "spec_row": "pm_deg",
+      "corner_id": "mos_ff/1.32V/125C",
+      "schematic_value": 76.36428359089481,
+      "extracted_value": 75.1865456398743,
+      "delta_pct": -1.542,
+      "status": "pass"
+    },
+    {
+      "spec_row": "iq_a",
+      "corner_id": "mos_ff/1.32V/125C",
+      "schematic_value": 0.0001058237535563,
+      "extracted_value": 8.484387725294e-05,
+      "delta_pct": -19.825,
+      "status": "pass"
+    },
+    {
+      "spec_row": "av0_db",
+      "corner_id": "mos_fs/1.08V/-40C",
+      "schematic_value": 42.3964231074,
+      "extracted_value": 48.11167380151,
+      "delta_pct": 13.481,
+      "status": "pass"
+    },
+    {
+      "spec_row": "gbw_hz",
+      "corner_id": "mos_fs/1.08V/-40C",
+      "schematic_value": 6329537.78907,
+      "extracted_value": 7528292.534319,
+      "delta_pct": 18.939,
+      "status": "pass"
+    },
+    {
+      "spec_row": "pm_deg",
+      "corner_id": "mos_fs/1.08V/-40C",
+      "schematic_value": 77.84596402726237,
+      "extracted_value": 76.70071032603894,
+      "delta_pct": -1.471,
+      "status": "pass"
+    },
+    {
+      "spec_row": "iq_a",
+      "corner_id": "mos_fs/1.08V/-40C",
+      "schematic_value": 0.0001118040426723,
+      "extracted_value": 7.881765193485e-05,
+      "delta_pct": -29.504,
+      "status": "pass"
+    },
+    {
+      "spec_row": "av0_db",
+      "corner_id": "mos_fs/1.08V/27C",
+      "schematic_value": 40.52025060452,
+      "extracted_value": 46.01277363095,
+      "delta_pct": 13.555,
+      "status": "pass"
+    },
+    {
+      "spec_row": "gbw_hz",
+      "corner_id": "mos_fs/1.08V/27C",
+      "schematic_value": 5579096.014489,
+      "extracted_value": 6806226.88454,
+      "delta_pct": 21.995,
+      "status": "pass"
+    },
+    {
+      "spec_row": "pm_deg",
+      "corner_id": "mos_fs/1.08V/27C",
+      "schematic_value": 77.61465955892855,
+      "extracted_value": 76.45372499733526,
+      "delta_pct": -1.496,
+      "status": "pass"
+    },
+    {
+      "spec_row": "iq_a",
+      "corner_id": "mos_fs/1.08V/27C",
+      "schematic_value": 0.0001065121625407,
+      "extracted_value": 7.945453733371e-05,
+      "delta_pct": -25.403,
+      "status": "pass"
+    },
+    {
+      "spec_row": "av0_db",
+      "corner_id": "mos_fs/1.08V/125C",
+      "schematic_value": 37.78119430924,
+      "extracted_value": 43.21595441232,
+      "delta_pct": 14.385,
+      "status": "pass"
+    },
+    {
+      "spec_row": "gbw_hz",
+      "corner_id": "mos_fs/1.08V/125C",
+      "schematic_value": 4749990.509949,
+      "extracted_value": 5955856.119007,
+      "delta_pct": 25.387,
+      "status": "pass"
+    },
+    {
+      "spec_row": "pm_deg",
+      "corner_id": "mos_fs/1.08V/125C",
+      "schematic_value": 77.47235584224232,
+      "extracted_value": 76.19235618186462,
+      "delta_pct": -1.652,
+      "status": "pass"
+    },
+    {
+      "spec_row": "iq_a",
+      "corner_id": "mos_fs/1.08V/125C",
+      "schematic_value": 0.0001009483690986,
+      "extracted_value": 8.045640642185e-05,
+      "delta_pct": -20.299,
+      "status": "pass"
+    },
+    {
+      "spec_row": "av0_db",
+      "corner_id": "mos_fs/1.20V/-40C",
+      "schematic_value": 42.84898744191,
+      "extracted_value": 49.7066355168,
+      "delta_pct": 16.004,
+      "status": "pass"
+    },
+    {
+      "spec_row": "gbw_hz",
+      "corner_id": "mos_fs/1.20V/-40C",
+      "schematic_value": 5985415.126198,
+      "extracted_value": 7516415.545082,
+      "delta_pct": 25.579,
+      "status": "pass"
+    },
+    {
+      "spec_row": "pm_deg",
+      "corner_id": "mos_fs/1.20V/-40C",
+      "schematic_value": 78.59867770916442,
+      "extracted_value": 77.34296846530931,
+      "delta_pct": -1.598,
+      "status": "pass"
+    },
+    {
+      "spec_row": "iq_a",
+      "corner_id": "mos_fs/1.20V/-40C",
+      "schematic_value": 0.0001153375769067,
+      "extracted_value": 8.155739326532e-05,
+      "delta_pct": -29.288,
+      "status": "pass"
+    },
+    {
+      "spec_row": "av0_db",
+      "corner_id": "mos_fs/1.20V/27C",
+      "schematic_value": 41.45366587004,
+      "extracted_value": 47.62039621458,
+      "delta_pct": 14.876,
+      "status": "pass"
+    },
+    {
+      "spec_row": "gbw_hz",
+      "corner_id": "mos_fs/1.20V/27C",
+      "schematic_value": 5492394.65498,
+      "extracted_value": 6931747.043944,
+      "delta_pct": 26.206,
+      "status": "pass"
+    },
+    {
+      "spec_row": "pm_deg",
+      "corner_id": "mos_fs/1.20V/27C",
+      "schematic_value": 77.86819523536002,
+      "extracted_value": 76.56616248297055,
+      "delta_pct": -1.672,
+      "status": "pass"
+    },
+    {
+      "spec_row": "iq_a",
+      "corner_id": "mos_fs/1.20V/27C",
+      "schematic_value": 0.0001095120019047,
+      "extracted_value": 8.185020670171e-05,
+      "delta_pct": -25.259,
+      "status": "pass"
+    },
+    {
+      "spec_row": "av0_db",
+      "corner_id": "mos_fs/1.20V/125C",
+      "schematic_value": 39.56838001663,
+      "extracted_value": 44.58756026868,
+      "delta_pct": 12.685,
+      "status": "pass"
+    },
+    {
+      "spec_row": "gbw_hz",
+      "corner_id": "mos_fs/1.20V/125C",
+      "schematic_value": 4833306.739027,
+      "extracted_value": 6130174.078689,
+      "delta_pct": 26.832,
+      "status": "pass"
+    },
+    {
+      "spec_row": "pm_deg",
+      "corner_id": "mos_fs/1.20V/125C",
+      "schematic_value": 77.2013316552819,
+      "extracted_value": 75.96684601949826,
+      "delta_pct": -1.599,
+      "status": "pass"
+    },
+    {
+      "spec_row": "iq_a",
+      "corner_id": "mos_fs/1.20V/125C",
+      "schematic_value": 0.0001034122697775,
+      "extracted_value": 8.249716834663e-05,
+      "delta_pct": -20.225,
+      "status": "pass"
+    },
+    {
+      "spec_row": "av0_db",
+      "corner_id": "mos_fs/1.32V/-40C",
+      "schematic_value": 43.73584378764,
+      "extracted_value": 50.96229499099,
+      "delta_pct": 16.523,
+      "status": "pass"
+    },
+    {
+      "spec_row": "gbw_hz",
+      "corner_id": "mos_fs/1.32V/-40C",
+      "schematic_value": 6147989.417,
+      "extracted_value": 7796790.665308,
+      "delta_pct": 26.819,
+      "status": "pass"
+    },
+    {
+      "spec_row": "pm_deg",
+      "corner_id": "mos_fs/1.32V/-40C",
+      "schematic_value": 78.3667577379398,
+      "extracted_value": 77.01341796362443,
+      "delta_pct": -1.727,
+      "status": "pass"
+    },
+    {
+      "spec_row": "iq_a",
+      "corner_id": "mos_fs/1.32V/-40C",
+      "schematic_value": 0.0001183596698485,
+      "extracted_value": 8.386671553806e-05,
+      "delta_pct": -29.142,
+      "status": "pass"
+    },
+    {
+      "spec_row": "av0_db",
+      "corner_id": "mos_fs/1.32V/27C",
+      "schematic_value": 42.50671037103,
+      "extracted_value": 48.81278070051,
+      "delta_pct": 14.835,
+      "status": "pass"
+    },
+    {
+      "spec_row": "gbw_hz",
+      "corner_id": "mos_fs/1.32V/27C",
+      "schematic_value": 5646498.377456,
+      "extracted_value": 7196252.618572,
+      "delta_pct": 27.446,
+      "status": "pass"
+    },
+    {
+      "spec_row": "pm_deg",
+      "corner_id": "mos_fs/1.32V/27C",
+      "schematic_value": 77.59055716973641,
+      "extracted_value": 76.16950413629533,
+      "delta_pct": -1.831,
+      "status": "pass"
+    },
+    {
+      "spec_row": "iq_a",
+      "corner_id": "mos_fs/1.32V/27C",
+      "schematic_value": 0.0001121768992565,
+      "extracted_value": 8.398301012358e-05,
+      "delta_pct": -25.133,
+      "status": "pass"
+    },
+    {
+      "spec_row": "av0_db",
+      "corner_id": "mos_fs/1.32V/125C",
+      "schematic_value": 40.86736891012,
+      "extracted_value": 45.64211728874,
+      "delta_pct": 11.684,
+      "status": "pass"
+    },
+    {
+      "spec_row": "gbw_hz",
+      "corner_id": "mos_fs/1.32V/125C",
+      "schematic_value": 4972120.151732,
+      "extracted_value": 6345707.27246,
+      "delta_pct": 27.626,
+      "status": "pass"
+    },
+    {
+      "spec_row": "pm_deg",
+      "corner_id": "mos_fs/1.32V/125C",
+      "schematic_value": 76.85170253733598,
+      "extracted_value": 75.55197166231173,
+      "delta_pct": -1.691,
+      "status": "pass"
+    },
+    {
+      "spec_row": "iq_a",
+      "corner_id": "mos_fs/1.32V/125C",
+      "schematic_value": 0.000105638923714,
+      "extracted_value": 8.436818293145e-05,
+      "delta_pct": -20.135,
+      "status": "pass"
+    },
+    {
+      "spec_row": "av0_db",
+      "corner_id": "mos_sf/1.08V/-40C",
+      "schematic_value": 44.02313199898,
+      "extracted_value": 52.23498827221,
+      "delta_pct": 18.654,
+      "status": "pass"
+    },
+    {
+      "spec_row": "gbw_hz",
+      "corner_id": "mos_sf/1.08V/-40C",
+      "schematic_value": 6634104.448077,
+      "extracted_value": 7470959.956978,
+      "delta_pct": 12.614,
+      "status": "pass"
+    },
+    {
+      "spec_row": "pm_deg",
+      "corner_id": "mos_sf/1.08V/-40C",
+      "schematic_value": 77.13609195121465,
+      "extracted_value": 76.23034906110172,
+      "delta_pct": -1.174,
+      "status": "pass"
+    },
+    {
+      "spec_row": "iq_a",
+      "corner_id": "mos_sf/1.08V/-40C",
+      "schematic_value": 0.0001114940820538,
+      "extracted_value": 7.703117910918e-05,
+      "delta_pct": -30.91,
+      "status": "pass"
+    },
+    {
+      "spec_row": "av0_db",
+      "corner_id": "mos_sf/1.08V/27C",
+      "schematic_value": 42.19686363904,
+      "extracted_value": 49.98137627149,
+      "delta_pct": 18.448,
+      "status": "pass"
+    },
+    {
+      "spec_row": "gbw_hz",
+      "corner_id": "mos_sf/1.08V/27C",
+      "schematic_value": 5969468.461437,
+      "extracted_value": 6978517.721331,
+      "delta_pct": 16.904,
+      "status": "pass"
+    },
+    {
+      "spec_row": "pm_deg",
+      "corner_id": "mos_sf/1.08V/27C",
+      "schematic_value": 76.65316968222908,
+      "extracted_value": 75.63579068031812,
+      "delta_pct": -1.327,
+      "status": "pass"
+    },
+    {
+      "spec_row": "iq_a",
+      "corner_id": "mos_sf/1.08V/27C",
+      "schematic_value": 0.0001062448059134,
+      "extracted_value": 7.802929506151e-05,
+      "delta_pct": -26.557,
+      "status": "pass"
+    },
+    {
+      "spec_row": "av0_db",
+      "corner_id": "mos_sf/1.08V/125C",
+      "schematic_value": 40.10018457345,
+      "extracted_value": 47.4529556643,
+      "delta_pct": 18.336,
+      "status": "pass"
+    },
+    {
+      "spec_row": "gbw_hz",
+      "corner_id": "mos_sf/1.08V/125C",
+      "schematic_value": 5005814.876242,
+      "extracted_value": 6085158.404926,
+      "delta_pct": 21.562,
+      "status": "pass"
+    },
+    {
+      "spec_row": "pm_deg",
+      "corner_id": "mos_sf/1.08V/125C",
+      "schematic_value": 76.64419770380032,
+      "extracted_value": 75.68810021497795,
+      "delta_pct": -1.247,
+      "status": "pass"
+    },
+    {
+      "spec_row": "iq_a",
+      "corner_id": "mos_sf/1.08V/125C",
+      "schematic_value": 0.0001005566997438,
+      "extracted_value": 7.919561942327e-05,
+      "delta_pct": -21.243,
+      "status": "pass"
+    },
+    {
+      "spec_row": "av0_db",
+      "corner_id": "mos_sf/1.20V/-40C",
+      "schematic_value": 44.36231568303,
+      "extracted_value": 50.76285891986,
+      "delta_pct": 14.428,
+      "status": "pass"
+    },
+    {
+      "spec_row": "gbw_hz",
+      "corner_id": "mos_sf/1.20V/-40C",
+      "schematic_value": 6231542.679361,
+      "extracted_value": 7692103.43991,
+      "delta_pct": 23.438,
+      "status": "pass"
+    },
+    {
+      "spec_row": "pm_deg",
+      "corner_id": "mos_sf/1.20V/-40C",
+      "schematic_value": 78.03238866824528,
+      "extracted_value": 76.77146164110394,
+      "delta_pct": -1.616,
+      "status": "pass"
+    },
+    {
+      "spec_row": "iq_a",
+      "corner_id": "mos_sf/1.20V/-40C",
+      "schematic_value": 0.0001160854956002,
+      "extracted_value": 8.085100949518e-05,
+      "delta_pct": -30.352,
+      "status": "pass"
+    },
+    {
+      "spec_row": "av0_db",
+      "corner_id": "mos_sf/1.20V/27C",
+      "schematic_value": 42.90771667018,
+      "extracted_value": 48.84546213323,
+      "delta_pct": 13.838,
+      "status": "pass"
+    },
+    {
+      "spec_row": "gbw_hz",
+      "corner_id": "mos_sf/1.20V/27C",
+      "schematic_value": 5608106.470253,
+      "extracted_value": 7013594.986883,
+      "delta_pct": 25.062,
+      "status": "pass"
+    },
+    {
+      "spec_row": "pm_deg",
+      "corner_id": "mos_sf/1.20V/27C",
+      "schematic_value": 77.54869909039893,
+      "extracted_value": 76.31929287059934,
+      "delta_pct": -1.585,
+      "status": "pass"
+    },
+    {
+      "spec_row": "iq_a",
+      "corner_id": "mos_sf/1.20V/27C",
+      "schematic_value": 0.0001098365174625,
+      "extracted_value": 8.101147174722e-05,
+      "delta_pct": -26.244,
+      "status": "pass"
+    },
+    {
+      "spec_row": "av0_db",
+      "corner_id": "mos_sf/1.20V/125C",
+      "schematic_value": 41.25402760469,
+      "extracted_value": 48.70440233273,
+      "delta_pct": 18.06,
+      "status": "pass"
+    },
+    {
+      "spec_row": "gbw_hz",
+      "corner_id": "mos_sf/1.20V/125C",
+      "schematic_value": 4914321.127259,
+      "extracted_value": 6189734.1637,
+      "delta_pct": 25.953,
+      "status": "pass"
+    },
+    {
+      "spec_row": "pm_deg",
+      "corner_id": "mos_sf/1.20V/125C",
+      "schematic_value": 76.93101020403658,
+      "extracted_value": 75.84259398553264,
+      "delta_pct": -1.415,
+      "status": "pass"
+    },
+    {
+      "spec_row": "iq_a",
+      "corner_id": "mos_sf/1.20V/125C",
+      "schematic_value": 0.0001032551532745,
+      "extracted_value": 8.147736020714e-05,
+      "delta_pct": -21.091,
+      "status": "pass"
+    },
+    {
+      "spec_row": "av0_db",
+      "corner_id": "mos_sf/1.32V/-40C",
+      "schematic_value": 44.88107024583,
+      "extracted_value": 48.46508645803,
+      "delta_pct": 7.986,
+      "status": "pass"
+    },
+    {
+      "spec_row": "gbw_hz",
+      "corner_id": "mos_sf/1.32V/-40C",
+      "schematic_value": 6105177.433596,
+      "extracted_value": 7779200.411657,
+      "delta_pct": 27.42,
+      "status": "pass"
+    },
+    {
+      "spec_row": "pm_deg",
+      "corner_id": "mos_sf/1.32V/-40C",
+      "schematic_value": 78.35809404781789,
+      "extracted_value": 77.08715089862966,
+      "delta_pct": -1.622,
+      "status": "pass"
+    },
+    {
+      "spec_row": "iq_a",
+      "corner_id": "mos_sf/1.32V/-40C",
+      "schematic_value": 0.0001192949840905,
+      "extracted_value": 8.335956497141e-05,
+      "delta_pct": -30.123,
+      "status": "pass"
+    },
+    {
+      "spec_row": "av0_db",
+      "corner_id": "mos_sf/1.32V/27C",
+      "schematic_value": 43.86680432776,
+      "extracted_value": 48.97344778305,
+      "delta_pct": 11.641,
+      "status": "pass"
+    },
+    {
+      "spec_row": "gbw_hz",
+      "corner_id": "mos_sf/1.32V/27C",
+      "schematic_value": 5635353.276226,
+      "extracted_value": 7203801.692013,
+      "delta_pct": 27.832,
+      "status": "pass"
+    },
+    {
+      "spec_row": "pm_deg",
+      "corner_id": "mos_sf/1.32V/27C",
+      "schematic_value": 77.55866711590478,
+      "extracted_value": 76.22764915431073,
+      "delta_pct": -1.716,
+      "status": "pass"
+    },
+    {
+      "spec_row": "iq_a",
+      "corner_id": "mos_sf/1.32V/27C",
+      "schematic_value": 0.000112613067193,
+      "extracted_value": 8.325820481025e-05,
+      "delta_pct": -26.067,
+      "status": "pass"
+    },
+    {
+      "spec_row": "av0_db",
+      "corner_id": "mos_sf/1.32V/125C",
+      "schematic_value": 42.44094206156,
+      "extracted_value": 49.92869608712,
+      "delta_pct": 17.643,
+      "status": "pass"
+    },
+    {
+      "spec_row": "gbw_hz",
+      "corner_id": "mos_sf/1.32V/125C",
+      "schematic_value": 5002932.627822,
+      "extracted_value": 6388416.483237,
+      "delta_pct": 27.693,
+      "status": "pass"
+    },
+    {
+      "spec_row": "pm_deg",
+      "corner_id": "mos_sf/1.32V/125C",
+      "schematic_value": 76.7385351055323,
+      "extracted_value": 75.54290921378981,
+      "delta_pct": -1.558,
+      "status": "pass"
+    },
+    {
+      "spec_row": "iq_a",
+      "corner_id": "mos_sf/1.32V/125C",
+      "schematic_value": 0.0001055426743473,
+      "extracted_value": 8.341606027584e-05,
+      "delta_pct": -20.965,
+      "status": "pass"
+    },
+    {
+      "spec_row": "av0_db",
+      "corner_id": "mos_ss/1.08V/-40C",
+      "schematic_value": 44.32322771995,
+      "extracted_value": 52.24480875098,
+      "delta_pct": 17.872,
+      "status": "pass"
+    },
+    {
+      "spec_row": "gbw_hz",
+      "corner_id": "mos_ss/1.08V/-40C",
+      "schematic_value": 6029322.873319,
+      "extracted_value": 6546740.972925,
+      "delta_pct": 8.582,
+      "status": "pass"
+    },
+    {
+      "spec_row": "pm_deg",
+      "corner_id": "mos_ss/1.08V/-40C",
+      "schematic_value": 78.52560629363965,
+      "extracted_value": 77.93641040482673,
+      "delta_pct": -0.75,
+      "status": "pass"
+    },
+    {
+      "spec_row": "iq_a",
+      "corner_id": "mos_ss/1.08V/-40C",
+      "schematic_value": 0.000110589787403,
+      "extracted_value": 7.549924156747e-05,
+      "delta_pct": -31.73,
+      "status": "pass"
+    },
+    {
+      "spec_row": "av0_db",
+      "corner_id": "mos_ss/1.08V/27C",
+      "schematic_value": 42.27489174406,
+      "extracted_value": 48.7956852526,
+      "delta_pct": 15.425,
+      "status": "pass"
+    },
+    {
+      "spec_row": "gbw_hz",
+      "corner_id": "mos_ss/1.08V/27C",
+      "schematic_value": 5907124.724336,
+      "extracted_value": 6677017.443018,
+      "delta_pct": 13.033,
+      "status": "pass"
+    },
+    {
+      "spec_row": "pm_deg",
+      "corner_id": "mos_ss/1.08V/27C",
+      "schematic_value": 76.9093915753126,
+      "extracted_value": 75.9225436622716,
+      "delta_pct": -1.283,
+      "status": "pass"
+    },
+    {
+      "spec_row": "iq_a",
+      "corner_id": "mos_ss/1.08V/27C",
+      "schematic_value": 0.0001053947288981,
+      "extracted_value": 7.673158693589e-05,
+      "delta_pct": -27.196,
+      "status": "pass"
+    },
+    {
+      "spec_row": "av0_db",
+      "corner_id": "mos_ss/1.08V/125C",
+      "schematic_value": 39.7109978172,
+      "extracted_value": 45.73906330827,
+      "delta_pct": 15.18,
+      "status": "pass"
+    },
+    {
+      "spec_row": "gbw_hz",
+      "corner_id": "mos_ss/1.08V/125C",
+      "schematic_value": 5075340.293731,
+      "extracted_value": 6011292.901194,
+      "delta_pct": 18.441,
+      "status": "pass"
+    },
+    {
+      "spec_row": "pm_deg",
+      "corner_id": "mos_ss/1.08V/125C",
+      "schematic_value": 76.45728374179158,
+      "extracted_value": 75.39078407207423,
+      "delta_pct": -1.395,
+      "status": "pass"
+    },
+    {
+      "spec_row": "iq_a",
+      "corner_id": "mos_ss/1.08V/125C",
+      "schematic_value": 9.98521013138e-05,
+      "extracted_value": 7.823046505684e-05,
+      "delta_pct": -21.654,
+      "status": "pass"
+    },
+    {
+      "spec_row": "av0_db",
+      "corner_id": "mos_ss/1.20V/-40C",
+      "schematic_value": 44.98938768177,
+      "extracted_value": 50.15380609671,
+      "delta_pct": 11.479,
+      "status": "pass"
+    },
+    {
+      "spec_row": "gbw_hz",
+      "corner_id": "mos_ss/1.20V/-40C",
+      "schematic_value": 6620421.433204,
+      "extracted_value": 7824517.947755,
+      "delta_pct": 18.188,
+      "status": "pass"
+    },
+    {
+      "spec_row": "pm_deg",
+      "corner_id": "mos_ss/1.20V/-40C",
+      "schematic_value": 77.53916826532338,
+      "extracted_value": 76.15351117744925,
+      "delta_pct": -1.787,
+      "status": "pass"
+    },
+    {
+      "spec_row": "iq_a",
+      "corner_id": "mos_ss/1.20V/-40C",
+      "schematic_value": 0.0001160444878583,
+      "extracted_value": 8.014452180283e-05,
+      "delta_pct": -30.936,
+      "status": "pass"
+    },
+    {
+      "spec_row": "av0_db",
+      "corner_id": "mos_ss/1.20V/27C",
+      "schematic_value": 43.0469658537,
+      "extracted_value": 45.08933387886,
+      "delta_pct": 4.745,
+      "status": "pass"
+    },
+    {
+      "spec_row": "gbw_hz",
+      "corner_id": "mos_ss/1.20V/27C",
+      "schematic_value": 5786316.825949,
+      "extracted_value": 7031076.429075,
+      "delta_pct": 21.512,
+      "status": "pass"
+    },
+    {
+      "spec_row": "pm_deg",
+      "corner_id": "mos_ss/1.20V/27C",
+      "schematic_value": 77.28474951092927,
+      "extracted_value": 75.9382838058397,
+      "delta_pct": -1.742,
+      "status": "pass"
+    },
+    {
+      "spec_row": "iq_a",
+      "corner_id": "mos_ss/1.20V/27C",
+      "schematic_value": 0.0001096870411179,
+      "extracted_value": 8.037517724979e-05,
+      "delta_pct": -26.723,
+      "status": "pass"
+    },
+    {
+      "spec_row": "av0_db",
+      "corner_id": "mos_ss/1.20V/125C",
+      "schematic_value": 40.89647218158,
+      "extracted_value": 43.59251041011,
+      "delta_pct": 6.592,
+      "status": "pass"
+    },
+    {
+      "spec_row": "gbw_hz",
+      "corner_id": "mos_ss/1.20V/125C",
+      "schematic_value": 4908754.218675,
+      "extracted_value": 6104519.664866,
+      "delta_pct": 24.36,
+      "status": "pass"
+    },
+    {
+      "spec_row": "pm_deg",
+      "corner_id": "mos_ss/1.20V/125C",
+      "schematic_value": 76.94301263038454,
+      "extracted_value": 75.72206563183684,
+      "delta_pct": -1.587,
+      "status": "pass"
+    },
+    {
+      "spec_row": "iq_a",
+      "corner_id": "mos_ss/1.20V/125C",
+      "schematic_value": 0.0001029365776897,
+      "extracted_value": 8.084730839597e-05,
+      "delta_pct": -21.459,
+      "status": "pass"
+    },
+    {
+      "spec_row": "av0_db",
+      "corner_id": "mos_ss/1.32V/-40C",
+      "schematic_value": 45.19647592648,
+      "extracted_value": 44.28657778497,
+      "delta_pct": -2.013,
+      "status": "pass"
+    },
+    {
+      "spec_row": "gbw_hz",
+      "corner_id": "mos_ss/1.32V/-40C",
+      "schematic_value": 6087668.845468,
+      "extracted_value": 7714184.165001,
+      "delta_pct": 26.718,
+      "status": "pass"
+    },
+    {
+      "spec_row": "pm_deg",
+      "corner_id": "mos_ss/1.32V/-40C",
+      "schematic_value": 78.63688869372437,
+      "extracted_value": 77.20100371457997,
+      "delta_pct": -1.826,
+      "status": "pass"
+    },
+    {
+      "spec_row": "iq_a",
+      "corner_id": "mos_ss/1.32V/-40C",
+      "schematic_value": 0.0001196549594839,
+      "extracted_value": 8.306218544507e-05,
+      "delta_pct": -30.582,
+      "status": "pass"
+    },
+    {
+      "spec_row": "av0_db",
+      "corner_id": "mos_ss/1.32V/27C",
+      "schematic_value": 43.75705415308,
+      "extracted_value": 42.19390424916,
+      "delta_pct": -3.572,
+      "status": "pass"
+    },
+    {
+      "spec_row": "gbw_hz",
+      "corner_id": "mos_ss/1.32V/27C",
+      "schematic_value": 5567015.675492,
+      "extracted_value": 7078859.121306,
+      "delta_pct": 27.157,
+      "status": "pass"
+    },
+    {
+      "spec_row": "pm_deg",
+      "corner_id": "mos_ss/1.32V/27C",
+      "schematic_value": 77.84432804557196,
+      "extracted_value": 76.37618534431829,
+      "delta_pct": -1.886,
+      "status": "pass"
+    },
+    {
+      "spec_row": "iq_a",
+      "corner_id": "mos_ss/1.32V/27C",
+      "schematic_value": 0.0001126975484447,
+      "extracted_value": 8.284130561531e-05,
+      "delta_pct": -26.492,
+      "status": "pass"
+    },
+    {
+      "spec_row": "av0_db",
+      "corner_id": "mos_ss/1.32V/125C",
+      "schematic_value": 41.99706712071,
+      "extracted_value": 43.87514831472,
+      "delta_pct": 4.472,
+      "status": "pass"
+    },
+    {
+      "spec_row": "gbw_hz",
+      "corner_id": "mos_ss/1.32V/125C",
+      "schematic_value": 4903517.164544,
+      "extracted_value": 6247457.604818,
+      "delta_pct": 27.408,
+      "status": "pass"
+    },
+    {
+      "spec_row": "pm_deg",
+      "corner_id": "mos_ss/1.32V/125C",
+      "schematic_value": 77.00053226107043,
+      "extracted_value": 75.65092608389303,
+      "delta_pct": -1.753,
+      "status": "pass"
+    },
+    {
+      "spec_row": "iq_a",
+      "corner_id": "mos_ss/1.32V/125C",
+      "schematic_value": 0.0001053470685046,
+      "extracted_value": 8.288848611637e-05,
+      "delta_pct": -21.319,
+      "status": "pass"
+    },
+    {
+      "spec_row": "av0_db",
+      "corner_id": "mos_tt/1.08V/-40C",
+      "schematic_value": 42.9518442841,
+      "extracted_value": 49.94107712101,
+      "delta_pct": 16.272,
+      "status": "pass"
+    },
+    {
+      "spec_row": "gbw_hz",
+      "corner_id": "mos_tt/1.08V/-40C",
+      "schematic_value": 6549037.003038,
+      "extracted_value": 7579879.640653,
+      "delta_pct": 15.74,
+      "status": "pass"
+    },
+    {
+      "spec_row": "pm_deg",
+      "corner_id": "mos_tt/1.08V/-40C",
+      "schematic_value": 77.34892962798857,
+      "extracted_value": 76.28214806097336,
+      "delta_pct": -1.379,
+      "status": "pass"
+    },
+    {
+      "spec_row": "iq_a",
+      "corner_id": "mos_tt/1.08V/-40C",
+      "schematic_value": 0.0001117645074501,
+      "extracted_value": 7.809008439108e-05,
+      "delta_pct": -30.13,
+      "status": "pass"
+    },
+    {
+      "spec_row": "av0_db",
+      "corner_id": "mos_tt/1.08V/27C",
+      "schematic_value": 41.14292312551,
+      "extracted_value": 48.10030432597,
+      "delta_pct": 16.91,
+      "status": "pass"
+    },
+    {
+      "spec_row": "gbw_hz",
+      "corner_id": "mos_tt/1.08V/27C",
+      "schematic_value": 5738129.052354,
+      "extracted_value": 6864817.430515,
+      "delta_pct": 19.635,
+      "status": "pass"
+    },
+    {
+      "spec_row": "pm_deg",
+      "corner_id": "mos_tt/1.08V/27C",
+      "schematic_value": 77.20516416447313,
+      "extracted_value": 76.14363911320675,
+      "delta_pct": -1.375,
+      "status": "pass"
+    },
+    {
+      "spec_row": "iq_a",
+      "corner_id": "mos_tt/1.08V/27C",
+      "schematic_value": 0.0001064720477877,
+      "extracted_value": 7.887283628305e-05,
+      "delta_pct": -25.922,
+      "status": "pass"
+    },
+    {
+      "spec_row": "av0_db",
+      "corner_id": "mos_tt/1.08V/125C",
+      "schematic_value": 38.9342542401,
+      "extracted_value": 45.21495074545,
+      "delta_pct": 16.132,
+      "status": "pass"
+    },
+    {
+      "spec_row": "gbw_hz",
+      "corner_id": "mos_tt/1.08V/125C",
+      "schematic_value": 4848490.192531,
+      "extracted_value": 5977683.283087,
+      "delta_pct": 23.29,
+      "status": "pass"
+    },
+    {
+      "spec_row": "pm_deg",
+      "corner_id": "mos_tt/1.08V/125C",
+      "schematic_value": 77.11390946733333,
+      "extracted_value": 76.09259778177992,
+      "delta_pct": -1.324,
+      "status": "pass"
+    },
+    {
+      "spec_row": "iq_a",
+      "corner_id": "mos_tt/1.08V/125C",
+      "schematic_value": 0.0001008101534949,
+      "extracted_value": 7.990276865311e-05,
+      "delta_pct": -20.739,
+      "status": "pass"
+    },
+    {
+      "spec_row": "av0_db",
+      "corner_id": "mos_tt/1.20V/-40C",
+      "schematic_value": 43.30754741373,
+      "extracted_value": 51.34935725,
+      "delta_pct": 18.569,
+      "status": "pass"
+    },
+    {
+      "spec_row": "gbw_hz",
+      "corner_id": "mos_tt/1.20V/-40C",
+      "schematic_value": 6004327.914553,
+      "extracted_value": 7503089.291215,
+      "delta_pct": 24.961,
+      "status": "pass"
+    },
+    {
+      "spec_row": "pm_deg",
+      "corner_id": "mos_tt/1.20V/-40C",
+      "schematic_value": 78.50083646768813,
+      "extracted_value": 77.3057205110189,
+      "delta_pct": -1.522,
+      "status": "pass"
+    },
+    {
+      "spec_row": "iq_a",
+      "corner_id": "mos_tt/1.20V/-40C",
+      "schematic_value": 0.0001157411917615,
+      "extracted_value": 8.12632376308e-05,
+      "delta_pct": -29.789,
+      "status": "pass"
+    },
+    {
+      "spec_row": "av0_db",
+      "corner_id": "mos_tt/1.20V/27C",
+      "schematic_value": 41.95015270271,
+      "extracted_value": 49.68051237866,
+      "delta_pct": 18.427,
+      "status": "pass"
+    },
+    {
+      "spec_row": "gbw_hz",
+      "corner_id": "mos_tt/1.20V/27C",
+      "schematic_value": 5489080.904556,
+      "extracted_value": 6910442.74209,
+      "delta_pct": 25.894,
+      "status": "pass"
+    },
+    {
+      "spec_row": "pm_deg",
+      "corner_id": "mos_tt/1.20V/27C",
+      "schematic_value": 77.83480063182982,
+      "extracted_value": 76.61097884338544,
+      "delta_pct": -1.572,
+      "status": "pass"
+    },
+    {
+      "spec_row": "iq_a",
+      "corner_id": "mos_tt/1.20V/27C",
+      "schematic_value": 0.0001097002274912,
+      "extracted_value": 8.148166715816e-05,
+      "delta_pct": -25.723,
+      "status": "pass"
+    },
+    {
+      "spec_row": "av0_db",
+      "corner_id": "mos_tt/1.20V/125C",
+      "schematic_value": 40.26181513872,
+      "extracted_value": 46.47957618426,
+      "delta_pct": 15.443,
+      "status": "pass"
+    },
+    {
+      "spec_row": "gbw_hz",
+      "corner_id": "mos_tt/1.20V/125C",
+      "schematic_value": 4842205.336947,
+      "extracted_value": 6122839.340619,
+      "delta_pct": 26.447,
+      "status": "pass"
+    },
+    {
+      "spec_row": "pm_deg",
+      "corner_id": "mos_tt/1.20V/125C",
+      "schematic_value": 77.14410759513058,
+      "extracted_value": 76.02017647699999,
+      "delta_pct": -1.457,
+      "status": "pass"
+    },
+    {
+      "spec_row": "iq_a",
+      "corner_id": "mos_tt/1.20V/125C",
+      "schematic_value": 0.0001033600302332,
+      "extracted_value": 8.203228251991e-05,
+      "delta_pct": -20.634,
+      "status": "pass"
+    },
+    {
+      "spec_row": "av0_db",
+      "corner_id": "mos_tt/1.32V/-40C",
+      "schematic_value": 44.10466259963,
+      "extracted_value": 52.00041234281,
+      "delta_pct": 17.902,
+      "status": "pass"
+    },
+    {
+      "spec_row": "gbw_hz",
+      "corner_id": "mos_tt/1.32V/-40C",
+      "schematic_value": 6081113.257999,
+      "extracted_value": 7730012.666992,
+      "delta_pct": 27.115,
+      "status": "pass"
+    },
+    {
+      "spec_row": "pm_deg",
+      "corner_id": "mos_tt/1.32V/-40C",
+      "schematic_value": 78.4301019585639,
+      "extracted_value": 77.15806516403751,
+      "delta_pct": -1.622,
+      "status": "pass"
+    },
+    {
+      "spec_row": "iq_a",
+      "corner_id": "mos_tt/1.32V/-40C",
+      "schematic_value": 0.0001188234425326,
+      "extracted_value": 8.363044179482e-05,
+      "delta_pct": -29.618,
+      "status": "pass"
+    },
+    {
+      "spec_row": "av0_db",
+      "corner_id": "mos_tt/1.32V/27C",
+      "schematic_value": 42.99368186509,
+      "extracted_value": 50.89620004636,
+      "delta_pct": 18.381,
+      "status": "pass"
+    },
+    {
+      "spec_row": "gbw_hz",
+      "corner_id": "mos_tt/1.32V/27C",
+      "schematic_value": 5605169.546878,
+      "extracted_value": 7152593.529834,
+      "delta_pct": 27.607,
+      "status": "pass"
+    },
+    {
+      "spec_row": "pm_deg",
+      "corner_id": "mos_tt/1.32V/27C",
+      "schematic_value": 77.64059841989034,
+      "extracted_value": 76.30231363217419,
+      "delta_pct": -1.724,
+      "status": "pass"
+    },
+    {
+      "spec_row": "iq_a",
+      "corner_id": "mos_tt/1.32V/27C",
+      "schematic_value": 0.0001124064079025,
+      "extracted_value": 8.36529850472e-05,
+      "delta_pct": -25.58,
+      "status": "pass"
+    },
+    {
+      "spec_row": "av0_db",
+      "corner_id": "mos_tt/1.32V/125C",
+      "schematic_value": 41.48819708551,
+      "extracted_value": 47.46397940556,
+      "delta_pct": 14.404,
+      "status": "pass"
+    },
+    {
+      "spec_row": "gbw_hz",
+      "corner_id": "mos_tt/1.32V/125C",
+      "schematic_value": 4963666.388674,
+      "extracted_value": 6333205.511284,
+      "delta_pct": 27.591,
+      "status": "pass"
+    },
+    {
+      "spec_row": "pm_deg",
+      "corner_id": "mos_tt/1.32V/125C",
+      "schematic_value": 76.85260597380689,
+      "extracted_value": 75.64069874794502,
+      "delta_pct": -1.577,
+      "status": "pass"
+    },
+    {
+      "spec_row": "iq_a",
+      "corner_id": "mos_tt/1.32V/125C",
+      "schematic_value": 0.0001056121726586,
+      "extracted_value": 8.393067712986e-05,
+      "delta_pct": -20.529,
+      "status": "pass"
+    }
+  ],
+  "coverage": {
+    "testbenches": 0,
+    "delta_rows": 180,
+    "corners_compared": 45,
+    "schema_version": 1,
+    "known": true,
+    "checked": [
+      "comparison:[0,\"mos_ff/1.08V/-40C\",\"av0_db\"]",
+      "comparison:[1,\"mos_ff/1.08V/-40C\",\"gbw_hz\"]",
+      "comparison:[10,\"mos_ff/1.08V/125C\",\"pm_deg\"]",
+      "comparison:[100,\"mos_sf/1.32V/27C\",\"av0_db\"]",
+      "comparison:[101,\"mos_sf/1.32V/27C\",\"gbw_hz\"]",
+      "comparison:[102,\"mos_sf/1.32V/27C\",\"pm_deg\"]",
+      "comparison:[103,\"mos_sf/1.32V/27C\",\"iq_a\"]",
+      "comparison:[104,\"mos_sf/1.32V/125C\",\"av0_db\"]",
+      "comparison:[105,\"mos_sf/1.32V/125C\",\"gbw_hz\"]",
+      "comparison:[106,\"mos_sf/1.32V/125C\",\"pm_deg\"]",
+      "comparison:[107,\"mos_sf/1.32V/125C\",\"iq_a\"]",
+      "comparison:[108,\"mos_ss/1.08V/-40C\",\"av0_db\"]",
+      "comparison:[109,\"mos_ss/1.08V/-40C\",\"gbw_hz\"]",
+      "comparison:[11,\"mos_ff/1.08V/125C\",\"iq_a\"]",
+      "comparison:[110,\"mos_ss/1.08V/-40C\",\"pm_deg\"]",
+      "comparison:[111,\"mos_ss/1.08V/-40C\",\"iq_a\"]",
+      "comparison:[112,\"mos_ss/1.08V/27C\",\"av0_db\"]",
+      "comparison:[113,\"mos_ss/1.08V/27C\",\"gbw_hz\"]",
+      "comparison:[114,\"mos_ss/1.08V/27C\",\"pm_deg\"]",
+      "comparison:[115,\"mos_ss/1.08V/27C\",\"iq_a\"]",
+      "comparison:[116,\"mos_ss/1.08V/125C\",\"av0_db\"]",
+      "comparison:[117,\"mos_ss/1.08V/125C\",\"gbw_hz\"]",
+      "comparison:[118,\"mos_ss/1.08V/125C\",\"pm_deg\"]",
+      "comparison:[119,\"mos_ss/1.08V/125C\",\"iq_a\"]",
+      "comparison:[12,\"mos_ff/1.20V/-40C\",\"av0_db\"]",
+      "comparison:[120,\"mos_ss/1.20V/-40C\",\"av0_db\"]",
+      "comparison:[121,\"mos_ss/1.20V/-40C\",\"gbw_hz\"]",
+      "comparison:[122,\"mos_ss/1.20V/-40C\",\"pm_deg\"]",
+      "comparison:[123,\"mos_ss/1.20V/-40C\",\"iq_a\"]",
+      "comparison:[124,\"mos_ss/1.20V/27C\",\"av0_db\"]",
+      "comparison:[125,\"mos_ss/1.20V/27C\",\"gbw_hz\"]",
+      "comparison:[126,\"mos_ss/1.20V/27C\",\"pm_deg\"]",
+      "comparison:[127,\"mos_ss/1.20V/27C\",\"iq_a\"]",
+      "comparison:[128,\"mos_ss/1.20V/125C\",\"av0_db\"]",
+      "comparison:[129,\"mos_ss/1.20V/125C\",\"gbw_hz\"]",
+      "comparison:[13,\"mos_ff/1.20V/-40C\",\"gbw_hz\"]",
+      "comparison:[130,\"mos_ss/1.20V/125C\",\"pm_deg\"]",
+      "comparison:[131,\"mos_ss/1.20V/125C\",\"iq_a\"]",
+      "comparison:[132,\"mos_ss/1.32V/-40C\",\"av0_db\"]",
+      "comparison:[133,\"mos_ss/1.32V/-40C\",\"gbw_hz\"]",
+      "comparison:[134,\"mos_ss/1.32V/-40C\",\"pm_deg\"]",
+      "comparison:[135,\"mos_ss/1.32V/-40C\",\"iq_a\"]",
+      "comparison:[136,\"mos_ss/1.32V/27C\",\"av0_db\"]",
+      "comparison:[137,\"mos_ss/1.32V/27C\",\"gbw_hz\"]",
+      "comparison:[138,\"mos_ss/1.32V/27C\",\"pm_deg\"]",
+      "comparison:[139,\"mos_ss/1.32V/27C\",\"iq_a\"]",
+      "comparison:[14,\"mos_ff/1.20V/-40C\",\"pm_deg\"]",
+      "comparison:[140,\"mos_ss/1.32V/125C\",\"av0_db\"]",
+      "comparison:[141,\"mos_ss/1.32V/125C\",\"gbw_hz\"]",
+      "comparison:[142,\"mos_ss/1.32V/125C\",\"pm_deg\"]",
+      "comparison:[143,\"mos_ss/1.32V/125C\",\"iq_a\"]",
+      "comparison:[144,\"mos_tt/1.08V/-40C\",\"av0_db\"]",
+      "comparison:[145,\"mos_tt/1.08V/-40C\",\"gbw_hz\"]",
+      "comparison:[146,\"mos_tt/1.08V/-40C\",\"pm_deg\"]",
+      "comparison:[147,\"mos_tt/1.08V/-40C\",\"iq_a\"]",
+      "comparison:[148,\"mos_tt/1.08V/27C\",\"av0_db\"]",
+      "comparison:[149,\"mos_tt/1.08V/27C\",\"gbw_hz\"]",
+      "comparison:[15,\"mos_ff/1.20V/-40C\",\"iq_a\"]",
+      "comparison:[150,\"mos_tt/1.08V/27C\",\"pm_deg\"]",
+      "comparison:[151,\"mos_tt/1.08V/27C\",\"iq_a\"]",
+      "comparison:[152,\"mos_tt/1.08V/125C\",\"av0_db\"]",
+      "comparison:[153,\"mos_tt/1.08V/125C\",\"gbw_hz\"]",
+      "comparison:[154,\"mos_tt/1.08V/125C\",\"pm_deg\"]",
+      "comparison:[155,\"mos_tt/1.08V/125C\",\"iq_a\"]",
+      "comparison:[156,\"mos_tt/1.20V/-40C\",\"av0_db\"]",
+      "comparison:[157,\"mos_tt/1.20V/-40C\",\"gbw_hz\"]",
+      "comparison:[158,\"mos_tt/1.20V/-40C\",\"pm_deg\"]",
+      "comparison:[159,\"mos_tt/1.20V/-40C\",\"iq_a\"]",
+      "comparison:[16,\"mos_ff/1.20V/27C\",\"av0_db\"]",
+      "comparison:[160,\"mos_tt/1.20V/27C\",\"av0_db\"]",
+      "comparison:[161,\"mos_tt/1.20V/27C\",\"gbw_hz\"]",
+      "comparison:[162,\"mos_tt/1.20V/27C\",\"pm_deg\"]",
+      "comparison:[163,\"mos_tt/1.20V/27C\",\"iq_a\"]",
+      "comparison:[164,\"mos_tt/1.20V/125C\",\"av0_db\"]",
+      "comparison:[165,\"mos_tt/1.20V/125C\",\"gbw_hz\"]",
+      "comparison:[166,\"mos_tt/1.20V/125C\",\"pm_deg\"]",
+      "comparison:[167,\"mos_tt/1.20V/125C\",\"iq_a\"]",
+      "comparison:[168,\"mos_tt/1.32V/-40C\",\"av0_db\"]",
+      "comparison:[169,\"mos_tt/1.32V/-40C\",\"gbw_hz\"]",
+      "comparison:[17,\"mos_ff/1.20V/27C\",\"gbw_hz\"]",
+      "comparison:[170,\"mos_tt/1.32V/-40C\",\"pm_deg\"]",
+      "comparison:[171,\"mos_tt/1.32V/-40C\",\"iq_a\"]",
+      "comparison:[172,\"mos_tt/1.32V/27C\",\"av0_db\"]",
+      "comparison:[173,\"mos_tt/1.32V/27C\",\"gbw_hz\"]",
+      "comparison:[174,\"mos_tt/1.32V/27C\",\"pm_deg\"]",
+      "comparison:[175,\"mos_tt/1.32V/27C\",\"iq_a\"]",
+      "comparison:[176,\"mos_tt/1.32V/125C\",\"av0_db\"]",
+      "comparison:[177,\"mos_tt/1.32V/125C\",\"gbw_hz\"]",
+      "comparison:[178,\"mos_tt/1.32V/125C\",\"pm_deg\"]",
+      "comparison:[179,\"mos_tt/1.32V/125C\",\"iq_a\"]",
+      "comparison:[18,\"mos_ff/1.20V/27C\",\"pm_deg\"]",
+      "comparison:[19,\"mos_ff/1.20V/27C\",\"iq_a\"]",
+      "comparison:[2,\"mos_ff/1.08V/-40C\",\"pm_deg\"]",
+      "comparison:[20,\"mos_ff/1.20V/125C\",\"av0_db\"]",
+      "comparison:[21,\"mos_ff/1.20V/125C\",\"gbw_hz\"]",
+      "comparison:[22,\"mos_ff/1.20V/125C\",\"pm_deg\"]",
+      "comparison:[23,\"mos_ff/1.20V/125C\",\"iq_a\"]",
+      "comparison:[24,\"mos_ff/1.32V/-40C\",\"av0_db\"]",
+      "comparison:[25,\"mos_ff/1.32V/-40C\",\"gbw_hz\"]",
+      "comparison:[26,\"mos_ff/1.32V/-40C\",\"pm_deg\"]",
+      "comparison:[27,\"mos_ff/1.32V/-40C\",\"iq_a\"]",
+      "comparison:[28,\"mos_ff/1.32V/27C\",\"av0_db\"]",
+      "comparison:[29,\"mos_ff/1.32V/27C\",\"gbw_hz\"]",
+      "comparison:[3,\"mos_ff/1.08V/-40C\",\"iq_a\"]",
+      "comparison:[30,\"mos_ff/1.32V/27C\",\"pm_deg\"]",
+      "comparison:[31,\"mos_ff/1.32V/27C\",\"iq_a\"]",
+      "comparison:[32,\"mos_ff/1.32V/125C\",\"av0_db\"]",
+      "comparison:[33,\"mos_ff/1.32V/125C\",\"gbw_hz\"]",
+      "comparison:[34,\"mos_ff/1.32V/125C\",\"pm_deg\"]",
+      "comparison:[35,\"mos_ff/1.32V/125C\",\"iq_a\"]",
+      "comparison:[36,\"mos_fs/1.08V/-40C\",\"av0_db\"]",
+      "comparison:[37,\"mos_fs/1.08V/-40C\",\"gbw_hz\"]",
+      "comparison:[38,\"mos_fs/1.08V/-40C\",\"pm_deg\"]",
+      "comparison:[39,\"mos_fs/1.08V/-40C\",\"iq_a\"]",
+      "comparison:[4,\"mos_ff/1.08V/27C\",\"av0_db\"]",
+      "comparison:[40,\"mos_fs/1.08V/27C\",\"av0_db\"]",
+      "comparison:[41,\"mos_fs/1.08V/27C\",\"gbw_hz\"]",
+      "comparison:[42,\"mos_fs/1.08V/27C\",\"pm_deg\"]",
+      "comparison:[43,\"mos_fs/1.08V/27C\",\"iq_a\"]",
+      "comparison:[44,\"mos_fs/1.08V/125C\",\"av0_db\"]",
+      "comparison:[45,\"mos_fs/1.08V/125C\",\"gbw_hz\"]",
+      "comparison:[46,\"mos_fs/1.08V/125C\",\"pm_deg\"]",
+      "comparison:[47,\"mos_fs/1.08V/125C\",\"iq_a\"]",
+      "comparison:[48,\"mos_fs/1.20V/-40C\",\"av0_db\"]",
+      "comparison:[49,\"mos_fs/1.20V/-40C\",\"gbw_hz\"]",
+      "comparison:[5,\"mos_ff/1.08V/27C\",\"gbw_hz\"]",
+      "comparison:[50,\"mos_fs/1.20V/-40C\",\"pm_deg\"]",
+      "comparison:[51,\"mos_fs/1.20V/-40C\",\"iq_a\"]",
+      "comparison:[52,\"mos_fs/1.20V/27C\",\"av0_db\"]",
+      "comparison:[53,\"mos_fs/1.20V/27C\",\"gbw_hz\"]",
+      "comparison:[54,\"mos_fs/1.20V/27C\",\"pm_deg\"]",
+      "comparison:[55,\"mos_fs/1.20V/27C\",\"iq_a\"]",
+      "comparison:[56,\"mos_fs/1.20V/125C\",\"av0_db\"]",
+      "comparison:[57,\"mos_fs/1.20V/125C\",\"gbw_hz\"]",
+      "comparison:[58,\"mos_fs/1.20V/125C\",\"pm_deg\"]",
+      "comparison:[59,\"mos_fs/1.20V/125C\",\"iq_a\"]",
+      "comparison:[6,\"mos_ff/1.08V/27C\",\"pm_deg\"]",
+      "comparison:[60,\"mos_fs/1.32V/-40C\",\"av0_db\"]",
+      "comparison:[61,\"mos_fs/1.32V/-40C\",\"gbw_hz\"]",
+      "comparison:[62,\"mos_fs/1.32V/-40C\",\"pm_deg\"]",
+      "comparison:[63,\"mos_fs/1.32V/-40C\",\"iq_a\"]",
+      "comparison:[64,\"mos_fs/1.32V/27C\",\"av0_db\"]",
+      "comparison:[65,\"mos_fs/1.32V/27C\",\"gbw_hz\"]",
+      "comparison:[66,\"mos_fs/1.32V/27C\",\"pm_deg\"]",
+      "comparison:[67,\"mos_fs/1.32V/27C\",\"iq_a\"]",
+      "comparison:[68,\"mos_fs/1.32V/125C\",\"av0_db\"]",
+      "comparison:[69,\"mos_fs/1.32V/125C\",\"gbw_hz\"]",
+      "comparison:[7,\"mos_ff/1.08V/27C\",\"iq_a\"]",
+      "comparison:[70,\"mos_fs/1.32V/125C\",\"pm_deg\"]",
+      "comparison:[71,\"mos_fs/1.32V/125C\",\"iq_a\"]",
+      "comparison:[72,\"mos_sf/1.08V/-40C\",\"av0_db\"]",
+      "comparison:[73,\"mos_sf/1.08V/-40C\",\"gbw_hz\"]",
+      "comparison:[74,\"mos_sf/1.08V/-40C\",\"pm_deg\"]",
+      "comparison:[75,\"mos_sf/1.08V/-40C\",\"iq_a\"]",
+      "comparison:[76,\"mos_sf/1.08V/27C\",\"av0_db\"]",
+      "comparison:[77,\"mos_sf/1.08V/27C\",\"gbw_hz\"]",
+      "comparison:[78,\"mos_sf/1.08V/27C\",\"pm_deg\"]",
+      "comparison:[79,\"mos_sf/1.08V/27C\",\"iq_a\"]",
+      "comparison:[8,\"mos_ff/1.08V/125C\",\"av0_db\"]",
+      "comparison:[80,\"mos_sf/1.08V/125C\",\"av0_db\"]",
+      "comparison:[81,\"mos_sf/1.08V/125C\",\"gbw_hz\"]",
+      "comparison:[82,\"mos_sf/1.08V/125C\",\"pm_deg\"]",
+      "comparison:[83,\"mos_sf/1.08V/125C\",\"iq_a\"]",
+      "comparison:[84,\"mos_sf/1.20V/-40C\",\"av0_db\"]",
+      "comparison:[85,\"mos_sf/1.20V/-40C\",\"gbw_hz\"]",
+      "comparison:[86,\"mos_sf/1.20V/-40C\",\"pm_deg\"]",
+      "comparison:[87,\"mos_sf/1.20V/-40C\",\"iq_a\"]",
+      "comparison:[88,\"mos_sf/1.20V/27C\",\"av0_db\"]",
+      "comparison:[89,\"mos_sf/1.20V/27C\",\"gbw_hz\"]",
+      "comparison:[9,\"mos_ff/1.08V/125C\",\"gbw_hz\"]",
+      "comparison:[90,\"mos_sf/1.20V/27C\",\"pm_deg\"]",
+      "comparison:[91,\"mos_sf/1.20V/27C\",\"iq_a\"]",
+      "comparison:[92,\"mos_sf/1.20V/125C\",\"av0_db\"]",
+      "comparison:[93,\"mos_sf/1.20V/125C\",\"gbw_hz\"]",
+      "comparison:[94,\"mos_sf/1.20V/125C\",\"pm_deg\"]",
+      "comparison:[95,\"mos_sf/1.20V/125C\",\"iq_a\"]",
+      "comparison:[96,\"mos_sf/1.32V/-40C\",\"av0_db\"]",
+      "comparison:[97,\"mos_sf/1.32V/-40C\",\"gbw_hz\"]",
+      "comparison:[98,\"mos_sf/1.32V/-40C\",\"pm_deg\"]",
+      "comparison:[99,\"mos_sf/1.32V/-40C\",\"iq_a\"]"
+    ],
+    "skipped": [],
+    "inapplicable": [],
+    "unknown": [],
+    "nothing_checked": false,
+    "nothing_checked_reasons": []
+  },
+  "passed": 180,
+  "failed": 0,
+  "errored": 0,
+  "pin_count_mismatch": null,
+  "flat_dut_mismatch": null,
+  "model_mismatch": {
+    "reference_only": [],
+    "extracted_only": [],
+    "counts": {
+      "reference": {
+        "cap_cmim": 1,
+        "sg13_lv_nmos": 5,
+        "sg13_lv_pmos": 3
+      },
+      "extracted": {
+        "cap_cmim": 1,
+        "sg13_lv_nmos": 19,
+        "sg13_lv_pmos": 18
+      }
+    },
+    "detail": "the reference (schematic) and extracted netlists instantiate different device models/`.subckt`s, and the two sides may be electrically unrelated, so `delta[]` rows could compare two different physical devices rather than a parasitic effect. A common cause: the layout carries no voltage-domain marker geometry, so `klt extract --pdk` bound every MOS to the PDK family's default flavour while the reference netlist names a different one -- see docs/cli/pex.md's `model_mismatch` section"
+  },
+  "provenance": {
+    "klt_version": "0.7.1.dev480+g673b3edbfb55",
+    "klayout_version": "0.30.12",
+    "pdk": {
+      "name": "ihp-sg13g2",
+      "source": "--pdk-root flag",
+      "version": null
+    },
+    "deck": {
+      "name": "sg13g2",
+      "content_hash": "sha256:3eb5a169caf24b2e8f5472c9939a47de01bec30d3f4d1e3701a5b0b4220dc6fe",
+      "released": false
+    },
+    "input": {
+      "content_hash": "sha256:07fcb21698709178395cb2f04ba998c3752efb6eff24aace7626d9ffc10e553e",
+      "role": "layout"
+    }
+  }
+}
