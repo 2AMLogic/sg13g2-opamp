@@ -1,0 +1,3640 @@
+{
+  "schema": "sg13g2-opamp/input-offset/klt-compare/1",
+  "points_compared": 45,
+  "tolerances": {
+    "vos_null_v": {
+      "abs": 1e-06,
+      "rel": 0.0001,
+      "unit": "V"
+    },
+    "gain_local_db": {
+      "abs": 0.02,
+      "rel": 0.0,
+      "unit": "dB"
+    },
+    "vd1_dc_v": {
+      "abs": 5e-05,
+      "rel": 0.0001,
+      "unit": "V"
+    },
+    "vd2_dc_v": {
+      "abs": 5e-05,
+      "rel": 0.0001,
+      "unit": "V"
+    },
+    "vtail_dc_v": {
+      "abs": 5e-05,
+      "rel": 0.0001,
+      "unit": "V"
+    },
+    "vibias_dc_v": {
+      "abs": 5e-05,
+      "rel": 0.0001,
+      "unit": "V"
+    }
+  },
+  "out_of_tolerance": [],
+  "bound_verdict_disagreements": [],
+  "unexplained_bound_verdict_disagreements": 0,
+  "row": {
+    "bound": {
+      "max_abs_v": 0.0219
+    },
+    "harness_worst": {
+      "point": "mos_fs_125C_1.08V",
+      "value": 0.0219273527,
+      "verdict": "fail"
+    },
+    "harness_points_over_bound": [
+      "mos_fs_125C_1.08V"
+    ],
+    "tool": {
+      "vos_null_v": {
+        "status": "fail",
+        "limits": {
+          "min": -0.0219,
+          "max": 0.0219
+        },
+        "worst_case": {
+          "corner_id": "mos_fs/vdd=1.080_vinp=0.540V/125C",
+          "value": 0.02192735265135,
+          "margin": -2.7352651349999563e-05
+        }
+      }
+    }
+  },
+  "points": [
+    {
+      "point_id": "mos_tt_-40C_1.08V",
+      "process": "mos_tt",
+      "temperature_c": -40,
+      "vdd_v": 1.08,
+      "metrics": {
+        "vos_null_v": {
+          "harness": 0.0151576578,
+          "tool": 0.01515765803696,
+          "delta": 2.3696000023276653e-10,
+          "rel_delta": 1.5633022156811493e-08,
+          "tolerance": 2.51576578e-06,
+          "unit": "V",
+          "within": true
+        },
+        "gain_local_db": {
+          "harness": 43.4325367,
+          "tool": 43.435470572122135,
+          "delta": 0.0029338721221350283,
+          "rel_delta": 6.75500982684953e-05,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "vd1_dc_v": {
+          "harness": 0.518781169,
+          "tool": 0.5187813505583,
+          "delta": 1.8155829994981332e-07,
+          "rel_delta": 3.4997087558090086e-07,
+          "tolerance": 0.0001018781169,
+          "unit": "V",
+          "within": true
+        },
+        "vd2_dc_v": {
+          "harness": 0.321315738,
+          "tool": 0.321306697318,
+          "delta": -9.040682000027722e-06,
+          "rel_delta": -2.8136443164286345e-05,
+          "tolerance": 8.21315738e-05,
+          "unit": "V",
+          "within": true
+        },
+        "vtail_dc_v": {
+          "harness": 0.0728442218,
+          "tool": 0.07284396096324,
+          "delta": -2.608367599965522e-07,
+          "rel_delta": -3.5807474299430597e-06,
+          "tolerance": 5.728442218e-05,
+          "unit": "V",
+          "within": true
+        },
+        "vibias_dc_v": {
+          "harness": 0.416365209,
+          "tool": 0.416365208783,
+          "delta": -2.1700002905689075e-10,
+          "rel_delta": -5.211771405638524e-10,
+          "tolerance": 9.16365209e-05,
+          "unit": "V",
+          "within": true
+        }
+      },
+      "harness_coarse_fine_delta_v": 7.83866173e-07,
+      "integrity_checks": {
+        "op_sanity": {
+          "harness_pass": true,
+          "tool_pass": true,
+          "agree": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "harness_margin_v": 0.006742342199999999,
+        "tool_margin_v": 0.006742341963039999
+      }
+    },
+    {
+      "point_id": "mos_tt_-40C_1.20V",
+      "process": "mos_tt",
+      "temperature_c": -40,
+      "vdd_v": 1.2,
+      "metrics": {
+        "vos_null_v": {
+          "harness": 0.0135106262,
+          "tool": 0.01351062652626,
+          "delta": 3.2625999991930943e-10,
+          "rel_delta": 2.4148399570059116e-08,
+          "tolerance": 2.35106262e-06,
+          "unit": "V",
+          "within": true
+        },
+        "gain_local_db": {
+          "harness": 44.6011651,
+          "tool": 44.603034138034005,
+          "delta": 0.0018690380340018464,
+          "rel_delta": 4.1905587663714335e-05,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "vd1_dc_v": {
+          "harness": 0.62408671,
+          "tool": 0.6240867210769,
+          "delta": 1.107689995283323e-08,
+          "rel_delta": 1.77489758640001e-08,
+          "tolerance": 0.00011240867100000001,
+          "unit": "V",
+          "within": true
+        },
+        "vd2_dc_v": {
+          "harness": 0.438131805,
+          "tool": 0.4381306424259,
+          "delta": -1.1625740999887668e-06,
+          "rel_delta": -2.6534802694562814e-06,
+          "tolerance": 9.38131805e-05,
+          "unit": "V",
+          "within": true
+        },
+        "vtail_dc_v": {
+          "harness": 0.125392342,
+          "tool": 0.1253923060041,
+          "delta": -3.59958999829324e-08,
+          "rel_delta": -2.870661749258372e-07,
+          "tolerance": 6.25392342e-05,
+          "unit": "V",
+          "within": true
+        },
+        "vibias_dc_v": {
+          "harness": 0.41636521,
+          "tool": 0.4163652096144,
+          "delta": -3.8559999637755027e-10,
+          "rel_delta": -9.261100282070883e-10,
+          "tolerance": 9.163652100000001e-05,
+          "unit": "V",
+          "within": true
+        }
+      },
+      "harness_coarse_fine_delta_v": 9.40763782e-08,
+      "integrity_checks": {
+        "op_sanity": {
+          "harness_pass": true,
+          "tool_pass": true,
+          "agree": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "harness_margin_v": 0.008389373799999999,
+        "tool_margin_v": 0.008389373473739999
+      }
+    },
+    {
+      "point_id": "mos_tt_-40C_1.32V",
+      "process": "mos_tt",
+      "temperature_c": -40,
+      "vdd_v": 1.32,
+      "metrics": {
+        "vos_null_v": {
+          "harness": 0.0125021618,
+          "tool": 0.01250216217268,
+          "delta": 3.726799997078034e-10,
+          "rel_delta": 2.980924464661811e-08,
+          "tolerance": 2.25021618e-06,
+          "unit": "V",
+          "within": true
+        },
+        "gain_local_db": {
+          "harness": 45.6710973,
+          "tool": 45.67274453802541,
+          "delta": 0.0016472380254128893,
+          "rel_delta": 3.6067406364087716e-05,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "vd1_dc_v": {
+          "harness": 0.737945492,
+          "tool": 0.7379454945105,
+          "delta": 2.510499919061715e-09,
+          "rel_delta": 3.4020126774644146e-09,
+          "tolerance": 0.0001237945492,
+          "unit": "V",
+          "within": true
+        },
+        "vd2_dc_v": {
+          "harness": 0.55508083,
+          "tool": 0.5550804725178,
+          "delta": -3.5748219995301866e-07,
+          "rel_delta": -6.440182773975795e-07,
+          "tolerance": 0.000105508083,
+          "unit": "V",
+          "within": true
+        },
+        "vtail_dc_v": {
+          "harness": 0.18122238,
+          "tool": 0.1812223689355,
+          "delta": -1.1064499982893494e-08,
+          "rel_delta": -6.105482105959262e-08,
+          "tolerance": 6.812223800000001e-05,
+          "unit": "V",
+          "within": true
+        },
+        "vibias_dc_v": {
+          "harness": 0.41636521,
+          "tool": 0.4163652099149,
+          "delta": -8.509998261629903e-11,
+          "rel_delta": -2.0438783205806037e-10,
+          "tolerance": 9.163652100000001e-05,
+          "unit": "V",
+          "within": true
+        }
+      },
+      "harness_coarse_fine_delta_v": 2.68661376e-08,
+      "integrity_checks": {
+        "op_sanity": {
+          "harness_pass": true,
+          "tool_pass": true,
+          "agree": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "harness_margin_v": 0.0093978382,
+        "tool_margin_v": 0.00939783782732
+      }
+    },
+    {
+      "point_id": "mos_tt_27C_1.08V",
+      "process": "mos_tt",
+      "temperature_c": 27,
+      "vdd_v": 1.08,
+      "metrics": {
+        "vos_null_v": {
+          "harness": 0.0174349573,
+          "tool": 0.01743495740558,
+          "delta": 1.0557999960414399e-10,
+          "rel_delta": 6.0556500246859785e-09,
+          "tolerance": 2.7434957300000005e-06,
+          "unit": "V",
+          "within": true
+        },
+        "gain_local_db": {
+          "harness": 41.6662228,
+          "tool": 41.66833846141505,
+          "delta": 0.002115661415047043,
+          "rel_delta": 5.077641487212139e-05,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "vd1_dc_v": {
+          "harness": 0.517984789,
+          "tool": 0.5179848619476,
+          "delta": 7.29475999605711e-08,
+          "rel_delta": 1.4082961799206636e-07,
+          "tolerance": 0.00010179847890000001,
+          "unit": "V",
+          "within": true
+        },
+        "vd2_dc_v": {
+          "harness": 0.328176131,
+          "tool": 0.328171848824,
+          "delta": -4.282175999958948e-06,
+          "rel_delta": -1.3048407837920876e-05,
+          "tolerance": 8.28176131e-05,
+          "unit": "V",
+          "within": true
+        },
+        "vtail_dc_v": {
+          "harness": 0.107147285,
+          "tool": 0.1071471262092,
+          "delta": -1.5879079999503443e-07,
+          "rel_delta": -1.4819862210697587e-06,
+          "tolerance": 6.0714728500000005e-05,
+          "unit": "V",
+          "within": true
+        },
+        "vibias_dc_v": {
+          "harness": 0.388959904,
+          "tool": 0.3889599037964,
+          "delta": -2.0360002572772373e-10,
+          "rel_delta": -5.234473364321987e-10,
+          "tolerance": 8.889599040000002e-05,
+          "unit": "V",
+          "within": true
+        }
+      },
+      "harness_coarse_fine_delta_v": 4.46093924e-07,
+      "integrity_checks": {
+        "op_sanity": {
+          "harness_pass": true,
+          "tool_pass": true,
+          "agree": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "harness_margin_v": 0.004465042699999998,
+        "tool_margin_v": 0.004465042594419998
+      }
+    },
+    {
+      "point_id": "mos_tt_27C_1.20V",
+      "process": "mos_tt",
+      "temperature_c": 27,
+      "vdd_v": 1.2,
+      "metrics": {
+        "vos_null_v": {
+          "harness": 0.0157152476,
+          "tool": 0.01571524796239,
+          "delta": 3.6238999995275023e-10,
+          "rel_delta": 2.3059770305671177e-08,
+          "tolerance": 2.57152476e-06,
+          "unit": "V",
+          "within": true
+        },
+        "gain_local_db": {
+          "harness": 42.884204,
+          "tool": 42.885560581606285,
+          "delta": 0.0013565816062879321,
+          "rel_delta": 3.163359651698169e-05,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "vd1_dc_v": {
+          "harness": 0.62690856,
+          "tool": 0.6269086761968,
+          "delta": 1.1619680007068922e-07,
+          "rel_delta": 1.8534888097665987e-07,
+          "tolerance": 0.000112690856,
+          "unit": "V",
+          "within": true
+        },
+        "vd2_dc_v": {
+          "harness": 0.444945434,
+          "tool": 0.4449333848846,
+          "delta": -1.2049115399981325e-05,
+          "rel_delta": -2.7079984373952078e-05,
+          "tolerance": 9.44945434e-05,
+          "unit": "V",
+          "within": true
+        },
+        "vtail_dc_v": {
+          "harness": 0.161792881,
+          "tool": 0.1617924270855,
+          "delta": -4.53914499987107e-07,
+          "rel_delta": -2.8055282604622573e-06,
+          "tolerance": 6.61792881e-05,
+          "unit": "V",
+          "within": true
+        },
+        "vibias_dc_v": {
+          "harness": 0.388959905,
+          "tool": 0.3889599046986,
+          "delta": -3.014000160561636e-10,
+          "rel_delta": -7.748871083670272e-10,
+          "tolerance": 8.88959905e-05,
+          "unit": "V",
+          "within": true
+        }
+      },
+      "harness_coarse_fine_delta_v": 1.17281843e-06,
+      "integrity_checks": {
+        "op_sanity": {
+          "harness_pass": true,
+          "tool_pass": true,
+          "agree": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "harness_margin_v": 0.0061847524,
+        "tool_margin_v": 0.00618475203761
+      }
+    },
+    {
+      "point_id": "mos_tt_27C_1.32V",
+      "process": "mos_tt",
+      "temperature_c": 27,
+      "vdd_v": 1.32,
+      "metrics": {
+        "vos_null_v": {
+          "harness": 0.0144555539,
+          "tool": 0.01445555440588,
+          "delta": 5.058800010837583e-10,
+          "rel_delta": 3.499554597376987e-08,
+          "tolerance": 2.44555539e-06,
+          "unit": "V",
+          "within": true
+        },
+        "gain_local_db": {
+          "harness": 44.0157644,
+          "tool": 44.016398337738096,
+          "delta": 0.0006339377380939482,
+          "rel_delta": 1.4402515706257919e-05,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "vd1_dc_v": {
+          "harness": 0.740731344,
+          "tool": 0.7407314005538,
+          "delta": 5.6553800087399964e-08,
+          "rel_delta": 7.634859864577293e-08,
+          "tolerance": 0.0001240731344,
+          "unit": "V",
+          "within": true
+        },
+        "vd2_dc_v": {
+          "harness": 0.561829068,
+          "tool": 0.5618222987818,
+          "delta": -6.7692181999756684e-06,
+          "rel_delta": -1.2048536797985093e-05,
+          "tolerance": 0.0001061829068,
+          "unit": "V",
+          "within": true
+        },
+        "vtail_dc_v": {
+          "harness": 0.21824074,
+          "tool": 0.2182404965076,
+          "delta": -2.4349239999277295e-07,
+          "rel_delta": -1.1157055277249012e-06,
+          "tolerance": 7.1824074e-05,
+          "unit": "V",
+          "within": true
+        },
+        "vibias_dc_v": {
+          "harness": 0.388959905,
+          "tool": 0.3889599052843,
+          "delta": 2.8430002796397957e-10,
+          "rel_delta": 7.309237386922428e-10,
+          "tolerance": 8.88959905e-05,
+          "unit": "V",
+          "within": true
+        }
+      },
+      "harness_coarse_fine_delta_v": 6.16935033e-07,
+      "integrity_checks": {
+        "op_sanity": {
+          "harness_pass": true,
+          "tool_pass": true,
+          "agree": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "harness_margin_v": 0.0074444461,
+        "tool_margin_v": 0.007444445594119999
+      }
+    },
+    {
+      "point_id": "mos_tt_125C_1.08V",
+      "process": "mos_tt",
+      "temperature_c": 125,
+      "vdd_v": 1.08,
+      "metrics": {
+        "vos_null_v": {
+          "harness": 0.0205745761,
+          "tool": 0.02057457608255,
+          "delta": -1.7449999778484937e-11,
+          "rel_delta": -8.481341094791712e-10,
+          "tolerance": 3.05745761e-06,
+          "unit": "V",
+          "within": true
+        },
+        "gain_local_db": {
+          "harness": 39.3400437,
+          "tool": 39.34240214119526,
+          "delta": 0.002358441195255523,
+          "rel_delta": 5.995014172430934e-05,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "vd1_dc_v": {
+          "harness": 0.537344143,
+          "tool": 0.5373441378487,
+          "delta": -5.151299942163234e-09,
+          "rel_delta": -9.586593637000402e-09,
+          "tolerance": 0.00010373441430000001,
+          "unit": "V",
+          "within": true
+        },
+        "vd2_dc_v": {
+          "harness": 0.360273168,
+          "tool": 0.360273477442,
+          "delta": 3.094420000238074e-07,
+          "rel_delta": 8.589093707467202e-07,
+          "tolerance": 8.602731679999999e-05,
+          "unit": "V",
+          "within": true
+        },
+        "vtail_dc_v": {
+          "harness": 0.165432225,
+          "tool": 0.1654322403798,
+          "delta": 1.5379800016868117e-08,
+          "rel_delta": 9.296737692349914e-08,
+          "tolerance": 6.65432225e-05,
+          "unit": "V",
+          "within": true
+        },
+        "vibias_dc_v": {
+          "harness": 0.345256191,
+          "tool": 0.3452561914097,
+          "delta": 4.0969999615114716e-10,
+          "rel_delta": 1.1866550313391691e-09,
+          "tolerance": 8.45256191e-05,
+          "unit": "V",
+          "within": true
+        }
+      },
+      "harness_coarse_fine_delta_v": -4.19281332e-08,
+      "integrity_checks": {
+        "op_sanity": {
+          "harness_pass": true,
+          "tool_pass": true,
+          "agree": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "harness_margin_v": 0.0013254239000000008,
+        "tool_margin_v": 0.0013254239174500006
+      }
+    },
+    {
+      "point_id": "mos_tt_125C_1.20V",
+      "process": "mos_tt",
+      "temperature_c": 125,
+      "vdd_v": 1.2,
+      "metrics": {
+        "vos_null_v": {
+          "harness": 0.0185293372,
+          "tool": 0.01852933734527,
+          "delta": 1.4527000088970787e-10,
+          "rel_delta": 7.839999851139192e-09,
+          "tolerance": 2.8529337199999997e-06,
+          "unit": "V",
+          "within": true
+        },
+        "gain_local_db": {
+          "harness": 40.8553288,
+          "tool": 40.85698982796414,
+          "delta": 0.0016610279641398051,
+          "rel_delta": 4.06563357321409e-05,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "vd1_dc_v": {
+          "harness": 0.648599192,
+          "tool": 0.6485992025762,
+          "delta": 1.0576199915846018e-08,
+          "rel_delta": 1.6306218148736174e-08,
+          "tolerance": 0.0001148599192,
+          "unit": "V",
+          "within": true
+        },
+        "vd2_dc_v": {
+          "harness": 0.477063894,
+          "tool": 0.4770629058991,
+          "delta": -9.881008999901297e-07,
+          "rel_delta": -2.071212918054389e-06,
+          "tolerance": 9.770638940000001e-05,
+          "unit": "V",
+          "within": true
+        },
+        "vtail_dc_v": {
+          "harness": 0.221719029,
+          "tool": 0.2217189825507,
+          "delta": -4.644930001740377e-08,
+          "rel_delta": -2.0949622694497625e-07,
+          "tolerance": 7.21719029e-05,
+          "unit": "V",
+          "within": true
+        },
+        "vibias_dc_v": {
+          "harness": 0.345256193,
+          "tool": 0.3452561930607,
+          "delta": 6.070000058144842e-11,
+          "rel_delta": 1.7581147510784382e-10,
+          "tolerance": 8.45256193e-05,
+          "unit": "V",
+          "within": true
+        }
+      },
+      "harness_coarse_fine_delta_v": 1.20800292e-07,
+      "integrity_checks": {
+        "op_sanity": {
+          "harness_pass": true,
+          "tool_pass": true,
+          "agree": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "harness_margin_v": 0.0033706628000000002,
+        "tool_margin_v": 0.0033706626547299993
+      }
+    },
+    {
+      "point_id": "mos_tt_125C_1.32V",
+      "process": "mos_tt",
+      "temperature_c": 125,
+      "vdd_v": 1.32,
+      "metrics": {
+        "vos_null_v": {
+          "harness": 0.0169442441,
+          "tool": 0.01694424441841,
+          "delta": 3.184099997555201e-10,
+          "rel_delta": 1.879163200650067e-08,
+          "tolerance": 2.69442441e-06,
+          "unit": "V",
+          "within": true
+        },
+        "gain_local_db": {
+          "harness": 42.1114825,
+          "tool": 42.11328913671663,
+          "delta": 0.0018066367166298392,
+          "rel_delta": 4.2901285097950166e-05,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "vd1_dc_v": {
+          "harness": 0.762533244,
+          "tool": 0.7625332917548,
+          "delta": 4.7754800003296793e-08,
+          "rel_delta": 6.262651547202156e-08,
+          "tolerance": 0.0001262533244,
+          "unit": "V",
+          "within": true
+        },
+        "vd2_dc_v": {
+          "harness": 0.593980557,
+          "tool": 0.5939755505263,
+          "delta": -5.0064736999422266e-06,
+          "rel_delta": -8.428682792629233e-06,
+          "tolerance": 0.0001093980557,
+          "unit": "V",
+          "within": true
+        },
+        "vtail_dc_v": {
+          "harness": 0.278925017,
+          "tool": 0.2789247958359,
+          "delta": -2.2116409997829933e-07,
+          "rel_delta": -7.929159684457394e-07,
+          "tolerance": 7.78925017e-05,
+          "unit": "V",
+          "within": true
+        },
+        "vibias_dc_v": {
+          "harness": 0.345256195,
+          "tool": 0.3452561948333,
+          "delta": -1.6669998714746725e-10,
+          "rel_delta": -4.828298219166415e-10,
+          "tolerance": 8.45256195e-05,
+          "unit": "V",
+          "within": true
+        }
+      },
+      "harness_coarse_fine_delta_v": 5.68302455e-07,
+      "integrity_checks": {
+        "op_sanity": {
+          "harness_pass": true,
+          "tool_pass": true,
+          "agree": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "harness_margin_v": 0.004955755900000001,
+        "tool_margin_v": 0.004955755581590001
+      }
+    },
+    {
+      "point_id": "mos_ss_-40C_1.08V",
+      "process": "mos_ss",
+      "temperature_c": -40,
+      "vdd_v": 1.08,
+      "metrics": {
+        "vos_null_v": {
+          "harness": 0.0158972015,
+          "tool": 0.01589720179264,
+          "delta": 2.926399990388351e-10,
+          "rel_delta": 1.8408271357624492e-08,
+          "tolerance": 2.58972015e-06,
+          "unit": "V",
+          "within": true
+        },
+        "gain_local_db": {
+          "harness": 44.4088626,
+          "tool": 44.41276846946535,
+          "delta": 0.003905869465349099,
+          "rel_delta": 8.795247697582552e-05,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "vd1_dc_v": {
+          "harness": 0.509383454,
+          "tool": 0.5093839109142,
+          "delta": 4.5691420003102223e-07,
+          "rel_delta": 8.969945852050041e-07,
+          "tolerance": 0.0001009383454,
+          "unit": "V",
+          "within": true
+        },
+        "vd2_dc_v": {
+          "harness": 0.27103085,
+          "tool": 0.2710176012559,
+          "delta": -1.3248744099969567e-05,
+          "rel_delta": -4.8882789911073106e-05,
+          "tolerance": 7.710308500000001e-05,
+          "unit": "V",
+          "within": true
+        },
+        "vtail_dc_v": {
+          "harness": 0.036121245,
+          "tool": 0.03612098580986,
+          "delta": -2.59190140003418e-07,
+          "rel_delta": -7.175559425025853e-06,
+          "tolerance": 5.3612124500000005e-05,
+          "unit": "V",
+          "within": true
+        },
+        "vibias_dc_v": {
+          "harness": 0.46562699,
+          "tool": 0.4656269895279,
+          "delta": -4.721000257390529e-10,
+          "rel_delta": -1.0139017623077495e-09,
+          "tolerance": 9.656269900000001e-05,
+          "unit": "V",
+          "within": true
+        }
+      },
+      "harness_coarse_fine_delta_v": 1.03747937e-06,
+      "integrity_checks": {
+        "op_sanity": {
+          "harness_pass": true,
+          "tool_pass": true,
+          "agree": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "harness_margin_v": 0.0060027985,
+        "tool_margin_v": 0.006002798207360001
+      }
+    },
+    {
+      "point_id": "mos_ss_-40C_1.20V",
+      "process": "mos_ss",
+      "temperature_c": -40,
+      "vdd_v": 1.2,
+      "metrics": {
+        "vos_null_v": {
+          "harness": 0.0130035031,
+          "tool": 0.01300350362341,
+          "delta": 5.234100011047849e-10,
+          "rel_delta": 4.0251461246991584e-08,
+          "tolerance": 2.30035031e-06,
+          "unit": "V",
+          "within": true
+        },
+        "gain_local_db": {
+          "harness": 45.6902312,
+          "tool": 45.692156499697425,
+          "delta": 0.0019252996974259418,
+          "rel_delta": 4.213810363528959e-05,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "vd1_dc_v": {
+          "harness": 0.591020469,
+          "tool": 0.5910204763302,
+          "delta": 7.330200002542142e-09,
+          "rel_delta": 1.2402616130951873e-08,
+          "tolerance": 0.00010910204690000001,
+          "unit": "V",
+          "within": true
+        },
+        "vd2_dc_v": {
+          "harness": 0.387883143,
+          "tool": 0.3878826738894,
+          "delta": -4.6911059997656324e-07,
+          "rel_delta": -1.209412186227859e-06,
+          "tolerance": 8.87883143e-05,
+          "unit": "V",
+          "within": true
+        },
+        "vtail_dc_v": {
+          "harness": 0.0795608039,
+          "tool": 0.07956079186505,
+          "delta": -1.2034950008787959e-08,
+          "rel_delta": -1.5126732535174847e-07,
+          "tolerance": 5.795608039e-05,
+          "unit": "V",
+          "within": true
+        },
+        "vibias_dc_v": {
+          "harness": 0.46562699,
+          "tool": 0.465626990094,
+          "delta": 9.399997447090414e-11,
+          "rel_delta": 2.0187827701075517e-10,
+          "tolerance": 9.656269900000001e-05,
+          "unit": "V",
+          "within": true
+        }
+      },
+      "harness_coarse_fine_delta_v": 3.34492784e-08,
+      "integrity_checks": {
+        "op_sanity": {
+          "harness_pass": true,
+          "tool_pass": true,
+          "agree": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "harness_margin_v": 0.0088964969,
+        "tool_margin_v": 0.008896496376589999
+      }
+    },
+    {
+      "point_id": "mos_ss_-40C_1.32V",
+      "process": "mos_ss",
+      "temperature_c": -40,
+      "vdd_v": 1.32,
+      "metrics": {
+        "vos_null_v": {
+          "harness": 0.0117696819,
+          "tool": 0.01176968246089,
+          "delta": 5.608899993764238e-10,
+          "rel_delta": 4.765549350797865e-08,
+          "tolerance": 2.17696819e-06,
+          "unit": "V",
+          "within": true
+        },
+        "gain_local_db": {
+          "harness": 46.7903706,
+          "tool": 46.794386627506086,
+          "delta": 0.004016027506082764,
+          "rel_delta": 8.583021366543235e-05,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "vd1_dc_v": {
+          "harness": 0.698874562,
+          "tool": 0.6988743841493,
+          "delta": -1.7785069994502578e-07,
+          "rel_delta": -2.5448157597275057e-07,
+          "tolerance": 0.0001198874562,
+          "unit": "V",
+          "within": true
+        },
+        "vd2_dc_v": {
+          "harness": 0.504849627,
+          "tool": 0.5048727826235,
+          "delta": 2.31556234999708e-05,
+          "rel_delta": 4.5866377355906814e-05,
+          "tolerance": 0.00010048496270000001,
+          "unit": "V",
+          "within": true
+        },
+        "vtail_dc_v": {
+          "harness": 0.133091472,
+          "tool": 0.1330920941041,
+          "delta": 6.221041000120664e-07,
+          "rel_delta": 4.674259670161785e-06,
+          "tolerance": 6.33091472e-05,
+          "unit": "V",
+          "within": true
+        },
+        "vibias_dc_v": {
+          "harness": 0.46562699,
+          "tool": 0.4656269903504,
+          "delta": 3.5039998680375106e-10,
+          "rel_delta": 7.525336682131572e-10,
+          "tolerance": 9.656269900000001e-05,
+          "unit": "V",
+          "within": true
+        }
+      },
+      "harness_coarse_fine_delta_v": 2.42237756e-06,
+      "integrity_checks": {
+        "op_sanity": {
+          "harness_pass": true,
+          "tool_pass": true,
+          "agree": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "harness_margin_v": 0.010130318099999999,
+        "tool_margin_v": 0.01013031753911
+      }
+    },
+    {
+      "point_id": "mos_ss_27C_1.08V",
+      "process": "mos_ss",
+      "temperature_c": 27,
+      "vdd_v": 1.08,
+      "metrics": {
+        "vos_null_v": {
+          "harness": 0.0181346118,
+          "tool": 0.01813461203098,
+          "delta": 2.309800024857811e-10,
+          "rel_delta": 1.273696978094569e-08,
+          "tolerance": 2.8134611799999996e-06,
+          "unit": "V",
+          "within": true
+        },
+        "gain_local_db": {
+          "harness": 42.4266044,
+          "tool": 42.42911672330959,
+          "delta": 0.0025123233095882824,
+          "rel_delta": 5.9215752594810115e-05,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "vd1_dc_v": {
+          "harness": 0.497288646,
+          "tool": 0.4972887940607,
+          "delta": 1.4806069997819193e-07,
+          "rel_delta": 2.9773593499295765e-07,
+          "tolerance": 9.972886460000001e-05,
+          "unit": "V",
+          "within": true
+        },
+        "vd2_dc_v": {
+          "harness": 0.276038408,
+          "tool": 0.2760336307033,
+          "delta": -4.777296700009259e-06,
+          "rel_delta": -1.7306637632866144e-05,
+          "tolerance": 7.76038408e-05,
+          "unit": "V",
+          "within": true
+        },
+        "vtail_dc_v": {
+          "harness": 0.0636224887,
+          "tool": 0.06362235224688,
+          "delta": -1.364531199976593e-07,
+          "rel_delta": -2.1447309400466647e-06,
+          "tolerance": 5.636224887e-05,
+          "unit": "V",
+          "within": true
+        },
+        "vibias_dc_v": {
+          "harness": 0.438844841,
+          "tool": 0.4388448409299,
+          "delta": -7.009998137519347e-11,
+          "rel_delta": -1.5973750817135268e-10,
+          "tolerance": 9.388448409999999e-05,
+          "unit": "V",
+          "within": true
+        }
+      },
+      "harness_coarse_fine_delta_v": 4.56725117e-07,
+      "integrity_checks": {
+        "op_sanity": {
+          "harness_pass": true,
+          "tool_pass": true,
+          "agree": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "harness_margin_v": 0.0037653882000000007,
+        "tool_margin_v": 0.003765387969019998
+      }
+    },
+    {
+      "point_id": "mos_ss_27C_1.20V",
+      "process": "mos_ss",
+      "temperature_c": 27,
+      "vdd_v": 1.2,
+      "metrics": {
+        "vos_null_v": {
+          "harness": 0.0153530736,
+          "tool": 0.01535307393308,
+          "delta": 3.3308000108034364e-10,
+          "rel_delta": 2.1694678847911185e-08,
+          "tolerance": 2.5353073599999997e-06,
+          "unit": "V",
+          "within": true
+        },
+        "gain_local_db": {
+          "harness": 43.7344755,
+          "tool": 43.73739560996114,
+          "delta": 0.0029201099611384507,
+          "rel_delta": 6.67690632562508e-05,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "vd1_dc_v": {
+          "harness": 0.59033884,
+          "tool": 0.5903390435207,
+          "delta": 2.0352069995954736e-07,
+          "rel_delta": 3.447523458892648e-07,
+          "tolerance": 0.00010903388400000002,
+          "unit": "V",
+          "within": true
+        },
+        "vd2_dc_v": {
+          "harness": 0.392820249,
+          "tool": 0.3928055159906,
+          "delta": -1.473300940002531e-05,
+          "rel_delta": -3.7505727969805626e-05,
+          "tolerance": 8.928202490000001e-05,
+          "unit": "V",
+          "within": true
+        },
+        "vtail_dc_v": {
+          "harness": 0.112388333,
+          "tool": 0.1123878505258,
+          "delta": -4.824742000086868e-07,
+          "rel_delta": -4.29292068962965e-06,
+          "tolerance": 6.12388333e-05,
+          "unit": "V",
+          "within": true
+        },
+        "vibias_dc_v": {
+          "harness": 0.438844842,
+          "tool": 0.4388448415607,
+          "delta": -4.3929998527758585e-10,
+          "rel_delta": -1.001037139403329e-09,
+          "tolerance": 9.38844842e-05,
+          "unit": "V",
+          "within": true
+        }
+      },
+      "harness_coarse_fine_delta_v": 1.30315983e-06,
+      "integrity_checks": {
+        "op_sanity": {
+          "harness_pass": true,
+          "tool_pass": true,
+          "agree": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "harness_margin_v": 0.0065469264,
+        "tool_margin_v": 0.006546926066919999
+      }
+    },
+    {
+      "point_id": "mos_ss_27C_1.32V",
+      "process": "mos_ss",
+      "temperature_c": 27,
+      "vdd_v": 1.32,
+      "metrics": {
+        "vos_null_v": {
+          "harness": 0.013935498,
+          "tool": 0.0139354984489,
+          "delta": 4.4890000050479273e-10,
+          "rel_delta": 3.221269885760758e-08,
+          "tolerance": 2.3935498e-06,
+          "unit": "V",
+          "within": true
+        },
+        "gain_local_db": {
+          "harness": 44.8733281,
+          "tool": 44.87461358597461,
+          "delta": 0.001285485974605649,
+          "rel_delta": 2.8646994306750538e-05,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "vd1_dc_v": {
+          "harness": 0.700336683,
+          "tool": 0.7003367802519,
+          "delta": 9.725190008857965e-08,
+          "rel_delta": 1.3886449539096848e-07,
+          "tolerance": 0.0001200336683,
+          "unit": "V",
+          "within": true
+        },
+        "vd2_dc_v": {
+          "harness": 0.509716434,
+          "tool": 0.5097048305097,
+          "delta": -1.160349030004948e-05,
+          "rel_delta": -2.2764599149748974e-05,
+          "tolerance": 0.0001009716434,
+          "unit": "V",
+          "within": true
+        },
+        "vtail_dc_v": {
+          "harness": 0.167321986,
+          "tool": 0.1673216067076,
+          "delta": -3.792924000156628e-07,
+          "rel_delta": -2.266841370240865e-06,
+          "tolerance": 6.673219860000001e-05,
+          "unit": "V",
+          "within": true
+        },
+        "vibias_dc_v": {
+          "harness": 0.438844842,
+          "tool": 0.4388448418343,
+          "delta": -1.6570000926918738e-10,
+          "rel_delta": -3.775822190686415e-10,
+          "tolerance": 9.38844842e-05,
+          "unit": "V",
+          "within": true
+        }
+      },
+      "harness_coarse_fine_delta_v": 9.60861127e-07,
+      "integrity_checks": {
+        "op_sanity": {
+          "harness_pass": true,
+          "tool_pass": true,
+          "agree": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "harness_margin_v": 0.007964502,
+        "tool_margin_v": 0.0079645015511
+      }
+    },
+    {
+      "point_id": "mos_ss_125C_1.08V",
+      "process": "mos_ss",
+      "temperature_c": 125,
+      "vdd_v": 1.08,
+      "metrics": {
+        "vos_null_v": {
+          "harness": 0.0211370862,
+          "tool": 0.02113708621536,
+          "delta": 1.5360001465181128e-11,
+          "rel_delta": 7.266849044302582e-10,
+          "tolerance": 3.11370862e-06,
+          "unit": "V",
+          "within": true
+        },
+        "gain_local_db": {
+          "harness": 39.9004076,
+          "tool": 39.90311602878519,
+          "delta": 0.0027084287851906197,
+          "rel_delta": 6.787972725347847e-05,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "vd1_dc_v": {
+          "harness": 0.505194658,
+          "tool": 0.5051946538249,
+          "delta": -4.175099932446358e-09,
+          "rel_delta": -8.26433903512566e-09,
+          "tolerance": 0.0001005194658,
+          "unit": "V",
+          "within": true
+        },
+        "vd2_dc_v": {
+          "harness": 0.305889463,
+          "tool": 0.3058896165842,
+          "delta": 1.5358420002442585e-07,
+          "rel_delta": 5.020905215830395e-07,
+          "tolerance": 8.058894630000001e-05,
+          "unit": "V",
+          "within": true
+        },
+        "vtail_dc_v": {
+          "harness": 0.116213082,
+          "tool": 0.1162130888533,
+          "delta": 6.853300010822849e-09,
+          "rel_delta": 5.897184630920338e-08,
+          "tolerance": 6.16213082e-05,
+          "unit": "V",
+          "within": true
+        },
+        "vibias_dc_v": {
+          "harness": 0.395788087,
+          "tool": 0.3957880872099,
+          "delta": 2.0989998628095918e-10,
+          "rel_delta": 5.30334270220112e-10,
+          "tolerance": 8.957880870000001e-05,
+          "unit": "V",
+          "within": true
+        }
+      },
+      "harness_coarse_fine_delta_v": -1.94360806e-08,
+      "integrity_checks": {
+        "op_sanity": {
+          "harness_pass": true,
+          "tool_pass": true,
+          "agree": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "harness_margin_v": 0.0007629138000000008,
+        "tool_margin_v": 0.0007629137846399993
+      }
+    },
+    {
+      "point_id": "mos_ss_125C_1.20V",
+      "process": "mos_ss",
+      "temperature_c": 125,
+      "vdd_v": 1.2,
+      "metrics": {
+        "vos_null_v": {
+          "harness": 0.0184283787,
+          "tool": 0.01842837896521,
+          "delta": 2.6520999979462445e-10,
+          "rel_delta": 1.439139080610626e-08,
+          "tolerance": 2.84283787e-06,
+          "unit": "V",
+          "within": true
+        },
+        "gain_local_db": {
+          "harness": 41.4505993,
+          "tool": 41.45283259088128,
+          "delta": 0.002233290881278549,
+          "rel_delta": 5.387837375076382e-05,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "vd1_dc_v": {
+          "harness": 0.608364079,
+          "tool": 0.6083641416619,
+          "delta": 6.266190000214777e-08,
+          "rel_delta": 1.0300065727935224e-07,
+          "tolerance": 0.0001108364079,
+          "unit": "V",
+          "within": true
+        },
+        "vd2_dc_v": {
+          "harness": 0.422657721,
+          "tool": 0.4226529467624,
+          "delta": -4.774237599980413e-06,
+          "rel_delta": -1.1295753899123526e-05,
+          "tolerance": 9.22657721e-05,
+          "unit": "V",
+          "within": true
+        },
+        "vtail_dc_v": {
+          "harness": 0.169443183,
+          "tool": 0.169442978886,
+          "delta": -2.04114000007527e-07,
+          "rel_delta": -1.2046161810329483e-06,
+          "tolerance": 6.69443183e-05,
+          "unit": "V",
+          "within": true
+        },
+        "vibias_dc_v": {
+          "harness": 0.395788088,
+          "tool": 0.395788087873,
+          "delta": -1.2699996609910613e-10,
+          "rel_delta": -3.2087869733741493e-10,
+          "tolerance": 8.95788088e-05,
+          "unit": "V",
+          "within": true
+        }
+      },
+      "harness_coarse_fine_delta_v": 5.41307649e-07,
+      "integrity_checks": {
+        "op_sanity": {
+          "harness_pass": true,
+          "tool_pass": true,
+          "agree": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "harness_margin_v": 0.003471621299999998,
+        "tool_margin_v": 0.0034716210347899984
+      }
+    },
+    {
+      "point_id": "mos_ss_125C_1.32V",
+      "process": "mos_ss",
+      "temperature_c": 125,
+      "vdd_v": 1.32,
+      "metrics": {
+        "vos_null_v": {
+          "harness": 0.0167274416,
+          "tool": 0.0167274420581,
+          "delta": 4.580999989067802e-10,
+          "rel_delta": 2.7386136497214267e-08,
+          "tolerance": 2.67274416e-06,
+          "unit": "V",
+          "within": true
+        },
+        "gain_local_db": {
+          "harness": 42.6935139,
+          "tool": 42.69451070292327,
+          "delta": 0.000996802923268092,
+          "rel_delta": 2.3347877281848473e-05,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "vd1_dc_v": {
+          "harness": 0.719960643,
+          "tool": 0.7199607619315,
+          "delta": 1.1893150009267828e-07,
+          "rel_delta": 1.651916688072049e-07,
+          "tolerance": 0.0001219960643,
+          "unit": "V",
+          "within": true
+        },
+        "vd2_dc_v": {
+          "harness": 0.539552373,
+          "tool": 0.5395400555403,
+          "delta": -1.2317459699984212e-05,
+          "rel_delta": -2.2829034429961098e-05,
+          "tolerance": 0.0001039552373,
+          "unit": "V",
+          "within": true
+        },
+        "vtail_dc_v": {
+          "harness": 0.22562671,
+          "tool": 0.2256262041589,
+          "delta": -5.05841100006954e-07,
+          "rel_delta": -2.241938022350962e-06,
+          "tolerance": 7.2562671e-05,
+          "unit": "V",
+          "within": true
+        },
+        "vibias_dc_v": {
+          "harness": 0.395788088,
+          "tool": 0.3957880883097,
+          "delta": 3.097000433882613e-10,
+          "rel_delta": 7.824895512981212e-10,
+          "tolerance": 8.95788088e-05,
+          "unit": "V",
+          "within": true
+        }
+      },
+      "harness_coarse_fine_delta_v": 1.29764072e-06,
+      "integrity_checks": {
+        "op_sanity": {
+          "harness_pass": true,
+          "tool_pass": true,
+          "agree": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "harness_margin_v": 0.005172558399999999,
+        "tool_margin_v": 0.0051725579419
+      }
+    },
+    {
+      "point_id": "mos_ff_-40C_1.08V",
+      "process": "mos_ff",
+      "temperature_c": -40,
+      "vdd_v": 1.08,
+      "metrics": {
+        "vos_null_v": {
+          "harness": 0.0140370594,
+          "tool": 0.01403705961985,
+          "delta": 2.1985000105140262e-10,
+          "rel_delta": 1.566211232613311e-08,
+          "tolerance": 2.40370594e-06,
+          "unit": "V",
+          "within": true
+        },
+        "gain_local_db": {
+          "harness": 43.411274,
+          "tool": 43.41424094595031,
+          "delta": 0.0029669459503125495,
+          "rel_delta": 6.834505594819792e-05,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "vd1_dc_v": {
+          "harness": 0.553458404,
+          "tool": 0.5534584257916,
+          "delta": 2.1791599968956632e-08,
+          "rel_delta": 3.937350993581919e-08,
+          "tolerance": 0.00010534584040000001,
+          "unit": "V",
+          "within": true
+        },
+        "vd2_dc_v": {
+          "harness": 0.375241746,
+          "tool": 0.3752396851815,
+          "delta": -2.060818499960426e-06,
+          "rel_delta": -5.491975564894707e-06,
+          "tolerance": 8.75241746e-05,
+          "unit": "V",
+          "within": true
+        },
+        "vtail_dc_v": {
+          "harness": 0.117432902,
+          "tool": 0.1174328341843,
+          "delta": -6.781570000002901e-08,
+          "rel_delta": -5.774846643918329e-07,
+          "tolerance": 6.17432902e-05,
+          "unit": "V",
+          "within": true
+        },
+        "vibias_dc_v": {
+          "harness": 0.368739008,
+          "tool": 0.368739008396,
+          "delta": 3.960000105607264e-10,
+          "rel_delta": 1.0739303463134729e-09,
+          "tolerance": 8.68739008e-05,
+          "unit": "V",
+          "within": true
+        }
+      },
+      "harness_coarse_fine_delta_v": 1.79086747e-07,
+      "integrity_checks": {
+        "op_sanity": {
+          "harness_pass": true,
+          "tool_pass": true,
+          "agree": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "harness_margin_v": 0.0078629406,
+        "tool_margin_v": 0.007862940380149999
+      }
+    },
+    {
+      "point_id": "mos_ff_-40C_1.20V",
+      "process": "mos_ff",
+      "temperature_c": -40,
+      "vdd_v": 1.2,
+      "metrics": {
+        "vos_null_v": {
+          "harness": 0.0130075661,
+          "tool": 0.01300756645824,
+          "delta": 3.582400001644892e-10,
+          "rel_delta": 2.7540894077370032e-08,
+          "tolerance": 2.30075661e-06,
+          "unit": "V",
+          "within": true
+        },
+        "gain_local_db": {
+          "harness": 44.4813685,
+          "tool": 44.4825920534116,
+          "delta": 0.0012235534115987434,
+          "rel_delta": 2.750709910372347e-05,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "vd1_dc_v": {
+          "harness": 0.666901516,
+          "tool": 0.6669015226569,
+          "delta": 6.656899920187698e-09,
+          "rel_delta": 9.981833539853128e-09,
+          "tolerance": 0.00011669015160000002,
+          "unit": "V",
+          "within": true
+        },
+        "vd2_dc_v": {
+          "harness": 0.49206566,
+          "tool": 0.4920648443486,
+          "delta": -8.156514000323689e-07,
+          "rel_delta": -1.6576068324547763e-06,
+          "tolerance": 9.9206566e-05,
+          "unit": "V",
+          "within": true
+        },
+        "vtail_dc_v": {
+          "harness": 0.173188405,
+          "tool": 0.1731883792194,
+          "delta": -2.5780599988145525e-08,
+          "rel_delta": -1.4885869517734475e-07,
+          "tolerance": 6.73188405e-05,
+          "unit": "V",
+          "within": true
+        },
+        "vibias_dc_v": {
+          "harness": 0.368739009,
+          "tool": 0.3687390094763,
+          "delta": 4.762999994412098e-10,
+          "rel_delta": 1.2916995159609212e-09,
+          "tolerance": 8.68739009e-05,
+          "unit": "V",
+          "within": true
+        }
+      },
+      "harness_coarse_fine_delta_v": 6.68538471e-08,
+      "integrity_checks": {
+        "op_sanity": {
+          "harness_pass": true,
+          "tool_pass": true,
+          "agree": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "harness_margin_v": 0.0088924339,
+        "tool_margin_v": 0.00889243354176
+      }
+    },
+    {
+      "point_id": "mos_ff_-40C_1.32V",
+      "process": "mos_ff",
+      "temperature_c": -40,
+      "vdd_v": 1.32,
+      "metrics": {
+        "vos_null_v": {
+          "harness": 0.0120962046,
+          "tool": 0.01209620511325,
+          "delta": 5.132499997922979e-10,
+          "rel_delta": 4.243066455674021e-08,
+          "tolerance": 2.20962046e-06,
+          "unit": "V",
+          "within": true
+        },
+        "gain_local_db": {
+          "harness": 45.5376749,
+          "tool": 45.54083228916433,
+          "delta": 0.003157389164329061,
+          "rel_delta": 6.933575706846335e-05,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "vd1_dc_v": {
+          "harness": 0.781792985,
+          "tool": 0.7817930933393,
+          "delta": 1.0833929997566827e-07,
+          "rel_delta": 1.3857798938381146e-07,
+          "tolerance": 0.00012817929850000002,
+          "unit": "V",
+          "within": true
+        },
+        "vd2_dc_v": {
+          "harness": 0.609029441,
+          "tool": 0.6090155590824,
+          "delta": -1.3881917599989357e-05,
+          "rel_delta": -2.2793508269806875e-05,
+          "tolerance": 0.0001109029441,
+          "unit": "V",
+          "within": true
+        },
+        "vtail_dc_v": {
+          "harness": 0.229518378,
+          "tool": 0.2295179528807,
+          "delta": -4.251192999848996e-07,
+          "rel_delta": -1.8522233543533479e-06,
+          "tolerance": 7.29518378e-05,
+          "unit": "V",
+          "within": true
+        },
+        "vibias_dc_v": {
+          "harness": 0.36873901,
+          "tool": 0.3687390104676,
+          "delta": 4.676000142644909e-10,
+          "rel_delta": 1.2681056291399462e-09,
+          "tolerance": 8.687390100000001e-05,
+          "unit": "V",
+          "within": true
+        }
+      },
+      "harness_coarse_fine_delta_v": 1.07956865e-06,
+      "integrity_checks": {
+        "op_sanity": {
+          "harness_pass": true,
+          "tool_pass": true,
+          "agree": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "harness_margin_v": 0.009803795399999999,
+        "tool_margin_v": 0.00980379488675
+      }
+    },
+    {
+      "point_id": "mos_ff_27C_1.08V",
+      "process": "mos_ff",
+      "temperature_c": 27,
+      "vdd_v": 1.08,
+      "metrics": {
+        "vos_null_v": {
+          "harness": 0.0162584333,
+          "tool": 0.01625843351228,
+          "delta": 2.1227999913442375e-10,
+          "rel_delta": 1.3056608543851746e-08,
+          "tolerance": 2.6258433299999998e-06,
+          "unit": "V",
+          "within": true
+        },
+        "gain_local_db": {
+          "harness": 41.7462764,
+          "tool": 41.74841992468547,
+          "delta": 0.0021435246854721868,
+          "rel_delta": 5.134648812587718e-05,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "vd1_dc_v": {
+          "harness": 0.557660364,
+          "tool": 0.5576604429663,
+          "delta": 7.896630005443939e-08,
+          "rel_delta": 1.4160285570239916e-07,
+          "tolerance": 0.0001057660364,
+          "unit": "V",
+          "within": true
+        },
+        "vd2_dc_v": {
+          "harness": 0.38357742,
+          "tool": 0.383570152268,
+          "delta": -7.267731999993643e-06,
+          "rel_delta": -1.8947236258050965e-05,
+          "tolerance": 8.8357742e-05,
+          "unit": "V",
+          "within": true
+        },
+        "vtail_dc_v": {
+          "harness": 0.153746439,
+          "tool": 0.1537461510823,
+          "delta": -2.879177000147948e-07,
+          "rel_delta": -1.87267882031918e-06,
+          "tolerance": 6.537464390000001e-05,
+          "unit": "V",
+          "within": true
+        },
+        "vibias_dc_v": {
+          "harness": 0.341317883,
+          "tool": 0.3413178832603,
+          "delta": 2.603000037737502e-10,
+          "rel_delta": 7.626321875837669e-10,
+          "tolerance": 8.41317883e-05,
+          "unit": "V",
+          "within": true
+        }
+      },
+      "harness_coarse_fine_delta_v": 7.57703236e-07,
+      "integrity_checks": {
+        "op_sanity": {
+          "harness_pass": true,
+          "tool_pass": true,
+          "agree": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "harness_margin_v": 0.0056415667,
+        "tool_margin_v": 0.0056415664877200004
+      }
+    },
+    {
+      "point_id": "mos_ff_27C_1.20V",
+      "process": "mos_ff",
+      "temperature_c": 27,
+      "vdd_v": 1.2,
+      "metrics": {
+        "vos_null_v": {
+          "harness": 0.0149892489,
+          "tool": 0.01498924913642,
+          "delta": 2.364199998966532e-10,
+          "rel_delta": 1.577263820715214e-08,
+          "tolerance": 2.49892489e-06,
+          "unit": "V",
+          "within": true
+        },
+        "gain_local_db": {
+          "harness": 42.9080405,
+          "tool": 42.90987587319179,
+          "delta": 0.001835373191788392,
+          "rel_delta": 4.277457489088536e-05,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "vd1_dc_v": {
+          "harness": 0.671260022,
+          "tool": 0.6712600341459,
+          "delta": 1.2145899952464845e-08,
+          "rel_delta": 1.809418042843738e-08,
+          "tolerance": 0.0001171260022,
+          "unit": "V",
+          "within": true
+        },
+        "vd2_dc_v": {
+          "harness": 0.500364558,
+          "tool": 0.500363215533,
+          "delta": -1.3424670000095063e-06,
+          "rel_delta": -2.682977797978861e-06,
+          "tolerance": 0.0001000364558,
+          "unit": "V",
+          "within": true
+        },
+        "vtail_dc_v": {
+          "harness": 0.210201527,
+          "tool": 0.2102014754647,
+          "delta": -5.1535299999683204e-08,
+          "rel_delta": -2.4517091162560015e-07,
+          "tolerance": 7.10201527e-05,
+          "unit": "V",
+          "within": true
+        },
+        "vibias_dc_v": {
+          "harness": 0.341317886,
+          "tool": 0.3413178855437,
+          "delta": -4.562999977864024e-10,
+          "rel_delta": -1.3368769012778967e-09,
+          "tolerance": 8.413178860000001e-05,
+          "unit": "V",
+          "within": true
+        }
+      },
+      "harness_coarse_fine_delta_v": 1.31212503e-07,
+      "integrity_checks": {
+        "op_sanity": {
+          "harness_pass": true,
+          "tool_pass": true,
+          "agree": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "harness_margin_v": 0.006910751099999999,
+        "tool_margin_v": 0.006910750863579999
+      }
+    },
+    {
+      "point_id": "mos_ff_27C_1.32V",
+      "process": "mos_ff",
+      "temperature_c": 27,
+      "vdd_v": 1.32,
+      "metrics": {
+        "vos_null_v": {
+          "harness": 0.0138489626,
+          "tool": 0.01384896304647,
+          "delta": 4.464699998596444e-10,
+          "rel_delta": 3.2238515819202544e-08,
+          "tolerance": 2.3848962600000002e-06,
+          "unit": "V",
+          "within": true
+        },
+        "gain_local_db": {
+          "harness": 44.030347,
+          "tool": 44.03265509978338,
+          "delta": 0.002308099783384421,
+          "rel_delta": 5.242065849229898e-05,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "vd1_dc_v": {
+          "harness": 0.786017659,
+          "tool": 0.7860177973362,
+          "delta": 1.3833620005065939e-07,
+          "rel_delta": 1.7599630042237942e-07,
+          "tolerance": 0.0001286017659,
+          "unit": "V",
+          "within": true
+        },
+        "vd2_dc_v": {
+          "harness": 0.617298778,
+          "tool": 0.6172824479518,
+          "delta": -1.6330048200008385e-05,
+          "rel_delta": -2.6454042648385713e-05,
+          "tolerance": 0.0001117298778,
+          "unit": "V",
+          "within": true
+        },
+        "vtail_dc_v": {
+          "harness": 0.267085667,
+          "tool": 0.2670850764684,
+          "delta": -5.905316000087701e-07,
+          "rel_delta": -2.2110194329850356e-06,
+          "tolerance": 7.670856670000001e-05,
+          "unit": "V",
+          "within": true
+        },
+        "vibias_dc_v": {
+          "harness": 0.341317888,
+          "tool": 0.3413178881967,
+          "delta": 1.9669998962967838e-10,
+          "rel_delta": 5.762955782431139e-10,
+          "tolerance": 8.41317888e-05,
+          "unit": "V",
+          "within": true
+        }
+      },
+      "harness_coarse_fine_delta_v": 1.49967234e-06,
+      "integrity_checks": {
+        "op_sanity": {
+          "harness_pass": true,
+          "tool_pass": true,
+          "agree": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "harness_margin_v": 0.008051037399999999,
+        "tool_margin_v": 0.008051036953529999
+      }
+    },
+    {
+      "point_id": "mos_ff_125C_1.08V",
+      "process": "mos_ff",
+      "temperature_c": 125,
+      "vdd_v": 1.08,
+      "metrics": {
+        "vos_null_v": {
+          "harness": 0.0191996871,
+          "tool": 0.01919968719766,
+          "delta": 9.765999814392856e-11,
+          "rel_delta": 5.086541131387946e-09,
+          "tolerance": 2.91996871e-06,
+          "unit": "V",
+          "within": true
+        },
+        "gain_local_db": {
+          "harness": 39.5763977,
+          "tool": 39.5782289298276,
+          "delta": 0.0018312298276015326,
+          "rel_delta": 4.627075565297174e-05,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "vd1_dc_v": {
+          "harness": 0.581322791,
+          "tool": 0.5813228052193,
+          "delta": 1.4219300070728025e-08,
+          "rel_delta": 2.446024874797662e-08,
+          "tolerance": 0.0001081322791,
+          "unit": "V",
+          "within": true
+        },
+        "vd2_dc_v": {
+          "harness": 0.417343426,
+          "tool": 0.4173422489533,
+          "delta": -1.177046699996076e-06,
+          "rel_delta": -2.8203312348235624e-06,
+          "tolerance": 9.17343426e-05,
+          "unit": "V",
+          "within": true
+        },
+        "vtail_dc_v": {
+          "harness": 0.213378534,
+          "tool": 0.2133784747531,
+          "delta": -5.9246899997145164e-08,
+          "rel_delta": -2.776610134417043e-07,
+          "tolerance": 7.133785340000001e-05,
+          "unit": "V",
+          "within": true
+        },
+        "vibias_dc_v": {
+          "harness": 0.297521159,
+          "tool": 0.2975211592852,
+          "delta": 2.8520003025889196e-10,
+          "rel_delta": 9.585873865827875e-10,
+          "tolerance": 7.97521159e-05,
+          "unit": "V",
+          "within": true
+        }
+      },
+      "harness_coarse_fine_delta_v": 1.57299714e-07,
+      "integrity_checks": {
+        "op_sanity": {
+          "harness_pass": true,
+          "tool_pass": true,
+          "agree": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "harness_margin_v": 0.002700312899999998,
+        "tool_margin_v": 0.00270031280234
+      }
+    },
+    {
+      "point_id": "mos_ff_125C_1.20V",
+      "process": "mos_ff",
+      "temperature_c": 125,
+      "vdd_v": 1.2,
+      "metrics": {
+        "vos_null_v": {
+          "harness": 0.0175170129,
+          "tool": 0.01751701315443,
+          "delta": 2.544300013729295e-10,
+          "rel_delta": 1.452473677021323e-08,
+          "tolerance": 2.75170129e-06,
+          "unit": "V",
+          "within": true
+        },
+        "gain_local_db": {
+          "harness": 41.0327797,
+          "tool": 41.03446031088953,
+          "delta": 0.0016806108895295324,
+          "rel_delta": 4.095776356895296e-05,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "vd1_dc_v": {
+          "harness": 0.69516537,
+          "tool": 0.695165376589,
+          "delta": 6.589000012269253e-09,
+          "rel_delta": 9.478320262514304e-09,
+          "tolerance": 0.00011951653700000001,
+          "unit": "V",
+          "within": true
+        },
+        "vd2_dc_v": {
+          "harness": 0.534193304,
+          "tool": 0.5341926822098,
+          "delta": -6.21790199994976e-07,
+          "rel_delta": -1.1639797716277177e-06,
+          "tolerance": 0.0001034193304,
+          "unit": "V",
+          "within": true
+        },
+        "vtail_dc_v": {
+          "harness": 0.27066405,
+          "tool": 0.2706640213344,
+          "delta": -2.866560000480689e-08,
+          "rel_delta": -1.0590841304859988e-07,
+          "tolerance": 7.7066405e-05,
+          "unit": "V",
+          "within": true
+        },
+        "vibias_dc_v": {
+          "harness": 0.297521167,
+          "tool": 0.2975211665401,
+          "delta": -4.598999514549007e-10,
+          "rel_delta": -1.545772208721206e-09,
+          "tolerance": 7.97521167e-05,
+          "unit": "V",
+          "within": true
+        }
+      },
+      "harness_coarse_fine_delta_v": 7.57301376e-08,
+      "integrity_checks": {
+        "op_sanity": {
+          "harness_pass": true,
+          "tool_pass": true,
+          "agree": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "harness_margin_v": 0.004382987099999999,
+        "tool_margin_v": 0.004382986845569998
+      }
+    },
+    {
+      "point_id": "mos_ff_125C_1.32V",
+      "process": "mos_ff",
+      "temperature_c": 125,
+      "vdd_v": 1.32,
+      "metrics": {
+        "vos_null_v": {
+          "harness": 0.0160865163,
+          "tool": 0.01608651660966,
+          "delta": 3.096600025009888e-10,
+          "rel_delta": 1.924966206020559e-08,
+          "tolerance": 2.60865163e-06,
+          "unit": "V",
+          "within": true
+        },
+        "gain_local_db": {
+          "harness": 42.2779456,
+          "tool": 42.27914362464618,
+          "delta": 0.001198024646178908,
+          "rel_delta": 2.8336869949019185e-05,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "vd1_dc_v": {
+          "harness": 0.8099734,
+          "tool": 0.8099734532814,
+          "delta": 5.328140006977122e-08,
+          "rel_delta": 6.57816664964198e-08,
+          "tolerance": 0.00013099734,
+          "unit": "V",
+          "within": true
+        },
+        "vd2_dc_v": {
+          "harness": 0.651170366,
+          "tool": 0.6511648159401,
+          "delta": -5.550059899994686e-06,
+          "rel_delta": -8.523207120261806e-06,
+          "tolerance": 0.0001151170366,
+          "unit": "V",
+          "within": true
+        },
+        "vtail_dc_v": {
+          "harness": 0.328251548,
+          "tool": 0.3282513039289,
+          "delta": -2.440710999973561e-07,
+          "rel_delta": -7.435489687236939e-07,
+          "tolerance": 8.28251548e-05,
+          "unit": "V",
+          "within": true
+        },
+        "vibias_dc_v": {
+          "harness": 0.297521176,
+          "tool": 0.2975211756379,
+          "delta": -3.6210001663761204e-10,
+          "rel_delta": -1.2170562832059123e-09,
+          "tolerance": 7.97521176e-05,
+          "unit": "V",
+          "within": true
+        }
+      },
+      "harness_coarse_fine_delta_v": 6.29298177e-07,
+      "integrity_checks": {
+        "op_sanity": {
+          "harness_pass": true,
+          "tool_pass": true,
+          "agree": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "harness_margin_v": 0.0058134837,
+        "tool_margin_v": 0.005813483390339998
+      }
+    },
+    {
+      "point_id": "mos_sf_-40C_1.08V",
+      "process": "mos_sf",
+      "temperature_c": -40,
+      "vdd_v": 1.08,
+      "metrics": {
+        "vos_null_v": {
+          "harness": 0.0143862243,
+          "tool": 0.01438622454829,
+          "delta": 2.4828999967141385e-10,
+          "rel_delta": 1.725887171600778e-08,
+          "tolerance": 2.43862243e-06,
+          "unit": "V",
+          "within": true
+        },
+        "gain_local_db": {
+          "harness": 44.3393926,
+          "tool": 44.3430086357451,
+          "delta": 0.0036160357451038294,
+          "rel_delta": 8.155356970550449e-05,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "vd1_dc_v": {
+          "harness": 0.558297842,
+          "tool": 0.5582981752413,
+          "delta": 3.3324129999900975e-07,
+          "rel_delta": 5.968880316736202e-07,
+          "tolerance": 0.00010582978420000001,
+          "unit": "V",
+          "within": true
+        },
+        "vd2_dc_v": {
+          "harness": 0.346168672,
+          "tool": 0.3461555514847,
+          "delta": -1.3120515300002467e-05,
+          "rel_delta": -3.790208751184297e-05,
+          "tolerance": 8.46168672e-05,
+          "unit": "V",
+          "within": true
+        },
+        "vtail_dc_v": {
+          "harness": 0.0551677378,
+          "tool": 0.05516743102126,
+          "delta": -3.067787400015676e-07,
+          "rel_delta": -5.560835956582719e-06,
+          "tolerance": 5.551677378e-05,
+          "unit": "V",
+          "within": true
+        },
+        "vibias_dc_v": {
+          "harness": 0.440982071,
+          "tool": 0.4409820714887,
+          "delta": 4.88700024892097e-10,
+          "rel_delta": 1.1082083763267033e-09,
+          "tolerance": 9.40982071e-05,
+          "unit": "V",
+          "within": true
+        }
+      },
+      "harness_coarse_fine_delta_v": 1.02487419e-06,
+      "integrity_checks": {
+        "op_sanity": {
+          "harness_pass": true,
+          "tool_pass": true,
+          "agree": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "harness_margin_v": 0.007513775699999999,
+        "tool_margin_v": 0.00751377545171
+      }
+    },
+    {
+      "point_id": "mos_sf_-40C_1.20V",
+      "process": "mos_sf",
+      "temperature_c": -40,
+      "vdd_v": 1.2,
+      "metrics": {
+        "vos_null_v": {
+          "harness": 0.0124066044,
+          "tool": 0.01240660483147,
+          "delta": 4.3147000035326233e-10,
+          "rel_delta": 3.4777444854553624e-08,
+          "tolerance": 2.24066044e-06,
+          "unit": "V",
+          "within": true
+        },
+        "gain_local_db": {
+          "harness": 45.582439,
+          "tool": 45.58556932774414,
+          "delta": 0.0031303277441381283,
+          "rel_delta": 6.867398526301166e-05,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "vd1_dc_v": {
+          "harness": 0.655139823,
+          "tool": 0.6551400113587,
+          "delta": 1.883587000817144e-07,
+          "rel_delta": 2.8750915982970925e-07,
+          "tolerance": 0.0001155139823,
+          "unit": "V",
+          "within": true
+        },
+        "vd2_dc_v": {
+          "harness": 0.463004225,
+          "tool": 0.4629865070045,
+          "delta": -1.7717995499988426e-05,
+          "rel_delta": -3.8267459654365844e-05,
+          "tolerance": 9.63004225e-05,
+          "unit": "V",
+          "within": true
+        },
+        "vtail_dc_v": {
+          "harness": 0.10429511,
+          "tool": 0.1042946237974,
+          "delta": -4.862026000002073e-07,
+          "rel_delta": -4.661796703605829e-06,
+          "tolerance": 6.0429511000000005e-05,
+          "unit": "V",
+          "within": true
+        },
+        "vibias_dc_v": {
+          "harness": 0.440982072,
+          "tool": 0.4409820722168,
+          "delta": 2.1680002237900453e-10,
+          "rel_delta": 4.916300143353776e-10,
+          "tolerance": 9.40982072e-05,
+          "unit": "V",
+          "within": true
+        }
+      },
+      "harness_coarse_fine_delta_v": 1.28625458e-06,
+      "integrity_checks": {
+        "op_sanity": {
+          "harness_pass": true,
+          "tool_pass": true,
+          "agree": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "harness_margin_v": 0.0094933956,
+        "tool_margin_v": 0.009493395168529999
+      }
+    },
+    {
+      "point_id": "mos_sf_-40C_1.32V",
+      "process": "mos_sf",
+      "temperature_c": -40,
+      "vdd_v": 1.32,
+      "metrics": {
+        "vos_null_v": {
+          "harness": 0.0114304056,
+          "tool": 0.01143040617915,
+          "delta": 5.79149998791717e-10,
+          "rel_delta": 5.0667493268280614e-08,
+          "tolerance": 2.1430405600000002e-06,
+          "unit": "V",
+          "within": true
+        },
+        "gain_local_db": {
+          "harness": 46.6780315,
+          "tool": 46.680994928891494,
+          "delta": 0.0029634288914905937,
+          "rel_delta": 6.34865866503088e-05,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "vd1_dc_v": {
+          "harness": 0.767607092,
+          "tool": 0.7676072338988,
+          "delta": 1.4189880004344957e-07,
+          "rel_delta": 1.8485863604221308e-07,
+          "tolerance": 0.0001267607092,
+          "unit": "V",
+          "within": true
+        },
+        "vd2_dc_v": {
+          "harness": 0.579961715,
+          "tool": 0.5799429068388,
+          "delta": -1.880816120003459e-05,
+          "rel_delta": -3.2430004797876336e-05,
+          "tolerance": 0.0001079961715,
+          "unit": "V",
+          "within": true
+        },
+        "vtail_dc_v": {
+          "harness": 0.15937844,
+          "tool": 0.1593779341533,
+          "delta": -5.058466999996458e-07,
+          "rel_delta": -3.173871572589403e-06,
+          "tolerance": 6.5937844e-05,
+          "unit": "V",
+          "within": true
+        },
+        "vibias_dc_v": {
+          "harness": 0.440982072,
+          "tool": 0.4409820724579,
+          "delta": 4.5789999569834094e-10,
+          "rel_delta": 1.0383641983938543e-09,
+          "tolerance": 9.40982072e-05,
+          "unit": "V",
+          "within": true
+        }
+      },
+      "harness_coarse_fine_delta_v": 1.28250436e-06,
+      "integrity_checks": {
+        "op_sanity": {
+          "harness_pass": true,
+          "tool_pass": true,
+          "agree": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "harness_margin_v": 0.010469594399999999,
+        "tool_margin_v": 0.01046959382085
+      }
+    },
+    {
+      "point_id": "mos_sf_27C_1.08V",
+      "process": "mos_sf",
+      "temperature_c": 27,
+      "vdd_v": 1.08,
+      "metrics": {
+        "vos_null_v": {
+          "harness": 0.0163569655,
+          "tool": 0.01635696574709,
+          "delta": 2.47089997768013e-10,
+          "rel_delta": 1.5106102520544716e-08,
+          "tolerance": 2.6356965500000004e-06,
+          "unit": "V",
+          "within": true
+        },
+        "gain_local_db": {
+          "harness": 42.6096906,
+          "tool": 42.6128729916762,
+          "delta": 0.0031823916761979376,
+          "rel_delta": 7.468704023394007e-05,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "vd1_dc_v": {
+          "harness": 0.554701005,
+          "tool": 0.5547011910527,
+          "delta": 1.8605270002414187e-07,
+          "rel_delta": 3.3541078589562294e-07,
+          "tolerance": 0.00010547010050000001,
+          "unit": "V",
+          "within": true
+        },
+        "vd2_dc_v": {
+          "harness": 0.354280862,
+          "tool": 0.3542721381981,
+          "delta": -8.723801899979122e-06,
+          "rel_delta": -2.4623971644223682e-05,
+          "tolerance": 8.54280862e-05,
+          "unit": "V",
+          "within": true
+        },
+        "vtail_dc_v": {
+          "harness": 0.0872862854,
+          "tool": 0.08728601027821,
+          "delta": -2.751217900026637e-07,
+          "rel_delta": -3.1519475109048883e-06,
+          "tolerance": 5.8728628540000006e-05,
+          "unit": "V",
+          "within": true
+        },
+        "vibias_dc_v": {
+          "harness": 0.413880003,
+          "tool": 0.4138800034824,
+          "delta": 4.824000088277103e-10,
+          "rel_delta": 1.1655552462816385e-09,
+          "tolerance": 9.13880003e-05,
+          "unit": "V",
+          "within": true
+        }
+      },
+      "harness_coarse_fine_delta_v": 8.17443956e-07,
+      "integrity_checks": {
+        "op_sanity": {
+          "harness_pass": true,
+          "tool_pass": true,
+          "agree": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "harness_margin_v": 0.0055430344999999985,
+        "tool_margin_v": 0.005543034252910001
+      }
+    },
+    {
+      "point_id": "mos_sf_27C_1.20V",
+      "process": "mos_sf",
+      "temperature_c": 27,
+      "vdd_v": 1.2,
+      "metrics": {
+        "vos_null_v": {
+          "harness": 0.014432574,
+          "tool": 0.01443257442971,
+          "delta": 4.2971000022151706e-10,
+          "rel_delta": 2.9773621823904528e-08,
+          "tolerance": 2.4432574e-06,
+          "unit": "V",
+          "within": true
+        },
+        "gain_local_db": {
+          "harness": 43.8726517,
+          "tool": 43.87557583038092,
+          "delta": 0.0029241303809186547,
+          "rel_delta": 6.665041358598014e-05,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "vd1_dc_v": {
+          "harness": 0.658714501,
+          "tool": 0.6587145953845,
+          "delta": 9.438449999343845e-08,
+          "rel_delta": 1.432858998096331e-07,
+          "tolerance": 0.0001158714501,
+          "unit": "V",
+          "within": true
+        },
+        "vd2_dc_v": {
+          "harness": 0.471055086,
+          "tool": 0.4710461096982,
+          "delta": -8.97630180002329e-06,
+          "rel_delta": -1.9055736933542607e-05,
+          "tolerance": 9.71055086e-05,
+          "unit": "V",
+          "within": true
+        },
+        "vtail_dc_v": {
+          "harness": 0.139839661,
+          "tool": 0.1398393609061,
+          "delta": -3.0009390000751424e-07,
+          "rel_delta": -2.145985608528572e-06,
+          "tolerance": 6.398396610000001e-05,
+          "unit": "V",
+          "within": true
+        },
+        "vibias_dc_v": {
+          "harness": 0.413880004,
+          "tool": 0.4138800042043,
+          "delta": 2.0429996583359866e-10,
+          "rel_delta": 4.936212521965633e-10,
+          "tolerance": 9.13880004e-05,
+          "unit": "V",
+          "within": true
+        }
+      },
+      "harness_coarse_fine_delta_v": 7.81434021e-07,
+      "integrity_checks": {
+        "op_sanity": {
+          "harness_pass": true,
+          "tool_pass": true,
+          "agree": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "harness_margin_v": 0.007467425999999999,
+        "tool_margin_v": 0.007467425570289999
+      }
+    },
+    {
+      "point_id": "mos_sf_27C_1.32V",
+      "process": "mos_sf",
+      "temperature_c": 27,
+      "vdd_v": 1.32,
+      "metrics": {
+        "vos_null_v": {
+          "harness": 0.0132374063,
+          "tool": 0.01323740679311,
+          "delta": 4.931099990140853e-10,
+          "rel_delta": 3.725125510532114e-08,
+          "tolerance": 2.32374063e-06,
+          "unit": "V",
+          "within": true
+        },
+        "gain_local_db": {
+          "harness": 45.027138,
+          "tool": 45.02986606447622,
+          "delta": 0.0027280644762157635,
+          "rel_delta": 6.058711695635115e-05,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "vd1_dc_v": {
+          "harness": 0.771656609,
+          "tool": 0.77165679282,
+          "delta": 1.8381999999927956e-07,
+          "rel_delta": 2.3821476788424625e-07,
+          "tolerance": 0.0001271656609,
+          "unit": "V",
+          "within": true
+        },
+        "vd2_dc_v": {
+          "harness": 0.587969405,
+          "tool": 0.5879471124225,
+          "delta": -2.22925774999716e-05,
+          "rel_delta": -3.791451954880476e-05,
+          "tolerance": 0.0001087969405,
+          "unit": "V",
+          "within": true
+        },
+        "vtail_dc_v": {
+          "harness": 0.195665057,
+          "tool": 0.1956643412925,
+          "delta": -7.157075000152613e-07,
+          "rel_delta": -3.6578196995862234e-06,
+          "tolerance": 6.95665057e-05,
+          "unit": "V",
+          "within": true
+        },
+        "vibias_dc_v": {
+          "harness": 0.413880005,
+          "tool": 0.4138800045411,
+          "delta": -4.588999735766208e-10,
+          "rel_delta": -1.1087754132423499e-09,
+          "tolerance": 9.13880005e-05,
+          "unit": "V",
+          "within": true
+        }
+      },
+      "harness_coarse_fine_delta_v": 1.81370456e-06,
+      "integrity_checks": {
+        "op_sanity": {
+          "harness_pass": true,
+          "tool_pass": true,
+          "agree": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "harness_margin_v": 0.008662593699999999,
+        "tool_margin_v": 0.00866259320689
+      }
+    },
+    {
+      "point_id": "mos_sf_125C_1.08V",
+      "process": "mos_sf",
+      "temperature_c": 125,
+      "vdd_v": 1.08,
+      "metrics": {
+        "vos_null_v": {
+          "harness": 0.0190021001,
+          "tool": 0.01900210013711,
+          "delta": 3.7110002570894807e-11,
+          "rel_delta": 1.952942168265644e-09,
+          "tolerance": 2.90021001e-06,
+          "unit": "V",
+          "within": true
+        },
+        "gain_local_db": {
+          "harness": 40.5255822,
+          "tool": 40.52835882884888,
+          "delta": 0.002776628848877749,
+          "rel_delta": 6.85154585855092e-05,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "vd1_dc_v": {
+          "harness": 0.572463946,
+          "tool": 0.5724639457087,
+          "delta": -2.912999841342412e-10,
+          "rel_delta": -5.088529787240806e-10,
+          "tolerance": 0.0001072463946,
+          "unit": "V",
+          "within": true
+        },
+        "vd2_dc_v": {
+          "harness": 0.388063505,
+          "tool": 0.3880635164866,
+          "delta": 1.1486600004495529e-08,
+          "rel_delta": 2.9599794509137182e-08,
+          "tolerance": 8.88063505e-05,
+          "unit": "V",
+          "within": true
+        },
+        "vtail_dc_v": {
+          "harness": 0.14445464,
+          "tool": 0.1444546407474,
+          "delta": 7.47400002998333e-10,
+          "rel_delta": 5.173942512323128e-09,
+          "tolerance": 6.4445464e-05,
+          "unit": "V",
+          "within": true
+        },
+        "vibias_dc_v": {
+          "harness": 0.370492049,
+          "tool": 0.3704920486339,
+          "delta": -3.660999836618828e-10,
+          "rel_delta": -9.881453182329503e-10,
+          "tolerance": 8.70492049e-05,
+          "unit": "V",
+          "within": true
+        }
+      },
+      "harness_coarse_fine_delta_v": -1.5432244e-09,
+      "integrity_checks": {
+        "op_sanity": {
+          "harness_pass": true,
+          "tool_pass": true,
+          "agree": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "harness_margin_v": 0.0028978999000000005,
+        "tool_margin_v": 0.002897899862889998
+      }
+    },
+    {
+      "point_id": "mos_sf_125C_1.20V",
+      "process": "mos_sf",
+      "temperature_c": 125,
+      "vdd_v": 1.2,
+      "metrics": {
+        "vos_null_v": {
+          "harness": 0.0170175336,
+          "tool": 0.01701753378745,
+          "delta": 1.874499999665602e-10,
+          "rel_delta": 1.101510973168052e-08,
+          "tolerance": 2.70175336e-06,
+          "unit": "V",
+          "within": true
+        },
+        "gain_local_db": {
+          "harness": 41.8980292,
+          "tool": 41.8998681711928,
+          "delta": 0.0018389711927966346,
+          "rel_delta": 4.389159175049299e-05,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "vd1_dc_v": {
+          "harness": 0.681541659,
+          "tool": 0.6815416675766,
+          "delta": 8.576599985765654e-09,
+          "rel_delta": 1.2584117012523888e-08,
+          "tolerance": 0.00011815416589999999,
+          "unit": "V",
+          "within": true
+        },
+        "vd2_dc_v": {
+          "harness": 0.504867782,
+          "tool": 0.5048670285158,
+          "delta": -7.534842000334052e-07,
+          "rel_delta": -1.4924386678994008e-06,
+          "tolerance": 0.00010048677820000002,
+          "unit": "V",
+          "within": true
+        },
+        "vtail_dc_v": {
+          "harness": 0.199517988,
+          "tool": 0.199517956127,
+          "delta": -3.187300001705751e-08,
+          "rel_delta": -1.597500071876101e-07,
+          "tolerance": 6.99517988e-05,
+          "unit": "V",
+          "within": true
+        },
+        "vibias_dc_v": {
+          "harness": 0.37049205,
+          "tool": 0.3704920495572,
+          "delta": -4.428000188738679e-10,
+          "rel_delta": -1.1951673966387885e-09,
+          "tolerance": 8.704920500000001e-05,
+          "unit": "V",
+          "within": true
+        }
+      },
+      "harness_coarse_fine_delta_v": 8.202112e-08,
+      "integrity_checks": {
+        "op_sanity": {
+          "harness_pass": true,
+          "tool_pass": true,
+          "agree": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "harness_margin_v": 0.0048824664,
+        "tool_margin_v": 0.00488246621255
+      }
+    },
+    {
+      "point_id": "mos_sf_125C_1.32V",
+      "process": "mos_sf",
+      "temperature_c": 125,
+      "vdd_v": 1.32,
+      "metrics": {
+        "vos_null_v": {
+          "harness": 0.0155520534,
+          "tool": 0.01555205379918,
+          "delta": 3.9917999981875507e-10,
+          "rel_delta": 2.5667350127460022e-08,
+          "tolerance": 2.55520534e-06,
+          "unit": "V",
+          "within": true
+        },
+        "gain_local_db": {
+          "harness": 43.1350998,
+          "tool": 43.1372674532092,
+          "delta": 0.002167653209198761,
+          "rel_delta": 5.025265315831635e-05,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "vd1_dc_v": {
+          "harness": 0.794934854,
+          "tool": 0.7949348933995,
+          "delta": 3.9399499995873555e-08,
+          "rel_delta": 4.956318092938161e-08,
+          "tolerance": 0.0001294934854,
+          "unit": "V",
+          "within": true
+        },
+        "vd2_dc_v": {
+          "harness": 0.621798406,
+          "tool": 0.6217942175447,
+          "delta": -4.188455300035976e-06,
+          "rel_delta": -6.736034154510161e-06,
+          "tolerance": 0.00011217984060000002,
+          "unit": "V",
+          "within": true
+        },
+        "vtail_dc_v": {
+          "harness": 0.256129246,
+          "tool": 0.2561290804137,
+          "delta": -1.655862999494495e-07,
+          "rel_delta": -6.464950900197064e-07,
+          "tolerance": 7.56129246e-05,
+          "unit": "V",
+          "within": true
+        },
+        "vibias_dc_v": {
+          "harness": 0.37049205,
+          "tool": 0.3704920503707,
+          "delta": 3.706999707198122e-10,
+          "rel_delta": 1.0005612015691354e-09,
+          "tolerance": 8.704920500000001e-05,
+          "unit": "V",
+          "within": true
+        }
+      },
+      "harness_coarse_fine_delta_v": 4.24404921e-07,
+      "integrity_checks": {
+        "op_sanity": {
+          "harness_pass": true,
+          "tool_pass": true,
+          "agree": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "harness_margin_v": 0.0063479465999999995,
+        "tool_margin_v": 0.00634794620082
+      }
+    },
+    {
+      "point_id": "mos_fs_-40C_1.08V",
+      "process": "mos_fs",
+      "temperature_c": -40,
+      "vdd_v": 1.08,
+      "metrics": {
+        "vos_null_v": {
+          "harness": 0.0153668136,
+          "tool": 0.01536681391276,
+          "delta": 3.127600001900932e-10,
+          "rel_delta": 2.03529507373014e-08,
+          "tolerance": 2.53668136e-06,
+          "unit": "V",
+          "within": true
+        },
+        "gain_local_db": {
+          "harness": 43.071127,
+          "tool": 43.073547110007546,
+          "delta": 0.0024201100075487147,
+          "rel_delta": 5.618868546320404e-05,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "vd1_dc_v": {
+          "harness": 0.485685428,
+          "tool": 0.4856855923132,
+          "delta": 1.6431320004617334e-07,
+          "rel_delta": 3.3831198255792293e-07,
+          "tolerance": 9.856854280000001e-05,
+          "unit": "V",
+          "within": true
+        },
+        "vd2_dc_v": {
+          "harness": 0.298370019,
+          "tool": 0.2983588533355,
+          "delta": -1.1165664499990235e-05,
+          "rel_delta": -3.742220661919198e-05,
+          "tolerance": 7.98370019e-05,
+          "unit": "V",
+          "within": true
+        },
+        "vtail_dc_v": {
+          "harness": 0.0915676968,
+          "tool": 0.09156733181485,
+          "delta": -3.6498515000593645e-07,
+          "rel_delta": -3.985959708073999e-06,
+          "tolerance": 5.9156769680000006e-05,
+          "unit": "V",
+          "within": true
+        },
+        "vibias_dc_v": {
+          "harness": 0.392553902,
+          "tool": 0.392553901605,
+          "delta": -3.9500003268244654e-10,
+          "rel_delta": -1.0062313243352923e-09,
+          "tolerance": 8.925539020000001e-05,
+          "unit": "V",
+          "within": true
+        }
+      },
+      "harness_coarse_fine_delta_v": 1.01531804e-06,
+      "integrity_checks": {
+        "op_sanity": {
+          "harness_pass": true,
+          "tool_pass": true,
+          "agree": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "harness_margin_v": 0.0065331864,
+        "tool_margin_v": 0.00653318608724
+      }
+    },
+    {
+      "point_id": "mos_fs_-40C_1.20V",
+      "process": "mos_fs",
+      "temperature_c": -40,
+      "vdd_v": 1.2,
+      "metrics": {
+        "vos_null_v": {
+          "harness": 0.014066596,
+          "tool": 0.01406659635629,
+          "delta": 3.5628999923986715e-10,
+          "rel_delta": 2.5328800175953523e-08,
+          "tolerance": 2.4066596e-06,
+          "unit": "V",
+          "within": true
+        },
+        "gain_local_db": {
+          "harness": 44.141298,
+          "tool": 44.14300875644209,
+          "delta": 0.0017107564420939525,
+          "rel_delta": 3.875636919634653e-05,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "vd1_dc_v": {
+          "harness": 0.596035863,
+          "tool": 0.5960359202093,
+          "delta": 5.720929996400059e-08,
+          "rel_delta": 9.598298276223119e-08,
+          "tolerance": 0.0001096035863,
+          "unit": "V",
+          "within": true
+        },
+        "vd2_dc_v": {
+          "harness": 0.415203512,
+          "tool": 0.4151966551427,
+          "delta": -6.85685730000829e-06,
+          "rel_delta": -1.651444918415885e-05,
+          "tolerance": 9.152035120000001e-05,
+          "unit": "V",
+          "within": true
+        },
+        "vtail_dc_v": {
+          "harness": 0.146265132,
+          "tool": 0.1462649018322,
+          "delta": -2.3016779998608072e-07,
+          "rel_delta": -1.573634104306423e-06,
+          "tolerance": 6.462651320000001e-05,
+          "unit": "V",
+          "within": true
+        },
+        "vibias_dc_v": {
+          "harness": 0.392553903,
+          "tool": 0.3925539025238,
+          "delta": -4.761999683466911e-10,
+          "rel_delta": -1.2130817314703685e-09,
+          "tolerance": 8.92553903e-05,
+          "unit": "V",
+          "within": true
+        }
+      },
+      "harness_coarse_fine_delta_v": 5.90791744e-07,
+      "integrity_checks": {
+        "op_sanity": {
+          "harness_pass": true,
+          "tool_pass": true,
+          "agree": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "harness_margin_v": 0.007833403999999999,
+        "tool_margin_v": 0.00783340364371
+      }
+    },
+    {
+      "point_id": "mos_fs_-40C_1.32V",
+      "process": "mos_fs",
+      "temperature_c": -40,
+      "vdd_v": 1.32,
+      "metrics": {
+        "vos_null_v": {
+          "harness": 0.0130797185,
+          "tool": 0.01307971905032,
+          "delta": 5.503199996398367e-10,
+          "rel_delta": 4.207429996599978e-08,
+          "tolerance": 2.30797185e-06,
+          "unit": "V",
+          "within": true
+        },
+        "gain_local_db": {
+          "harness": 45.1559932,
+          "tool": 45.15693952608964,
+          "delta": 0.0009463260896396264,
+          "rel_delta": 2.0956821510895843e-05,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "vd1_dc_v": {
+          "harness": 0.710484647,
+          "tool": 0.7104847309745,
+          "delta": 8.397450002028961e-08,
+          "rel_delta": 1.1819326480152583e-07,
+          "tolerance": 0.00012104846470000001,
+          "unit": "V",
+          "within": true
+        },
+        "vd2_dc_v": {
+          "harness": 0.532171393,
+          "tool": 0.5321602320976,
+          "delta": -1.116090240005363e-05,
+          "rel_delta": -2.097238323378579e-05,
+          "tolerance": 0.00010321713930000001,
+          "unit": "V",
+          "within": true
+        },
+        "vtail_dc_v": {
+          "harness": 0.202543059,
+          "tool": 0.2025426987445,
+          "delta": -3.602554999870833e-07,
+          "rel_delta": -1.7786612968410006e-06,
+          "tolerance": 7.02543059e-05,
+          "unit": "V",
+          "within": true
+        },
+        "vibias_dc_v": {
+          "harness": 0.392553903,
+          "tool": 0.3925539030209,
+          "delta": 2.0900003949719803e-11,
+          "rel_delta": 5.324110597295425e-11,
+          "tolerance": 8.92553903e-05,
+          "unit": "V",
+          "within": true
+        }
+      },
+      "harness_coarse_fine_delta_v": 9.11629422e-07,
+      "integrity_checks": {
+        "op_sanity": {
+          "harness_pass": true,
+          "tool_pass": true,
+          "agree": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "harness_margin_v": 0.008820281499999999,
+        "tool_margin_v": 0.00882028094968
+      }
+    },
+    {
+      "point_id": "mos_fs_27C_1.08V",
+      "process": "mos_fs",
+      "temperature_c": 27,
+      "vdd_v": 1.08,
+      "metrics": {
+        "vos_null_v": {
+          "harness": 0.0179928653,
+          "tool": 0.01799286544902,
+          "delta": 1.490199977305373e-10,
+          "rel_delta": 8.282171585563823e-09,
+          "tolerance": 2.79928653e-06,
+          "unit": "V",
+          "within": true
+        },
+        "gain_local_db": {
+          "harness": 41.075188,
+          "tool": 41.077361125901135,
+          "delta": 0.002173125901137496,
+          "rel_delta": 5.290604880828533e-05,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "vd1_dc_v": {
+          "harness": 0.486123264,
+          "tool": 0.4861232698,
+          "delta": 5.799999980293791e-09,
+          "rel_delta": 1.1931130249906721e-08,
+          "tolerance": 9.86123264e-05,
+          "unit": "V",
+          "within": true
+        },
+        "vd2_dc_v": {
+          "harness": 0.303772658,
+          "tool": 0.3037722322872,
+          "delta": -4.257127999562904e-07,
+          "rel_delta": -1.40141908346567e-06,
+          "tolerance": 8.03772658e-05,
+          "unit": "V",
+          "within": true
+        },
+        "vtail_dc_v": {
+          "harness": 0.126391108,
+          "tool": 0.1263910905705,
+          "delta": -1.7429500009935595e-08,
+          "rel_delta": -1.3790131509833424e-07,
+          "tolerance": 6.26391108e-05,
+          "unit": "V",
+          "within": true
+        },
+        "vibias_dc_v": {
+          "harness": 0.365140707,
+          "tool": 0.3651407067957,
+          "delta": -2.043000213447499e-10,
+          "rel_delta": -5.595103953850587e-10,
+          "tolerance": 8.65140707e-05,
+          "unit": "V",
+          "within": true
+        }
+      },
+      "harness_coarse_fine_delta_v": 4.74265006e-08,
+      "integrity_checks": {
+        "op_sanity": {
+          "harness_pass": true,
+          "tool_pass": true,
+          "agree": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "harness_margin_v": 0.0039071346999999985,
+        "tool_margin_v": 0.003907134550980001
+      }
+    },
+    {
+      "point_id": "mos_fs_27C_1.20V",
+      "process": "mos_fs",
+      "temperature_c": 27,
+      "vdd_v": 1.2,
+      "metrics": {
+        "vos_null_v": {
+          "harness": 0.0164446377,
+          "tool": 0.01644463802923,
+          "delta": 3.292300009005711e-10,
+          "rel_delta": 2.0020508016456397e-08,
+          "tolerance": 2.6444637700000003e-06,
+          "unit": "V",
+          "within": true
+        },
+        "gain_local_db": {
+          "harness": 42.3495111,
+          "tool": 42.351596812939874,
+          "delta": 0.002085712939873474,
+          "rel_delta": 4.924998862320926e-05,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "vd1_dc_v": {
+          "harness": 0.597725868,
+          "tool": 0.5977259177481,
+          "delta": 4.974809997282392e-08,
+          "rel_delta": 8.32289560083485e-08,
+          "tolerance": 0.00010977258680000001,
+          "unit": "V",
+          "within": true
+        },
+        "vd2_dc_v": {
+          "harness": 0.420546782,
+          "tool": 0.4205414039855,
+          "delta": -5.378014500012629e-06,
+          "rel_delta": -1.2788148025854182e-05,
+          "tolerance": 9.205467820000001e-05,
+          "unit": "V",
+          "within": true
+        },
+        "vtail_dc_v": {
+          "harness": 0.182312003,
+          "tool": 0.182311785889,
+          "delta": -2.1711100001153838e-07,
+          "rel_delta": -1.1908760610322425e-06,
+          "tolerance": 6.82312003e-05,
+          "unit": "V",
+          "within": true
+        },
+        "vibias_dc_v": {
+          "harness": 0.365140708,
+          "tool": 0.3651407081246,
+          "delta": 1.2459999698677393e-10,
+          "rel_delta": 3.41238306923516e-10,
+          "tolerance": 8.65140708e-05,
+          "unit": "V",
+          "within": true
+        }
+      },
+      "harness_coarse_fine_delta_v": 5.58259991e-07,
+      "integrity_checks": {
+        "op_sanity": {
+          "harness_pass": true,
+          "tool_pass": true,
+          "agree": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "harness_margin_v": 0.005455362299999999,
+        "tool_margin_v": 0.005455361970769998
+      }
+    },
+    {
+      "point_id": "mos_fs_27C_1.32V",
+      "process": "mos_fs",
+      "temperature_c": 27,
+      "vdd_v": 1.32,
+      "metrics": {
+        "vos_null_v": {
+          "harness": 0.0151897481,
+          "tool": 0.01518974847304,
+          "delta": 3.7303999993187897e-10,
+          "rel_delta": 2.455866927325009e-08,
+          "tolerance": 2.51897481e-06,
+          "unit": "V",
+          "within": true
+        },
+        "gain_local_db": {
+          "harness": 43.443033,
+          "tool": 43.444676834615095,
+          "delta": 0.0016438346150948746,
+          "rel_delta": 3.7838854738684445e-05,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "vd1_dc_v": {
+          "harness": 0.71198631,
+          "tool": 0.7119864302444,
+          "delta": 1.2024439999258618e-07,
+          "rel_delta": 1.6888583151631972e-07,
+          "tolerance": 0.00012119863100000001,
+          "unit": "V",
+          "within": true
+        },
+        "vd2_dc_v": {
+          "harness": 0.537452269,
+          "tool": 0.5374377892559,
+          "delta": -1.4479744099960001e-05,
+          "rel_delta": -2.6941451241617146e-05,
+          "tolerance": 0.00010374522690000001,
+          "unit": "V",
+          "within": true
+        },
+        "vtail_dc_v": {
+          "harness": 0.239197077,
+          "tool": 0.2391965191328,
+          "delta": -5.578672000183804e-07,
+          "rel_delta": -2.3322492357144497e-06,
+          "tolerance": 7.391970770000001e-05,
+          "unit": "V",
+          "within": true
+        },
+        "vibias_dc_v": {
+          "harness": 0.365140709,
+          "tool": 0.3651407093301,
+          "delta": 3.301000028876899e-10,
+          "rel_delta": 9.040350603243473e-10,
+          "tolerance": 8.65140709e-05,
+          "unit": "V",
+          "within": true
+        }
+      },
+      "harness_coarse_fine_delta_v": 1.41456352e-06,
+      "integrity_checks": {
+        "op_sanity": {
+          "harness_pass": true,
+          "tool_pass": true,
+          "agree": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "harness_margin_v": 0.0067102518999999985,
+        "tool_margin_v": 0.006710251526959999
+      }
+    },
+    {
+      "point_id": "mos_fs_125C_1.08V",
+      "process": "mos_fs",
+      "temperature_c": 125,
+      "vdd_v": 1.08,
+      "metrics": {
+        "vos_null_v": {
+          "harness": 0.0219273527,
+          "tool": 0.02192735265135,
+          "delta": -4.8650000694649975e-11,
+          "rel_delta": -2.2186901155035455e-09,
+          "tolerance": 3.19273527e-06,
+          "unit": "V",
+          "within": true
+        },
+        "gain_local_db": {
+          "harness": 38.0166347,
+          "tool": 38.01816807001832,
+          "delta": 0.001533370018321989,
+          "rel_delta": 4.0334186085176785e-05,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "vd1_dc_v": {
+          "harness": 0.505526981,
+          "tool": 0.5055269738932,
+          "delta": -7.106800037348648e-09,
+          "rel_delta": -1.405820125226639e-08,
+          "tolerance": 0.00010055269810000002,
+          "unit": "V",
+          "within": true
+        },
+        "vd2_dc_v": {
+          "harness": 0.333898685,
+          "tool": 0.333899147292,
+          "delta": 4.622920000141306e-07,
+          "rel_delta": 1.384527764804257e-06,
+          "tolerance": 8.338986850000001e-05,
+          "unit": "V",
+          "within": true
+        },
+        "vtail_dc_v": {
+          "harness": 0.184208981,
+          "tool": 0.1842090075873,
+          "delta": 2.6587300000491254e-08,
+          "rel_delta": 1.4433226792830072e-07,
+          "tolerance": 6.842089810000001e-05,
+          "unit": "V",
+          "within": true
+        },
+        "vibias_dc_v": {
+          "harness": 0.321384316,
+          "tool": 0.3213843162347,
+          "delta": 2.3469998167158224e-10,
+          "rel_delta": 7.302782680645257e-10,
+          "tolerance": 8.213843160000001e-05,
+          "unit": "V",
+          "within": true
+        }
+      },
+      "harness_coarse_fine_delta_v": -7.26891271e-08,
+      "integrity_checks": {
+        "op_sanity": {
+          "harness_pass": true,
+          "tool_pass": true,
+          "agree": true
+        }
+      },
+      "row": {
+        "tool_status": "fail",
+        "tool_pass": false,
+        "harness_pass": false,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "harness_margin_v": -2.7352700000000257e-05,
+        "tool_margin_v": -2.7352651349999563e-05
+      }
+    },
+    {
+      "point_id": "mos_fs_125C_1.20V",
+      "process": "mos_fs",
+      "temperature_c": 125,
+      "vdd_v": 1.2,
+      "metrics": {
+        "vos_null_v": {
+          "harness": 0.0195745397,
+          "tool": 0.01957453992639,
+          "delta": 2.263900004961794e-10,
+          "rel_delta": 1.1565533798793715e-08,
+          "tolerance": 2.9574539699999997e-06,
+          "unit": "V",
+          "within": true
+        },
+        "gain_local_db": {
+          "harness": 40.1023339,
+          "tool": 40.103285685463064,
+          "delta": 0.0009517854630658462,
+          "rel_delta": 2.3733916969502023e-05,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "vd1_dc_v": {
+          "harness": 0.617991823,
+          "tool": 0.6179918424858,
+          "delta": 1.9485799973573137e-08,
+          "rel_delta": 3.1530837866075026e-08,
+          "tolerance": 0.00011179918230000001,
+          "unit": "V",
+          "within": true
+        },
+        "vd2_dc_v": {
+          "harness": 0.450692865,
+          "tool": 0.4506910671941,
+          "delta": -1.7978058999834623e-06,
+          "rel_delta": -3.988982386005738e-06,
+          "tolerance": 9.50692865e-05,
+          "unit": "V",
+          "within": true
+        },
+        "vtail_dc_v": {
+          "harness": 0.241436305,
+          "tool": 0.2414362134796,
+          "delta": -9.152039998072681e-08,
+          "rel_delta": -3.790664373393505e-07,
+          "tolerance": 7.41436305e-05,
+          "unit": "V",
+          "within": true
+        },
+        "vibias_dc_v": {
+          "harness": 0.32138432,
+          "tool": 0.3213843196056,
+          "delta": -3.944000126487879e-10,
+          "rel_delta": -1.2271912103514816e-09,
+          "tolerance": 8.2138432e-05,
+          "unit": "V",
+          "within": true
+        }
+      },
+      "harness_coarse_fine_delta_v": 2.40010276e-07,
+      "integrity_checks": {
+        "op_sanity": {
+          "harness_pass": true,
+          "tool_pass": true,
+          "agree": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "harness_margin_v": 0.0023254602999999985,
+        "tool_margin_v": 0.002325460073609998
+      }
+    },
+    {
+      "point_id": "mos_fs_125C_1.32V",
+      "process": "mos_fs",
+      "temperature_c": 125,
+      "vdd_v": 1.32,
+      "metrics": {
+        "vos_null_v": {
+          "harness": 0.0178976217,
+          "tool": 0.01789762193842,
+          "delta": 2.3841999902129984e-10,
+          "rel_delta": 1.332132296780526e-08,
+          "tolerance": 2.78976217e-06,
+          "unit": "V",
+          "within": true
+        },
+        "gain_local_db": {
+          "harness": 41.4423012,
+          "tool": 41.443581710147214,
+          "delta": 0.0012805101472110891,
+          "rel_delta": 3.089862556211258e-05,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "vd1_dc_v": {
+          "harness": 0.732244502,
+          "tool": 0.7322445655521,
+          "delta": 6.355210002695344e-08,
+          "rel_delta": 8.679081898651585e-08,
+          "tolerance": 0.0001232244502,
+          "unit": "V",
+          "within": true
+        },
+        "vd2_dc_v": {
+          "harness": 0.567612046,
+          "tool": 0.5676053429733,
+          "delta": -6.70302670002787e-06,
+          "rel_delta": -1.1809169215601653e-05,
+          "tolerance": 0.0001067612046,
+          "unit": "V",
+          "within": true
+        },
+        "vtail_dc_v": {
+          "harness": 0.29912685,
+          "tool": 0.2991265313646,
+          "delta": -3.1863540000953705e-07,
+          "rel_delta": -1.0652183179461725e-06,
+          "tolerance": 7.9912685e-05,
+          "unit": "V",
+          "within": true
+        },
+        "vibias_dc_v": {
+          "harness": 0.321384324,
+          "tool": 0.3213843236077,
+          "delta": -3.923000257977094e-10,
+          "rel_delta": -1.2206570031639421e-09,
+          "tolerance": 8.213843240000001e-05,
+          "unit": "V",
+          "within": true
+        }
+      },
+      "harness_coarse_fine_delta_v": 8.22069316e-07,
+      "integrity_checks": {
+        "op_sanity": {
+          "harness_pass": true,
+          "tool_pass": true,
+          "agree": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "harness_margin_v": 0.004002378299999998,
+        "tool_margin_v": 0.004002378061579999
+      }
+    }
+  ],
+  "status": "agree",
+  "inputs": {
+    "envelope": {
+      "path": "sim/input-offset/klt/records/20261015-081722-8e276bc.sim.json",
+      "sha256": "17bf8c7e01e51e8a17723b13c317f3ceb7048f9db904f88c49b1e328990d277b"
+    },
+    "harness_csv": {
+      "path": "sim/input-offset/records/20260918-203858-90844d2.csv",
+      "sha256": "f0263167c6b550e5138b1b706e37c6dcfe11388bcf9c5b77f726a47c20813813"
+    }
+  },
+  "provenance": {
+    "backend": "batch",
+    "client": "klayout-tools==0.7.0",
+    "job_id": "klt-sim-38b6e4833c62",
+    "run_path": "klt-sim-direct-not-run.sh"
+  }
+}

@@ -1,0 +1,195 @@
+{
+  "_comment": [
+    "sim/input-offset (systematic half) as a `klt sim` request (issue #97): T1 item 5 coverage for the ratified input-referred-offset row.",
+    "Circuit: tb_offset.body.spice -- the same test circuit as ../testbench/tb_offset_null.spice.tmpl, the harness's PRIMARY (null-sweep) method; the committed record's vos_null_v column comes from it.",
+    "Grid: cornerMOSlv.lib mos_tt/ss/ff/sf/fs [DR-1] x {-40, 27, 125} C x VDD {1.08, 1.20, 1.32} V = 45 corners; vinp (the common-mode source) sweeps WITH vdd by index, so Vcm = VDD/2 as in the harness.",
+    "Each process corner is a bundle carrying the template's fixed cornerCAP.lib cap_typ section.",
+    "Analysis: dc Vid 0.004 0.034 4u = 7501 points at the harness fine pass's 4 uV step, one pass (the harness's coarse locate + fine pass cannot be chained in a request; see the body header).",
+    "Ratified row: systematic input offset |Vos| <= 21.9 mV worst-case [DR-2] (spec/target-spec.md section 2): vos_null_v carries limits min -0.0219 / max 0.0219 (a magnitude bound written as a two-sided limit; no rounding or slack added, so a point at 21.93 mV is a miss).",
+    "vos_null_v = Vid at which v(out) = v(cm), first rising crossing, linearly interpolated by ngspice between adjacent sweep points (.meas dc ... when).",
+    "vos_crossings_n counts sign changes of v(orel) over the 7501-point sweep (mean of the per-interval sign-change indicator times the 7500 intervals; `sum` is a running sum in ngspice and does not reduce to a scalar) and must be exactly 1 (limits 0.5..1.5 only absorb float rounding of mean*7500) (the harness's unique-crossing rule; 0 means the null left the window).",
+    "gain_local_vv is the two-point slope dVout/dVid across the sweep interval that brackets the null (the one interval where orel changes sign), must be >= 10 V/V (the harness's >= 20 dB sanity rule); fd1/fd2/ftail at the null reproduce its rail-window rule [0.02, 0.98]*VDD.",
+    "The *_dc_v node voltages and gain_local_vv carry/ride no ratified bound beyond the sanity rules: they are reported for compare.py's join against the harness CSV.",
+    "The harness's second method (closed-loop output error referred back through the AC-record gain) is a cross-check, not the ratified number's source, and is NOT in this request.",
+    "options.timeout_s = 300 s per corner: a 7501-point DC sweep of this circuit takes seconds.",
+    "Solver tolerance: ngspice default, no .options reltol/abstol/vntol (DR-0005).",
+    "ngspice_init raises the print precision so the envelope values are not rounded to 6 digits."
+  ],
+  "netlist": "tb_offset.body.spice",
+  "netlist_source": "schematic",
+  "engine": "ngspice",
+  "backend": "batch",
+  "models": {
+    "pdk": "ihp-sg13g2",
+    "lib": "libs.tech/ngspice/models/cornerMOSlv.lib"
+  },
+  "corners": {
+    "process": [
+      {
+        "name": "mos_tt",
+        "sections": [
+          "mos_tt",
+          {
+            "lib": "libs.tech/ngspice/models/cornerCAP.lib",
+            "section": "cap_typ"
+          }
+        ]
+      },
+      {
+        "name": "mos_ss",
+        "sections": [
+          "mos_ss",
+          {
+            "lib": "libs.tech/ngspice/models/cornerCAP.lib",
+            "section": "cap_typ"
+          }
+        ]
+      },
+      {
+        "name": "mos_ff",
+        "sections": [
+          "mos_ff",
+          {
+            "lib": "libs.tech/ngspice/models/cornerCAP.lib",
+            "section": "cap_typ"
+          }
+        ]
+      },
+      {
+        "name": "mos_sf",
+        "sections": [
+          "mos_sf",
+          {
+            "lib": "libs.tech/ngspice/models/cornerCAP.lib",
+            "section": "cap_typ"
+          }
+        ]
+      },
+      {
+        "name": "mos_fs",
+        "sections": [
+          "mos_fs",
+          {
+            "lib": "libs.tech/ngspice/models/cornerCAP.lib",
+            "section": "cap_typ"
+          }
+        ]
+      }
+    ],
+    "supply_v": {
+      "vdd": [
+        1.08,
+        1.2,
+        1.32
+      ],
+      "vinp": [
+        0.54,
+        0.6,
+        0.66
+      ]
+    },
+    "temperature_c": [
+      -40,
+      27,
+      125
+    ]
+  },
+  "analysis": {
+    "kind": "dc",
+    "args": "Vid 0.004 0.034 4u"
+  },
+  "measurements": [
+    {
+      "name": "vos_null_v",
+      "spice": ".meas dc vos_null_v when v(orel)=0 rise=1",
+      "unit": "V",
+      "limits": {
+        "min": -0.0219,
+        "max": 0.0219
+      }
+    },
+    {
+      "name": "vos_crossings_n",
+      "expr": "mean((v(orel)[1,7500]*v(orel)[0,7499]) lt 0)*7500",
+      "unit": "count",
+      "limits": {
+        "min": 0.5,
+        "max": 1.5
+      }
+    },
+    {
+      "name": "gain_local_vv",
+      "expr": "vecmax(((v(orel)[1,7500]*v(orel)[0,7499]) lt 0)*((v(out)[1,7500]-v(out)[0,7499])/4e-6))",
+      "unit": "V/V",
+      "limits": {
+        "min": 10.0
+      }
+    },
+    {
+      "name": "vd1_dc_v",
+      "spice": ".meas dc vd1_dc_v find v(d1) when v(orel)=0 rise=1",
+      "unit": "V"
+    },
+    {
+      "name": "vd2_dc_v",
+      "spice": ".meas dc vd2_dc_v find v(d2) when v(orel)=0 rise=1",
+      "unit": "V"
+    },
+    {
+      "name": "vtail_dc_v",
+      "spice": ".meas dc vtail_dc_v find v(tail) when v(orel)=0 rise=1",
+      "unit": "V"
+    },
+    {
+      "name": "vibias_dc_v",
+      "spice": ".meas dc vibias_dc_v find v(ibias) when v(orel)=0 rise=1",
+      "unit": "V"
+    },
+    {
+      "name": "op_vd1_rail_frac",
+      "spice": ".meas dc op_vd1_rail_frac find v(fd1) when v(orel)=0 rise=1",
+      "unit": "frac",
+      "limits": {
+        "min": 0.02,
+        "max": 0.98
+      }
+    },
+    {
+      "name": "op_vd2_rail_frac",
+      "spice": ".meas dc op_vd2_rail_frac find v(fd2) when v(orel)=0 rise=1",
+      "unit": "frac",
+      "limits": {
+        "min": 0.02,
+        "max": 0.98
+      }
+    },
+    {
+      "name": "op_vtail_rail_frac",
+      "spice": ".meas dc op_vtail_rail_frac find v(ftail) when v(orel)=0 rise=1",
+      "unit": "frac",
+      "limits": {
+        "min": 0.02,
+        "max": 0.98
+      }
+    }
+  ],
+  "options": {
+    "timeout_s": 300,
+    "keep_artifacts": false,
+    "osdi_preload": [
+      "$PDK_ROOT/ihp-sg13g2/libs.tech/ngspice/osdi/psp103.osdi",
+      "$PDK_ROOT/ihp-sg13g2/libs.tech/ngspice/osdi/psp103_nqs.osdi",
+      "$PDK_ROOT/ihp-sg13g2/libs.tech/ngspice/osdi/mosvar.osdi",
+      "$PDK_ROOT/ihp-sg13g2/libs.tech/ngspice/osdi/r3_cmc.osdi"
+    ],
+    "stage_model_inputs": true,
+    "fail_on_diagnostic": [
+      "singular_matrix",
+      "nonconvergence"
+    ],
+    "ngspice_init": [
+      "set measureprec=12",
+      "set numdgt=12"
+    ]
+  }
+}
