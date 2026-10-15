@@ -267,8 +267,11 @@ two together point by point. Where they disagree beyond the stated tolerance,
 the disagreement is reported in that file and must be explained here before
 the envelope is cited anywhere.
 
-**No envelope is committed yet.** The real 45-corner run is blocked; see
-"Status" below.
+**A real 45-corner envelope is committed**:
+`klt/records/20261015-063443-80878d7.sim.json` (batch job `klt-sim-9649fa050398`, runner and
+client both klt 0.7.0, 45 unique points, status `pass`, nothing skipped),
+with `20261015-063443-80878d7.compare.json` joining it to the harness record. See "Status"
+below for the result and how the run got unblocked.
 
 ### Grid encoding
 
@@ -368,55 +371,64 @@ maximum step is at least 16 000 timepoints, and the harness ran the whole
 on the batch fleet the per-corner timeout is the guard, and a timed-out corner
 is graded `error`, which `run.sh` and `compare.py` refuse as evidence.
 
-### Status (2026-10-09): the real run is blocked
+### Status (2026-10-15): the real run is done
 
-Two independent blockers, both shared with
-[`../open-loop-ac/README.md`](../open-loop-ac/README.md) → "The `klt sim`
-path". Neither is solved by running the grid locally on a shared dispatch
-host, and that is not done.
+The envelope `klt/records/20261015-063443-80878d7.sim.json` was produced on the batch fleet
+(job `klt-sim-9649fa050398`, m7i.4xlarge spot, runner klt 0.7.0, submitted by
+a client with `klt --version` 0.7.0 via
+`KLT="uvx --from klayout-tools==0.7.0 klt" sim/slew-rate/klt/run.sh`). It has
+45 unique points, no errored or inconclusive corner, and nothing skipped.
 
-1. **The batch fleet runner is older than the client.** The fleet image pins
-   klt **0.5.0** (2AMLogic/2am#2193). A submission of `slew.request.json` with
-   klt `0.7.0+g4cbdfa769875` launched job `klt-sim-994a710c60f3`
-   (c7i.4xlarge spot). The job exited 87, `batch_runner_version_mismatch`:
-   "the fleet runner runs klt 0.5.0 but the submitting client is
-   0.7.0+g4cbdfa769875 -- the request was not run". All 45 corners came back
-   `error`; nothing simulated. The request also needs features 0.5.0 lacks
-   (`options.osdi_preload` with `stage_model_inputs`, per-section corner
-   libraries, `ngspice_init`, `fail_on_diagnostic`), so pinning the client back
-   to 0.5.0 does not work. After the runner bump, run with a client whose
-   `klt --version` equals the runner's, for example
-   `KLT="uvx --from klayout-tools==X.Y.Z klt" sim/slew-rate/klt/run.sh`.
-2. **The preflight needs the pinned ngspice.** `run.sh` sources
-   `sim/preflight.sh`, whose OSDI check loads the `.osdi` binaries with the
-   local ngspice. They target OSDI v0.4 (ngspice-46, the `sim/pdk.json` pin).
-   A host with ngspice-42 fails the check and `run.sh` exits 3 before
-   submitting anything (verified on this host).
+- **Ratified row (slew rate ≥ 7.51 V/µs, worse of the two edges):** both
+  per-edge measurements pass. The binding corner for both is `mos_ss`,
+  −40 °C, VDD = 1.08 V: rising 7.5378 V/µs (margin 0.0278), falling
+  7.5144 V/µs (margin 0.0044). The falling-edge margin is thin and is the
+  row's worst case; it is a pass, not a rounding of one.
+- **Comparison with the harness record:** `20261015-063443-80878d7.compare.json` reports 45
+  points compared, status `agree`, no point out of tolerance, no bound-verdict
+  disagreement. The harness's own worst point is the same corner
+  (`mos_ss_-40C_1.08V`, 7.51441 V/µs).
 
-What *was* verified without the real run:
+How the run got unblocked (the 2026-10-09 blockers):
 
-- The client accepts the request, including model staging and the include
-  closure (the submission above reached the fleet).
+1. The fleet runner pin moved to klt 0.7.0 (2AMLogic/2am#2193, closed
+   2026-10-15), so a 0.7.0 client is accepted (`runner_compatibility: match`).
+2. The host now has ngspice-46, and `sim/tools/build-osdi.sh` was run once, so
+   the `run.sh` preflight passes.
+3. **A new blocker, found on the first fleet attempt (job
+   `klt-sim-135fd62274ef`, c7i.8xlarge): every one of the 45 corners hit the
+   300 s per-corner timeout** and came back `error` (`timeout`), although a
+   single corner takes about 2.4 s locally. The cause is on the tool/runner
+   side, tracked in 2AMLogic/klayout-tools#2970: each ngspice worker runs its
+   own OpenMP thread team and the fleet instance is oversubscribed.
+   `tb_slew.body.spice` now carries a body-level
+   `.control` / `set num_threads=1` / `.endc` block, the workaround reported
+   there. It changes scheduling only, not the solution; that tracker's A/B
+   showed bit-identical `.meas` values. The first attempt's envelope was
+   rejected by `run.sh` (exit 4) and nothing was written to `records/`.
+   The 300 s `options.timeout_s` is unchanged.
+
+No grid was run locally. The only local run was one debug corner
+(`mos_tt`, 27 °C, 1.20 V; 2.4 s, slew 8.90/8.71 V/µs), used to confirm the
+bench itself was healthy; it is not evidence and was not committed.
+
+Checks made before the real run, kept for the record:
+
 - The request mechanics were checked on a behavioural stand-in DUT (a
   slew-limited gm stage with rail clamps) over three supply corners, locally,
-  one temperature. `alter` of `vdd`/`vinp` tracks (`Vcm = VDD/2`); the series
-  `Vinp`/`Vdrvp` split reproduces the drive (`inn` excursion exactly 0.6 V
-  peak-to-peak); every `.meas` card, including the `param` cards that read an
-  earlier measurement, evaluates; each limit grades as intended; edge slews
-  land at the stand-in's `I/CL` (about 9.95 V/µs for 20 µA into 2 pF).
-  This is mechanics only, not evidence about this circuit.
+  one temperature: `alter` of `vdd`/`vinp` tracks (`Vcm = VDD/2`), the series
+  `Vinp`/`Vdrvp` split reproduces the drive, every `.meas` card evaluates and
+  each limit grades as intended. Mechanics only, not evidence about this
+  circuit.
 - `compare.py`'s `.meas`-style algorithm reproduces the committed harness
-  record from its own waveforms (3.3e-6, above).
-- `compare.py` passes 35 offline tests, including negative controls for
-  reordered, missing, duplicate, extra and off-grid points, null and
-  non-finite values, errored/inconclusive/not-checked/skipped coverage, a
-  mis-biased `Vcm`, perturbations outside tolerance, each integrity-flag
-  disagreement, a method-check failure, and bound flips on either edge
-  (explained inside the tolerance, unexplained outside it).
-- `run.sh` exits 3 on a failed preflight (verified), and by construction
-  writes nothing to `records/` unless the envelope passes `validate`.
+  record from its own waveforms, and `test_compare.py` carries its offline
+  negative controls (reordered, missing, duplicate, extra and off-grid
+  points, null and non-finite values, errored/inconclusive/skipped coverage,
+  a mis-biased `Vcm`, perturbations outside tolerance, integrity-flag
+  disagreements, bound flips on either edge).
+- `run.sh` exits 3 on a failed preflight and, by construction, writes nothing
+  to `records/` unless the envelope passes `validate`.
 
-Not verified, and only the real run can: that the PSP-based DUT's transient
-converges at default tolerance under `klt sim`'s generated deck at all 45
-corners (DR-0005 found it does under the harness's deck), the slew values
-themselves, and the tool's binding corner.
+What the real run settled: the PSP-based DUT's transient converges at default
+tolerance under `klt sim`'s generated deck at all 45 corners.
+
