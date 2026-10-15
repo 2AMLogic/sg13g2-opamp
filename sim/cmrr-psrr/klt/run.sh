@@ -63,7 +63,12 @@ klt_check_client
 
 HARNESS_ID="20260921-151815-707b34c"
 HARNESS_CSV="sim/cmrr-psrr/records/${HARNESS_ID}.csv"
-OPENLOOP_CSV="sim/open-loop-ac/records/20260910-221601-22feaba.csv"
+# Same-point Av0: the inn-AC-grounded open-loop record (issue #241). It
+# supersedes 20260910-221601-22feaba (inn AC-floating), which the harness
+# record above divided by, so compare.py reports the join as inconsistent and
+# the tool values as outside the old harness record's tolerance: expected, and
+# the point of the re-derivation. Override with PSRR_OPENLOOP_CSV.
+OPENLOOP_CSV="${PSRR_OPENLOOP_CSV:-sim/open-loop-ac/records/20261015-103057-895d555.csv}"
 
 klt_begin_record psrr
 BACKEND_ARGS=()
