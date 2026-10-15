@@ -20,6 +20,7 @@ _None._
 `loom:important`; taken before unlabelled work.
 
 - **#85**: sim: express the open-loop AC bench as a `klt sim` request, the first gradable envelope toward T1 item 5
+- **#237**: design: reconcile schematic device representation with drawn fingering before citing post-layout (T1 item 7)
 
 ## Ready
 
@@ -31,7 +32,7 @@ Human-approved issues ready for implementation (`loom:issue`).
 
 Issues currently being built (`loom:building`).
 
-- **#241**: sim: open-loop AC bench leaves inn AC-floating (Lbreak with no C to ground) -- GBW about halved, PM overstated, parasitic-sensitive
+_None._
 
 ## PRs Awaiting Review
 
@@ -56,7 +57,6 @@ Issues carrying `loom:curated`.
 - **#100**: sim: express the output-swing bench as a klt sim request (T1 item 5 coverage, follow-up to #85) *(curated)*
 - **#105**: signoff: express the statistical rows as klt yield evidence for T1 item 6 (offset MC, mismatch CMRR) *(curated)*
 - **#237**: design: reconcile schematic device representation with drawn fingering before citing post-layout (T1 item 7) *(curated)*
-- **#241**: sim: open-loop AC bench leaves inn AC-floating (Lbreak with no C to ground) -- GBW about halved, PM overstated, parasitic-sensitive *(curated)*
 
 ## Proposed (Architect / Hermit)
 
@@ -72,12 +72,12 @@ _None._
 |------|-------|
 | Operator merge-risk holds | 1 |
 | Very important | 0 |
-| Important | 1 |
+| Important | 2 |
 | Ready (`loom:issue`) | 1 |
-| In Progress (`loom:building`) | 1 |
+| In Progress (`loom:building`) | 0 |
 | PRs awaiting review | 0 |
 | Approved PRs awaiting merge | 1 |
-| Curated | 8 |
+| Curated | 7 |
 | Architect / Hermit proposals | 1 |
 | Active epics | 0 |
 <!-- guide:plan-body:end -->

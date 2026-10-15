@@ -4,6 +4,8 @@
 
 ### 2026-10-15
 
+- **PR #243**: sim: AC-ground inn in the open-loop AC and PSRR benches; re-run 45 corners on the batch fleet
+- **Issue #241** (closed): sim: open-loop AC bench leaves inn AC-floating (Lbreak with no C to ground) -- GBW about halved, PM overstated, parasitic-sensitive
 - **PR #242**: sim: #237 fingering probe (inn-grounded diagnostic) + DR 0008 option 1; bench defect filed as #241
 - **PR #240**: sim: input-offset (systematic) klt sim request and real 45-corner envelope (T1 item 5, #97)
 - **Issue #97** (closed): sim: express the input-offset bench (systematic half) as a klt sim request (T1 item 5 coverage, follow-up to #85)
