@@ -260,12 +260,26 @@ class TestCommittedRecord(unittest.TestCase):
         self.assertEqual(len(C.index_envelope(committed)), 45)
 
     def test_shard_requests_are_what_gen_produces_today(self):
+        sd = os.path.join(RECORDS, RECORD + ".shards")
         with tempfile.TemporaryDirectory() as d:
             man = S.gen(d, "/opt/pdk")
-        with open(os.path.join(RECORDS, RECORD + ".shards", "shards.json")) as f:
-            # The master digest is historical (it moves when the master request's
-            # comment is edited); what must stay is every shard request and body.
-            self.assertEqual(json.load(f)["shards"], man["shards"])
+            with open(os.path.join(sd, "shards.json")) as f:
+                # The master digest is historical (it moves when the master request's
+                # comment is edited); what must stay is every shard request.
+                old = json.load(f)["shards"]
+            # The live bench moved on after this record (issue #241 added the inn
+            # AC-ground cap), so the body hash is not comparable; the record's own
+            # body is pinned by its committed snapshot above. Everything else
+            # (requests, keys) must still be what gen produces.
+            strip = lambda shards: [{k: v for k, v in s.items() if k != "body_sha256"} for s in shards]
+            self.assertEqual(strip(old), strip(man["shards"]))
+            # And the live body differs from the record's only by the #241 lines.
+            for s in old:
+                with open(os.path.join(sd, s["body"])) as f:
+                    committed = f.read().splitlines()
+                with open(os.path.join(d, s["body"])) as f:
+                    live = [l for l in f.read().splitlines() if "Cinn_acgnd" not in l]
+                self.assertEqual(committed, live, s["process"])
 
     def test_committed_comparison_is_clean_and_preserves_the_plateau_miss(self):
         with open(os.path.join(RECORDS, RECORD + ".compare.json")) as f:
