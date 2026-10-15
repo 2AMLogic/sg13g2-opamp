@@ -30,6 +30,10 @@ probe (run_probe.sh) can attribute the delta step by step:
   extracted        layout/opamp_core/opamp_core_pex.spice, byte-for-byte
                    (the extracted leg of the #236 run).
 
+plus ``<v>_innac`` for v in lumped/drawn/extracted_nopar/extracted: the same
+netlist with inn AC-grounded by a 1 F capacitor (see inn_acgnd()), a
+diagnostic of the bench's loop-break method.
+
 Device sizes, unit counts and finger counts come from generate.PAIRS /
 generate.FOLDED (the tables the layout is drawn from), after
 generate.verify_against_netlist() has checked them against the schematic.
@@ -61,6 +65,9 @@ PEX = REPO / "layout" / "opamp_core" / "opamp_core_pex.spice"
 #: lvs_reference.DUMMY_COLUMNS_PER_PAIR (one dummy column at each array end).
 DUMMY_COLUMNS_PER_PAIR = 2
 VARIANTS = ("lumped", "drawn", "expanded", "extracted_nopar", "extracted")
+#: Variants also written with inn AC-grounded (see inn_acgnd()).
+INNAC_BASES = ("lumped", "drawn", "extracted_nopar", "extracted")
+INNAC_CARD = "Cprobe_inn_acgnd inn vss 1"
 
 
 def _um(v: float) -> str:
@@ -166,6 +173,32 @@ def extracted_nopar(text: str) -> str:
     return "\n".join(out) + "\n"
 
 
+def inn_acgnd(text: str, variant: str) -> str:
+    """The same DUT with a 1 F capacitor from inn to vss (``<variant>_innac``).
+
+    The committed open-loop bench breaks the loop with Lbreak = 1e18 H from
+    inn to out and nothing else on inn, so at AC inn is a floating node held
+    only by whatever capacitance the DUT puts on it: M1's gate capacitance in
+    the schematic, plus every extracted parasitic touching inn in the pex
+    netlist. This variant pins inn to AC ground (1 F; with the 1e18 H the
+    L-C corner is ~1.6e-10 Hz, far below the 1 Hz sweep start; at DC the
+    capacitor is open, so inn = out still sets the bias point). It is a
+    diagnostic of the bench's loop-break method, not a bench change: if the
+    parasitics step collapses here, the extracted leg's large AC deltas come
+    from coupling into the floating inn node, not from the parasitics' effect
+    on the amplifier itself.
+    """
+    lines = text.splitlines()
+    note = f"* {variant}_innac: {variant} plus {INNAC_CARD!r} (inn AC-grounded; bench diagnostic)."
+    for i, line in enumerate(lines):
+        if line.strip().upper().startswith(".ENDS"):
+            return "\n".join([note, *lines[:i], INNAC_CARD, *lines[i:]]) + "\n"
+    for i, line in enumerate(lines):
+        if line.strip().lower() == ".end":
+            return "\n".join([note, *lines[:i], INNAC_CARD, *lines[i:]]) + "\n"
+    raise SystemExit(f"{variant}: no .ENDS/.end to insert the inn AC ground before")
+
+
 def main(argv: list[str]) -> int:
     if len(argv) != 2:
         sys.exit(__doc__)
@@ -181,7 +214,11 @@ def main(argv: list[str]) -> int:
         extracted_nopar(PEX.read_text(encoding="utf-8")), encoding="utf-8"
     )
     shutil.copyfile(PEX, out / "extracted.spice")
-    for v in VARIANTS:
+    for v in INNAC_BASES:
+        (out / f"{v}_innac.spice").write_text(
+            inn_acgnd((out / f"{v}.spice").read_text(encoding="utf-8"), v), encoding="utf-8"
+        )
+    for v in VARIANTS + tuple(f"{b}_innac" for b in INNAC_BASES):
         print(out / f"{v}.spice")
     return 0
 

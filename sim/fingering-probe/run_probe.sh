@@ -26,6 +26,10 @@
 # body and requests, both `klt sim` envelopes (environment.remote carries the
 # batch job id), their stderr, and the measurement document.
 #
+# PROBE_SET=innac measures the four <variant>_innac netlists instead: the
+# same DUTs with inn AC-grounded by 1 F (build_probe_netlists.inn_acgnd), a
+# diagnostic of the bench's floating-inn loop break.
+#
 # Environment (optional): PROBE_POINTS overrides the grid (SG13G2_PEX_POINTS
 # syntax, e.g. "mos_tt:27:1.20"; axes are crossed, see klt_measure.py).
 
@@ -38,7 +42,12 @@ _sg13g2_preflight_self="$(basename "$0")"
 source "${REPO_ROOT}/sim/record-paths.sh"
 
 POINTS="${PROBE_POINTS:-mos_tt:27:1.20 mos_ss:27:1.20 mos_ff:27:1.20 mos_sf:27:1.20 mos_fs:27:1.20}"
-VARIANTS=(lumped drawn expanded extracted_nopar extracted)
+PROBE_SET="${PROBE_SET:-base}"
+case "${PROBE_SET}" in
+  base)  VARIANTS=(lumped drawn expanded extracted_nopar extracted) ;;
+  innac) VARIANTS=(lumped_innac drawn_innac extracted_nopar_innac extracted_innac) ;;
+  *) echo "PROBE_SET must be base or innac (got '${PROBE_SET}')" >&2; exit 2 ;;
+esac
 
 sg13g2_preflight_record_paths
 echo "record ${RECORD_ID}" >&2
@@ -68,6 +77,6 @@ for v in "${VARIANTS[@]}"; do
   fi
 done
 
-python3 -I "${SCRIPT_DIR}/summarize.py" "${RECORD_ID}" "${POINTS}" \
+PROBE_SET="${PROBE_SET}" python3 -I "${SCRIPT_DIR}/summarize.py" "${RECORD_ID}" "${POINTS}" \
   "${CORNERS_OUT}" "${RECORDS_DIR}/${RECORD_ID}.json" "${MD_OUT}"
 echo "wrote ${RECORDS_DIR}/${RECORD_ID}.json and ${MD_OUT}" >&2

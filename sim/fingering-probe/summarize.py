@@ -18,18 +18,23 @@ definition `klt pex` uses for its delta[] rows):
   pex_236          extracted        vs lumped           what the #236 pex_report compared
   pex_drawn        extracted        vs drawn            what a reconciled pex would compare
 
+PROBE_SET=innac (environment) reads the four <variant>_innac documents
+instead and reports representation / expansion+diffusion / parasitics /
+pex_236 / pex_drawn over them.
+
 Loud: a missing variant, corner or measurement exits 1 and writes nothing.
 """
 from __future__ import annotations
 
 import json
 import math
+import os
 import sys
 from pathlib import Path
 
-VARIANTS = ("lumped", "drawn", "expanded", "extracted_nopar", "extracted")
 ROWS = ("av0_db", "gbw_hz", "pm_deg", "iq_a")
-STEPS = (
+BASE_VARIANTS = ("lumped", "drawn", "expanded", "extracted_nopar", "extracted")
+BASE_STEPS = (
     ("representation", "lumped", "drawn"),
     ("expansion", "drawn", "expanded"),
     ("diffusion", "expanded", "extracted_nopar"),
@@ -37,6 +42,20 @@ STEPS = (
     ("pex_236", "lumped", "extracted"),
     ("pex_drawn", "drawn", "extracted"),
 )
+# PROBE_SET=innac: the same DUTs with inn AC-grounded (bench diagnostic).
+_I = "_innac"
+INNAC_VARIANTS = tuple(v + _I for v in ("lumped", "drawn", "extracted_nopar", "extracted"))
+INNAC_STEPS = (
+    ("representation", "lumped" + _I, "drawn" + _I),
+    ("expansion+diffusion", "drawn" + _I, "extracted_nopar" + _I),
+    ("parasitics", "extracted_nopar" + _I, "extracted" + _I),
+    ("pex_236", "lumped" + _I, "extracted" + _I),
+    ("pex_drawn", "drawn" + _I, "extracted" + _I),
+)
+if os.environ.get("PROBE_SET", "base") == "innac":
+    VARIANTS, STEPS = INNAC_VARIANTS, INNAC_STEPS
+else:
+    VARIANTS, STEPS = BASE_VARIANTS, BASE_STEPS
 
 
 def pct(a: float, b: float) -> float:
@@ -91,6 +110,7 @@ def main(argv: list[str]) -> int:
     doc = {
         "record_id": record_id,
         "issue": 237,
+        "probe_set": os.environ.get("PROBE_SET", "base"),
         "bench": "sim/post-layout/measure_openloop_ac.sh (open-loop AC + OP, CL = 2 pF [DR-1], ibias = 10 uA external)",
         "points": points,
         "corner_ids": corner_ids,
@@ -105,6 +125,10 @@ def main(argv: list[str]) -> int:
 
     md = [
         f"# Device-representation probe {record_id} (issue #237)",
+        "",
+        f"Probe set: `{os.environ.get('PROBE_SET', 'base')}`"
+        + (" -- every DUT has inn AC-grounded by 1 F (bench loop-break diagnostic)."
+           if os.environ.get("PROBE_SET") == "innac" else "."),
         "",
         "Bench: the committed post-layout open-loop AC bench "
         "(`sim/post-layout/measure_openloop_ac.sh`), CL = 2 pF [DR-1], "

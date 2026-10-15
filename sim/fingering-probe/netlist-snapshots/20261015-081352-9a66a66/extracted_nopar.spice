@@ -1,0 +1,45 @@
+* issue-#237 device-representation probe, variant 'extracted_nopar'.
+* layout/opamp_core/opamp_core_pex.spice with every R and C card dropped
+* and every <net>__tN terminal node collapsed onto <net>.
+* Written by sim/fingering-probe/build_probe_netlists.py -- DO NOT EDIT.
+* dropped 151 R and 29 C cards; kept 38 device cards.
+.SUBCKT opamp_core ibias inn inp out vdd vss
+X$1 vss vss vss vss sg13_lv_nmos L=0.52U W=1.1U AS=0.462P AD=0.462P PS=3.04U PD=3.04U
+X$2 ibias ibias vss vss sg13_lv_nmos L=0.52U W=1.1U AS=0.462P AD=0.462P PS=3.04U PD=3.04U
+X$3 \$3 ibias vss vss sg13_lv_nmos L=0.52U W=1.1U AS=0.462P AD=0.462P PS=3.04U PD=3.04U
+X$4 \$3 ibias vss vss sg13_lv_nmos L=0.52U W=1.1U AS=0.462P AD=0.462P PS=3.04U PD=3.04U
+X$5 ibias ibias vss vss sg13_lv_nmos L=0.52U W=1.1U AS=0.462P AD=0.462P PS=3.04U PD=3.04U
+X$6 vss vss vss vss sg13_lv_nmos L=0.52U W=1.1U AS=0.462P AD=0.462P PS=3.04U PD=3.04U
+X$7 out ibias vss vss sg13_lv_nmos L=0.52U W=1.7U AS=0.714P AD=0.357P PS=4.24U PD=2.12U
+X$8 vss ibias out vss sg13_lv_nmos L=0.52U W=1.7U AS=0.357P AD=0.357P PS=2.12U PD=2.12U
+X$9 out ibias vss vss sg13_lv_nmos L=0.52U W=1.7U AS=0.357P AD=0.357P PS=2.12U PD=2.12U
+X$10 vss ibias out vss sg13_lv_nmos L=0.52U W=1.7U AS=0.357P AD=0.357P PS=2.12U PD=2.12U
+X$11 out ibias vss vss sg13_lv_nmos L=0.52U W=1.7U AS=0.357P AD=0.357P PS=2.12U PD=2.12U
+X$12 vss ibias out vss sg13_lv_nmos L=0.52U W=1.7U AS=0.357P AD=0.357P PS=2.12U PD=2.12U
+X$13 out ibias vss vss sg13_lv_nmos L=0.52U W=1.7U AS=0.357P AD=0.714P PS=2.12U PD=4.24U
+X$14 vss vss vss vss sg13_lv_nmos L=0.13U W=1.6U AS=0.768P AD=0.768P PS=4.16U PD=4.16U
+X$15 \$6 inp \$3 vss sg13_lv_nmos L=0.13U W=1.6U AS=0.768P AD=0.768P PS=4.16U PD=4.16U
+X$16 \$5 inn \$3 vss sg13_lv_nmos L=0.13U W=1.6U AS=0.768P AD=0.768P PS=4.16U PD=4.16U
+X$17 \$5 inn \$3 vss sg13_lv_nmos L=0.13U W=1.6U AS=0.768P AD=0.768P PS=4.16U PD=4.16U
+X$18 \$6 inp \$3 vss sg13_lv_nmos L=0.13U W=1.6U AS=0.768P AD=0.768P PS=4.16U PD=4.16U
+X$19 vss vss vss vss sg13_lv_nmos L=0.13U W=1.6U AS=0.768P AD=0.768P PS=4.16U PD=4.16U
+X$20 vdd vdd vdd vdd sg13_lv_pmos L=0.52U W=0.52U AS=0.2184P AD=0.2184P PS=1.88U PD=1.88U
+X$21 \$6 \$5 vdd vdd sg13_lv_pmos L=0.52U W=0.52U AS=0.2184P AD=0.2184P PS=1.88U PD=1.88U
+X$22 \$5 \$5 vdd vdd sg13_lv_pmos L=0.52U W=0.52U AS=0.2184P AD=0.2184P PS=1.88U PD=1.88U
+X$23 \$5 \$5 vdd vdd sg13_lv_pmos L=0.52U W=0.52U AS=0.2184P AD=0.2184P PS=1.88U PD=1.88U
+X$24 \$6 \$5 vdd vdd sg13_lv_pmos L=0.52U W=0.52U AS=0.2184P AD=0.2184P PS=1.88U PD=1.88U
+X$25 vdd vdd vdd vdd sg13_lv_pmos L=0.52U W=0.52U AS=0.2184P AD=0.2184P PS=1.88U PD=1.88U
+X$26 out \$6 vdd vdd sg13_lv_pmos L=1.04U W=2.75U AS=1.155P AD=0.5775P PS=6.34U PD=3.17U
+X$27 vdd \$6 out vdd sg13_lv_pmos L=1.04U W=2.75U AS=0.5775P AD=0.5775P PS=3.17U PD=3.17U
+X$28 out \$6 vdd vdd sg13_lv_pmos L=1.04U W=2.75U AS=0.5775P AD=0.5775P PS=3.17U PD=3.17U
+X$29 vdd \$6 out vdd sg13_lv_pmos L=1.04U W=2.75U AS=0.5775P AD=0.5775P PS=3.17U PD=3.17U
+X$30 out \$6 vdd vdd sg13_lv_pmos L=1.04U W=2.75U AS=0.5775P AD=0.5775P PS=3.17U PD=3.17U
+X$31 vdd \$6 out vdd sg13_lv_pmos L=1.04U W=2.75U AS=0.5775P AD=0.5775P PS=3.17U PD=3.17U
+X$32 out \$6 vdd vdd sg13_lv_pmos L=1.04U W=2.75U AS=0.5775P AD=0.5775P PS=3.17U PD=3.17U
+X$33 vdd \$6 out vdd sg13_lv_pmos L=1.04U W=2.75U AS=0.5775P AD=0.5775P PS=3.17U PD=3.17U
+X$34 out \$6 vdd vdd sg13_lv_pmos L=1.04U W=2.75U AS=0.5775P AD=0.5775P PS=3.17U PD=3.17U
+X$35 vdd \$6 out vdd sg13_lv_pmos L=1.04U W=2.75U AS=0.5775P AD=0.5775P PS=3.17U PD=3.17U
+X$36 out \$6 vdd vdd sg13_lv_pmos L=1.04U W=2.75U AS=0.5775P AD=0.5775P PS=3.17U PD=3.17U
+X$37 vdd \$6 out vdd sg13_lv_pmos L=1.04U W=2.75U AS=0.5775P AD=1.155P PS=3.17U PD=6.34U
+X$38 out \$6 cap_cmim l=25.7U w=25.7U
+.ENDS opamp_core
