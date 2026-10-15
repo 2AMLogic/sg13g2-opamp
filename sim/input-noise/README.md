@@ -376,9 +376,13 @@ sim` envelope (see `signoff/README.md`, "Item 5 envelope coverage, per
 ratified row"). It is a second measurement path for the same circuit, not a
 new bench, and follows the pattern of `../slew-rate/klt/` (issue #95).
 
-**Delivered: request, circuit body, runner, comparator, tests. Pending: the
-real 45-corner envelope and the measured comparison.** Issue #96 stays open;
-this increment is `Part of #96`. Nothing under `klt/` is signoff evidence yet.
+**Delivered: request, circuit body, runner, comparator, tests, and (2026-10-15)
+the real 45-corner fleet envelope with its measured comparison against the
+harness record.** The envelope is `klt/records/20261015-061719-80878d7.sim.json`.
+Its verdict is **fail**: 44 of 45 corners meet the 108.9 uVrms bound and
+`mos_fs`/125 C/1.08 V misses it at 108.949 uVrms (margin -49 nVrms), the same
+point and the same number as the harness record. The miss stays a miss; the
+spec and the 100 Hz to 1 MHz band are untouched.
 
 | File | What it is |
 |---|---|
@@ -392,7 +396,7 @@ this increment is `Part of #96`. Nothing under `klt/` is signoff evidence yet.
 The harness record
 [`records/20260918-203850-90844d2.csv`](records/20260918-203850-90844d2.csv)
 stays the **record of evidence** for the noise row; nothing in `klt/` edits or
-replaces it. A `klt sim` envelope under `klt/records/` (none yet) will be the
+replaces it. A `klt sim` envelope under `klt/records/` will be the
 **gradable form** of the same measurement: the tool assigns the verdict and
 binding corner against the ratified bound, and `compare.json` ties the two
 together point by point. The harness `run_noise_sweep.sh` path is unchanged.
@@ -490,24 +494,31 @@ in the request. `compare.py` does not compare them and lists them under
 real envelope must be checked against the harness' units (V/√Hz, RMS V)
 through the join itself.
 
-### Comparison tolerance (provisional)
+### Comparison tolerance (measured)
 
 | Metric | Tolerance | Why |
 |---|---|---|
-| `inoise_int_vrms`, `inoise_*_v_rthz` | 2×10⁻³ relative | Same circuit, same analysis, ngspice default tolerance (DR-0005), no waveform post-processing on either side. The harness ran on macOS/aarch64 ngspice-46; DR-0005 measured 9.9×10⁻⁴ relative drain-current difference to a Linux/x86_64 record of this PDK, and noise tracks bias current and gm. 2×10⁻³ is that figure doubled, as in `../slew-rate/klt/`. |
+| `inoise_int_vrms`, `inoise_*_v_rthz` | 2x10^-5 relative | Largest measured relative difference over 45 points x 6 metrics is 4.7x10^-6 (integrated, `mos_ss_125C_1.20V`); the spot densities peak at 4.6x10^-6. That equals the harness CSV's printing resolution (6 significant digits, <= 5x10^-6 relative), so the paths agree to the record's precision. 2x10^-5 is ~4x the largest delta, and 20x tighter than the 4.5x10^-4 margin by which the harness-worst point misses the bound. |
 
-**These tolerances are provisional.** No measured envelope exists, so none is
-justified from measurement. They must be replaced by a measured
-justification, and every out-of-tolerance point explained, in the evidence
-increment. A comparison tolerance never loosens the bound: the bound is graded
-by `klt sim`, and a verdict that flips within tolerance of it is listed in
-`bound_verdict_disagreements` as *explained*, never hidden. Proximity, stated
-in advance: the harness-worst integrated figure is 4.5×10⁻⁴ relative above
-the bound, so a tool value within the tolerance can flip the verdict there.
+Measurement basis: the envelope ran on the AWS batch fleet (job
+`klt-sim-97d94b85943b`, `c7i.8xlarge` Linux/x86_64, ngspice-46, runner and
+client klt 0.7.0); the harness record ran on macOS/aarch64 ngspice-46. The
+2x10^-3 allowance first carried over from DR-0005's 9.9x10^-4 drain-current
+cross-host figure was not needed: no cross-host solver drift is visible in the
+noise numbers at default tolerance. Out-of-tolerance points: **none** (0 of
+270 comparisons). The bound-verdict join has no disagreements: the single
+failing corner fails in both paths. A tolerance never loosens the bound; a
+verdict flip beyond it is reported as unexplained (negative control
+`test_flip_beyond_tolerance_of_bound_is_unexplained`).
+
+The remote job record reports `state: failed, exit_code: 3`; that is the
+runner relaying klt's nonzero exit for the failing limit verdict (envelope
+`status: fail`), not an infrastructure failure: 45 corners simulated, 0
+errored, 0 inconclusive.
 
 ### Tests
 
-`python3 -m pytest sim/input-noise/klt/test_compare.py` (36 tests, offline).
+`python3 -m pytest sim/input-noise/klt/test_compare.py` (37 tests, offline).
 The synthetic envelopes are **built from the harness CSV** and are comparator
 tests with negative controls (perturbed value, missing/duplicate/extra
 point, null/NaN, mis-biased Vcm, wrong band/point count/spot frequency,
@@ -523,10 +534,12 @@ about the circuit.
   and failed `sim/preflight.sh`'s OSDI check (`Unknown model type
   pspnqs103va`, exit 3). The 2026-10-10 host passes it. The prototype is an
   encoding check at one point, not envelope evidence.
-- **Not done: the real 45-corner envelope and the measured comparison.** The
-  fleet submission depends on 2AMLogic/2am#2193 (runner image klt version) or
-  a verified compatible sharded bridge; deployed runner/client compatibility
-  must be re-checked first. The grid is never run locally on a shared dispatch
-  host. No fleet submission was attempted in this increment.
+- Delivered (2026-10-15): the real 45-corner envelope through `klt sim` on the
+  batch fleet (client and runner klt 0.7.0 via
+  `KLT="uvx --from klayout-tools==0.7.0 klt"`; `runner_compatibility: match`;
+  2AMLogic/2am#2193 resolved at runner pin 0.7.0), and the measured
+  comparison above. No local grid was run. `sim/preflight.sh` passed on the
+  submitting host (ngspice-46 with OSDI).
+- Bound result: 1 of 45 corners misses the ratified bound (see above).
 - The signoff manifest is unchanged; item 5 stays uncited until all ten
   ratified rows have envelopes.

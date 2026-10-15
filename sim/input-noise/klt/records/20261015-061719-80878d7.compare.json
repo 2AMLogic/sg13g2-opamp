@@ -1,0 +1,3197 @@
+{
+  "schema": "sg13g2-opamp/input-noise/klt-compare/1",
+  "points_compared": 45,
+  "tolerances": {
+    "inoise_int_vrms": {
+      "abs": 0.0,
+      "rel": 2e-05,
+      "unit": "Vrms"
+    },
+    "inoise_100hz_v_rthz": {
+      "abs": 0.0,
+      "rel": 2e-05,
+      "unit": "V/rtHz"
+    },
+    "inoise_1khz_v_rthz": {
+      "abs": 0.0,
+      "rel": 2e-05,
+      "unit": "V/rtHz"
+    },
+    "inoise_10khz_v_rthz": {
+      "abs": 0.0,
+      "rel": 2e-05,
+      "unit": "V/rtHz"
+    },
+    "inoise_100khz_v_rthz": {
+      "abs": 0.0,
+      "rel": 2e-05,
+      "unit": "V/rtHz"
+    },
+    "inoise_1mhz_v_rthz": {
+      "abs": 0.0,
+      "rel": 2e-05,
+      "unit": "V/rtHz"
+    }
+  },
+  "tolerances_provisional": false,
+  "not_compared": [
+    "op_pass / clgain_* (need a second analysis per corner; klt sim runs one)",
+    "flicker/thermal split and crosscheck columns (derived by the harness from the written spectrum)"
+  ],
+  "out_of_tolerance": [],
+  "bound_verdict_disagreements": [],
+  "unexplained_bound_verdict_disagreements": 0,
+  "row": {
+    "bound": {
+      "max": 0.0001089,
+      "band_hz": [
+        100.0,
+        1000000.0
+      ]
+    },
+    "harness_worst": {
+      "point": "mos_fs_125C_1.08V",
+      "value": 0.000108949,
+      "verdict": "fail"
+    },
+    "tool": {
+      "inoise_int_vrms": {
+        "status": "fail",
+        "limits": {
+          "max": 0.0001089
+        },
+        "worst_case": {
+          "corner_id": "mos_fs/vdd=1.080_vinp=0.540V/125C",
+          "value": 0.0001089491081877,
+          "margin": -4.910818769999505e-08
+        }
+      }
+    }
+  },
+  "points": [
+    {
+      "point_id": "mos_tt_-40C_1.08V",
+      "process": "mos_tt",
+      "temperature_c": -40,
+      "vdd_v": 1.08,
+      "metrics": {
+        "inoise_int_vrms": {
+          "harness": 7.85085e-05,
+          "tool": 7.850854790551e-05,
+          "delta": 4.7905510003223677e-11,
+          "rel_delta": 6.101952018344979e-07,
+          "tolerance": 1.57017e-09,
+          "unit": "Vrms",
+          "within": true
+        },
+        "inoise_100hz_v_rthz": {
+          "harness": 2.50089e-06,
+          "tool": 2.500890157192e-06,
+          "delta": 1.5719199996289037e-13,
+          "rel_delta": 6.285442381027969e-08,
+          "tolerance": 5.001780000000001e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1khz_v_rthz": {
+          "harness": 7.91078e-07,
+          "tool": 7.910781967196e-07,
+          "delta": 1.967196000924275e-13,
+          "rel_delta": 2.4867282378277177e-07,
+          "tolerance": 1.582156e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_10khz_v_rthz": {
+          "harness": 2.50879e-07,
+          "tool": 2.508786138239e-07,
+          "delta": -3.861761000264028e-13,
+          "rel_delta": -1.5392922485596752e-06,
+          "tolerance": 5.0175800000000005e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_100khz_v_rthz": {
+          "harness": 8.1573e-08,
+          "tool": 8.15730401444e-08,
+          "delta": 4.014440000584195e-14,
+          "rel_delta": 4.921285229897387e-07,
+          "tolerance": 1.6314600000000002e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1mhz_v_rthz": {
+          "harness": 3.21484e-08,
+          "tool": 3.214835477322e-08,
+          "delta": -4.5226779999974756e-14,
+          "rel_delta": -1.4068127807285824e-06,
+          "tolerance": 6.429680000000001e-13,
+          "unit": "V/rtHz",
+          "within": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false
+      }
+    },
+    {
+      "point_id": "mos_tt_-40C_1.20V",
+      "process": "mos_tt",
+      "temperature_c": -40,
+      "vdd_v": 1.2,
+      "metrics": {
+        "inoise_int_vrms": {
+          "harness": 7.72241e-05,
+          "tool": 7.722408474767e-05,
+          "delta": -1.5252329997952896e-11,
+          "rel_delta": -1.9750738432630352e-07,
+          "tolerance": 1.544482e-09,
+          "unit": "Vrms",
+          "within": true
+        },
+        "inoise_100hz_v_rthz": {
+          "harness": 2.46776e-06,
+          "tool": 2.467764526474e-06,
+          "delta": 4.526473999749936e-12,
+          "rel_delta": 1.8342440106614645e-06,
+          "tolerance": 4.9355200000000006e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1khz_v_rthz": {
+          "harness": 7.80579e-07,
+          "tool": 7.805785890846e-07,
+          "delta": -4.109154000518864e-13,
+          "rel_delta": -5.264238469801089e-07,
+          "tolerance": 1.5611580000000002e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_10khz_v_rthz": {
+          "harness": 2.47481e-07,
+          "tool": 2.474814973396e-07,
+          "delta": 4.9733959996955e-13,
+          "rel_delta": 2.0096072020460154e-06,
+          "tolerance": 4.949620000000001e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_100khz_v_rthz": {
+          "harness": 8.02616e-08,
+          "tool": 8.026162730897e-08,
+          "delta": 2.7308970003241456e-14,
+          "rel_delta": 3.4024950914561207e-07,
+          "tolerance": 1.6052320000000002e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1mhz_v_rthz": {
+          "harness": 3.11055e-08,
+          "tool": 3.110549211246e-08,
+          "delta": -7.887540000626033e-15,
+          "rel_delta": -2.535738052957205e-07,
+          "tolerance": 6.221100000000001e-13,
+          "unit": "V/rtHz",
+          "within": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false
+      }
+    },
+    {
+      "point_id": "mos_tt_-40C_1.32V",
+      "process": "mos_tt",
+      "temperature_c": -40,
+      "vdd_v": 1.32,
+      "metrics": {
+        "inoise_int_vrms": {
+          "harness": 7.55027e-05,
+          "tool": 7.550267077395e-05,
+          "delta": -2.922605000621036e-11,
+          "rel_delta": -3.870861572660363e-07,
+          "tolerance": 1.5100540000000002e-09,
+          "unit": "Vrms",
+          "within": true
+        },
+        "inoise_100hz_v_rthz": {
+          "harness": 2.41355e-06,
+          "tool": 2.413547783563e-06,
+          "delta": -2.216436999959311e-12,
+          "rel_delta": -9.183306747153824e-07,
+          "tolerance": 4.8271e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1khz_v_rthz": {
+          "harness": 7.63427e-07,
+          "tool": 7.63427197869e-07,
+          "delta": 1.9786899997904995e-13,
+          "rel_delta": 2.591852265888552e-07,
+          "tolerance": 1.526854e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_10khz_v_rthz": {
+          "harness": 2.42037e-07,
+          "tool": 2.420370648363e-07,
+          "delta": 6.483630000142277e-14,
+          "rel_delta": 2.6787763854874574e-07,
+          "tolerance": 4.84074e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_100khz_v_rthz": {
+          "harness": 7.84755e-08,
+          "tool": 7.847549662251e-08,
+          "delta": -3.3774899979401433e-15,
+          "rel_delta": -4.303878277857604e-08,
+          "tolerance": 1.56951e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1mhz_v_rthz": {
+          "harness": 3.03569e-08,
+          "tool": 3.035693599405e-08,
+          "delta": 3.5994050002068e-14,
+          "rel_delta": 1.1856958385760075e-06,
+          "tolerance": 6.07138e-13,
+          "unit": "V/rtHz",
+          "within": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false
+      }
+    },
+    {
+      "point_id": "mos_tt_27C_1.08V",
+      "process": "mos_tt",
+      "temperature_c": 27,
+      "vdd_v": 1.08,
+      "metrics": {
+        "inoise_int_vrms": {
+          "harness": 8.92841e-05,
+          "tool": 8.928408796438e-05,
+          "delta": -1.2035620004964553e-11,
+          "rel_delta": -1.3480138126457627e-07,
+          "tolerance": 1.7856820000000002e-09,
+          "unit": "Vrms",
+          "within": true
+        },
+        "inoise_100hz_v_rthz": {
+          "harness": 2.84582e-06,
+          "tool": 2.845823276206e-06,
+          "delta": 3.2762060001320463e-12,
+          "rel_delta": 1.1512344421404187e-06,
+          "tolerance": 5.6916400000000005e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1khz_v_rthz": {
+          "harness": 9.00182e-07,
+          "tool": 9.001822515037e-07,
+          "delta": 2.515036999581349e-13,
+          "rel_delta": 2.793920562265574e-07,
+          "tolerance": 1.800364e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_10khz_v_rthz": {
+          "harness": 2.85464e-07,
+          "tool": 2.854644438248e-07,
+          "delta": 4.4382479999230815e-13,
+          "rel_delta": 1.5547487598867392e-06,
+          "tolerance": 5.709280000000001e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_100khz_v_rthz": {
+          "harness": 9.2773e-08,
+          "tool": 9.277301541785e-08,
+          "delta": 1.5417849996736433e-14,
+          "rel_delta": 1.6618897736126278e-07,
+          "tolerance": 1.8554600000000003e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1mhz_v_rthz": {
+          "harness": 3.64571e-08,
+          "tool": 3.645713328272e-08,
+          "delta": 3.328272000413242e-14,
+          "rel_delta": 9.129283460322521e-07,
+          "tolerance": 7.29142e-13,
+          "unit": "V/rtHz",
+          "within": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false
+      }
+    },
+    {
+      "point_id": "mos_tt_27C_1.20V",
+      "process": "mos_tt",
+      "temperature_c": 27,
+      "vdd_v": 1.2,
+      "metrics": {
+        "inoise_int_vrms": {
+          "harness": 8.7293e-05,
+          "tool": 8.729301696786e-05,
+          "delta": 1.696785999194799e-11,
+          "rel_delta": 1.9437824329497197e-07,
+          "tolerance": 1.7458600000000002e-09,
+          "unit": "Vrms",
+          "within": true
+        },
+        "inoise_100hz_v_rthz": {
+          "harness": 2.78673e-06,
+          "tool": 2.786726543735e-06,
+          "delta": -3.4562650000179032e-12,
+          "rel_delta": -1.2402582955714775e-06,
+          "tolerance": 5.5734600000000004e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1khz_v_rthz": {
+          "harness": 8.81477e-07,
+          "tool": 8.814770596384e-07,
+          "delta": 5.963839994664263e-14,
+          "rel_delta": 6.765735231508323e-08,
+          "tolerance": 1.7629540000000004e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_10khz_v_rthz": {
+          "harness": 2.79495e-07,
+          "tool": 2.794951874091e-07,
+          "delta": 1.874091000159315e-13,
+          "rel_delta": 6.705275586895347e-07,
+          "tolerance": 5.589900000000001e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_100khz_v_rthz": {
+          "harness": 9.07178e-08,
+          "tool": 9.071780145166e-08,
+          "delta": 1.451660007195005e-15,
+          "rel_delta": 1.600193134307716e-08,
+          "tolerance": 1.814356e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1mhz_v_rthz": {
+          "harness": 3.53527e-08,
+          "tool": 3.535270430622e-08,
+          "delta": 4.306219994258615e-15,
+          "rel_delta": 1.2180738654356285e-07,
+          "tolerance": 7.070540000000001e-13,
+          "unit": "V/rtHz",
+          "within": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false
+      }
+    },
+    {
+      "point_id": "mos_tt_27C_1.32V",
+      "process": "mos_tt",
+      "temperature_c": 27,
+      "vdd_v": 1.32,
+      "metrics": {
+        "inoise_int_vrms": {
+          "harness": 8.4968e-05,
+          "tool": 8.496795117626e-05,
+          "delta": -4.8823739999927576e-11,
+          "rel_delta": -5.746132661699413e-07,
+          "tolerance": 1.6993600000000002e-09,
+          "unit": "Vrms",
+          "within": true
+        },
+        "inoise_100hz_v_rthz": {
+          "harness": 2.71279e-06,
+          "tool": 2.712789528021e-06,
+          "delta": -4.719789999537663e-13,
+          "rel_delta": -1.7398287370337046e-07,
+          "tolerance": 5.42558e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1khz_v_rthz": {
+          "harness": 8.58089e-07,
+          "tool": 8.580891573286e-07,
+          "delta": 1.57328600013382e-13,
+          "rel_delta": 1.833476481033809e-07,
+          "tolerance": 1.7161780000000002e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_10khz_v_rthz": {
+          "harness": 2.72077e-07,
+          "tool": 2.720772859926e-07,
+          "delta": 2.8599259998120745e-13,
+          "rel_delta": 1.0511458152699694e-06,
+          "tolerance": 5.441540000000001e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_100khz_v_rthz": {
+          "harness": 8.83033e-08,
+          "tool": 8.830333646489e-08,
+          "delta": 3.64648900079349e-14,
+          "rel_delta": 4.129504787242934e-07,
+          "tolerance": 1.766066e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1mhz_v_rthz": {
+          "harness": 3.43888e-08,
+          "tool": 3.438883563116e-08,
+          "delta": 3.563115999766736e-14,
+          "rel_delta": 1.036126878450756e-06,
+          "tolerance": 6.87776e-13,
+          "unit": "V/rtHz",
+          "within": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false
+      }
+    },
+    {
+      "point_id": "mos_tt_125C_1.08V",
+      "process": "mos_tt",
+      "temperature_c": 125,
+      "vdd_v": 1.08,
+      "metrics": {
+        "inoise_int_vrms": {
+          "harness": 0.000106622,
+          "tool": 0.0001066216865383,
+          "delta": -3.1346169999675166e-10,
+          "rel_delta": -2.9399345350561016e-06,
+          "tolerance": 2.13244e-09,
+          "unit": "Vrms",
+          "within": true
+        },
+        "inoise_100hz_v_rthz": {
+          "harness": 3.39659e-06,
+          "tool": 3.396590604413e-06,
+          "delta": 6.044130002094944e-13,
+          "rel_delta": 1.779469998467564e-07,
+          "tolerance": 6.793180000000001e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1khz_v_rthz": {
+          "harness": 1.0744e-06,
+          "tool": 1.074404401893e-06,
+          "delta": 4.401892999919847e-12,
+          "rel_delta": 4.097070923231429e-06,
+          "tolerance": 2.1488000000000004e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_10khz_v_rthz": {
+          "harness": 3.4073e-07,
+          "tool": 3.407295397428e-07,
+          "delta": -4.602571999937678e-13,
+          "rel_delta": -1.350797405552102e-06,
+          "tolerance": 6.8146000000000005e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_100khz_v_rthz": {
+          "harness": 1.10783e-07,
+          "tool": 1.107825857539e-07,
+          "delta": -4.142460999895249e-13,
+          "rel_delta": -3.7392569256070417e-06,
+          "tolerance": 2.21566e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1mhz_v_rthz": {
+          "harness": 4.36629e-08,
+          "tool": 4.366290807143e-08,
+          "delta": 8.07142999982455e-15,
+          "rel_delta": 1.848578541467596e-07,
+          "tolerance": 8.732580000000001e-13,
+          "unit": "V/rtHz",
+          "within": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false
+      }
+    },
+    {
+      "point_id": "mos_tt_125C_1.20V",
+      "process": "mos_tt",
+      "temperature_c": 125,
+      "vdd_v": 1.2,
+      "metrics": {
+        "inoise_int_vrms": {
+          "harness": 0.000103681,
+          "tool": 0.0001036810885375,
+          "delta": 8.853750000400833e-11,
+          "rel_delta": 8.539414164987638e-07,
+          "tolerance": 2.07362e-09,
+          "unit": "Vrms",
+          "within": true
+        },
+        "inoise_100hz_v_rthz": {
+          "harness": 3.30535e-06,
+          "tool": 3.3053460906e-06,
+          "delta": -3.909399999972346e-12,
+          "rel_delta": -1.182749179352367e-06,
+          "tolerance": 6.6107e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1khz_v_rthz": {
+          "harness": 1.04554e-06,
+          "tool": 1.04553550794e-06,
+          "delta": -4.492059999991653e-12,
+          "rel_delta": -4.296401859318297e-06,
+          "tolerance": 2.0910800000000002e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_10khz_v_rthz": {
+          "harness": 3.31554e-07,
+          "tool": 3.315535415583e-07,
+          "delta": -4.584416999619299e-13,
+          "rel_delta": -1.3827059844306807e-06,
+          "tolerance": 6.6310800000000005e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_100khz_v_rthz": {
+          "harness": 1.07735e-07,
+          "tool": 1.077354933388e-07,
+          "delta": 4.933387999985958e-13,
+          "rel_delta": 4.579187821957542e-06,
+          "tolerance": 2.1547e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1mhz_v_rthz": {
+          "harness": 4.22955e-08,
+          "tool": 4.2295461868e-08,
+          "delta": -3.813200000533942e-14,
+          "rel_delta": -9.01561631978329e-07,
+          "tolerance": 8.459100000000002e-13,
+          "unit": "V/rtHz",
+          "within": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false
+      }
+    },
+    {
+      "point_id": "mos_tt_125C_1.32V",
+      "process": "mos_tt",
+      "temperature_c": 125,
+      "vdd_v": 1.32,
+      "metrics": {
+        "inoise_int_vrms": {
+          "harness": 0.00010066,
+          "tool": 0.0001006602554695,
+          "delta": 2.554694999924896e-10,
+          "rel_delta": 2.5379445657906774e-06,
+          "tolerance": 2.0132e-09,
+          "unit": "Vrms",
+          "within": true
+        },
+        "inoise_100hz_v_rthz": {
+          "harness": 3.20888e-06,
+          "tool": 3.208882626072e-06,
+          "delta": 2.626071999914777e-12,
+          "rel_delta": 8.183765051715167e-07,
+          "tolerance": 6.417760000000002e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1khz_v_rthz": {
+          "harness": 1.01502e-06,
+          "tool": 1.015023096978e-06,
+          "delta": 3.0969780001303016e-12,
+          "rel_delta": 3.051149731168156e-06,
+          "tolerance": 2.0300400000000002e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_10khz_v_rthz": {
+          "harness": 3.21879e-07,
+          "tool": 3.218794467149e-07,
+          "delta": 4.4671490001938323e-13,
+          "rel_delta": 1.3878348696851402e-06,
+          "tolerance": 6.4375800000000005e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_100khz_v_rthz": {
+          "harness": 1.04597e-07,
+          "tool": 1.045973479102e-07,
+          "delta": 3.479102000072051e-13,
+          "rel_delta": 3.3261967361129396e-06,
+          "tolerance": 2.09194e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1mhz_v_rthz": {
+          "harness": 4.10697e-08,
+          "tool": 4.106972892482e-08,
+          "delta": 2.892482000189787e-14,
+          "rel_delta": 7.042861282623898e-07,
+          "tolerance": 8.213940000000001e-13,
+          "unit": "V/rtHz",
+          "within": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false
+      }
+    },
+    {
+      "point_id": "mos_ss_-40C_1.08V",
+      "process": "mos_ss",
+      "temperature_c": -40,
+      "vdd_v": 1.08,
+      "metrics": {
+        "inoise_int_vrms": {
+          "harness": 7.9916e-05,
+          "tool": 7.991603256822e-05,
+          "delta": 3.256821999857596e-11,
+          "rel_delta": 4.0753065717223033e-07,
+          "tolerance": 1.5983200000000001e-09,
+          "unit": "Vrms",
+          "within": true
+        },
+        "inoise_100hz_v_rthz": {
+          "harness": 2.51778e-06,
+          "tool": 2.517777859956e-06,
+          "delta": -2.140044000113018e-12,
+          "rel_delta": -8.499725949499233e-07,
+          "tolerance": 5.035560000000001e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1khz_v_rthz": {
+          "harness": 7.96497e-07,
+          "tool": 7.96496953598e-07,
+          "delta": -4.640199999192835e-14,
+          "rel_delta": -5.82575954359255e-08,
+          "tolerance": 1.592994e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_10khz_v_rthz": {
+          "harness": 2.52839e-07,
+          "tool": 2.528392770381e-07,
+          "delta": 2.7703810001738767e-13,
+          "rel_delta": 1.095709522729435e-06,
+          "tolerance": 5.0567800000000006e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_100khz_v_rthz": {
+          "harness": 8.29503e-08,
+          "tool": 8.295034185693e-08,
+          "delta": 4.185693000099083e-14,
+          "rel_delta": 5.046025150118906e-07,
+          "tolerance": 1.6590060000000001e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1mhz_v_rthz": {
+          "harness": 3.45083e-08,
+          "tool": 3.450828042747e-08,
+          "delta": -1.957252999984952e-14,
+          "rel_delta": -5.671832573569119e-07,
+          "tolerance": 6.90166e-13,
+          "unit": "V/rtHz",
+          "within": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false
+      }
+    },
+    {
+      "point_id": "mos_ss_-40C_1.20V",
+      "process": "mos_ss",
+      "temperature_c": -40,
+      "vdd_v": 1.2,
+      "metrics": {
+        "inoise_int_vrms": {
+          "harness": 7.74683e-05,
+          "tool": 7.746830736987e-05,
+          "delta": 7.369870000189203e-12,
+          "rel_delta": 9.513400965542297e-08,
+          "tolerance": 1.5493660000000002e-09,
+          "unit": "Vrms",
+          "within": true
+        },
+        "inoise_100hz_v_rthz": {
+          "harness": 2.47361e-06,
+          "tool": 2.47361141812e-06,
+          "delta": 1.4181199998545006e-12,
+          "rel_delta": 5.732997521252342e-07,
+          "tolerance": 4.947220000000001e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1khz_v_rthz": {
+          "harness": 7.82433e-07,
+          "tool": 7.824332811395e-07,
+          "delta": 2.8113950004007935e-13,
+          "rel_delta": 3.59314471705666e-07,
+          "tolerance": 1.564866e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_10khz_v_rthz": {
+          "harness": 2.48086e-07,
+          "tool": 2.48086122073e-07,
+          "delta": 1.2207300001834966e-13,
+          "rel_delta": 4.920592053495549e-07,
+          "tolerance": 4.96172e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_100khz_v_rthz": {
+          "harness": 8.05089e-08,
+          "tool": 8.050892324649e-08,
+          "delta": 2.3246489993040697e-14,
+          "rel_delta": 2.8874434991709854e-07,
+          "tolerance": 1.6101780000000002e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1mhz_v_rthz": {
+          "harness": 3.13366e-08,
+          "tool": 3.133661005062e-08,
+          "delta": 1.0050619995752275e-14,
+          "rel_delta": 3.2073103003364353e-07,
+          "tolerance": 6.267320000000001e-13,
+          "unit": "V/rtHz",
+          "within": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false
+      }
+    },
+    {
+      "point_id": "mos_ss_-40C_1.32V",
+      "process": "mos_ss",
+      "temperature_c": -40,
+      "vdd_v": 1.32,
+      "metrics": {
+        "inoise_int_vrms": {
+          "harness": 7.63066e-05,
+          "tool": 7.630659999956e-05,
+          "delta": -4.3999634664892984e-16,
+          "rel_delta": -5.7661636955247625e-12,
+          "tolerance": 1.526132e-09,
+          "unit": "Vrms",
+          "within": true
+        },
+        "inoise_100hz_v_rthz": {
+          "harness": 2.44192e-06,
+          "tool": 2.441921970538e-06,
+          "delta": 1.970537999910853e-12,
+          "rel_delta": 8.06962554019318e-07,
+          "tolerance": 4.88384e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1khz_v_rthz": {
+          "harness": 7.72395e-07,
+          "tool": 7.723947805881e-07,
+          "delta": -2.1941189999941845e-13,
+          "rel_delta": -2.840669605569928e-07,
+          "tolerance": 1.5447900000000002e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_10khz_v_rthz": {
+          "harness": 2.44857e-07,
+          "tool": 2.448567184043e-07,
+          "delta": -2.8159570002113014e-13,
+          "rel_delta": -1.1500414528526043e-06,
+          "tolerance": 4.897140000000001e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_100khz_v_rthz": {
+          "harness": 7.93178e-08,
+          "tool": 7.931776944843e-08,
+          "delta": -3.055157000433135e-14,
+          "rel_delta": -3.8517924103204263e-07,
+          "tolerance": 1.586356e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1mhz_v_rthz": {
+          "harness": 3.05036e-08,
+          "tool": 3.050357432784e-08,
+          "delta": -2.5672159995634225e-14,
+          "rel_delta": -8.416108261200064e-07,
+          "tolerance": 6.10072e-13,
+          "unit": "V/rtHz",
+          "within": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false
+      }
+    },
+    {
+      "point_id": "mos_ss_27C_1.08V",
+      "process": "mos_ss",
+      "temperature_c": 27,
+      "vdd_v": 1.08,
+      "metrics": {
+        "inoise_int_vrms": {
+          "harness": 8.99539e-05,
+          "tool": 8.995389478269e-05,
+          "delta": -5.217310009584045e-12,
+          "rel_delta": -5.7999820014296704e-08,
+          "tolerance": 1.7990780000000004e-09,
+          "unit": "Vrms",
+          "within": true
+        },
+        "inoise_100hz_v_rthz": {
+          "harness": 2.85193e-06,
+          "tool": 2.851926816943e-06,
+          "delta": -3.183057000028883e-12,
+          "rel_delta": -1.116106285928786e-06,
+          "tolerance": 5.703860000000001e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1khz_v_rthz": {
+          "harness": 9.02155e-07,
+          "tool": 9.021546080555e-07,
+          "delta": -3.919445000116252e-13,
+          "rel_delta": -4.344536138597305e-07,
+          "tolerance": 1.8043100000000003e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_10khz_v_rthz": {
+          "harness": 2.86221e-07,
+          "tool": 2.862213643819e-07,
+          "delta": 3.6438189999484183e-13,
+          "rel_delta": 1.273078844650958e-06,
+          "tolerance": 5.72442e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_100khz_v_rthz": {
+          "harness": 9.34219e-08,
+          "tool": 9.342189695754e-08,
+          "delta": -3.042459999053106e-15,
+          "rel_delta": -3.2566882059272036e-08,
+          "tolerance": 1.868438e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1mhz_v_rthz": {
+          "harness": 3.77255e-08,
+          "tool": 3.772549434336e-08,
+          "delta": -5.656640003089606e-15,
+          "rel_delta": -1.4994208169778017e-07,
+          "tolerance": 7.545100000000001e-13,
+          "unit": "V/rtHz",
+          "within": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false
+      }
+    },
+    {
+      "point_id": "mos_ss_27C_1.20V",
+      "process": "mos_ss",
+      "temperature_c": 27,
+      "vdd_v": 1.2,
+      "metrics": {
+        "inoise_int_vrms": {
+          "harness": 8.77557e-05,
+          "tool": 8.775568931568e-05,
+          "delta": -1.0684319992322958e-11,
+          "rel_delta": -1.2175072379712038e-07,
+          "tolerance": 1.7551140000000002e-09,
+          "unit": "Vrms",
+          "within": true
+        },
+        "inoise_100hz_v_rthz": {
+          "harness": 2.80098e-06,
+          "tool": 2.800979543609e-06,
+          "delta": -4.563909996858862e-13,
+          "rel_delta": -1.629397566872617e-07,
+          "tolerance": 5.60196e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1khz_v_rthz": {
+          "harness": 8.85987e-07,
+          "tool": 8.859867257104e-07,
+          "delta": -2.7428960007629187e-13,
+          "rel_delta": -3.095864838607021e-07,
+          "tolerance": 1.7719740000000003e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_10khz_v_rthz": {
+          "harness": 2.80929e-07,
+          "tool": 2.80929078055e-07,
+          "delta": 7.805500003803386e-14,
+          "rel_delta": 2.778460039299391e-07,
+          "tolerance": 5.61858e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_100khz_v_rthz": {
+          "harness": 9.11957e-08,
+          "tool": 9.119571709909e-08,
+          "delta": 1.70990899992437e-14,
+          "rel_delta": 1.874988623284179e-07,
+          "tolerance": 1.8239140000000003e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1mhz_v_rthz": {
+          "harness": 3.55787e-08,
+          "tool": 3.557869786407e-08,
+          "delta": -2.1359300017457855e-15,
+          "rel_delta": -6.003395294785322e-08,
+          "tolerance": 7.115740000000001e-13,
+          "unit": "V/rtHz",
+          "within": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false
+      }
+    },
+    {
+      "point_id": "mos_ss_27C_1.32V",
+      "process": "mos_ss",
+      "temperature_c": 27,
+      "vdd_v": 1.32,
+      "metrics": {
+        "inoise_int_vrms": {
+          "harness": 8.57984e-05,
+          "tool": 8.579836455424e-05,
+          "delta": -3.544575998817509e-11,
+          "rel_delta": -4.131284498099626e-07,
+          "tolerance": 1.715968e-09,
+          "unit": "Vrms",
+          "within": true
+        },
+        "inoise_100hz_v_rthz": {
+          "harness": 2.74167e-06,
+          "tool": 2.741667905074e-06,
+          "delta": -2.094925999895778e-12,
+          "rel_delta": -7.641058186783158e-07,
+          "tolerance": 5.4833400000000004e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1khz_v_rthz": {
+          "harness": 8.67217e-07,
+          "tool": 8.672171113362e-07,
+          "delta": 1.1133620006139477e-13,
+          "rel_delta": 1.2838332281469894e-07,
+          "tolerance": 1.734434e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_10khz_v_rthz": {
+          "harness": 2.74951e-07,
+          "tool": 2.749505993747e-07,
+          "delta": -4.0062529996620413e-13,
+          "rel_delta": -1.4570788975715825e-06,
+          "tolerance": 5.49902e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_100khz_v_rthz": {
+          "harness": 8.91718e-08,
+          "tool": 8.917181796258e-08,
+          "delta": 1.7962580002569764e-14,
+          "rel_delta": 2.0143789855727667e-07,
+          "tolerance": 1.7834360000000002e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1mhz_v_rthz": {
+          "harness": 3.45716e-08,
+          "tool": 3.457160287037e-08,
+          "delta": 2.8703700026078993e-15,
+          "rel_delta": 8.302681977715523e-08,
+          "tolerance": 6.914320000000001e-13,
+          "unit": "V/rtHz",
+          "within": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false
+      }
+    },
+    {
+      "point_id": "mos_ss_125C_1.08V",
+      "process": "mos_ss",
+      "temperature_c": 125,
+      "vdd_v": 1.08,
+      "metrics": {
+        "inoise_int_vrms": {
+          "harness": 0.000106896,
+          "tool": 0.0001068959092393,
+          "delta": -9.076069999453939e-11,
+          "rel_delta": -8.490560918513264e-07,
+          "tolerance": 2.13792e-09,
+          "unit": "Vrms",
+          "within": true
+        },
+        "inoise_100hz_v_rthz": {
+          "harness": 3.3991e-06,
+          "tool": 3.399097819874e-06,
+          "delta": -2.180126000247192e-12,
+          "rel_delta": -6.41383307418785e-07,
+          "tolerance": 6.798200000000001e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1khz_v_rthz": {
+          "harness": 1.07521e-06,
+          "tool": 1.07521432801e-06,
+          "delta": 4.328010000100659e-12,
+          "rel_delta": 4.025269482334296e-06,
+          "tolerance": 2.15042e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_10khz_v_rthz": {
+          "harness": 3.4104e-07,
+          "tool": 3.410395127907e-07,
+          "delta": -4.87209300007966e-13,
+          "rel_delta": -1.4285986981232875e-06,
+          "tolerance": 6.8208e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_100khz_v_rthz": {
+          "harness": 1.11047e-07,
+          "tool": 1.110466118805e-07,
+          "delta": -3.8811949999510303e-13,
+          "rel_delta": -3.495092168136942e-06,
+          "tolerance": 2.22094e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1mhz_v_rthz": {
+          "harness": 4.41901e-08,
+          "tool": 4.41901183117e-08,
+          "delta": 1.8311699997487683e-14,
+          "rel_delta": 4.143846698126432e-07,
+          "tolerance": 8.838020000000001e-13,
+          "unit": "V/rtHz",
+          "within": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false
+      }
+    },
+    {
+      "point_id": "mos_ss_125C_1.20V",
+      "process": "mos_ss",
+      "temperature_c": 125,
+      "vdd_v": 1.2,
+      "metrics": {
+        "inoise_int_vrms": {
+          "harness": 0.000104253,
+          "tool": 0.0001042534917748,
+          "delta": 4.917748000000163e-10,
+          "rel_delta": 4.7171285238795644e-06,
+          "tolerance": 2.0850600000000002e-09,
+          "unit": "Vrms",
+          "within": true
+        },
+        "inoise_100hz_v_rthz": {
+          "harness": 3.32425e-06,
+          "tool": 3.324248371135e-06,
+          "delta": -1.6288650001864606e-12,
+          "rel_delta": -4.899947357107499e-07,
+          "tolerance": 6.6485e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1khz_v_rthz": {
+          "harness": 1.05151e-06,
+          "tool": 1.051512570713e-06,
+          "delta": 2.570712999941285e-12,
+          "rel_delta": 2.4447822654480552e-06,
+          "tolerance": 2.1030200000000003e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_10khz_v_rthz": {
+          "harness": 3.33443e-07,
+          "tool": 3.334425295208e-07,
+          "delta": -4.704791999539798e-13,
+          "rel_delta": -1.4109733896167554e-06,
+          "tolerance": 6.66886e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_100khz_v_rthz": {
+          "harness": 1.0833e-07,
+          "tool": 1.083299983951e-07,
+          "delta": -1.6049000067005614e-15,
+          "rel_delta": -1.4814917443926532e-08,
+          "tolerance": 2.1666e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1mhz_v_rthz": {
+          "harness": 4.2493e-08,
+          "tool": 4.249299540322e-08,
+          "delta": -4.596780002408638e-15,
+          "rel_delta": -1.0817734691381258e-07,
+          "tolerance": 8.498600000000001e-13,
+          "unit": "V/rtHz",
+          "within": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false
+      }
+    },
+    {
+      "point_id": "mos_ss_125C_1.32V",
+      "process": "mos_ss",
+      "temperature_c": 125,
+      "vdd_v": 1.32,
+      "metrics": {
+        "inoise_int_vrms": {
+          "harness": 0.000101441,
+          "tool": 0.0001014413068134,
+          "delta": 3.068133999899886e-10,
+          "rel_delta": 3.0245502310701646e-06,
+          "tolerance": 2.0288200000000004e-09,
+          "unit": "Vrms",
+          "within": true
+        },
+        "inoise_100hz_v_rthz": {
+          "harness": 3.23604e-06,
+          "tool": 3.236040236023e-06,
+          "delta": 2.360230003417053e-13,
+          "rel_delta": 7.293574873663655e-08,
+          "tolerance": 6.472080000000001e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1khz_v_rthz": {
+          "harness": 1.02361e-06,
+          "tool": 1.023607066999e-06,
+          "delta": -2.9330010000798006e-12,
+          "rel_delta": -2.8653500845828005e-06,
+          "tolerance": 2.0472200000000005e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_10khz_v_rthz": {
+          "harness": 3.24581e-07,
+          "tool": 3.24581280771e-07,
+          "delta": 2.807709999975027e-13,
+          "rel_delta": 8.65025987342151e-07,
+          "tolerance": 6.4916200000000006e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_100khz_v_rthz": {
+          "harness": 1.05413e-07,
+          "tool": 1.054134696109e-07,
+          "delta": 4.696108999946534e-13,
+          "rel_delta": 4.4549619116679474e-06,
+          "tolerance": 2.10826e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1mhz_v_rthz": {
+          "harness": 4.1246e-08,
+          "tool": 4.124600756967e-08,
+          "delta": 7.569670002512751e-15,
+          "rel_delta": 1.8352494793465431e-07,
+          "tolerance": 8.2492e-13,
+          "unit": "V/rtHz",
+          "within": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false
+      }
+    },
+    {
+      "point_id": "mos_ff_-40C_1.08V",
+      "process": "mos_ff",
+      "temperature_c": -40,
+      "vdd_v": 1.08,
+      "metrics": {
+        "inoise_int_vrms": {
+          "harness": 7.66174e-05,
+          "tool": 7.6617418849e-05,
+          "delta": 1.88489999975415e-11,
+          "rel_delta": 2.460146128365293e-07,
+          "tolerance": 1.5323480000000002e-09,
+          "unit": "Vrms",
+          "within": true
+        },
+        "inoise_100hz_v_rthz": {
+          "harness": 2.44731e-06,
+          "tool": 2.447310901013e-06,
+          "delta": 9.010130000360354e-13,
+          "rel_delta": 3.681646379232853e-07,
+          "tolerance": 4.8946200000000006e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1khz_v_rthz": {
+          "harness": 7.74112e-07,
+          "tool": 7.74111887317e-07,
+          "delta": -1.1268300002346276e-13,
+          "rel_delta": -1.45564207793527e-07,
+          "tolerance": 1.5482240000000002e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_10khz_v_rthz": {
+          "harness": 2.45441e-07,
+          "tool": 2.454406441107e-07,
+          "delta": -3.558892999614727e-13,
+          "rel_delta": -1.449999388698191e-06,
+          "tolerance": 4.90882e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_100khz_v_rthz": {
+          "harness": 7.96286e-08,
+          "tool": 7.962856304018e-08,
+          "delta": -3.695982000139863e-14,
+          "rel_delta": -4.641525783625309e-07,
+          "tolerance": 1.592572e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1mhz_v_rthz": {
+          "harness": 3.09308e-08,
+          "tool": 3.093080960962e-08,
+          "delta": 9.609619994470188e-15,
+          "rel_delta": 3.106812625108367e-07,
+          "tolerance": 6.186160000000002e-13,
+          "unit": "V/rtHz",
+          "within": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false
+      }
+    },
+    {
+      "point_id": "mos_ff_-40C_1.20V",
+      "process": "mos_ff",
+      "temperature_c": -40,
+      "vdd_v": 1.2,
+      "metrics": {
+        "inoise_int_vrms": {
+          "harness": 7.5076e-05,
+          "tool": 7.507597080862e-05,
+          "delta": -2.919137999900234e-11,
+          "rel_delta": -3.8882439127021077e-07,
+          "tolerance": 1.50152e-09,
+          "unit": "Vrms",
+          "within": true
+        },
+        "inoise_100hz_v_rthz": {
+          "harness": 2.39923e-06,
+          "tool": 2.399234280295e-06,
+          "delta": 4.280295000255269e-12,
+          "rel_delta": 1.78402862595719e-06,
+          "tolerance": 4.79846e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1khz_v_rthz": {
+          "harness": 7.58902e-07,
+          "tool": 7.589016030031e-07,
+          "delta": -3.9699690002897864e-13,
+          "rel_delta": -5.231201130435532e-07,
+          "tolerance": 1.5178040000000002e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_10khz_v_rthz": {
+          "harness": 2.40608e-07,
+          "tool": 2.406082478013e-07,
+          "delta": 2.478013000462637e-13,
+          "rel_delta": 1.0298963461159384e-06,
+          "tolerance": 4.81216e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_100khz_v_rthz": {
+          "harness": 7.80305e-08,
+          "tool": 7.803052201669e-08,
+          "delta": 2.201668999052778e-14,
+          "rel_delta": 2.8215492647782314e-07,
+          "tolerance": 1.5606100000000002e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1mhz_v_rthz": {
+          "harness": 3.02291e-08,
+          "tool": 3.022914553585e-08,
+          "delta": 4.5535850000745445e-14,
+          "rel_delta": 1.5063581119102272e-06,
+          "tolerance": 6.04582e-13,
+          "unit": "V/rtHz",
+          "within": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false
+      }
+    },
+    {
+      "point_id": "mos_ff_-40C_1.32V",
+      "process": "mos_ff",
+      "temperature_c": -40,
+      "vdd_v": 1.32,
+      "metrics": {
+        "inoise_int_vrms": {
+          "harness": 7.33562e-05,
+          "tool": 7.335624843504e-05,
+          "delta": 4.843504000922195e-11,
+          "rel_delta": 6.602719335137582e-07,
+          "tolerance": 1.467124e-09,
+          "unit": "Vrms",
+          "within": true
+        },
+        "inoise_100hz_v_rthz": {
+          "harness": 2.34434e-06,
+          "tool": 2.344342446085e-06,
+          "delta": 2.446084999947019e-12,
+          "rel_delta": 1.0434002746815816e-06,
+          "tolerance": 4.6886800000000007e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1khz_v_rthz": {
+          "harness": 7.41539e-07,
+          "tool": 7.41538661579e-07,
+          "delta": -3.3842100000016343e-13,
+          "rel_delta": -4.563765358263873e-07,
+          "tolerance": 1.4830780000000003e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_10khz_v_rthz": {
+          "harness": 2.35103e-07,
+          "tool": 2.351030125251e-07,
+          "delta": 1.2525099987381201e-14,
+          "rel_delta": 5.327494752249525e-08,
+          "tolerance": 4.702060000000001e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_100khz_v_rthz": {
+          "harness": 7.6244e-08,
+          "tool": 7.624397098739e-08,
+          "delta": -2.90126100037971e-14,
+          "rel_delta": -3.805231887597332e-07,
+          "tolerance": 1.5248800000000003e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1mhz_v_rthz": {
+          "harness": 2.95302e-08,
+          "tool": 2.953016893755e-08,
+          "delta": -3.1062450002077515e-14,
+          "rel_delta": -1.0518875592470595e-06,
+          "tolerance": 5.906040000000001e-13,
+          "unit": "V/rtHz",
+          "within": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false
+      }
+    },
+    {
+      "point_id": "mos_ff_27C_1.08V",
+      "process": "mos_ff",
+      "temperature_c": 27,
+      "vdd_v": 1.08,
+      "metrics": {
+        "inoise_int_vrms": {
+          "harness": 8.70961e-05,
+          "tool": 8.70960934748e-05,
+          "delta": -6.5252000038071994e-12,
+          "rel_delta": -7.491954293943357e-08,
+          "tolerance": 1.7419220000000001e-09,
+          "unit": "Vrms",
+          "within": true
+        },
+        "inoise_100hz_v_rthz": {
+          "harness": 2.77963e-06,
+          "tool": 2.779632506441e-06,
+          "delta": 2.5064410000655865e-12,
+          "rel_delta": 9.017174947980798e-07,
+          "tolerance": 5.559260000000001e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1khz_v_rthz": {
+          "harness": 8.79235e-07,
+          "tool": 8.792354376352e-07,
+          "delta": 4.376351999568111e-13,
+          "rel_delta": 4.977454263727116e-07,
+          "tolerance": 1.75847e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_10khz_v_rthz": {
+          "harness": 2.78792e-07,
+          "tool": 2.787917074233e-07,
+          "delta": -2.925767000002949e-13,
+          "rel_delta": -1.0494443886492255e-06,
+          "tolerance": 5.575840000000001e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_100khz_v_rthz": {
+          "harness": 9.05117e-08,
+          "tool": 9.051166930047e-08,
+          "delta": -3.069952999749042e-14,
+          "rel_delta": -3.3917747647531116e-07,
+          "tolerance": 1.810234e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1mhz_v_rthz": {
+          "harness": 3.53239e-08,
+          "tool": 3.532387728429e-08,
+          "delta": -2.2715709998446366e-14,
+          "rel_delta": -6.430691401132481e-07,
+          "tolerance": 7.064780000000001e-13,
+          "unit": "V/rtHz",
+          "within": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false
+      }
+    },
+    {
+      "point_id": "mos_ff_27C_1.20V",
+      "process": "mos_ff",
+      "temperature_c": 27,
+      "vdd_v": 1.2,
+      "metrics": {
+        "inoise_int_vrms": {
+          "harness": 8.49391e-05,
+          "tool": 8.493907938074e-05,
+          "delta": -2.061926000220763e-11,
+          "rel_delta": -2.4275345514854323e-07,
+          "tolerance": 1.6987820000000002e-09,
+          "unit": "Vrms",
+          "within": true
+        },
+        "inoise_100hz_v_rthz": {
+          "harness": 2.71142e-06,
+          "tool": 2.711423476434e-06,
+          "delta": 3.476433999680573e-12,
+          "rel_delta": 1.2821451489184902e-06,
+          "tolerance": 5.422840000000001e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1khz_v_rthz": {
+          "harness": 8.57658e-07,
+          "tool": 8.576583598649e-07,
+          "delta": 3.5986490008020627e-13,
+          "rel_delta": 4.195902097108711e-07,
+          "tolerance": 1.7153160000000002e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_10khz_v_rthz": {
+          "harness": 2.71945e-07,
+          "tool": 2.71944790645e-07,
+          "delta": -2.093549999955161e-13,
+          "rel_delta": -7.698431668003313e-07,
+          "tolerance": 5.438900000000001e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_100khz_v_rthz": {
+          "harness": 8.82728e-08,
+          "tool": 8.827277451362e-08,
+          "delta": -2.5486380001232588e-14,
+          "rel_delta": -2.887229135275259e-07,
+          "tolerance": 1.7654560000000001e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1mhz_v_rthz": {
+          "harness": 3.44044e-08,
+          "tool": 3.440442550306e-08,
+          "delta": 2.550306000564049e-14,
+          "rel_delta": 7.412732094046254e-07,
+          "tolerance": 6.88088e-13,
+          "unit": "V/rtHz",
+          "within": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false
+      }
+    },
+    {
+      "point_id": "mos_ff_27C_1.32V",
+      "process": "mos_ff",
+      "temperature_c": 27,
+      "vdd_v": 1.32,
+      "metrics": {
+        "inoise_int_vrms": {
+          "harness": 8.26782e-05,
+          "tool": 8.26782160411e-05,
+          "delta": 1.6041100007547007e-11,
+          "rel_delta": 1.9401849589791515e-07,
+          "tolerance": 1.653564e-09,
+          "unit": "Vrms",
+          "within": true
+        },
+        "inoise_100hz_v_rthz": {
+          "harness": 2.63896e-06,
+          "tool": 2.638960017026e-06,
+          "delta": 1.702600005562072e-14,
+          "rel_delta": 6.4517840572122054e-09,
+          "tolerance": 5.27792e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1khz_v_rthz": {
+          "harness": 8.34738e-07,
+          "tool": 8.347381266496e-07,
+          "delta": 1.2664959997695066e-13,
+          "rel_delta": 1.5172377437824883e-07,
+          "tolerance": 1.669476e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_10khz_v_rthz": {
+          "harness": 2.6468e-07,
+          "tool": 2.64680109289e-07,
+          "delta": 1.0928899999018698e-13,
+          "rel_delta": 4.1290992893375765e-07,
+          "tolerance": 5.293600000000001e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_100khz_v_rthz": {
+          "harness": 8.59232e-08,
+          "tool": 8.5923223259e-08,
+          "delta": 2.3258999994692263e-14,
+          "rel_delta": 2.706952254419326e-07,
+          "tolerance": 1.7184640000000002e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1mhz_v_rthz": {
+          "harness": 3.35052e-08,
+          "tool": 3.350518424669e-08,
+          "delta": -1.57533099971931e-14,
+          "rel_delta": -4.7017507721765875e-07,
+          "tolerance": 6.70104e-13,
+          "unit": "V/rtHz",
+          "within": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false
+      }
+    },
+    {
+      "point_id": "mos_ff_125C_1.08V",
+      "process": "mos_ff",
+      "temperature_c": 125,
+      "vdd_v": 1.08,
+      "metrics": {
+        "inoise_int_vrms": {
+          "harness": 0.000103957,
+          "tool": 0.000103957472711,
+          "delta": 4.727110000093612e-10,
+          "rel_delta": 4.5471781602909014e-06,
+          "tolerance": 2.07914e-09,
+          "unit": "Vrms",
+          "within": true
+        },
+        "inoise_100hz_v_rthz": {
+          "harness": 3.31298e-06,
+          "tool": 3.312977896878e-06,
+          "delta": -2.103121999960661e-12,
+          "rel_delta": -6.348127667419244e-07,
+          "tolerance": 6.625960000000001e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1khz_v_rthz": {
+          "harness": 1.04795e-06,
+          "tool": 1.047952994405e-06,
+          "delta": 2.99440499997093e-12,
+          "rel_delta": 2.8573930053637383e-06,
+          "tolerance": 2.0959000000000002e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_10khz_v_rthz": {
+          "harness": 3.32331e-07,
+          "tool": 3.323309312933e-07,
+          "delta": -6.870670000453589e-14,
+          "rel_delta": -2.0674177252358612e-07,
+          "tolerance": 6.646620000000001e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_100khz_v_rthz": {
+          "harness": 1.08021e-07,
+          "tool": 1.080208332091e-07,
+          "delta": -1.6679090000102434e-13,
+          "rel_delta": -1.5440599513152473e-06,
+          "tolerance": 2.16042e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1mhz_v_rthz": {
+          "harness": 4.24805e-08,
+          "tool": 4.248047616755e-08,
+          "delta": -2.383245000192347e-14,
+          "rel_delta": -5.610209390643581e-07,
+          "tolerance": 8.496100000000001e-13,
+          "unit": "V/rtHz",
+          "within": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false
+      }
+    },
+    {
+      "point_id": "mos_ff_125C_1.20V",
+      "process": "mos_ff",
+      "temperature_c": 125,
+      "vdd_v": 1.2,
+      "metrics": {
+        "inoise_int_vrms": {
+          "harness": 0.000100988,
+          "tool": 0.0001009876204769,
+          "delta": -3.7952309999941033e-10,
+          "rel_delta": -3.758100962484754e-06,
+          "tolerance": 2.01976e-09,
+          "unit": "Vrms",
+          "within": true
+        },
+        "inoise_100hz_v_rthz": {
+          "harness": 3.21874e-06,
+          "tool": 3.218737277266e-06,
+          "delta": -2.7227340001334923e-12,
+          "rel_delta": -8.459005698296514e-07,
+          "tolerance": 6.437480000000001e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1khz_v_rthz": {
+          "harness": 1.01814e-06,
+          "tool": 1.018142033081e-06,
+          "delta": 2.0330809999239574e-12,
+          "rel_delta": 1.996857995878717e-06,
+          "tolerance": 2.0362800000000002e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_10khz_v_rthz": {
+          "harness": 3.22874e-07,
+          "tool": 3.228740035301e-07,
+          "delta": 3.5301000166911792e-15,
+          "rel_delta": 1.0933367247567718e-08,
+          "tolerance": 6.4574800000000005e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_100khz_v_rthz": {
+          "harness": 1.04937e-07,
+          "tool": 1.049371265244e-07,
+          "delta": 1.2652440001054722e-13,
+          "rel_delta": 1.2057177164446024e-06,
+          "tolerance": 2.09874e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1mhz_v_rthz": {
+          "harness": 4.12372e-08,
+          "tool": 4.12371786043e-08,
+          "delta": -2.1395700001051577e-14,
+          "rel_delta": -5.188446354517663e-07,
+          "tolerance": 8.247440000000001e-13,
+          "unit": "V/rtHz",
+          "within": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false
+      }
+    },
+    {
+      "point_id": "mos_ff_125C_1.32V",
+      "process": "mos_ff",
+      "temperature_c": 125,
+      "vdd_v": 1.32,
+      "metrics": {
+        "inoise_int_vrms": {
+          "harness": 9.80847e-05,
+          "tool": 9.808469898161e-05,
+          "delta": -1.0183900028609347e-12,
+          "rel_delta": -1.0382761051019523e-08,
+          "tolerance": 1.961694e-09,
+          "unit": "Vrms",
+          "within": true
+        },
+        "inoise_100hz_v_rthz": {
+          "harness": 3.12558e-06,
+          "tool": 3.125580140519e-06,
+          "delta": 1.4051900004100493e-13,
+          "rel_delta": 4.4957735857346456e-08,
+          "tolerance": 6.25116e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1khz_v_rthz": {
+          "harness": 9.88677e-07,
+          "tool": 9.886766911503e-07,
+          "delta": -3.088496998889656e-13,
+          "rel_delta": -3.123868562624251e-07,
+          "tolerance": 1.977354e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_10khz_v_rthz": {
+          "harness": 3.13536e-07,
+          "tool": 3.135358047488e-07,
+          "delta": -1.9525119997457256e-13,
+          "rel_delta": -6.227393344769741e-07,
+          "tolerance": 6.27072e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_100khz_v_rthz": {
+          "harness": 1.0192e-07,
+          "tool": 1.019199855452e-07,
+          "delta": -1.4454800005487895e-14,
+          "rel_delta": -1.418249608073773e-07,
+          "tolerance": 2.0384000000000003e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1mhz_v_rthz": {
+          "harness": 4.00899e-08,
+          "tool": 4.008986630629e-08,
+          "delta": -3.36937099986702e-14,
+          "rel_delta": -8.404538299838663e-07,
+          "tolerance": 8.01798e-13,
+          "unit": "V/rtHz",
+          "within": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false
+      }
+    },
+    {
+      "point_id": "mos_sf_-40C_1.08V",
+      "process": "mos_sf",
+      "temperature_c": -40,
+      "vdd_v": 1.08,
+      "metrics": {
+        "inoise_int_vrms": {
+          "harness": 7.65575e-05,
+          "tool": 7.655748432392e-05,
+          "delta": -1.5676079995175472e-11,
+          "rel_delta": -2.0476217216047379e-07,
+          "tolerance": 1.53115e-09,
+          "unit": "Vrms",
+          "within": true
+        },
+        "inoise_100hz_v_rthz": {
+          "harness": 2.42627e-06,
+          "tool": 2.426272149439e-06,
+          "delta": 2.149438999878695e-12,
+          "rel_delta": 8.859026406289057e-07,
+          "tolerance": 4.8525400000000006e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1khz_v_rthz": {
+          "harness": 7.6751e-07,
+          "tool": 7.675095686042e-07,
+          "delta": -4.3139580004854835e-13,
+          "rel_delta": -5.620718948919862e-07,
+          "tolerance": 1.5350200000000003e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_10khz_v_rthz": {
+          "harness": 2.43513e-07,
+          "tool": 2.435127119729e-07,
+          "delta": -2.88027100010981e-13,
+          "rel_delta": -1.182799686304144e-06,
+          "tolerance": 4.870260000000001e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_100khz_v_rthz": {
+          "harness": 7.95101e-08,
+          "tool": 7.951010025347e-08,
+          "delta": 2.534700037241987e-16,
+          "rel_delta": 3.1878969303798975e-09,
+          "tolerance": 1.590202e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1mhz_v_rthz": {
+          "harness": 3.2153e-08,
+          "tool": 3.215295140329e-08,
+          "delta": -4.859670999725008e-14,
+          "rel_delta": -1.5114207071579662e-06,
+          "tolerance": 6.4306e-13,
+          "unit": "V/rtHz",
+          "within": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false
+      }
+    },
+    {
+      "point_id": "mos_sf_-40C_1.20V",
+      "process": "mos_sf",
+      "temperature_c": -40,
+      "vdd_v": 1.2,
+      "metrics": {
+        "inoise_int_vrms": {
+          "harness": 7.52175e-05,
+          "tool": 7.521746749929e-05,
+          "delta": -3.250071000900686e-11,
+          "rel_delta": -4.3208973987445554e-07,
+          "tolerance": 1.50435e-09,
+          "unit": "Vrms",
+          "within": true
+        },
+        "inoise_100hz_v_rthz": {
+          "harness": 2.39975e-06,
+          "tool": 2.399750315092e-06,
+          "delta": 3.150919996145233e-13,
+          "rel_delta": 1.3130201046547486e-07,
+          "tolerance": 4.7995000000000005e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1khz_v_rthz": {
+          "harness": 7.59076e-07,
+          "tool": 7.590757364323e-07,
+          "delta": -2.6356770001121434e-13,
+          "rel_delta": -3.472217538312558e-07,
+          "tolerance": 1.518152e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_10khz_v_rthz": {
+          "harness": 2.40698e-07,
+          "tool": 2.406978499824e-07,
+          "delta": -1.5001759998294387e-13,
+          "rel_delta": -6.232606834412579e-07,
+          "tolerance": 4.81396e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_100khz_v_rthz": {
+          "harness": 7.81654e-08,
+          "tool": 7.816544679039e-08,
+          "delta": 4.679039000923287e-14,
+          "rel_delta": 5.986074402386845e-07,
+          "tolerance": 1.563308e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1mhz_v_rthz": {
+          "harness": 3.0554e-08,
+          "tool": 3.055402732955e-08,
+          "delta": 2.732955000541887e-14,
+          "rel_delta": 8.944671730516094e-07,
+          "tolerance": 6.1108e-13,
+          "unit": "V/rtHz",
+          "within": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false
+      }
+    },
+    {
+      "point_id": "mos_sf_-40C_1.32V",
+      "process": "mos_sf",
+      "temperature_c": -40,
+      "vdd_v": 1.32,
+      "metrics": {
+        "inoise_int_vrms": {
+          "harness": 7.36702e-05,
+          "tool": 7.367023563971e-05,
+          "delta": 3.5639710001017684e-11,
+          "rel_delta": 4.837737647110729e-07,
+          "tolerance": 1.4734040000000001e-09,
+          "unit": "Vrms",
+          "within": true
+        },
+        "inoise_100hz_v_rthz": {
+          "harness": 2.3524e-06,
+          "tool": 2.352400731765e-06,
+          "delta": 7.317649997168568e-13,
+          "rel_delta": 3.1107167136407786e-07,
+          "tolerance": 4.7048000000000004e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1khz_v_rthz": {
+          "harness": 7.44093e-07,
+          "tool": 7.440929185682e-07,
+          "delta": -8.143180000852446e-14,
+          "rel_delta": -1.0943766438943043e-07,
+          "tolerance": 1.4881860000000002e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_10khz_v_rthz": {
+          "harness": 2.3593e-07,
+          "tool": 2.359296813696e-07,
+          "delta": -3.186303999982322e-13,
+          "rel_delta": -1.3505293943043793e-06,
+          "tolerance": 4.7186000000000005e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_100khz_v_rthz": {
+          "harness": 7.6564e-08,
+          "tool": 7.656401218358e-08,
+          "delta": 1.2183580008817411e-14,
+          "rel_delta": 1.5912935594819252e-07,
+          "tolerance": 1.5312800000000001e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1mhz_v_rthz": {
+          "harness": 2.97901e-08,
+          "tool": 2.97900868192e-08,
+          "delta": -1.318080000068118e-14,
+          "rel_delta": -4.4245571517655796e-07,
+          "tolerance": 5.95802e-13,
+          "unit": "V/rtHz",
+          "within": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false
+      }
+    },
+    {
+      "point_id": "mos_sf_27C_1.08V",
+      "process": "mos_sf",
+      "temperature_c": 27,
+      "vdd_v": 1.08,
+      "metrics": {
+        "inoise_int_vrms": {
+          "harness": 8.69202e-05,
+          "tool": 8.692021893681e-05,
+          "delta": 1.8936809992277023e-11,
+          "rel_delta": 2.178643168363283e-07,
+          "tolerance": 1.7384040000000002e-09,
+          "unit": "Vrms",
+          "within": true
+        },
+        "inoise_100hz_v_rthz": {
+          "harness": 2.76147e-06,
+          "tool": 2.761473250704e-06,
+          "delta": 3.2507039997183007e-12,
+          "rel_delta": 1.1771643362840446e-06,
+          "tolerance": 5.522940000000001e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1khz_v_rthz": {
+          "harness": 8.73526e-07,
+          "tool": 8.735257788964e-07,
+          "delta": -2.2110359991914713e-13,
+          "rel_delta": -2.5311622083274814e-07,
+          "tolerance": 1.7470520000000002e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_10khz_v_rthz": {
+          "harness": 2.7709e-07,
+          "tool": 2.77089581959e-07,
+          "delta": -4.180409999755823e-13,
+          "rel_delta": -1.5086830992658786e-06,
+          "tolerance": 5.5418000000000005e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_100khz_v_rthz": {
+          "harness": 9.02914e-08,
+          "tool": 9.029141003031e-08,
+          "delta": 1.0030309998561689e-14,
+          "rel_delta": 1.1108820993540568e-07,
+          "tolerance": 1.8058280000000002e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1mhz_v_rthz": {
+          "harness": 3.60763e-08,
+          "tool": 3.60763081058e-08,
+          "delta": 8.105799996168283e-15,
+          "rel_delta": 2.246849038334941e-07,
+          "tolerance": 7.215260000000001e-13,
+          "unit": "V/rtHz",
+          "within": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false
+      }
+    },
+    {
+      "point_id": "mos_sf_27C_1.20V",
+      "process": "mos_sf",
+      "temperature_c": 27,
+      "vdd_v": 1.2,
+      "metrics": {
+        "inoise_int_vrms": {
+          "harness": 8.49986e-05,
+          "tool": 8.499856735567e-05,
+          "delta": -3.264433000174996e-11,
+          "rel_delta": -3.8405726684615933e-07,
+          "tolerance": 1.6999720000000003e-09,
+          "unit": "Vrms",
+          "within": true
+        },
+        "inoise_100hz_v_rthz": {
+          "harness": 2.70916e-06,
+          "tool": 2.709164310251e-06,
+          "delta": 4.310251000178857e-12,
+          "rel_delta": 1.5909916727616151e-06,
+          "tolerance": 5.4183200000000006e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1khz_v_rthz": {
+          "harness": 8.56955e-07,
+          "tool": 8.569550675632e-07,
+          "delta": 6.756319996708887e-14,
+          "rel_delta": 7.884101261686887e-08,
+          "tolerance": 1.7139100000000002e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_10khz_v_rthz": {
+          "harness": 2.71757e-07,
+          "tool": 2.717574595651e-07,
+          "delta": 4.595650999604781e-13,
+          "rel_delta": 1.6910883618838819e-06,
+          "tolerance": 5.435140000000001e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_100khz_v_rthz": {
+          "harness": 8.83217e-08,
+          "tool": 8.832169588956e-08,
+          "delta": -4.110439995056143e-15,
+          "rel_delta": -4.653941211566516e-08,
+          "tolerance": 1.766434e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1mhz_v_rthz": {
+          "harness": 3.4706e-08,
+          "tool": 3.470603217395e-08,
+          "delta": 3.217394999835383e-14,
+          "rel_delta": 9.270428743835023e-07,
+          "tolerance": 6.941200000000001e-13,
+          "unit": "V/rtHz",
+          "within": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false
+      }
+    },
+    {
+      "point_id": "mos_sf_27C_1.32V",
+      "process": "mos_sf",
+      "temperature_c": 27,
+      "vdd_v": 1.32,
+      "metrics": {
+        "inoise_int_vrms": {
+          "harness": 8.27878e-05,
+          "tool": 8.278777451069e-05,
+          "delta": -2.5489309989946973e-11,
+          "rel_delta": -3.078872731241436e-07,
+          "tolerance": 1.655756e-09,
+          "unit": "Vrms",
+          "within": true
+        },
+        "inoise_100hz_v_rthz": {
+          "harness": 2.63978e-06,
+          "tool": 2.639776489422e-06,
+          "delta": -3.510577999851864e-12,
+          "rel_delta": -1.3298752168180166e-06,
+          "tolerance": 5.27956e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1khz_v_rthz": {
+          "harness": 8.35004e-07,
+          "tool": 8.35003652585e-07,
+          "delta": -3.474149999690499e-13,
+          "rel_delta": -4.1606387510604726e-07,
+          "tolerance": 1.670008e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_10khz_v_rthz": {
+          "harness": 2.64787e-07,
+          "tool": 2.647872130376e-07,
+          "delta": 2.1303759998284963e-13,
+          "rel_delta": 8.045621574429622e-07,
+          "tolerance": 5.29574e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_100khz_v_rthz": {
+          "harness": 8.60285e-08,
+          "tool": 8.602853855198e-08,
+          "delta": 3.855198001053266e-14,
+          "rel_delta": 4.481303290250634e-07,
+          "tolerance": 1.72057e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1mhz_v_rthz": {
+          "harness": 3.37294e-08,
+          "tool": 3.372941256858e-08,
+          "delta": 1.2568580001743667e-14,
+          "rel_delta": 3.7262981261877374e-07,
+          "tolerance": 6.74588e-13,
+          "unit": "V/rtHz",
+          "within": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false
+      }
+    },
+    {
+      "point_id": "mos_sf_125C_1.08V",
+      "process": "mos_sf",
+      "temperature_c": 125,
+      "vdd_v": 1.08,
+      "metrics": {
+        "inoise_int_vrms": {
+          "harness": 0.000103572,
+          "tool": 0.0001035722611137,
+          "delta": 2.6111369999786554e-10,
+          "rel_delta": 2.521083883654516e-06,
+          "tolerance": 2.0714400000000004e-09,
+          "unit": "Vrms",
+          "within": true
+        },
+        "inoise_100hz_v_rthz": {
+          "harness": 3.29263e-06,
+          "tool": 3.292625213802e-06,
+          "delta": -4.786198000089419e-12,
+          "rel_delta": -1.4536094247119837e-06,
+          "tolerance": 6.585260000000001e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1khz_v_rthz": {
+          "harness": 1.04154e-06,
+          "tool": 1.041537139609e-06,
+          "delta": -2.8603909999360517e-12,
+          "rel_delta": -2.746309311150846e-06,
+          "tolerance": 2.08308e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_10khz_v_rthz": {
+          "harness": 3.30366e-07,
+          "tool": 3.303658410271e-07,
+          "delta": -1.589729000223219e-13,
+          "rel_delta": -4.812023635069042e-07,
+          "tolerance": 6.607320000000001e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_100khz_v_rthz": {
+          "harness": 1.07595e-07,
+          "tool": 1.075954994507e-07,
+          "delta": 4.994506999945404e-13,
+          "rel_delta": 4.641950834095826e-06,
+          "tolerance": 2.1519e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1mhz_v_rthz": {
+          "harness": 4.28554e-08,
+          "tool": 4.285544112792e-08,
+          "delta": 4.112792000409876e-14,
+          "rel_delta": 9.596904941757343e-07,
+          "tolerance": 8.57108e-13,
+          "unit": "V/rtHz",
+          "within": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false
+      }
+    },
+    {
+      "point_id": "mos_sf_125C_1.20V",
+      "process": "mos_sf",
+      "temperature_c": 125,
+      "vdd_v": 1.2,
+      "metrics": {
+        "inoise_int_vrms": {
+          "harness": 0.000100856,
+          "tool": 0.0001008563247003,
+          "delta": 3.2470029999963606e-10,
+          "rel_delta": 3.2194445546089084e-06,
+          "tolerance": 2.01712e-09,
+          "unit": "Vrms",
+          "within": true
+        },
+        "inoise_100hz_v_rthz": {
+          "harness": 3.21032e-06,
+          "tool": 3.210317800118e-06,
+          "delta": -2.1998820001973077e-12,
+          "rel_delta": -6.852531835447269e-07,
+          "tolerance": 6.42064e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1khz_v_rthz": {
+          "harness": 1.01549e-06,
+          "tool": 1.015490312316e-06,
+          "delta": 3.1231599990176194e-13,
+          "rel_delta": 3.075520191255078e-07,
+          "tolerance": 2.0309800000000003e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_10khz_v_rthz": {
+          "harness": 3.22069e-07,
+          "tool": 3.220693628791e-07,
+          "delta": 3.628791000161143e-13,
+          "rel_delta": 1.1267122884106024e-06,
+          "tolerance": 6.44138e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_100khz_v_rthz": {
+          "harness": 1.04787e-07,
+          "tool": 1.047871264887e-07,
+          "delta": 1.2648870000704018e-13,
+          "rel_delta": 1.2071029803987154e-06,
+          "tolerance": 2.09574e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1mhz_v_rthz": {
+          "harness": 4.14654e-08,
+          "tool": 4.146543860238e-08,
+          "delta": 3.8602379999524066e-14,
+          "rel_delta": 9.309540001911007e-07,
+          "tolerance": 8.293080000000001e-13,
+          "unit": "V/rtHz",
+          "within": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false
+      }
+    },
+    {
+      "point_id": "mos_sf_125C_1.32V",
+      "process": "mos_sf",
+      "temperature_c": 125,
+      "vdd_v": 1.32,
+      "metrics": {
+        "inoise_int_vrms": {
+          "harness": 9.7955e-05,
+          "tool": 9.795502243576e-05,
+          "delta": 2.2435759996250297e-11,
+          "rel_delta": 2.290414986090582e-07,
+          "tolerance": 1.9591000000000004e-09,
+          "unit": "Vrms",
+          "within": true
+        },
+        "inoise_100hz_v_rthz": {
+          "harness": 3.11822e-06,
+          "tool": 3.118215870704e-06,
+          "delta": -4.129296000371065e-12,
+          "rel_delta": -1.3242478081633318e-06,
+          "tolerance": 6.236440000000001e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1khz_v_rthz": {
+          "harness": 9.86356e-07,
+          "tool": 9.863560089328e-07,
+          "delta": 8.932799932623195e-15,
+          "rel_delta": 9.05636497636066e-09,
+          "tolerance": 1.9727120000000004e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_10khz_v_rthz": {
+          "harness": 3.12828e-07,
+          "tool": 3.128274997457e-07,
+          "delta": -5.002542999509957e-13,
+          "rel_delta": -1.5991353074245136e-06,
+          "tolerance": 6.25656e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_100khz_v_rthz": {
+          "harness": 1.01775e-07,
+          "tool": 1.017747576507e-07,
+          "delta": -2.4234929999376996e-13,
+          "rel_delta": -2.3812262342792433e-06,
+          "tolerance": 2.0355e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1mhz_v_rthz": {
+          "harness": 4.02524e-08,
+          "tool": 4.025240379786e-08,
+          "delta": 3.797860002248595e-15,
+          "rel_delta": 9.435114433545814e-08,
+          "tolerance": 8.05048e-13,
+          "unit": "V/rtHz",
+          "within": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false
+      }
+    },
+    {
+      "point_id": "mos_fs_-40C_1.08V",
+      "process": "mos_fs",
+      "temperature_c": -40,
+      "vdd_v": 1.08,
+      "metrics": {
+        "inoise_int_vrms": {
+          "harness": 7.96706e-05,
+          "tool": 7.967059242545e-05,
+          "delta": -7.574549996014653e-12,
+          "rel_delta": -9.507333942526669e-08,
+          "tolerance": 1.5934120000000002e-09,
+          "unit": "Vrms",
+          "within": true
+        },
+        "inoise_100hz_v_rthz": {
+          "harness": 2.5468e-06,
+          "tool": 2.546802328382e-06,
+          "delta": 2.3283819999752263e-12,
+          "rel_delta": 9.142382597672477e-07,
+          "tolerance": 5.0936000000000005e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1khz_v_rthz": {
+          "harness": 8.05577e-07,
+          "tool": 8.055765732669e-07,
+          "delta": -4.2673309998495233e-13,
+          "rel_delta": -5.297235397546757e-07,
+          "tolerance": 1.611154e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_10khz_v_rthz": {
+          "harness": 2.55399e-07,
+          "tool": 2.553993165058e-07,
+          "delta": 3.1650579998859823e-13,
+          "rel_delta": 1.239260138013846e-06,
+          "tolerance": 5.10798e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_100khz_v_rthz": {
+          "harness": 8.28057e-08,
+          "tool": 8.280574354575e-08,
+          "delta": 4.354574999546396e-14,
+          "rel_delta": 5.258786532263353e-07,
+          "tolerance": 1.6561140000000002e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1mhz_v_rthz": {
+          "harness": 3.20367e-08,
+          "tool": 3.203668930293e-08,
+          "delta": -1.0697070002295375e-14,
+          "rel_delta": -3.3390049544102156e-07,
+          "tolerance": 6.407340000000001e-13,
+          "unit": "V/rtHz",
+          "within": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false
+      }
+    },
+    {
+      "point_id": "mos_fs_-40C_1.20V",
+      "process": "mos_fs",
+      "temperature_c": -40,
+      "vdd_v": 1.2,
+      "metrics": {
+        "inoise_int_vrms": {
+          "harness": 7.83936e-05,
+          "tool": 7.839362380632e-05,
+          "delta": 2.3806320006676887e-11,
+          "rel_delta": 3.036768308468662e-07,
+          "tolerance": 1.5678720000000001e-09,
+          "unit": "Vrms",
+          "within": true
+        },
+        "inoise_100hz_v_rthz": {
+          "harness": 2.5095e-06,
+          "tool": 2.509497396022e-06,
+          "delta": -2.6039779997183757e-12,
+          "rel_delta": -1.0376481369668762e-06,
+          "tolerance": 5.0190000000000003e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1khz_v_rthz": {
+          "harness": 7.93767e-07,
+          "tool": 7.937671366066e-07,
+          "delta": 1.3660660006802088e-13,
+          "rel_delta": 1.7209911733294643e-07,
+          "tolerance": 1.587534e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_10khz_v_rthz": {
+          "harness": 2.51625e-07,
+          "tool": 2.516251441391e-07,
+          "delta": 1.441391000082594e-13,
+          "rel_delta": 5.728329856264655e-07,
+          "tolerance": 5.032500000000001e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_100khz_v_rthz": {
+          "harness": 8.14893e-08,
+          "tool": 8.148926064156e-08,
+          "delta": -3.9358440000204144e-14,
+          "rel_delta": -4.829890550072727e-07,
+          "tolerance": 1.6297860000000002e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1mhz_v_rthz": {
+          "harness": 3.12854e-08,
+          "tool": 3.128537165207e-08,
+          "delta": -2.834793000196196e-14,
+          "rel_delta": -9.061073216887737e-07,
+          "tolerance": 6.25708e-13,
+          "unit": "V/rtHz",
+          "within": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false
+      }
+    },
+    {
+      "point_id": "mos_fs_-40C_1.32V",
+      "process": "mos_fs",
+      "temperature_c": -40,
+      "vdd_v": 1.32,
+      "metrics": {
+        "inoise_int_vrms": {
+          "harness": 7.67165e-05,
+          "tool": 7.671648502476e-05,
+          "delta": -1.497524000149738e-11,
+          "rel_delta": -1.9520233589250528e-07,
+          "tolerance": 1.53433e-09,
+          "unit": "Vrms",
+          "within": true
+        },
+        "inoise_100hz_v_rthz": {
+          "harness": 2.4561e-06,
+          "tool": 2.456100969589e-06,
+          "delta": 9.695890000510133e-13,
+          "rel_delta": 3.947677212047609e-07,
+          "tolerance": 4.9122000000000005e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1khz_v_rthz": {
+          "harness": 7.76877e-07,
+          "tool": 7.768768472662e-07,
+          "delta": -1.5273380001666202e-13,
+          "rel_delta": -1.9659971915330485e-07,
+          "tolerance": 1.553754e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_10khz_v_rthz": {
+          "harness": 2.46269e-07,
+          "tool": 2.462686257366e-07,
+          "delta": -3.7426340001591677e-13,
+          "rel_delta": -1.519734111950415e-06,
+          "tolerance": 4.9253800000000006e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_100khz_v_rthz": {
+          "harness": 7.97474e-08,
+          "tool": 7.974742407799e-08,
+          "delta": 2.407798999716869e-14,
+          "rel_delta": 3.0192821329809734e-07,
+          "tolerance": 1.5949480000000002e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1mhz_v_rthz": {
+          "harness": 3.05942e-08,
+          "tool": 3.059420611821e-08,
+          "delta": 6.118210000972417e-15,
+          "rel_delta": 1.9997940789340518e-07,
+          "tolerance": 6.118840000000001e-13,
+          "unit": "V/rtHz",
+          "within": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false
+      }
+    },
+    {
+      "point_id": "mos_fs_27C_1.08V",
+      "process": "mos_fs",
+      "temperature_c": 27,
+      "vdd_v": 1.08,
+      "metrics": {
+        "inoise_int_vrms": {
+          "harness": 9.0752e-05,
+          "tool": 9.075204418773e-05,
+          "delta": 4.418772999955668e-11,
+          "rel_delta": 4.869064042616877e-07,
+          "tolerance": 1.8150400000000002e-09,
+          "unit": "Vrms",
+          "within": true
+        },
+        "inoise_100hz_v_rthz": {
+          "harness": 2.89969e-06,
+          "tool": 2.899689062175e-06,
+          "delta": -9.378250002546975e-13,
+          "rel_delta": -3.2342250387272345e-07,
+          "tolerance": 5.799380000000001e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1khz_v_rthz": {
+          "harness": 9.17201e-07,
+          "tool": 9.172014259216e-07,
+          "delta": 4.2592159996395623e-13,
+          "rel_delta": 4.6437105930320206e-07,
+          "tolerance": 1.8344020000000002e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_10khz_v_rthz": {
+          "harness": 2.908e-07,
+          "tool": 2.908000953248e-07,
+          "delta": 9.532479999867601e-14,
+          "rel_delta": 3.278019257175929e-07,
+          "tolerance": 5.816e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_100khz_v_rthz": {
+          "harness": 9.43183e-08,
+          "tool": 9.431835411151e-08,
+          "delta": 5.411151000551299e-14,
+          "rel_delta": 5.737116763715312e-07,
+          "tolerance": 1.8863660000000003e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1mhz_v_rthz": {
+          "harness": 3.65891e-08,
+          "tool": 3.658914024135e-08,
+          "delta": 4.0241349994086355e-14,
+          "rel_delta": 1.0998179784166966e-06,
+          "tolerance": 7.317820000000001e-13,
+          "unit": "V/rtHz",
+          "within": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false
+      }
+    },
+    {
+      "point_id": "mos_fs_27C_1.20V",
+      "process": "mos_fs",
+      "temperature_c": 27,
+      "vdd_v": 1.2,
+      "metrics": {
+        "inoise_int_vrms": {
+          "harness": 8.87141e-05,
+          "tool": 8.871410395394e-05,
+          "delta": 3.95393999930594e-12,
+          "rel_delta": 4.4569465274470915e-08,
+          "tolerance": 1.774282e-09,
+          "unit": "Vrms",
+          "within": true
+        },
+        "inoise_100hz_v_rthz": {
+          "harness": 2.83689e-06,
+          "tool": 2.836889405714e-06,
+          "delta": -5.942860000765146e-13,
+          "rel_delta": -2.0948503469521716e-07,
+          "tolerance": 5.6737800000000006e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1khz_v_rthz": {
+          "harness": 8.97331e-07,
+          "tool": 8.973310002362e-07,
+          "delta": 2.3620000778130836e-16,
+          "rel_delta": 2.632250616342335e-10,
+          "tolerance": 1.794662e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_10khz_v_rthz": {
+          "harness": 2.8448e-07,
+          "tool": 2.844804365025e-07,
+          "delta": 4.365024999600185e-13,
+          "rel_delta": 1.5343873030090638e-06,
+          "tolerance": 5.689600000000001e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_100khz_v_rthz": {
+          "harness": 9.22079e-08,
+          "tool": 9.22078713998e-08,
+          "delta": -2.8600199998227917e-14,
+          "rel_delta": -3.1017082048531546e-07,
+          "tolerance": 1.844158e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1mhz_v_rthz": {
+          "harness": 3.56101e-08,
+          "tool": 3.561008204464e-08,
+          "delta": -1.7955359999606487e-14,
+          "rel_delta": -5.042209934711356e-07,
+          "tolerance": 7.12202e-13,
+          "unit": "V/rtHz",
+          "within": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false
+      }
+    },
+    {
+      "point_id": "mos_fs_27C_1.32V",
+      "process": "mos_fs",
+      "temperature_c": 27,
+      "vdd_v": 1.32,
+      "metrics": {
+        "inoise_int_vrms": {
+          "harness": 8.64432e-05,
+          "tool": 8.644315456753e-05,
+          "delta": -4.543247000127464e-11,
+          "rel_delta": -5.255759851703158e-07,
+          "tolerance": 1.7288640000000002e-09,
+          "unit": "Vrms",
+          "within": true
+        },
+        "inoise_100hz_v_rthz": {
+          "harness": 2.76423e-06,
+          "tool": 2.764230409727e-06,
+          "delta": 4.097270000155153e-13,
+          "rel_delta": 1.4822464122577183e-07,
+          "tolerance": 5.528460000000001e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1khz_v_rthz": {
+          "harness": 8.74349e-07,
+          "tool": 8.743485801155e-07,
+          "delta": -4.1988450000498065e-13,
+          "rel_delta": -4.802252876196812e-07,
+          "tolerance": 1.748698e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_10khz_v_rthz": {
+          "harness": 2.77195e-07,
+          "tool": 2.771949769001e-07,
+          "delta": -2.3099899996264475e-14,
+          "rel_delta": -8.333447571660556e-08,
+          "tolerance": 5.5439e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_100khz_v_rthz": {
+          "harness": 8.98483e-08,
+          "tool": 8.984830866849e-08,
+          "delta": 8.66848999828673e-15,
+          "rel_delta": 9.647917654854604e-08,
+          "tolerance": 1.796966e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1mhz_v_rthz": {
+          "harness": 3.46981e-08,
+          "tool": 3.469813577985e-08,
+          "delta": 3.5779849994260616e-14,
+          "rel_delta": 1.0311760584660432e-06,
+          "tolerance": 6.939620000000001e-13,
+          "unit": "V/rtHz",
+          "within": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false
+      }
+    },
+    {
+      "point_id": "mos_fs_125C_1.08V",
+      "process": "mos_fs",
+      "temperature_c": 125,
+      "vdd_v": 1.08,
+      "metrics": {
+        "inoise_int_vrms": {
+          "harness": 0.000108949,
+          "tool": 0.0001089491081877,
+          "delta": 1.081876999960282e-10,
+          "rel_delta": 9.93012326832079e-07,
+          "tolerance": 2.1789800000000003e-09,
+          "unit": "Vrms",
+          "within": true
+        },
+        "inoise_100hz_v_rthz": {
+          "harness": 3.47626e-06,
+          "tool": 3.47626419897e-06,
+          "delta": 4.198970000301723e-12,
+          "rel_delta": 1.2078987188247493e-06,
+          "tolerance": 6.95252e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1khz_v_rthz": {
+          "harness": 1.09959e-06,
+          "tool": 1.099591370253e-06,
+          "delta": 1.3702529999467259e-12,
+          "rel_delta": 1.2461490191314272e-06,
+          "tolerance": 2.1991800000000002e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_10khz_v_rthz": {
+          "harness": 3.48669e-07,
+          "tool": 3.48669055045e-07,
+          "delta": 5.50450000424449e-14,
+          "rel_delta": 1.5787179256671773e-07,
+          "tolerance": 6.97338e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_100khz_v_rthz": {
+          "harness": 1.13216e-07,
+          "tool": 1.13216376241e-07,
+          "delta": 3.762409999986536e-13,
+          "rel_delta": 3.3232140333402842e-06,
+          "tolerance": 2.26432e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1mhz_v_rthz": {
+          "harness": 4.42529e-08,
+          "tool": 4.425293487092e-08,
+          "delta": 3.4870920001889144e-14,
+          "rel_delta": 7.879917474761913e-07,
+          "tolerance": 8.850580000000001e-13,
+          "unit": "V/rtHz",
+          "within": true
+        }
+      },
+      "row": {
+        "tool_status": "fail",
+        "tool_pass": false,
+        "harness_pass": false,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false
+      }
+    },
+    {
+      "point_id": "mos_fs_125C_1.20V",
+      "process": "mos_fs",
+      "temperature_c": 125,
+      "vdd_v": 1.2,
+      "metrics": {
+        "inoise_int_vrms": {
+          "harness": 0.000105579,
+          "tool": 0.0001055785649144,
+          "delta": -4.3508559999423397e-10,
+          "rel_delta": -4.120948294587314e-06,
+          "tolerance": 2.1115800000000003e-09,
+          "unit": "Vrms",
+          "within": true
+        },
+        "inoise_100hz_v_rthz": {
+          "harness": 3.37102e-06,
+          "tool": 3.37101951513e-06,
+          "delta": -4.848700003072602e-13,
+          "rel_delta": -1.438348038004106e-07,
+          "tolerance": 6.742040000000001e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1khz_v_rthz": {
+          "harness": 1.06629e-06,
+          "tool": 1.066294763698e-06,
+          "delta": 4.76369800006074e-12,
+          "rel_delta": 4.4675444767002785e-06,
+          "tolerance": 2.13258e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_10khz_v_rthz": {
+          "harness": 3.38091e-07,
+          "tool": 3.380914022259e-07,
+          "delta": 4.0222590001014796e-13,
+          "rel_delta": 1.1896971525717867e-06,
+          "tolerance": 6.761820000000001e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_100khz_v_rthz": {
+          "harness": 1.09721e-07,
+          "tool": 1.097212726756e-07,
+          "delta": 2.7267560001082715e-13,
+          "rel_delta": 2.4851723918924105e-06,
+          "tolerance": 2.19442e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1mhz_v_rthz": {
+          "harness": 4.27294e-08,
+          "tool": 4.272940046734e-08,
+          "delta": 4.673399995543971e-16,
+          "rel_delta": 1.0937200137479046e-08,
+          "tolerance": 8.545880000000001e-13,
+          "unit": "V/rtHz",
+          "within": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false
+      }
+    },
+    {
+      "point_id": "mos_fs_125C_1.32V",
+      "process": "mos_fs",
+      "temperature_c": 125,
+      "vdd_v": 1.32,
+      "metrics": {
+        "inoise_int_vrms": {
+          "harness": 0.000102522,
+          "tool": 0.0001025218403741,
+          "delta": -1.5962590000891466e-10,
+          "rel_delta": -1.5569916701675217e-06,
+          "tolerance": 2.0504400000000002e-09,
+          "unit": "Vrms",
+          "within": true
+        },
+        "inoise_100hz_v_rthz": {
+          "harness": 3.27324e-06,
+          "tool": 3.27323877281e-06,
+          "delta": -1.2271899999761137e-12,
+          "rel_delta": -3.749159853772145e-07,
+          "tolerance": 6.54648e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1khz_v_rthz": {
+          "harness": 1.03537e-06,
+          "tool": 1.035366138953e-06,
+          "delta": -3.861047000088008e-12,
+          "rel_delta": -3.7291470682828434e-06,
+          "tolerance": 2.0707400000000004e-11,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_10khz_v_rthz": {
+          "harness": 3.28287e-07,
+          "tool": 3.282867806062e-07,
+          "delta": -2.1939380001706637e-13,
+          "rel_delta": -6.682987752090895e-07,
+          "tolerance": 6.565740000000001e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_100khz_v_rthz": {
+          "harness": 1.06545e-07,
+          "tool": 1.06545223523e-07,
+          "delta": 2.2352299999195918e-13,
+          "rel_delta": 2.097921066140684e-06,
+          "tolerance": 2.1309e-12,
+          "unit": "V/rtHz",
+          "within": true
+        },
+        "inoise_1mhz_v_rthz": {
+          "harness": 4.15009e-08,
+          "tool": 4.150093236795e-08,
+          "delta": 3.236795000413976e-14,
+          "rel_delta": 7.799336882848266e-07,
+          "tolerance": 8.30018e-13,
+          "unit": "V/rtHz",
+          "within": true
+        }
+      },
+      "row": {
+        "tool_status": "pass",
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false
+      }
+    }
+  ],
+  "status": "agree",
+  "inputs": {
+    "envelope": {
+      "path": "sim/input-noise/klt/records/20261015-061719-80878d7.sim.json",
+      "sha256": "6a313b726e6f0edc146316f32621966739dd93efa3ab613fdd2ba9bac6505d87"
+    },
+    "harness_csv": {
+      "path": "sim/input-noise/records/20260918-203850-90844d2.csv",
+      "sha256": "1841f63b519713c4c108f0197606bbf7fbba39148dfdc3d88ab8c6bea7eea249"
+    }
+  },
+  "provenance": {
+    "record_id": "20261015-061719-80878d7",
+    "repo_git_sha": "80878d7",
+    "klt_client_version": "klt 0.7.0",
+    "host_ngspice": "ngspice-46",
+    "backend_override": "none (request field: batch)",
+    "pdk": "ihp-sg13g2 0.3.0"
+  }
+}
