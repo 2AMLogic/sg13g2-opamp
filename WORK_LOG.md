@@ -4,6 +4,7 @@
 
 ### 2026-10-16
 
+- **PR #250**: sim: join PSRR Av0 from the open-loop klt sim envelope
 - **PR #248**: sim: commit 45-corner klt sim envelopes for the open-loop AC bench
 - **Issue #85** (closed): sim: express the open-loop AC bench as a `klt sim` request, the first gradable envelope toward T1 item 5
 
