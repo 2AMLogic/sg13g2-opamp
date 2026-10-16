@@ -512,6 +512,31 @@ class TestCli(Base):
             _write(pa, json.dumps(ac))
             self.assertEqual(C.main(args), 2)
 
+    def test_klt_measured_baseline_needs_no_dc_columns_or_raw_sweeps(self):
+        # A klt-measured record (summarize_klt.py) carries the four ratified
+        # rows only, and has no raw sweeps to derive a GBW method bias from.
+        ac, op = self.envs()
+        with tempfile.TemporaryDirectory() as d:
+            pa, po, pb, pj = (os.path.join(d, n) for n in ("ac.json", "op.json", "base.csv", "cmp.json"))
+            _write(pa, json.dumps(ac))
+            _write(po, json.dumps(op))
+            with open(pb, "w", newline="") as f:
+                w = csv.writer(f)
+                w.writerow(["point_id", "corner", "temp_c", "vdd_v", "av0_db", "gbw_hz", "pm_deg", "iq_a"])
+                for r in self.rows:
+                    w.writerow([r["point_id"], r["corner"], r["temp_c"], r["vdd_v"], r["av0_db"],
+                                r["gbw_hz"], r["pm_deg"], r["ivdd_total_a"]])
+            base = C.load_harness_csv(pb)
+            self.assertNotIn("op_pass", base[C.expected_keys()[0]])
+            # iq_a is the record's spelling of ivdd_total_a.
+            args = ["compare", "--ac", pa, "--op", po, "--harness-csv", pb, "--json-out", pj]
+            rc = C.main(args)
+            rep = json.loads(_read(pj))
+            self.assertEqual(rep["inputs"]["harness_ac_dir"]["path"], None)
+            self.assertNotIn("method_bias", rep["points"][0]["metrics"]["gbw_hz"])
+            self.assertNotIn("vout_dc_v", rep["points"][0]["metrics"])
+            self.assertEqual(rc, 0 if rep["status"] == "agree" else 1)
+
 
 if __name__ == "__main__":
     unittest.main()

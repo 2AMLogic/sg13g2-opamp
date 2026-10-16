@@ -250,8 +250,15 @@ def _check_grid(keys: Iterable[Key], label: str, problems: List[str]) -> None:
 
 
 # ----------------------------------------------------------------- harness
-HARNESS_COLUMNS = ("av0_db", "gbw_hz", "pm_deg", "ivdd_total_a", "vout_dc_v",
-                   "vd1_dc_v", "vd2_dc_v", "vtail_dc_v", "vibias_dc_v", "op_pass")
+#
+# Two baseline shapes are accepted. The harness record (run_pvt_sweep.sh) also
+# carries the per-point DC node voltages and op_pass; a klt-measured record
+# (run_klt_record.sh, summarize_klt.py) carries only the four ratified rows.
+# The REQUIRED columns are the four rows; the OPTIONAL ones are compared only
+# when the baseline has them in its header.
+HARNESS_REQUIRED_COLUMNS = ("av0_db", "gbw_hz", "pm_deg", "ivdd_total_a")
+HARNESS_OPTIONAL_COLUMNS = ("vout_dc_v", "vd1_dc_v", "vd2_dc_v", "vtail_dc_v",
+                            "vibias_dc_v", "op_pass")
 
 
 def load_harness_csv(path: str) -> Dict[Key, Dict[str, object]]:
@@ -262,7 +269,10 @@ def load_harness_csv(path: str) -> Dict[Key, Dict[str, object]]:
     except OSError as e:
         raise InputError(f"{path}: {e}")
     with f:
-        for r in csv.DictReader(f):
+        reader = csv.DictReader(f)
+        columns = HARNESS_REQUIRED_COLUMNS + tuple(
+            c for c in HARNESS_OPTIONAL_COLUMNS if c in (reader.fieldnames or ()))
+        for r in reader:
             k = make_key(r["corner"], r["temp_c"], r["vdd_v"])
             if k in out:
                 problems.append(f"{key_str(k)}: duplicate row")
@@ -270,8 +280,10 @@ def load_harness_csv(path: str) -> Dict[Key, Dict[str, object]]:
             if r.get("point_id") != key_str(k):
                 problems.append(f"{r.get('point_id')}: point_id disagrees with its corner/temp/vdd columns")
             row: Dict[str, object] = {}
-            for col in HARNESS_COLUMNS:
+            for col in columns:
                 raw = r.get(col)
+                if raw is None and col == "ivdd_total_a":
+                    raw = r.get("iq_a")  # klt-measured records spell it iq_a
                 if col == "op_pass":
                     row[col] = raw
                     continue
@@ -352,6 +364,8 @@ def compare(ac: Dict[Key, Dict[str, float]], op: Dict[Key, Dict[str, float]],
         }
         metrics = {}
         for m, tv in tool.items():
+            if m not in h:
+                continue  # baseline without this column (klt-measured record)
             hv = float(h[m])
             ref = hv
             entry = {"harness": hv, "tool": tv}
@@ -377,10 +391,15 @@ def compare(ac: Dict[Key, Dict[str, float]], op: Dict[Key, Dict[str, float]],
             metrics[m] = entry
 
         tool_op_pass = all(op[k].get(n + "__status") == "pass" for n in OP_SANITY)
-        harness_op_pass = str(h["op_pass"]).strip() == "1"
-        op_sanity = {"harness_op_pass": harness_op_pass, "tool_op_sanity_pass": tool_op_pass,
-                     "agree": harness_op_pass == tool_op_pass}
-        if not op_sanity["agree"]:
+        op_sanity = {"tool_op_sanity_pass": tool_op_pass}
+        if "op_pass" in h:
+            harness_op_pass = str(h["op_pass"]).strip() == "1"
+            op_sanity.update({"harness_op_pass": harness_op_pass,
+                              "agree": harness_op_pass == tool_op_pass})
+        if not tool_op_pass and "op_pass" not in h:
+            out_of_tol.append(f"{key_str(k)} op sanity: tool sanity checks fail "
+                              "(baseline carries no op_pass to compare against)")
+        elif "op_pass" in h and not op_sanity["agree"]:
             out_of_tol.append(f"{key_str(k)} op sanity: harness op_pass={h['op_pass']} vs tool sanity "
                               f"{'pass' if tool_op_pass else 'fail'}")
 
@@ -466,8 +485,10 @@ def main(argv: Optional[List[str]] = None) -> int:
     c.add_argument("--ac", required=True)
     c.add_argument("--op", required=True)
     c.add_argument("--harness-csv", required=True)
-    c.add_argument("--harness-ac-dir", required=True,
-                   help="the harness record's corners/<id>/ directory (raw *_ac.csv sweeps)")
+    c.add_argument("--harness-ac-dir",
+                   help="the harness record's corners/<id>/ directory (raw *_ac.csv sweeps); "
+                        "omit when the baseline is itself a klt-measured record (same .meas "
+                        "interpolation, so no GBW method bias to correct)")
     c.add_argument("--json-out")
     c.add_argument("--provenance", action="append", default=[], metavar="KEY=VALUE")
     a = ap.parse_args(argv)
@@ -480,8 +501,9 @@ def main(argv: Optional[List[str]] = None) -> int:
         ac_env, ac = load_envelope(a.ac, "ac")
         op_env, op = load_envelope(a.op, "op")
         harness = load_harness_csv(a.harness_csv)
-        bias = {k: gbw_method_bias(os.path.join(a.harness_ac_dir, f"{key_str(k)}_ac.csv"))
-                for k in expected_keys()}
+        bias = None if not a.harness_ac_dir else {
+            k: gbw_method_bias(os.path.join(a.harness_ac_dir, f"{key_str(k)}_ac.csv"))
+            for k in expected_keys()}
         rep = compare(ac, op, harness, bias, ac_env, op_env)
     except InputError as e:
         print(f"compare.py: {e}", file=sys.stderr)
@@ -490,7 +512,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     if a.cmd == "compare":
         rep["inputs"] = {name: {"path": p, "sha256": _sha256(p)} for name, p in
                          (("ac_envelope", a.ac), ("op_envelope", a.op), ("harness_csv", a.harness_csv))}
-        rep["inputs"]["harness_ac_dir"] = {"path": a.harness_ac_dir}
+        rep["inputs"]["harness_ac_dir"] = {"path": a.harness_ac_dir}  # None: klt-measured baseline
         rep["provenance"] = dict(kv.split("=", 1) for kv in a.provenance)
         if a.json_out:
             with open(a.json_out, "w") as f:
