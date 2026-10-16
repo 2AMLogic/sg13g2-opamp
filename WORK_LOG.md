@@ -2,6 +2,11 @@
 
 <!-- Maintained by the Loom Guide role. Newest entries first. -->
 
+### 2026-10-16
+
+- **PR #248**: sim: commit 45-corner klt sim envelopes for the open-loop AC bench
+- **Issue #85** (closed): sim: express the open-loop AC bench as a `klt sim` request, the first gradable envelope toward T1 item 5
+
 ### 2026-10-15
 
 - **PR #102**: sim: open-loop AC bench as klt sim AC + OP requests with a harness comparison (no envelope yet: fleet runner klt 0.5.0)
