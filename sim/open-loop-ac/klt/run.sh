@@ -15,7 +15,8 @@
 #   records/<UTC YYYYmmdd-HHMMSS>-<short sha>.ac.sim.json
 #   records/<UTC YYYYmmdd-HHMMSS>-<short sha>.op.sim.json
 #
-# followed by compare.py's join against the harness record of the same bench,
+# followed by compare.py's join against the grounded-inn klt record of the
+# same bench (records/20261015-103057-895d555.csv, issue #241),
 #
 #   records/<id>.compare.json
 #
@@ -45,9 +46,23 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SIM_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 REPO_ROOT="$(cd "${SIM_DIR}/.." && pwd)"
 
-# shellcheck source=/dev/null
-source "${SIM_DIR}/preflight.sh"
-sg13g2_preflight_require_netlist
+# The batch backend (the default) simulates on the fleet, so the host needs
+# neither the pinned ngspice nor built OSDI models -- only the PDK path klt
+# resolves model references through (what measure_openloop_ac.sh does). The
+# full local preflight (PDK + OSDI + ngspice) applies only when the grid is
+# deliberately sent to a local backend.
+case "${OPENLOOP_KLT_BACKEND:-batch}" in
+  batch)
+    # shellcheck source=/dev/null
+    source "${SIM_DIR}/env.sh" >&2
+    NGSPICE_VERSION="n/a (simulated on the batch fleet)"
+    ;;
+  *)
+    # shellcheck source=/dev/null
+    source "${SIM_DIR}/preflight.sh"
+    sg13g2_preflight_require_netlist
+    ;;
+esac
 
 read -r -a KLT_CMD <<< "${KLT:-klt}"
 if ! command -v "${KLT_CMD[0]}" >/dev/null 2>&1; then
@@ -59,9 +74,12 @@ if ! KLT_VERSION="$("${KLT_CMD[@]}" --version 2>&1)"; then
   exit 3
 fi
 
-HARNESS_ID="20260910-221601-22feaba"
-HARNESS_CSV="sim/open-loop-ac/records/${HARNESS_ID}.csv"
-HARNESS_AC_DIR="sim/open-loop-ac/corners/${HARNESS_ID}"
+# The baseline is the grounded-inn klt record (issue #241). The floating-inn
+# harness record 20260910-221601-22feaba is superseded: its Av0/GBW/PM were
+# measured on a bench whose inn was AC-floating and cannot be compared with
+# this bench's numbers.
+BASELINE_ID="20261015-103057-895d555"
+BASELINE_CSV="sim/open-loop-ac/records/${BASELINE_ID}.csv"
 
 REPO_GIT_SHA="$(cd "${REPO_ROOT}" && git rev-parse --short HEAD 2>/dev/null || echo unknown)"
 RECORD_ID="$(date -u +%Y%m%d-%H%M%S)-${REPO_GIT_SHA}"
@@ -119,10 +137,10 @@ cmp_rc=0
   python3 sim/open-loop-ac/klt/compare.py compare \
     --ac "sim/open-loop-ac/klt/records/${RECORD_ID}.ac.sim.json" \
     --op "sim/open-loop-ac/klt/records/${RECORD_ID}.op.sim.json" \
-    --harness-csv "${HARNESS_CSV}" \
-    --harness-ac-dir "${HARNESS_AC_DIR}" \
+    --harness-csv "${BASELINE_CSV}" \
     --json-out "sim/open-loop-ac/klt/records/${RECORD_ID}.compare.json" \
     --provenance "record_id=${RECORD_ID}" \
+    --provenance "baseline_record=${BASELINE_ID}" \
     --provenance "repo_git_sha=${REPO_GIT_SHA}" \
     --provenance "klt_client_version=${KLT_VERSION}" \
     --provenance "host_ngspice=${NGSPICE_VERSION}" \

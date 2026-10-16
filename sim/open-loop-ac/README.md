@@ -220,17 +220,21 @@ the same circuit, not a new bench.
 
 The harness record
 [`records/20260910-221601-22feaba.csv`](records/20260910-221601-22feaba.csv)
-stays the **record of evidence** for the four rows this bench carries. It is
-what DR-0002 ratified the bounds on, and nothing in `klt/` edits or replaces
-it. A `klt sim` envelope pair under `klt/records/` is the **gradable form** of
+is what DR-0002 ratified the bounds on, and nothing in `klt/` edits or
+replaces it. It was measured with `inn` AC-floating and is **superseded** for
+the bench as it now stands (issue #241); the current measurement of the four
+rows is the grounded-`inn` klt record
+[`records/20261015-103057-895d555.csv`](records/20261015-103057-895d555.csv).
+A `klt sim` envelope pair under `klt/records/` is the **gradable form** of
 the same measurement: the tool assigns each row's pass/fail verdict and
 binding corner against the ratified bound. The `compare.json` written beside
-each pair ties the two together point by point. Where the two disagree beyond
-the stated tolerance, the disagreement is reported in that file and must be
-explained here before the envelope is cited anywhere.
+each pair ties it to the grounded-`inn` record point by point. Where the two
+disagree beyond the stated tolerance, the disagreement is reported in that
+file and must be explained here before the envelope is cited anywhere.
 
-**No envelope is committed yet.** The real 45-corner run is blocked; see
-"Status" below.
+The first committed pair is `klt/records/20261016-161057-8caa272.*`; see
+"Status (2026-10-16)" below for its verdicts and for what its comparison
+does and does not show.
 
 ### Grid encoding
 
@@ -298,7 +302,7 @@ tolerance.
 Both sides' print quantisation (the harness CSV is `%.6g`) is two decades
 below these tolerances.
 
-**Bound proximity, stated in advance:** the harness's worst Av0 is
+**Bound proximity, stated in advance (for the superseded floating-`inn` harness record; the 2026-10-16 status below carries the current numbers):** the harness's worst Av0 is
 **37.7812 dB at `mos_fs_125C_1.08V`, below the 37.8 dB bound by 0.019 dB**.
 That is inside the 0.02 dB comparison tolerance, so a tool value on either
 side of 37.8 dB at that corner would agree with the harness. The verdict of
@@ -309,50 +313,70 @@ also inside its comparison tolerance. GBW's worst (4.74216 MHz at
 `mos_fs_125C_1.08V`, 4.6e-4 relative margin) can only move up under the
 method bias. PM's worst (76.36°) is 16° clear.
 
-### Status (2026-10-09): the real run is blocked
+### Status (2026-10-16): the real 45-corner run is committed
 
-Two independent blockers. Neither is solved by running the grid locally on
-a shared dispatch host, and that is not done.
+`klt/run.sh` ran both requests on the batch fleet (no local grid) and wrote
 
-1. **The batch fleet runner is older than the client.** The fleet image pins
-   klt **0.5.0** (2AMLogic/2am `infra/aws/batch-image-pins.env`,
-   `PIN_KLAYOUT_TOOLS_VERSION`). klt's runner/client version gate rejects
-   the job before simulating. A submission of `openloop_ac.request.json` with
-   klt `0.7.0+g4cbdfa769875` staged its 14 model inputs and launched job
-   `klt-sim-671820687a2e`. The job then failed with exit 87,
-   `batch_runner_version_mismatch`: "the fleet runner runs klt 0.5.0 but the
-   submitting client is 0.7.0+g4cbdfa769875 -- the request was not run". All
-   45 corners came back `error`. The requests also need features that 0.5.0
-   lacks: `options.osdi_preload` with `stage_model_inputs`, per-section
-   corner libraries, `expr` measurements, `ngspice_init` and
-   `fail_on_diagnostic`. So the runner must move forward. Pinning the client
-   back to 0.5.0 does not work. Tracked in 2AMLogic/2am#2193. After the bump,
-   run with a client whose `klt --version` equals the runner's, for example
-   `KLT="uvx --from klayout-tools==X.Y.Z klt" sim/open-loop-ac/klt/run.sh`.
-2. **The preflight needs the pinned ngspice.** `run.sh` sources
-   `sim/preflight.sh`, whose OSDI check loads the `.osdi` binaries with the
-   local ngspice. These are the same binaries the request stages to the
-   fleet. They target OSDI v0.4 (ngspice-46, the `sim/pdk.json` pin). A host
-   with ngspice-42 ("only supports OSDI v0.3") fails the check, and
-   `run.sh` exits 3 before submitting anything. Run from a host with the
-   pinned ngspice-46.
+- `klt/records/20261016-161057-8caa272.ac.sim.json`: fleet job `klt-sim-61cc8b42b2da`, 45 unique corners, status **pass**
+- `klt/records/20261016-161057-8caa272.op.sim.json`: fleet job `klt-sim-eb4fefe4b5a5`, 45 unique corners, status **pass**
+- `klt/records/20261016-161057-8caa272.compare.json`: the join, status `agree`
 
-What *was* verified without the real run:
+Client klt `0.7.1.dev954+g30c453e97ae1`, fleet runner klt 0.7.0 (`runner_compatibility: match`), ngspice-46 on the fleet, PDK `ihp-sg13g2` 0.3.0, repo sha `8caa272`. Both envelopes have `coverage.nothing_checked` false and nothing skipped (`compare.py validate` is the gate).
 
-- The client accepts both requests, including model staging and the
-  include closure.
-- The request mechanics were checked on a behavioural stand-in DUT with one
-  local corner. `alter` of `vdd`/`vinp` tracks as intended. `.meas ac` with
-  `at=1` and `when vdb(out)=0` produces the expected values. The tool's GBW
-  equals the linear-in-frequency interpolation and its phase equals the
-  harness's interpolation on the same sweep data. The OP `expr`
-  measurements and their limits grade as intended.
-- `compare.py` passes 31 offline tests, including negative controls for
+Per-row verdicts of record, graded by `klt sim` against the unrounded ratified bounds:
+
+| Row | Bound | Binding corner | Value | Verdict |
+|---|---|---|---|---|
+| Open-loop DC gain | >= 37.8 dB | `mos_fs`/125 C/1.08 V | 38.2293 dB (margin 0.429 dB) | pass |
+| GBW | >= 4.74 MHz | `mos_ss`/-40 C/1.08 V | 8.0624 MHz | pass |
+| Phase margin | >= 60 deg | `mos_ff`/125 C/1.32 V | 61.99 deg (1.99 deg over 60) | pass |
+| Iq (total, incl. `ibias`) | <= 119.7 uA | `mos_ss`/-40 C/1.32 V | 119.655 uA (margin 45 nA) | pass |
+
+**Which bench, and which baseline.** This bench has `Cinn_acgnd inn vss 1`
+(issue #241), the same grounded-`inn` form as `sim/post-layout/klt/`. The
+comparison baseline is therefore the grounded-`inn` klt record
+[`records/20261015-103057-895d555.csv`](records/20261015-103057-895d555.csv),
+not `records/20260910-221601-22feaba.csv`. That older harness record was
+measured with `inn` AC-floating and is superseded (its own header says not to
+cite its GBW or PM). It stays in the tree unedited, as the append-only
+history. Av0's worst case moved from 37.7812 dB (a miss against 37.8 dB) to
+38.2293 dB (a pass) between the two records. That change is attributed to
+the bench correction (`inn` AC-grounded, issue #241), as the records' own
+headers state, not to a change in the amplifier: both read the same
+`design/netlist/opamp_core.spice`.
+
+**What the comparison does and does not show.** Against the grounded-`inn`
+baseline, 0 of 180 comparisons (45 points x Av0, GBW, PM, Iq) are out of
+tolerance, with no bound-verdict disagreement. The largest differences are
+4.9e-5 dB (Av0), 49.9 Hz (GBW, 6e-6 relative), 4.9e-5 deg (PM) and 0.5 nA
+(Iq). That agreement is tight because the baseline was itself produced by
+`klt sim` on the same fleet with the same `.meas` method: it shows the bench
+is reproducible and that the `klt/` requests express the same circuit as the
+`sim/post-layout/klt/` requests. It is **not** an independent cross-check of
+the tool against the legacy ngspice harness; that comparison was only possible
+for the floating-`inn` circuit, and this PR does not re-measure it. For the
+same reason `compare.py` is run without `--harness-ac-dir` here: there is no
+raw sweep to derive the log-vs-linear GBW interpolation term from, and none is
+needed, since both sides use the same interpolation. The tolerances in
+"Comparison tolerance" are unchanged and still apply to the solver term.
+
+**Preflight.** `run.sh` no longer sources `sim/preflight.sh` for the default
+batch backend: simulating on the fleet needs neither the host's ngspice nor
+locally built OSDI models, only the PDK path klt resolves model references
+through. The full local preflight still applies when
+`OPENLOOP_KLT_BACKEND` selects a local backend.
+
+History (kept for the record): the first attempt, on 2026-10-09, was rejected
+by the batch fleet before simulating: the runner's klt (0.5.0) was older than the
+client (`batch_runner_version_mismatch`, exit 87; 2AMLogic/2am#2193, closed
+with the runner pinned to 0.7.0).
+
+What was verified without the real run, and still holds:
+
+- `compare.py` passes 37 offline tests, including negative controls for
   reordered, missing, duplicate, extra and off-grid points, null and
-  non-finite values, perturbations outside tolerance, sanity disagreement
-  and a bound flip.
-- `run.sh` failure paths: missing PDK, missing OSDI, missing ngspice and
-  missing klt exit 3. A klt error, an errored corner or failed validation
-  exits 4 and writes nothing to `records/`. Repeated runs mint distinct
-  append-only records and leave the harness CSV byte-identical. These paths
-  were exercised with replayed envelopes, never real simulator output.
+  non-finite values, perturbations outside tolerance, sanity disagreement,
+  a bound flip, and a baseline without DC columns or raw sweeps.
+- `run.sh` failure paths: missing klt exits 3. A klt error, an errored corner or
+  failed validation exits 4 and writes nothing to `records/`. Repeated runs
+  mint distinct append-only records.
