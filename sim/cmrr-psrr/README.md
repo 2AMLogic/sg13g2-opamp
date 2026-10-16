@@ -294,8 +294,9 @@ row"). **Status: evidence increment. A real 45-corner supply-gain envelope
 was run through the batch fleet and is committed unmodified
 (`klt/records/20261010-094256-469573d.sim.json`), with its measured comparison
 against the harness record (`.compare.json`).** The PSRR verdict is still an
-offline join with the harness open-loop Av0 (below), so this is not yet a
-fully `klt sim`-graded PSRR row. The CMRR bench is a separate ratified row
+offline two-envelope join (below): Av0 now comes from the open-loop `klt sim`
+AC envelope (issue #99), so both operands are `klt sim` outputs, but the
+ratified bound is applied by `compare.py`, not graded by the tool. The CMRR bench is a separate ratified row
 (`sim/cmrr-mismatch/`, #98) and is not in `klt/`.
 
 | File | Role |
@@ -312,14 +313,16 @@ PSRR = Av0 / Avs needs two AC excitations (`Vinp ac 1` for Av0, `Vdd ac 1`
 for Avs). One AC solve cannot carry both, and a `limits` entry applies to one
 measurement of one request. So this is **not** a single-solve PSRR ratio, and
 it is not described as one. The request reports `avs0_db` (10 mHz, the DC
-shelf) and `avs_1khz_db`; `compare.py` joins the same-point Av0 from
-`sim/open-loop-ac/records/20260910-221601-22feaba.csv` on (process,
+shelf) and `avs_1khz_db`; `compare.py` joins the same-point Av0 (see below) on (process,
 temperature, VDD), computes `PSRR = Av0 − Avs0`, and applies the ratified
 bound (≥ 1.87 dB, DC shelf) **offline**. Consequences, stated plainly:
 
-- Av0 is **harness evidence**, not a `klt sim` Av0 envelope. This is the same
-  join the harness itself makes (above). If #85's AC envelope lands, the join
-  can use it instead (the other option in the issue).
+- Av0 is the open-loop `klt sim` AC envelope's `av0_db`
+  (`--openloop-envelope`; default `sim/open-loop-ac/klt/records/20261016-161057-8caa272.ac.sim.json`),
+  gated like any envelope (45 unique points, `av0_db` finite, no
+  errored/inconclusive corner, `nothing_checked` false) and failing closed
+  (exit 2) otherwise. The open-loop harness CSV (`--openloop-csv`) is the
+  legacy source and, given beside the envelope, the cross-check below.
 - The PSRR verdict is `compare.py`'s, not the tool's. The tool grades one
   limit: the harness's flat-shelf plateau guard (|Avs(10 mHz) − Avs(0.1 Hz)|
   ≤ 0.05 dB), which also keeps `coverage.nothing_checked` false. The harness
@@ -384,6 +387,31 @@ fleet jobs are `klt-sim-8b0cf80b0eea` (`mos_tt`), `klt-sim-a5c104a8e55f`
 `ami-0e40e3245f1923ac8` (ngspice 46). When the runner image is bumped, use
 `PSRR_KLT_MODE=single` with a client whose `klt --version` equals the
 runner's.
+
+### Av0 from the open-loop envelope: measured join check (issue #99)
+
+`klt/records/20261016-171154-ff5ee9a.compare.json` joins the grounded-`inn` supply-gain envelope
+`20261015-103521-0f41068.sim.json` to the open-loop AC envelope
+`sim/open-loop-ac/klt/records/20261016-161057-8caa272.ac.sim.json` and, as a
+cross-check, to the open-loop CSV `sim/open-loop-ac/records/20261015-103057-895d555.csv`
+(offline, no simulator run). Per point, the envelope-joined PSRR differs from the
+CSV-joined PSRR by exactly the Av0 difference, because Avs0 is common to both:
+
+- Largest |delta| 4.95e-5 dB (`mos_fs`/27 °C/1.20 V), 45 of 45 within the 0.02 dB
+  tolerance. The tolerance is the same argued DR-0005 figure as `avs0_db`
+  (the same bench on two hosts, 9.9e-4 relative, 0.017 dB rounded up); the
+  measured spread is the CSV's print precision, the same 4.95e-5 dB that
+  `sim/open-loop-ac/klt/records/20261016-161057-8caa272.compare.json` reports.
+  No point is out of tolerance, so there is nothing to explain.
+- PSRR+ (DC shelf, 10 mHz) worst 26.9011 dB (envelope join) vs 26.9010 dB (CSV
+  join) at `mos_fs`/125 °C/1.08 V; the bound verdicts agree at 45 of 45 points.
+  The 1 kHz figure is reported separately and is not the ratified row.
+- The record's top-level `status` is `disagree` and lists 189 out-of-tolerance
+  entries plus 45 join inconsistencies. These compare the grounded-`inn`
+  envelope to the superseded floating-`inn` harness record
+  `20260921-151815-707b34c` (same as `0f41068.compare.json` above), so they are
+  the size of the correction, not a defect of this join. The join check itself
+  is `av0_join.status`: `agree`.
 
 ### Measured comparison: `klt sim` envelope vs the harness record
 

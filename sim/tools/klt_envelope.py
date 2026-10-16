@@ -320,7 +320,8 @@ def run_cli(argv: Optional[List[str]], *, description: str, compare_help: str,
     index_fn(env, label): the bench's envelope gate.
     run(args, tool, env) -> report: loads the harness files named by `args` and
         compares; may raise InputError (exit 2).
-    inputs: (report key, argparse dest, hash it) for each harness file; the
+    inputs: (report key, argparse dest, hash it) for each harness file (an optional
+        one left unset is skipped); the
         envelope is always first and always hashed.
     summary(report) -> the stdout text.
     common_args: (flag, add_argument kwargs) added to BOTH subcommands; each
@@ -359,6 +360,8 @@ def run_cli(argv: Optional[List[str]], *, description: str, compare_help: str,
     stanza = {"envelope": {"path": a.envelope, "sha256": sha256_file(a.envelope)}}
     for key, dest, hashed in inputs:
         path = getattr(a, dest)
+        if path is None:  # an optional input not given
+            continue
         stanza[key] = {"path": path, "sha256": sha256_file(path)} if hashed else {"path": path}
     rep["inputs"] = stanza
     rep["provenance"] = dict(kv.split("=", 1) for kv in a.provenance)
