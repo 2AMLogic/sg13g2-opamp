@@ -1,0 +1,3728 @@
+{
+  "schema": "sg13g2-opamp/cmrr-psrr/klt-compare/1",
+  "av0_join": {
+    "source": "open-loop-envelope",
+    "source_description": "the open-loop `klt sim` AC envelope's Av0 (av0_db)",
+    "tolerance": {
+      "abs": 0.02,
+      "rel": 0.0,
+      "unit": "dB"
+    },
+    "max_abs_av0_delta_db": 4.948390999715002e-05,
+    "max_abs_av0_delta_point": "mos_fs_27C_1.20V",
+    "worst_psrr_envelope_join": [
+      26.9010753681,
+      "mos_fs_125C_1.08V"
+    ],
+    "worst_psrr_csv_join": [
+      26.90102966011,
+      "mos_fs_125C_1.08V"
+    ],
+    "out_of_tolerance": [],
+    "points": [
+      {
+        "point_id": "mos_tt_-40C_1.08V",
+        "av0_envelope_db": 43.49304457716,
+        "av0_csv_db": 43.493,
+        "av0_delta_db": 4.4577159997061244e-05,
+        "tolerance_db": 0.02,
+        "psrr_envelope_join_db": 33.19171523138,
+        "psrr_csv_join_db": 33.191670654220005,
+        "psrr_delta_db": 4.4577159997061244e-05,
+        "within": true,
+        "verdicts_agree": true
+      },
+      {
+        "point_id": "mos_tt_-40C_1.20V",
+        "av0_envelope_db": 44.59050058032,
+        "av0_csv_db": 44.5905,
+        "av0_delta_db": 5.803199982779006e-07,
+        "tolerance_db": 0.02,
+        "psrr_envelope_join_db": 34.690788335463,
+        "psrr_csv_join_db": 34.690787755143,
+        "psrr_delta_db": 5.803199982779006e-07,
+        "within": true,
+        "verdicts_agree": true
+      },
+      {
+        "point_id": "mos_tt_-40C_1.32V",
+        "av0_envelope_db": 45.65279840599,
+        "av0_csv_db": 45.6528,
+        "av0_delta_db": -1.594010001326751e-06,
+        "tolerance_db": 0.02,
+        "psrr_envelope_join_db": 35.33263996599,
+        "psrr_csv_join_db": 35.33264156,
+        "psrr_delta_db": -1.594010001326751e-06,
+        "within": true,
+        "verdicts_agree": true
+      },
+      {
+        "point_id": "mos_tt_27C_1.08V",
+        "av0_envelope_db": 41.71211460366,
+        "av0_csv_db": 41.7121,
+        "av0_delta_db": 1.4603659998613239e-05,
+        "tolerance_db": 0.02,
+        "psrr_envelope_join_db": 31.640912104589997,
+        "psrr_csv_join_db": 31.64089750093,
+        "psrr_delta_db": 1.4603659998613239e-05,
+        "within": true,
+        "verdicts_agree": true
+      },
+      {
+        "point_id": "mos_tt_27C_1.20V",
+        "av0_envelope_db": 42.87273094762,
+        "av0_csv_db": 42.8727,
+        "av0_delta_db": 3.094761999733464e-05,
+        "tolerance_db": 0.02,
+        "psrr_envelope_join_db": 32.79871513858,
+        "psrr_csv_join_db": 32.79868419096,
+        "psrr_delta_db": 3.094761999733464e-05,
+        "within": true,
+        "verdicts_agree": true
+      },
+      {
+        "point_id": "mos_tt_27C_1.32V",
+        "av0_envelope_db": 43.99699181373,
+        "av0_csv_db": 43.997,
+        "av0_delta_db": -8.18627000143124e-06,
+        "tolerance_db": 0.02,
+        "psrr_envelope_join_db": 33.47016257506,
+        "psrr_csv_join_db": 33.470170761329996,
+        "psrr_delta_db": -8.186269994325812e-06,
+        "within": true,
+        "verdicts_agree": true
+      },
+      {
+        "point_id": "mos_tt_125C_1.08V",
+        "av0_envelope_db": 39.42293726718,
+        "av0_csv_db": 39.4229,
+        "av0_delta_db": 3.726717999796847e-05,
+        "tolerance_db": 0.02,
+        "psrr_envelope_join_db": 29.078350412279995,
+        "psrr_csv_join_db": 29.078313145099997,
+        "psrr_delta_db": 3.726717999796847e-05,
+        "within": true,
+        "verdicts_agree": true
+      },
+      {
+        "point_id": "mos_tt_125C_1.20V",
+        "av0_envelope_db": 40.8551165987,
+        "av0_csv_db": 40.8551,
+        "av0_delta_db": 1.659870000025876e-05,
+        "tolerance_db": 0.02,
+        "psrr_envelope_join_db": 30.7155586236,
+        "psrr_csv_join_db": 30.7155420249,
+        "psrr_delta_db": 1.659870000025876e-05,
+        "within": true,
+        "verdicts_agree": true
+      },
+      {
+        "point_id": "mos_tt_125C_1.32V",
+        "av0_envelope_db": 42.09495567249,
+        "av0_csv_db": 42.095,
+        "av0_delta_db": -4.4327509996833214e-05,
+        "tolerance_db": 0.02,
+        "psrr_envelope_join_db": 31.626755376940004,
+        "psrr_csv_join_db": 31.62679970445,
+        "psrr_delta_db": -4.4327509996833214e-05,
+        "within": true,
+        "verdicts_agree": true
+      },
+      {
+        "point_id": "mos_ss_-40C_1.08V",
+        "av0_envelope_db": 44.54311265863,
+        "av0_csv_db": 44.5431,
+        "av0_delta_db": 1.2658629998441029e-05,
+        "tolerance_db": 0.02,
+        "psrr_envelope_join_db": 32.09477146891,
+        "psrr_csv_join_db": 32.09475881028,
+        "psrr_delta_db": 1.2658629998441029e-05,
+        "within": true,
+        "verdicts_agree": true
+      },
+      {
+        "point_id": "mos_ss_-40C_1.20V",
+        "av0_envelope_db": 45.72304849019,
+        "av0_csv_db": 45.723,
+        "av0_delta_db": 4.84901900037471e-05,
+        "tolerance_db": 0.02,
+        "psrr_envelope_join_db": 34.86984800113,
+        "psrr_csv_join_db": 34.86979951094,
+        "psrr_delta_db": 4.84901900037471e-05,
+        "within": true,
+        "verdicts_agree": true
+      },
+      {
+        "point_id": "mos_ss_-40C_1.32V",
+        "av0_envelope_db": 46.77840361089,
+        "av0_csv_db": 46.7784,
+        "av0_delta_db": 3.6108900047793213e-06,
+        "tolerance_db": 0.02,
+        "psrr_envelope_join_db": 36.20892727114,
+        "psrr_csv_join_db": 36.208923660249994,
+        "psrr_delta_db": 3.6108900047793213e-06,
+        "within": true,
+        "verdicts_agree": true
+      },
+      {
+        "point_id": "mos_ss_27C_1.08V",
+        "av0_envelope_db": 42.55065497556,
+        "av0_csv_db": 42.5507,
+        "av0_delta_db": -4.502443999854222e-05,
+        "tolerance_db": 0.02,
+        "psrr_envelope_join_db": 30.829582579940002,
+        "psrr_csv_join_db": 30.82962760438,
+        "psrr_delta_db": -4.502443999854222e-05,
+        "within": true,
+        "verdicts_agree": true
+      },
+      {
+        "point_id": "mos_ss_27C_1.20V",
+        "av0_envelope_db": 43.75185306771,
+        "av0_csv_db": 43.7519,
+        "av0_delta_db": -4.69322899974145e-05,
+        "tolerance_db": 0.02,
+        "psrr_envelope_join_db": 32.98302980202,
+        "psrr_csv_join_db": 32.98307673431,
+        "psrr_delta_db": -4.693229000451993e-05,
+        "within": true,
+        "verdicts_agree": true
+      },
+      {
+        "point_id": "mos_ss_27C_1.32V",
+        "av0_envelope_db": 44.85819349188,
+        "av0_csv_db": 44.8582,
+        "av0_delta_db": -6.5081199949190705e-06,
+        "tolerance_db": 0.02,
+        "psrr_envelope_join_db": 34.032344822400006,
+        "psrr_csv_join_db": 34.03235133052,
+        "psrr_delta_db": -6.5081199949190705e-06,
+        "within": true,
+        "verdicts_agree": true
+      },
+      {
+        "point_id": "mos_ss_125C_1.08V",
+        "av0_envelope_db": 40.04173187305,
+        "av0_csv_db": 40.0417,
+        "av0_delta_db": 3.18730499984099e-05,
+        "tolerance_db": 0.02,
+        "psrr_envelope_join_db": 28.757183289939995,
+        "psrr_csv_join_db": 28.757151416889997,
+        "psrr_delta_db": 3.18730499984099e-05,
+        "within": true,
+        "verdicts_agree": true
+      },
+      {
+        "point_id": "mos_ss_125C_1.20V",
+        "av0_envelope_db": 41.46636592767,
+        "av0_csv_db": 41.4664,
+        "av0_delta_db": -3.4072330002743456e-05,
+        "tolerance_db": 0.02,
+        "psrr_envelope_join_db": 30.860342738869996,
+        "psrr_csv_join_db": 30.8603768112,
+        "psrr_delta_db": -3.4072330002743456e-05,
+        "within": true,
+        "verdicts_agree": true
+      },
+      {
+        "point_id": "mos_ss_125C_1.32V",
+        "av0_envelope_db": 42.67998727206,
+        "av0_csv_db": 42.68,
+        "av0_delta_db": -1.2727939996182158e-05,
+        "tolerance_db": 0.02,
+        "psrr_envelope_join_db": 31.907566542820003,
+        "psrr_csv_join_db": 31.90757927076,
+        "psrr_delta_db": -1.2727939996182158e-05,
+        "within": true,
+        "verdicts_agree": true
+      },
+      {
+        "point_id": "mos_ff_-40C_1.08V",
+        "av0_envelope_db": 43.4114548632,
+        "av0_csv_db": 43.4115,
+        "av0_delta_db": -4.513679999718079e-05,
+        "tolerance_db": 0.02,
+        "psrr_envelope_join_db": 34.662356749927,
+        "psrr_csv_join_db": 34.662401886727,
+        "psrr_delta_db": -4.513679999718079e-05,
+        "within": true,
+        "verdicts_agree": true
+      },
+      {
+        "point_id": "mos_ff_-40C_1.20V",
+        "av0_envelope_db": 44.46493156213,
+        "av0_csv_db": 44.4649,
+        "av0_delta_db": 3.1562129997553257e-05,
+        "tolerance_db": 0.02,
+        "psrr_envelope_join_db": 35.171946108652996,
+        "psrr_csv_join_db": 35.171914546523,
+        "psrr_delta_db": 3.1562129997553257e-05,
+        "within": true,
+        "verdicts_agree": true
+      },
+      {
+        "point_id": "mos_ff_-40C_1.32V",
+        "av0_envelope_db": 45.52083311748,
+        "av0_csv_db": 45.5208,
+        "av0_delta_db": 3.3117480001010335e-05,
+        "tolerance_db": 0.02,
+        "psrr_envelope_join_db": 35.688089615892004,
+        "psrr_csv_join_db": 35.688056498412,
+        "psrr_delta_db": 3.3117480001010335e-05,
+        "within": true,
+        "verdicts_agree": true
+      },
+      {
+        "point_id": "mos_ff_27C_1.08V",
+        "av0_envelope_db": 41.75216213168,
+        "av0_csv_db": 41.7522,
+        "av0_delta_db": -3.786831999974538e-05,
+        "tolerance_db": 0.02,
+        "psrr_envelope_join_db": 32.700754849424,
+        "psrr_csv_join_db": 32.700792717744,
+        "psrr_delta_db": -3.786831999974538e-05,
+        "within": true,
+        "verdicts_agree": true
+      },
+      {
+        "point_id": "mos_ff_27C_1.20V",
+        "av0_envelope_db": 42.89246936348,
+        "av0_csv_db": 42.8925,
+        "av0_delta_db": -3.063652000179218e-05,
+        "tolerance_db": 0.02,
+        "psrr_envelope_join_db": 33.32003125027,
+        "psrr_csv_join_db": 33.32006188679,
+        "psrr_delta_db": -3.063652000179218e-05,
+        "within": true,
+        "verdicts_agree": true
+      },
+      {
+        "point_id": "mos_ff_27C_1.32V",
+        "av0_envelope_db": 44.012817648,
+        "av0_csv_db": 44.0128,
+        "av0_delta_db": 1.764800000358946e-05,
+        "tolerance_db": 0.02,
+        "psrr_envelope_join_db": 33.920566517510004,
+        "psrr_csv_join_db": 33.92054886951,
+        "psrr_delta_db": 1.764800000358946e-05,
+        "within": true,
+        "verdicts_agree": true
+      },
+      {
+        "point_id": "mos_ff_125C_1.08V",
+        "av0_envelope_db": 39.62574381412,
+        "av0_csv_db": 39.6257,
+        "av0_delta_db": 4.381411999787588e-05,
+        "tolerance_db": 0.02,
+        "psrr_envelope_join_db": 29.920325073912,
+        "psrr_csv_join_db": 29.920281259792002,
+        "psrr_delta_db": 4.381411999787588e-05,
+        "within": true,
+        "verdicts_agree": true
+      },
+      {
+        "point_id": "mos_ff_125C_1.20V",
+        "av0_envelope_db": 41.02785068972,
+        "av0_csv_db": 41.0279,
+        "av0_delta_db": -4.931028000498827e-05,
+        "tolerance_db": 0.02,
+        "psrr_envelope_join_db": 31.291010480060997,
+        "psrr_csv_join_db": 31.291059790341002,
+        "psrr_delta_db": -4.931028000498827e-05,
+        "within": true,
+        "verdicts_agree": true
+      },
+      {
+        "point_id": "mos_ff_125C_1.32V",
+        "av0_envelope_db": 42.26143460363,
+        "av0_csv_db": 42.2614,
+        "av0_delta_db": 3.460362999874178e-05,
+        "tolerance_db": 0.02,
+        "psrr_envelope_join_db": 32.16288720039,
+        "psrr_csv_join_db": 32.162852596760004,
+        "psrr_delta_db": 3.460362999874178e-05,
+        "within": true,
+        "verdicts_agree": true
+      },
+      {
+        "point_id": "mos_sf_-40C_1.08V",
+        "av0_envelope_db": 44.43946381663,
+        "av0_csv_db": 44.4395,
+        "av0_delta_db": -3.6183369999776005e-05,
+        "tolerance_db": 0.02,
+        "psrr_envelope_join_db": 33.171751211,
+        "psrr_csv_join_db": 33.17178739437,
+        "psrr_delta_db": -3.6183369999776005e-05,
+        "within": true,
+        "verdicts_agree": true
+      },
+      {
+        "point_id": "mos_sf_-40C_1.20V",
+        "av0_envelope_db": 45.59007136918,
+        "av0_csv_db": 45.5901,
+        "av0_delta_db": -2.8630819997488288e-05,
+        "tolerance_db": 0.02,
+        "psrr_envelope_join_db": 35.365544237600005,
+        "psrr_csv_join_db": 35.36557286842,
+        "psrr_delta_db": -2.8630819997488288e-05,
+        "within": true,
+        "verdicts_agree": true
+      },
+      {
+        "point_id": "mos_sf_-40C_1.32V",
+        "av0_envelope_db": 46.66605988465,
+        "av0_csv_db": 46.6661,
+        "av0_delta_db": -4.01153500035889e-05,
+        "tolerance_db": 0.02,
+        "psrr_envelope_join_db": 36.327770472359994,
+        "psrr_csv_join_db": 36.32781058771,
+        "psrr_delta_db": -4.01153500035889e-05,
+        "within": true,
+        "verdicts_agree": true
+      },
+      {
+        "point_id": "mos_sf_27C_1.08V",
+        "av0_envelope_db": 42.68399465672,
+        "av0_csv_db": 42.684,
+        "av0_delta_db": -5.343279994463046e-06,
+        "tolerance_db": 0.02,
+        "psrr_envelope_join_db": 31.891675192390004,
+        "psrr_csv_join_db": 31.891680535669998,
+        "psrr_delta_db": -5.343279994463046e-06,
+        "within": true,
+        "verdicts_agree": true
+      },
+      {
+        "point_id": "mos_sf_27C_1.20V",
+        "av0_envelope_db": 43.87406022958,
+        "av0_csv_db": 43.8741,
+        "av0_delta_db": -3.977041999547737e-05,
+        "tolerance_db": 0.02,
+        "psrr_envelope_join_db": 33.514708598000006,
+        "psrr_csv_join_db": 33.51474836842,
+        "psrr_delta_db": -3.977041999547737e-05,
+        "within": true,
+        "verdicts_agree": true
+      },
+      {
+        "point_id": "mos_sf_27C_1.32V",
+        "av0_envelope_db": 45.01477680849,
+        "av0_csv_db": 45.0148,
+        "av0_delta_db": -2.319151000307329e-05,
+        "tolerance_db": 0.02,
+        "psrr_envelope_join_db": 34.42380628179,
+        "psrr_csv_join_db": 34.4238294733,
+        "psrr_delta_db": -2.319151000307329e-05,
+        "within": true,
+        "verdicts_agree": true
+      },
+      {
+        "point_id": "mos_sf_125C_1.08V",
+        "av0_envelope_db": 40.58811585497,
+        "av0_csv_db": 40.5881,
+        "av0_delta_db": 1.585497000178293e-05,
+        "tolerance_db": 0.02,
+        "psrr_envelope_join_db": 30.227398887299998,
+        "psrr_csv_join_db": 30.227383032329996,
+        "psrr_delta_db": 1.585497000178293e-05,
+        "within": true,
+        "verdicts_agree": true
+      },
+      {
+        "point_id": "mos_sf_125C_1.20V",
+        "av0_envelope_db": 41.90008146846,
+        "av0_csv_db": 41.9001,
+        "av0_delta_db": -1.8531540000310542e-05,
+        "tolerance_db": 0.02,
+        "psrr_envelope_join_db": 31.637910291860003,
+        "psrr_csv_join_db": 31.637928823400003,
+        "psrr_delta_db": -1.8531540000310542e-05,
+        "within": true,
+        "verdicts_agree": true
+      },
+      {
+        "point_id": "mos_sf_125C_1.32V",
+        "av0_envelope_db": 43.12258408887,
+        "av0_csv_db": 43.1226,
+        "av0_delta_db": -1.5911129999324203e-05,
+        "tolerance_db": 0.02,
+        "psrr_envelope_join_db": 32.60131641164,
+        "psrr_csv_join_db": 32.60133232277,
+        "psrr_delta_db": -1.5911129999324203e-05,
+        "within": true,
+        "verdicts_agree": true
+      },
+      {
+        "point_id": "mos_fs_-40C_1.08V",
+        "av0_envelope_db": 43.09826553542,
+        "av0_csv_db": 43.0983,
+        "av0_delta_db": -3.446458000411212e-05,
+        "tolerance_db": 0.02,
+        "psrr_envelope_join_db": 33.952729102984996,
+        "psrr_csv_join_db": 33.952763567565,
+        "psrr_delta_db": -3.446458000411212e-05,
+        "within": true,
+        "verdicts_agree": true
+      },
+      {
+        "point_id": "mos_fs_-40C_1.20V",
+        "av0_envelope_db": 44.11971891634,
+        "av0_csv_db": 44.1197,
+        "av0_delta_db": 1.89163399966219e-05,
+        "tolerance_db": 0.02,
+        "psrr_envelope_join_db": 34.740186909856,
+        "psrr_csv_join_db": 34.740167993516,
+        "psrr_delta_db": 1.89163399966219e-05,
+        "within": true,
+        "verdicts_agree": true
+      },
+      {
+        "point_id": "mos_fs_-40C_1.32V",
+        "av0_envelope_db": 45.13282085236,
+        "av0_csv_db": 45.1328,
+        "av0_delta_db": 2.085235999516044e-05,
+        "tolerance_db": 0.02,
+        "psrr_envelope_join_db": 35.07672310983,
+        "psrr_csv_join_db": 35.076702257470004,
+        "psrr_delta_db": 2.085235999516044e-05,
+        "within": true,
+        "verdicts_agree": true
+      },
+      {
+        "point_id": "mos_fs_27C_1.08V",
+        "av0_envelope_db": 41.12963778173,
+        "av0_csv_db": 41.1296,
+        "av0_delta_db": 3.778172999346907e-05,
+        "tolerance_db": 0.02,
+        "psrr_envelope_join_db": 31.569926851332,
+        "psrr_csv_join_db": 31.569889069602006,
+        "psrr_delta_db": 3.778172999346907e-05,
+        "within": true,
+        "verdicts_agree": true
+      },
+      {
+        "point_id": "mos_fs_27C_1.20V",
+        "av0_envelope_db": 42.33164948391,
+        "av0_csv_db": 42.3316,
+        "av0_delta_db": 4.948390999715002e-05,
+        "tolerance_db": 0.02,
+        "psrr_envelope_join_db": 32.680093467329,
+        "psrr_csv_join_db": 32.680043983419,
+        "psrr_delta_db": 4.948391000425545e-05,
+        "within": true,
+        "verdicts_agree": true
+      },
+      {
+        "point_id": "mos_fs_27C_1.32V",
+        "av0_envelope_db": 43.41884738292,
+        "av0_csv_db": 43.4188,
+        "av0_delta_db": 4.738292000183719e-05,
+        "tolerance_db": 0.02,
+        "psrr_envelope_join_db": 33.14284265683,
+        "psrr_csv_join_db": 33.14279527391,
+        "psrr_delta_db": 4.738292000183719e-05,
+        "within": true,
+        "verdicts_agree": true
+      },
+      {
+        "point_id": "mos_fs_125C_1.08V",
+        "av0_envelope_db": 38.22934570799,
+        "av0_csv_db": 38.2293,
+        "av0_delta_db": 4.5707989997367804e-05,
+        "tolerance_db": 0.02,
+        "psrr_envelope_join_db": 26.9010753681,
+        "psrr_csv_join_db": 26.90102966011,
+        "psrr_delta_db": 4.5707989997367804e-05,
+        "within": true,
+        "verdicts_agree": true
+      },
+      {
+        "point_id": "mos_fs_125C_1.20V",
+        "av0_envelope_db": 40.12023037882,
+        "av0_csv_db": 40.1202,
+        "av0_delta_db": 3.037882000000991e-05,
+        "tolerance_db": 0.02,
+        "psrr_envelope_join_db": 29.959796698739996,
+        "psrr_csv_join_db": 29.959766319919996,
+        "psrr_delta_db": 3.037882000000991e-05,
+        "within": true,
+        "verdicts_agree": true
+      },
+      {
+        "point_id": "mos_fs_125C_1.32V",
+        "av0_envelope_db": 41.4247631761,
+        "av0_csv_db": 41.4248,
+        "av0_delta_db": -3.6823899996818454e-05,
+        "tolerance_db": 0.02,
+        "psrr_envelope_join_db": 31.08564499069,
+        "psrr_csv_join_db": 31.085681814589996,
+        "psrr_delta_db": -3.6823899996818454e-05,
+        "within": true,
+        "verdicts_agree": true
+      }
+    ],
+    "status": "agree"
+  },
+  "points_compared": 45,
+  "tolerances": {
+    "avs0_db": {
+      "abs": 0.02,
+      "rel": 0.0,
+      "unit": "dB"
+    },
+    "avs_1khz_db": {
+      "abs": 0.02,
+      "rel": 0.0,
+      "unit": "dB"
+    },
+    "avs_plateau_delta_db": {
+      "abs": 0.005,
+      "rel": 0.0,
+      "unit": "dB"
+    },
+    "psrr_db": {
+      "abs": 0.02,
+      "rel": 0.0,
+      "unit": "dB"
+    },
+    "psrr_1khz_db": {
+      "abs": 0.02,
+      "rel": 0.0,
+      "unit": "dB"
+    },
+    "av0_db": {
+      "abs": 0.02,
+      "rel": 0.0,
+      "unit": "dB"
+    }
+  },
+  "out_of_tolerance": [
+    "mos_tt_-40C_1.08V avs0_db: tool 10.3013293 vs harness 26.4756 (delta -16.2 dB, tolerance 0.02)",
+    "mos_tt_-40C_1.08V avs_1khz_db: tool 10.3005861 vs harness 37.3547 (delta -27.1 dB, tolerance 0.02)",
+    "mos_tt_-40C_1.08V psrr_db: tool 33.1917152 vs harness 16.4762 (delta 16.7 dB, tolerance 0.02)",
+    "mos_tt_-40C_1.08V psrr_1khz_db: tool 33.1924585 vs harness 5.5971 (delta 27.6 dB, tolerance 0.02)",
+    "mos_tt_-40C_1.20V avs0_db: tool 9.89971224 vs harness 35.0794 (delta -25.2 dB, tolerance 0.02)",
+    "mos_tt_-40C_1.20V avs_1khz_db: tool 9.89898849 vs harness 41.1806 (delta -31.3 dB, tolerance 0.02)",
+    "mos_tt_-40C_1.20V psrr_db: tool 34.6907883 vs harness 8.2281 (delta 26.5 dB, tolerance 0.02)",
+    "mos_tt_-40C_1.20V psrr_1khz_db: tool 34.6915121 vs harness 2.1269 (delta 32.6 dB, tolerance 0.02)",
+    "mos_tt_-40C_1.32V avs0_db: tool 10.3201584 vs harness 37.9427 (delta -27.6 dB, tolerance 0.02)",
+    "mos_tt_-40C_1.32V avs_1khz_db: tool 10.3193359 vs harness 42.6847 (delta -32.4 dB, tolerance 0.02)",
+    "mos_tt_-40C_1.32V psrr_db: tool 35.33264 vs harness 6.162 (delta 29.2 dB, tolerance 0.02)",
+    "mos_tt_-40C_1.32V psrr_1khz_db: tool 35.3334625 vs harness 1.42 (delta 33.9 dB, tolerance 0.02)",
+    "mos_tt_27C_1.08V avs0_db: tool 10.0712025 vs harness 29.7694 (delta -19.7 dB, tolerance 0.02)",
+    "mos_tt_27C_1.08V avs_1khz_db: tool 10.0706678 vs harness 36.8132 (delta -26.7 dB, tolerance 0.02)",
+    "mos_tt_27C_1.08V psrr_db: tool 31.6409121 vs harness 11.3735 (delta 20.3 dB, tolerance 0.02)",
+    "mos_tt_27C_1.08V psrr_1khz_db: tool 31.6414468 vs harness 4.3297 (delta 27.3 dB, tolerance 0.02)",
+    "mos_tt_27C_1.20V avs0_db: tool 10.0740158 vs harness 35.5167 (delta -25.4 dB, tolerance 0.02)",
+    "mos_tt_27C_1.20V avs_1khz_db: tool 10.073439 vs harness 39.6523 (delta -29.6 dB, tolerance 0.02)",
+    "mos_tt_27C_1.20V psrr_db: tool 32.7987151 vs harness 6.4335 (delta 26.4 dB, tolerance 0.02)",
+    "mos_tt_27C_1.20V psrr_1khz_db: tool 32.799292 vs harness 2.2979 (delta 30.5 dB, tolerance 0.02)",
+    "mos_tt_27C_1.32V avs0_db: tool 10.5268292 vs harness 38.2646 (delta -27.7 dB, tolerance 0.02)",
+    "mos_tt_27C_1.32V avs_1khz_db: tool 10.5261617 vs harness 41.0892 (delta -30.6 dB, tolerance 0.02)",
+    "mos_tt_27C_1.32V psrr_db: tool 33.4701626 vs harness 4.7291 (delta 28.7 dB, tolerance 0.02)",
+    "mos_tt_27C_1.32V psrr_1khz_db: tool 33.4708301 vs harness 1.9045 (delta 31.6 dB, tolerance 0.02)",
+    "mos_tt_125C_1.08V avs0_db: tool 10.3445869 vs harness 31.9604 (delta -21.6 dB, tolerance 0.02)",
+    "mos_tt_125C_1.08V avs_1khz_db: tool 10.3441856 vs harness 35.4336 (delta -25.1 dB, tolerance 0.02)",
+    "mos_tt_125C_1.08V psrr_db: tool 29.0783504 vs harness 6.9739 (delta 22.1 dB, tolerance 0.02)",
+    "mos_tt_125C_1.08V psrr_1khz_db: tool 29.0787517 vs harness 3.5007 (delta 25.6 dB, tolerance 0.02)",
+    "mos_tt_125C_1.20V avs0_db: tool 10.139558 vs harness 36.0035 (delta -25.9 dB, tolerance 0.02)",
+    "mos_tt_125C_1.20V avs_1khz_db: tool 10.1390795 vs harness 37.7365 (delta -27.6 dB, tolerance 0.02)",
+    "mos_tt_125C_1.20V psrr_db: tool 30.7155586 vs harness 4.2583 (delta 26.5 dB, tolerance 0.02)",
+    "mos_tt_125C_1.20V psrr_1khz_db: tool 30.716037 vs harness 2.5253 (delta 28.2 dB, tolerance 0.02)",
+    "mos_tt_125C_1.32V avs0_db: tool 10.4682003 vs harness 38.4899 (delta -28 dB, tolerance 0.02)",
+    "mos_tt_125C_1.32V avs_1khz_db: tool 10.4676297 vs harness 39.2102 (delta -28.7 dB, tolerance 0.02)",
+    "mos_tt_125C_1.32V psrr_db: tool 31.6267554 vs harness 2.9983 (delta 28.6 dB, tolerance 0.02)",
+    "mos_tt_125C_1.32V psrr_1khz_db: tool 31.627326 vs harness 2.278 (delta 29.3 dB, tolerance 0.02)",
+    "mos_ss_-40C_1.08V avs0_db: tool 12.4483412 vs harness 14.7784 (delta -2.33 dB, tolerance 0.02)",
+    "mos_ss_-40C_1.08V avs_1khz_db: tool 12.4465772 vs harness 35.2669 (delta -22.8 dB, tolerance 0.02)",
+    "mos_ss_-40C_1.08V avs_plateau_delta_db: tool 1.78630444e-11 vs harness 0.0660786 (delta -0.0661 dB, tolerance 0.005)",
+    "mos_ss_-40C_1.08V psrr_db: tool 32.0947715 vs harness 29.5448 (delta 2.55 dB, tolerance 0.02)",
+    "mos_ss_-40C_1.08V psrr_1khz_db: tool 32.0965354 vs harness 9.0563 (delta 23 dB, tolerance 0.02)",
+    "mos_ss_-40C_1.08V plateau_guard: harness pass=False vs tool pass=True",
+    "mos_ss_-40C_1.20V avs0_db: tool 10.8532005 vs harness 29.0517 (delta -18.2 dB, tolerance 0.02)",
+    "mos_ss_-40C_1.20V avs_1khz_db: tool 10.8521593 vs harness 40.2876 (delta -29.4 dB, tolerance 0.02)",
+    "mos_ss_-40C_1.20V avs_plateau_delta_db: tool 1.07256426e-11 vs harness 0.0083333 (delta -0.00833 dB, tolerance 0.005)",
+    "mos_ss_-40C_1.20V psrr_db: tool 34.869848 vs harness 15.9377 (delta 18.9 dB, tolerance 0.02)",
+    "mos_ss_-40C_1.20V psrr_1khz_db: tool 34.8708892 vs harness 4.7018 (delta 30.2 dB, tolerance 0.02)",
+    "mos_ss_-40C_1.32V avs0_db: tool 10.5694763 vs harness 36.5609 (delta -26 dB, tolerance 0.02)",
+    "mos_ss_-40C_1.32V avs_1khz_db: tool 10.5684181 vs harness 43.5652 (delta -33 dB, tolerance 0.02)",
+    "mos_ss_-40C_1.32V avs_plateau_delta_db: tool 1.09690035e-11 vs harness 0.0071503 (delta -0.00715 dB, tolerance 0.005)",
+    "mos_ss_-40C_1.32V psrr_db: tool 36.2089273 vs harness 8.6356 (delta 27.6 dB, tolerance 0.02)",
+    "mos_ss_-40C_1.32V psrr_1khz_db: tool 36.2099855 vs harness 1.6313 (delta 34.6 dB, tolerance 0.02)",
+    "mos_ss_27C_1.08V avs0_db: tool 11.7210724 vs harness 22.3819 (delta -10.7 dB, tolerance 0.02)",
+    "mos_ss_27C_1.08V avs_1khz_db: tool 11.7201597 vs harness 34.7916 (delta -23.1 dB, tolerance 0.02)",
+    "mos_ss_27C_1.08V avs_plateau_delta_db: tool 9.32232069e-12 vs harness 0.0193402 (delta -0.0193 dB, tolerance 0.005)",
+    "mos_ss_27C_1.08V psrr_db: tool 30.8295826 vs harness 19.893 (delta 10.9 dB, tolerance 0.02)",
+    "mos_ss_27C_1.08V psrr_1khz_db: tool 30.8304953 vs harness 7.4833 (delta 23.3 dB, tolerance 0.02)",
+    "mos_ss_27C_1.20V avs0_db: tool 10.7688233 vs harness 31.4629 (delta -20.7 dB, tolerance 0.02)",
+    "mos_ss_27C_1.20V avs_1khz_db: tool 10.7680696 vs harness 39.2597 (delta -28.5 dB, tolerance 0.02)",
+    "mos_ss_27C_1.20V avs_plateau_delta_db: tool 7.84083909e-12 vs harness 0.0087915 (delta -0.00879 dB, tolerance 0.005)",
+    "mos_ss_27C_1.20V psrr_db: tool 32.9830298 vs harness 11.5841 (delta 21.4 dB, tolerance 0.02)",
+    "mos_ss_27C_1.20V psrr_1khz_db: tool 32.9837834 vs harness 3.7873 (delta 29.2 dB, tolerance 0.02)",
+    "mos_ss_27C_1.32V avs0_db: tool 10.8258487 vs harness 36.6746 (delta -25.8 dB, tolerance 0.02)",
+    "mos_ss_27C_1.32V avs_1khz_db: tool 10.8250295 vs harness 41.7543 (delta -30.9 dB, tolerance 0.02)",
+    "mos_ss_27C_1.32V avs_plateau_delta_db: tool 8.46256398e-12 vs harness 0.0074982 (delta -0.0075 dB, tolerance 0.005)",
+    "mos_ss_27C_1.32V psrr_db: tool 34.0323448 vs harness 7.0825 (delta 26.9 dB, tolerance 0.02)",
+    "mos_ss_27C_1.32V psrr_1khz_db: tool 34.0331639 vs harness 2.0028 (delta 32 dB, tolerance 0.02)",
+    "mos_ss_125C_1.08V avs0_db: tool 11.2845486 vs harness 27.3984 (delta -16.1 dB, tolerance 0.02)",
+    "mos_ss_125C_1.08V avs_1khz_db: tool 11.2840141 vs harness 34.1952 (delta -22.9 dB, tolerance 0.02)",
+    "mos_ss_125C_1.08V avs_plateau_delta_db: tool 5.51025892e-12 vs harness 0.0067559 (delta -0.00676 dB, tolerance 0.005)",
+    "mos_ss_125C_1.08V psrr_db: tool 28.7571833 vs harness 12.3126 (delta 16.4 dB, tolerance 0.02)",
+    "mos_ss_125C_1.08V psrr_1khz_db: tool 28.7577177 vs harness 5.5158 (delta 23.2 dB, tolerance 0.02)",
+    "mos_ss_125C_1.20V avs0_db: tool 10.6060232 vs harness 33.3971 (delta -22.8 dB, tolerance 0.02)",
+    "mos_ss_125C_1.20V avs_1khz_db: tool 10.6054494 vs harness 37.6844 (delta -27.1 dB, tolerance 0.02)",
+    "mos_ss_125C_1.20V psrr_db: tool 30.8603427 vs harness 7.4994 (delta 23.4 dB, tolerance 0.02)",
+    "mos_ss_125C_1.20V psrr_1khz_db: tool 30.8609166 vs harness 3.2121 (delta 27.6 dB, tolerance 0.02)",
+    "mos_ss_125C_1.32V avs0_db: tool 10.7724207 vs harness 37.1041 (delta -26.3 dB, tolerance 0.02)",
+    "mos_ss_125C_1.32V avs_1khz_db: tool 10.7717581 vs harness 39.6394 (delta -28.9 dB, tolerance 0.02)",
+    "mos_ss_125C_1.32V psrr_db: tool 31.9075665 vs harness 4.893 (delta 27 dB, tolerance 0.02)",
+    "mos_ss_125C_1.32V psrr_1khz_db: tool 31.9082291 vs harness 2.3577 (delta 29.6 dB, tolerance 0.02)",
+    "mos_ff_-40C_1.08V avs0_db: tool 8.74909811 vs harness 34.2637 (delta -25.5 dB, tolerance 0.02)",
+    "mos_ff_-40C_1.08V avs_1khz_db: tool 8.74854872 vs harness 39.7534 (delta -31 dB, tolerance 0.02)",
+    "mos_ff_-40C_1.08V psrr_db: tool 34.6623567 vs harness 8.0229 (delta 26.6 dB, tolerance 0.02)",
+    "mos_ff_-40C_1.08V psrr_1khz_db: tool 34.6629061 vs harness 2.5332 (delta 32.1 dB, tolerance 0.02)",
+    "mos_ff_-40C_1.20V avs0_db: tool 9.29298545 vs harness 37.7552 (delta -28.5 dB, tolerance 0.02)",
+    "mos_ff_-40C_1.20V avs_1khz_db: tool 9.29236191 vs harness 41.4438 (delta -32.2 dB, tolerance 0.02)",
+    "mos_ff_-40C_1.20V psrr_db: tool 35.1719461 vs harness 5.3341 (delta 29.8 dB, tolerance 0.02)",
+    "mos_ff_-40C_1.20V psrr_1khz_db: tool 35.1725697 vs harness 1.6455 (delta 33.5 dB, tolerance 0.02)",
+    "mos_ff_-40C_1.32V avs0_db: tool 9.8327435 vs harness 39.8741 (delta -30 dB, tolerance 0.02)",
+    "mos_ff_-40C_1.32V avs_1khz_db: tool 9.83202088 vs harness 42.5766 (delta -32.7 dB, tolerance 0.02)",
+    "mos_ff_-40C_1.32V psrr_db: tool 35.6880896 vs harness 4.261 (delta 31.4 dB, tolerance 0.02)",
+    "mos_ff_-40C_1.32V psrr_1khz_db: tool 35.6888122 vs harness 1.5585 (delta 34.1 dB, tolerance 0.02)",
+    "mos_ff_27C_1.08V avs0_db: tool 9.05140728 vs harness 35.0126 (delta -26 dB, tolerance 0.02)",
+    "mos_ff_27C_1.08V avs_1khz_db: tool 9.05096182 vs harness 38.3787 (delta -29.3 dB, tolerance 0.02)",
+    "mos_ff_27C_1.08V psrr_db: tool 32.7007548 vs harness 5.9101 (delta 26.8 dB, tolerance 0.02)",
+    "mos_ff_27C_1.08V psrr_1khz_db: tool 32.7012003 vs harness 2.544 (delta 30.2 dB, tolerance 0.02)",
+    "mos_ff_27C_1.20V avs0_db: tool 9.57243811 vs harness 38.0111 (delta -28.4 dB, tolerance 0.02)",
+    "mos_ff_27C_1.20V avs_1khz_db: tool 9.57191996 vs harness 39.9363 (delta -30.4 dB, tolerance 0.02)",
+    "mos_ff_27C_1.20V psrr_db: tool 33.3200313 vs harness 3.987 (delta 29.3 dB, tolerance 0.02)",
+    "mos_ff_27C_1.20V psrr_1khz_db: tool 33.3205494 vs harness 2.0618 (delta 31.3 dB, tolerance 0.02)",
+    "mos_ff_27C_1.32V avs0_db: tool 10.0922511 vs harness 40.1385 (delta -30 dB, tolerance 0.02)",
+    "mos_ff_27C_1.32V avs_1khz_db: tool 10.0916427 vs harness 41.1443 (delta -31.1 dB, tolerance 0.02)",
+    "mos_ff_27C_1.32V psrr_db: tool 33.9205665 vs harness 2.9988 (delta 30.9 dB, tolerance 0.02)",
+    "mos_ff_27C_1.32V psrr_1khz_db: tool 33.921175 vs harness 1.993 (delta 31.9 dB, tolerance 0.02)",
+    "mos_ff_125C_1.08V avs0_db: tool 9.70541874 vs harness 35.3396 (delta -25.6 dB, tolerance 0.02)",
+    "mos_ff_125C_1.08V avs_1khz_db: tool 9.7050516 vs harness 36.3987 (delta -26.7 dB, tolerance 0.02)",
+    "mos_ff_125C_1.08V psrr_db: tool 29.9203251 vs harness 3.7395 (delta 26.2 dB, tolerance 0.02)",
+    "mos_ff_125C_1.08V psrr_1khz_db: tool 29.9206922 vs harness 2.6804 (delta 27.2 dB, tolerance 0.02)",
+    "mos_ff_125C_1.20V avs0_db: tool 9.73684021 vs harness 37.9353 (delta -28.2 dB, tolerance 0.02)",
+    "mos_ff_125C_1.20V avs_1khz_db: tool 9.73639063 vs harness 38.095 (delta -28.4 dB, tolerance 0.02)",
+    "mos_ff_125C_1.20V psrr_db: tool 31.2910105 vs harness 2.5244 (delta 28.8 dB, tolerance 0.02)",
+    "mos_ff_125C_1.20V psrr_1khz_db: tool 31.2914601 vs harness 2.3647 (delta 28.9 dB, tolerance 0.02)",
+    "mos_ff_125C_1.32V avs0_db: tool 10.0985474 vs harness 39.8214 (delta -29.7 dB, tolerance 0.02)",
+    "mos_ff_125C_1.32V avs_1khz_db: tool 10.0980061 vs harness 39.4366 (delta -29.3 dB, tolerance 0.02)",
+    "mos_ff_125C_1.32V psrr_db: tool 32.1628872 vs harness 1.8709 (delta 30.3 dB, tolerance 0.02)",
+    "mos_ff_125C_1.32V psrr_1khz_db: tool 32.1634285 vs harness 2.2557 (delta 29.9 dB, tolerance 0.02)",
+    "mos_sf_-40C_1.08V avs0_db: tool 11.2677126 vs harness 23.0778 (delta -11.8 dB, tolerance 0.02)",
+    "mos_sf_-40C_1.08V avs_1khz_db: tool 11.2666117 vs harness 36.9109 (delta -25.6 dB, tolerance 0.02)",
+    "mos_sf_-40C_1.08V avs_plateau_delta_db: tool 1.13260512e-11 vs harness 0.0064289 (delta -0.00643 dB, tolerance 0.005)",
+    "mos_sf_-40C_1.08V psrr_db: tool 33.1717512 vs harness 20.9453 (delta 12.2 dB, tolerance 0.02)",
+    "mos_sf_-40C_1.08V psrr_1khz_db: tool 33.1728521 vs harness 7.1122 (delta 26.1 dB, tolerance 0.02)",
+    "mos_sf_-40C_1.20V avs0_db: tool 10.2245271 vs harness 33.857 (delta -23.6 dB, tolerance 0.02)",
+    "mos_sf_-40C_1.20V avs_1khz_db: tool 10.2236161 vs harness 41.5375 (delta -31.3 dB, tolerance 0.02)",
+    "mos_sf_-40C_1.20V psrr_db: tool 35.3655442 vs harness 10.5053 (delta 24.9 dB, tolerance 0.02)",
+    "mos_sf_-40C_1.20V psrr_1khz_db: tool 35.3664553 vs harness 2.8248 (delta 32.5 dB, tolerance 0.02)",
+    "mos_sf_-40C_1.32V avs0_db: tool 10.3382894 vs harness 38.1841 (delta -27.8 dB, tolerance 0.02)",
+    "mos_sf_-40C_1.32V avs_1khz_db: tool 10.3372818 vs harness 43.5813 (delta -33.2 dB, tolerance 0.02)",
+    "mos_sf_-40C_1.32V psrr_db: tool 36.3277705 vs harness 6.697 (delta 29.6 dB, tolerance 0.02)",
+    "mos_sf_-40C_1.32V psrr_1khz_db: tool 36.3287781 vs harness 1.2998 (delta 35 dB, tolerance 0.02)",
+    "mos_sf_27C_1.08V avs0_db: tool 10.7923195 vs harness 28.2409 (delta -17.4 dB, tolerance 0.02)",
+    "mos_sf_27C_1.08V avs_1khz_db: tool 10.7915985 vs harness 36.6717 (delta -25.9 dB, tolerance 0.02)",
+    "mos_sf_27C_1.08V psrr_db: tool 31.8916752 vs harness 13.956 (delta 17.9 dB, tolerance 0.02)",
+    "mos_sf_27C_1.08V psrr_1khz_db: tool 31.8923962 vs harness 5.5252 (delta 26.4 dB, tolerance 0.02)",
+    "mos_sf_27C_1.20V avs0_db: tool 10.3593516 vs harness 35.5724 (delta -25.2 dB, tolerance 0.02)",
+    "mos_sf_27C_1.20V avs_1khz_db: tool 10.3586343 vs harness 40.2729 (delta -29.9 dB, tolerance 0.02)",
+    "mos_sf_27C_1.20V psrr_db: tool 33.5147086 vs harness 7.3353 (delta 26.2 dB, tolerance 0.02)",
+    "mos_sf_27C_1.20V psrr_1khz_db: tool 33.5154259 vs harness 2.6348 (delta 30.9 dB, tolerance 0.02)",
+    "mos_sf_27C_1.32V avs0_db: tool 10.5909705 vs harness 38.9633 (delta -28.4 dB, tolerance 0.02)",
+    "mos_sf_27C_1.32V avs_1khz_db: tool 10.5901524 vs harness 42.0032 (delta -31.4 dB, tolerance 0.02)",
+    "mos_sf_27C_1.32V psrr_db: tool 34.4238063 vs harness 4.9035 (delta 29.5 dB, tolerance 0.02)",
+    "mos_sf_27C_1.32V psrr_1khz_db: tool 34.4246244 vs harness 1.8636 (delta 32.6 dB, tolerance 0.02)",
+    "mos_sf_125C_1.08V avs0_db: tool 10.360717 vs harness 32.4904 (delta -22.1 dB, tolerance 0.02)",
+    "mos_sf_125C_1.08V avs_1khz_db: tool 10.3601956 vs harness 36.0041 (delta -25.6 dB, tolerance 0.02)",
+    "mos_sf_125C_1.08V psrr_db: tool 30.2273989 vs harness 7.6098 (delta 22.6 dB, tolerance 0.02)",
+    "mos_sf_125C_1.08V psrr_1khz_db: tool 30.2279203 vs harness 4.0961 (delta 26.1 dB, tolerance 0.02)",
+    "mos_sf_125C_1.20V avs0_db: tool 10.2621712 vs harness 36.8916 (delta -26.6 dB, tolerance 0.02)",
+    "mos_sf_125C_1.20V avs_1khz_db: tool 10.2615799 vs harness 38.5691 (delta -28.3 dB, tolerance 0.02)",
+    "mos_sf_125C_1.20V psrr_db: tool 31.6379103 vs harness 4.3624 (delta 27.3 dB, tolerance 0.02)",
+    "mos_sf_125C_1.20V psrr_1khz_db: tool 31.6385016 vs harness 2.6849 (delta 29 dB, tolerance 0.02)",
+    "mos_sf_125C_1.32V avs0_db: tool 10.5212677 vs harness 39.4839 (delta -29 dB, tolerance 0.02)",
+    "mos_sf_125C_1.32V avs_1khz_db: tool 10.5205707 vs harness 40.1434 (delta -29.6 dB, tolerance 0.02)",
+    "mos_sf_125C_1.32V psrr_db: tool 32.6013164 vs harness 2.957 (delta 29.6 dB, tolerance 0.02)",
+    "mos_sf_125C_1.32V psrr_1khz_db: tool 32.6020134 vs harness 2.2975 (delta 30.3 dB, tolerance 0.02)",
+    "mos_fs_-40C_1.08V avs0_db: tool 9.14553643 vs harness 30.5975 (delta -21.5 dB, tolerance 0.02)",
+    "mos_fs_-40C_1.08V avs_1khz_db: tool 9.14495473 vs harness 38.2978 (delta -29.2 dB, tolerance 0.02)",
+    "mos_fs_-40C_1.08V psrr_db: tool 33.9527291 vs harness 11.7989 (delta 22.2 dB, tolerance 0.02)",
+    "mos_fs_-40C_1.08V psrr_1khz_db: tool 33.9533108 vs harness 4.0986 (delta 29.9 dB, tolerance 0.02)",
+    "mos_fs_-40C_1.20V avs0_db: tool 9.37953201 vs harness 35.7069 (delta -26.3 dB, tolerance 0.02)",
+    "mos_fs_-40C_1.20V avs_1khz_db: tool 9.37891205 vs harness 41.0324 (delta -31.7 dB, tolerance 0.02)",
+    "mos_fs_-40C_1.20V psrr_db: tool 34.7401869 vs harness 7.1421 (delta 27.6 dB, tolerance 0.02)",
+    "mos_fs_-40C_1.20V psrr_1khz_db: tool 34.7408069 vs harness 1.8166 (delta 32.9 dB, tolerance 0.02)",
+    "mos_fs_-40C_1.32V avs0_db: tool 10.0560977 vs harness 37.8688 (delta -27.8 dB, tolerance 0.02)",
+    "mos_fs_-40C_1.32V avs_1khz_db: tool 10.0553869 vs harness 42.2471 (delta -32.2 dB, tolerance 0.02)",
+    "mos_fs_-40C_1.32V psrr_db: tool 35.0767231 vs harness 5.867 (delta 29.2 dB, tolerance 0.02)",
+    "mos_fs_-40C_1.32V psrr_1khz_db: tool 35.077434 vs harness 1.4887 (delta 33.6 dB, tolerance 0.02)",
+    "mos_fs_27C_1.08V avs0_db: tool 9.55971093 vs harness 32.0998 (delta -22.5 dB, tolerance 0.02)",
+    "mos_fs_27C_1.08V avs_1khz_db: tool 9.55927686 vs harness 37.0841 (delta -27.5 dB, tolerance 0.02)",
+    "mos_fs_27C_1.08V psrr_db: tool 31.5699269 vs harness 8.4205 (delta 23.1 dB, tolerance 0.02)",
+    "mos_fs_27C_1.08V psrr_1khz_db: tool 31.5703609 vs harness 3.4362 (delta 28.1 dB, tolerance 0.02)",
+    "mos_fs_27C_1.20V avs0_db: tool 9.65155602 vs harness 35.4197 (delta -25.8 dB, tolerance 0.02)",
+    "mos_fs_27C_1.20V avs_1khz_db: tool 9.65106225 vs harness 39.3235 (delta -29.7 dB, tolerance 0.02)",
+    "mos_fs_27C_1.20V psrr_db: tool 32.6800935 vs harness 6.034 (delta 26.6 dB, tolerance 0.02)",
+    "mos_fs_27C_1.20V psrr_1khz_db: tool 32.6805872 vs harness 2.1302 (delta 30.6 dB, tolerance 0.02)",
+    "mos_fs_27C_1.32V avs0_db: tool 10.2760047 vs harness 37.8548 (delta -27.6 dB, tolerance 0.02)",
+    "mos_fs_27C_1.32V avs_1khz_db: tool 10.2754302 vs harness 40.5916 (delta -30.3 dB, tolerance 0.02)",
+    "mos_fs_27C_1.32V psrr_db: tool 33.1428427 vs harness 4.6519 (delta 28.5 dB, tolerance 0.02)",
+    "mos_fs_27C_1.32V psrr_1khz_db: tool 33.1434171 vs harness 1.9151 (delta 31.2 dB, tolerance 0.02)",
+    "mos_fs_125C_1.08V avs0_db: tool 11.3282703 vs harness 31.5519 (delta -20.2 dB, tolerance 0.02)",
+    "mos_fs_125C_1.08V avs_1khz_db: tool 11.3279617 vs harness 34.6168 (delta -23.3 dB, tolerance 0.02)",
+    "mos_fs_125C_1.08V psrr_db: tool 26.9010754 vs harness 6.2293 (delta 20.7 dB, tolerance 0.02)",
+    "mos_fs_125C_1.08V psrr_1khz_db: tool 26.901384 vs harness 3.1644 (delta 23.7 dB, tolerance 0.02)",
+    "mos_fs_125C_1.20V avs0_db: tool 10.1604337 vs harness 35.2713 (delta -25.1 dB, tolerance 0.02)",
+    "mos_fs_125C_1.20V avs_1khz_db: tool 10.1600305 vs harness 37.1395 (delta -27 dB, tolerance 0.02)",
+    "mos_fs_125C_1.20V psrr_db: tool 29.9597967 vs harness 4.2971 (delta 25.7 dB, tolerance 0.02)",
+    "mos_fs_125C_1.20V psrr_1khz_db: tool 29.9601999 vs harness 2.4289 (delta 27.5 dB, tolerance 0.02)",
+    "mos_fs_125C_1.32V avs0_db: tool 10.3391182 vs harness 37.7983 (delta -27.5 dB, tolerance 0.02)",
+    "mos_fs_125C_1.32V avs_1khz_db: tool 10.3386298 vs harness 38.6177 (delta -28.3 dB, tolerance 0.02)",
+    "mos_fs_125C_1.32V psrr_db: tool 31.085645 vs harness 3.0691 (delta 28 dB, tolerance 0.02)",
+    "mos_fs_125C_1.32V psrr_1khz_db: tool 31.0861333 vs harness 2.2497 (delta 28.8 dB, tolerance 0.02)"
+  ],
+  "join_inconsistencies": [
+    "mos_tt_-40C_1.08V: open-loop-envelope av0_db 43.49304457716 != harness-recorded av0_db 42.9518",
+    "mos_tt_-40C_1.20V: open-loop-envelope av0_db 44.59050058032 != harness-recorded av0_db 43.3075",
+    "mos_tt_-40C_1.32V: open-loop-envelope av0_db 45.65279840599 != harness-recorded av0_db 44.1047",
+    "mos_tt_27C_1.08V: open-loop-envelope av0_db 41.71211460366 != harness-recorded av0_db 41.1429",
+    "mos_tt_27C_1.20V: open-loop-envelope av0_db 42.87273094762 != harness-recorded av0_db 41.9502",
+    "mos_tt_27C_1.32V: open-loop-envelope av0_db 43.99699181373 != harness-recorded av0_db 42.9937",
+    "mos_tt_125C_1.08V: open-loop-envelope av0_db 39.42293726718 != harness-recorded av0_db 38.9343",
+    "mos_tt_125C_1.20V: open-loop-envelope av0_db 40.8551165987 != harness-recorded av0_db 40.2618",
+    "mos_tt_125C_1.32V: open-loop-envelope av0_db 42.09495567249 != harness-recorded av0_db 41.4882",
+    "mos_ss_-40C_1.08V: open-loop-envelope av0_db 44.54311265863 != harness-recorded av0_db 44.3232",
+    "mos_ss_-40C_1.20V: open-loop-envelope av0_db 45.72304849019 != harness-recorded av0_db 44.9894",
+    "mos_ss_-40C_1.32V: open-loop-envelope av0_db 46.77840361089 != harness-recorded av0_db 45.1965",
+    "mos_ss_27C_1.08V: open-loop-envelope av0_db 42.55065497556 != harness-recorded av0_db 42.2749",
+    "mos_ss_27C_1.20V: open-loop-envelope av0_db 43.75185306771 != harness-recorded av0_db 43.047",
+    "mos_ss_27C_1.32V: open-loop-envelope av0_db 44.85819349188 != harness-recorded av0_db 43.7571",
+    "mos_ss_125C_1.08V: open-loop-envelope av0_db 40.04173187305 != harness-recorded av0_db 39.711",
+    "mos_ss_125C_1.20V: open-loop-envelope av0_db 41.46636592767 != harness-recorded av0_db 40.8965",
+    "mos_ss_125C_1.32V: open-loop-envelope av0_db 42.67998727206 != harness-recorded av0_db 41.9971",
+    "mos_ff_-40C_1.08V: open-loop-envelope av0_db 43.4114548632 != harness-recorded av0_db 42.2866",
+    "mos_ff_-40C_1.20V: open-loop-envelope av0_db 44.46493156213 != harness-recorded av0_db 43.0893",
+    "mos_ff_-40C_1.32V: open-loop-envelope av0_db 45.52083311748 != harness-recorded av0_db 44.1351",
+    "mos_ff_27C_1.08V: open-loop-envelope av0_db 41.75216213168 != harness-recorded av0_db 40.9227",
+    "mos_ff_27C_1.20V: open-loop-envelope av0_db 42.89246936348 != harness-recorded av0_db 41.9981",
+    "mos_ff_27C_1.32V: open-loop-envelope av0_db 44.012817648 != harness-recorded av0_db 43.1373",
+    "mos_ff_125C_1.08V: open-loop-envelope av0_db 39.62574381412 != harness-recorded av0_db 39.0791",
+    "mos_ff_125C_1.20V: open-loop-envelope av0_db 41.02785068972 != harness-recorded av0_db 40.4597",
+    "mos_ff_125C_1.32V: open-loop-envelope av0_db 42.26143460363 != harness-recorded av0_db 41.6923",
+    "mos_sf_-40C_1.08V: open-loop-envelope av0_db 44.43946381663 != harness-recorded av0_db 44.0231",
+    "mos_sf_-40C_1.20V: open-loop-envelope av0_db 45.59007136918 != harness-recorded av0_db 44.3623",
+    "mos_sf_-40C_1.32V: open-loop-envelope av0_db 46.66605988465 != harness-recorded av0_db 44.8811",
+    "mos_sf_27C_1.08V: open-loop-envelope av0_db 42.68399465672 != harness-recorded av0_db 42.1969",
+    "mos_sf_27C_1.20V: open-loop-envelope av0_db 43.87406022958 != harness-recorded av0_db 42.9077",
+    "mos_sf_27C_1.32V: open-loop-envelope av0_db 45.01477680849 != harness-recorded av0_db 43.8668",
+    "mos_sf_125C_1.08V: open-loop-envelope av0_db 40.58811585497 != harness-recorded av0_db 40.1002",
+    "mos_sf_125C_1.20V: open-loop-envelope av0_db 41.90008146846 != harness-recorded av0_db 41.254",
+    "mos_sf_125C_1.32V: open-loop-envelope av0_db 43.12258408887 != harness-recorded av0_db 42.4409",
+    "mos_fs_-40C_1.08V: open-loop-envelope av0_db 43.09826553542 != harness-recorded av0_db 42.3964",
+    "mos_fs_-40C_1.20V: open-loop-envelope av0_db 44.11971891634 != harness-recorded av0_db 42.849",
+    "mos_fs_-40C_1.32V: open-loop-envelope av0_db 45.13282085236 != harness-recorded av0_db 43.7358",
+    "mos_fs_27C_1.08V: open-loop-envelope av0_db 41.12963778173 != harness-recorded av0_db 40.5203",
+    "mos_fs_27C_1.20V: open-loop-envelope av0_db 42.33164948391 != harness-recorded av0_db 41.4537",
+    "mos_fs_27C_1.32V: open-loop-envelope av0_db 43.41884738292 != harness-recorded av0_db 42.5067",
+    "mos_fs_125C_1.08V: open-loop-envelope av0_db 38.22934570799 != harness-recorded av0_db 37.7812",
+    "mos_fs_125C_1.20V: open-loop-envelope av0_db 40.12023037882 != harness-recorded av0_db 39.5684",
+    "mos_fs_125C_1.32V: open-loop-envelope av0_db 41.4247631761 != harness-recorded av0_db 40.8674"
+  ],
+  "bound_verdict_disagreements": [],
+  "unexplained_bound_verdict_disagreements": 0,
+  "row": {
+    "bound": {
+      "min": 1.87,
+      "unit": "dB"
+    },
+    "tool_worst": {
+      "point": "mos_fs_125C_1.08V",
+      "value": 26.9010753681,
+      "verdict": "pass"
+    },
+    "harness_worst": {
+      "point": "mos_ff_125C_1.32V",
+      "value": 1.8709,
+      "verdict": "pass"
+    },
+    "verdict_source": "offline join of the tool's Avs with the open-loop `klt sim` AC envelope's Av0 (av0_db); not a klt verdict",
+    "tool_plateau_guard": {
+      "status": "pass",
+      "limits": {
+        "max": 0.05
+      },
+      "worst_case": {
+        "corner_id": "mos_ss/vdd=1.080_vinp=0.540V/-40C",
+        "value": 1.786304437701e-11,
+        "margin": 0.04999999998213696
+      }
+    }
+  },
+  "points": [
+    {
+      "point_id": "mos_tt_-40C_1.08V",
+      "process": "mos_tt",
+      "temperature_c": -40,
+      "vdd_v": 1.08,
+      "av0_db_joined": 43.49304457716,
+      "metrics": {
+        "avs0_db": {
+          "harness": 26.4756,
+          "tool": 10.30132934578,
+          "delta": -16.174270654220003,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_1khz_db": {
+          "harness": 37.3547,
+          "tool": 10.30058611087,
+          "delta": -27.05411388913,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_plateau_delta_db": {
+          "harness": 0.0014613,
+          "tool": 7.741363106106e-12,
+          "delta": -0.001461299992258637,
+          "tolerance": 0.005,
+          "unit": "dB",
+          "within": true
+        },
+        "psrr_db": {
+          "harness": 16.4762,
+          "tool": 33.19171523138,
+          "delta": 16.715515231380003,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "psrr_1khz_db": {
+          "harness": 5.5971,
+          "tool": 33.19245846629,
+          "delta": 27.595358466289998,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        }
+      },
+      "plateau_guard": {
+        "harness_pass": true,
+        "tool_pass": true,
+        "agree": true
+      },
+      "row": {
+        "tool_psrr_db": 33.19171523138,
+        "harness_psrr_db": 16.4762,
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "verdict_source": "offline join with the open-loop klt sim envelope (not a klt verdict)"
+      }
+    },
+    {
+      "point_id": "mos_tt_-40C_1.20V",
+      "process": "mos_tt",
+      "temperature_c": -40,
+      "vdd_v": 1.2,
+      "av0_db_joined": 44.59050058032,
+      "metrics": {
+        "avs0_db": {
+          "harness": 35.0794,
+          "tool": 9.899712244857,
+          "delta": -25.179687755143,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_1khz_db": {
+          "harness": 41.1806,
+          "tool": 9.898988490822,
+          "delta": -31.281611509178,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_plateau_delta_db": {
+          "harness": 0.0009111,
+          "tool": 7.565503779006e-12,
+          "delta": -0.0009110999924344962,
+          "tolerance": 0.005,
+          "unit": "dB",
+          "within": true
+        },
+        "psrr_db": {
+          "harness": 8.2281,
+          "tool": 34.690788335463,
+          "delta": 26.462688335463,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "psrr_1khz_db": {
+          "harness": 2.1269,
+          "tool": 34.691512089498,
+          "delta": 32.564612089498,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        }
+      },
+      "plateau_guard": {
+        "harness_pass": true,
+        "tool_pass": true,
+        "agree": true
+      },
+      "row": {
+        "tool_psrr_db": 34.690788335463,
+        "harness_psrr_db": 8.2281,
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "verdict_source": "offline join with the open-loop klt sim envelope (not a klt verdict)"
+      }
+    },
+    {
+      "point_id": "mos_tt_-40C_1.32V",
+      "process": "mos_tt",
+      "temperature_c": -40,
+      "vdd_v": 1.32,
+      "av0_db_joined": 45.65279840599,
+      "metrics": {
+        "avs0_db": {
+          "harness": 37.9427,
+          "tool": 10.32015844,
+          "delta": -27.622541560000002,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_1khz_db": {
+          "harness": 42.6847,
+          "tool": 10.31933591885,
+          "delta": -32.36536408115,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_plateau_delta_db": {
+          "harness": 0.0008619,
+          "tool": 8.610001600573e-12,
+          "delta": -0.0008618999913899984,
+          "tolerance": 0.005,
+          "unit": "dB",
+          "within": true
+        },
+        "psrr_db": {
+          "harness": 6.162,
+          "tool": 35.33263996599,
+          "delta": 29.17063996599,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "psrr_1khz_db": {
+          "harness": 1.42,
+          "tool": 35.33346248714,
+          "delta": 33.913462487139995,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        }
+      },
+      "plateau_guard": {
+        "harness_pass": true,
+        "tool_pass": true,
+        "agree": true
+      },
+      "row": {
+        "tool_psrr_db": 35.33263996599,
+        "harness_psrr_db": 6.162,
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "verdict_source": "offline join with the open-loop klt sim envelope (not a klt verdict)"
+      }
+    },
+    {
+      "point_id": "mos_tt_27C_1.08V",
+      "process": "mos_tt",
+      "temperature_c": 27,
+      "vdd_v": 1.08,
+      "av0_db_joined": 41.71211460366,
+      "metrics": {
+        "avs0_db": {
+          "harness": 29.7694,
+          "tool": 10.07120249907,
+          "delta": -19.69819750093,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_1khz_db": {
+          "harness": 36.8132,
+          "tool": 10.07066780762,
+          "delta": -26.742532192380004,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_plateau_delta_db": {
+          "harness": 0.0008806,
+          "tool": 5.579536832556e-12,
+          "delta": -0.0008805999944204632,
+          "tolerance": 0.005,
+          "unit": "dB",
+          "within": true
+        },
+        "psrr_db": {
+          "harness": 11.3735,
+          "tool": 31.640912104589997,
+          "delta": 20.267412104589997,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "psrr_1khz_db": {
+          "harness": 4.3297,
+          "tool": 31.64144679604,
+          "delta": 27.31174679604,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        }
+      },
+      "plateau_guard": {
+        "harness_pass": true,
+        "tool_pass": true,
+        "agree": true
+      },
+      "row": {
+        "tool_psrr_db": 31.640912104589997,
+        "harness_psrr_db": 11.3735,
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "verdict_source": "offline join with the open-loop klt sim envelope (not a klt verdict)"
+      }
+    },
+    {
+      "point_id": "mos_tt_27C_1.20V",
+      "process": "mos_tt",
+      "temperature_c": 27,
+      "vdd_v": 1.2,
+      "av0_db_joined": 42.87273094762,
+      "metrics": {
+        "avs0_db": {
+          "harness": 35.5167,
+          "tool": 10.07401580904,
+          "delta": -25.44268419096,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_1khz_db": {
+          "harness": 39.6523,
+          "tool": 10.07343899699,
+          "delta": -29.578861003009997,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_plateau_delta_db": {
+          "harness": 0.0006117,
+          "tool": 6.037836897121e-12,
+          "delta": -0.0006116999939621631,
+          "tolerance": 0.005,
+          "unit": "dB",
+          "within": true
+        },
+        "psrr_db": {
+          "harness": 6.4335,
+          "tool": 32.79871513858,
+          "delta": 26.365215138579998,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "psrr_1khz_db": {
+          "harness": 2.2979,
+          "tool": 32.79929195063,
+          "delta": 30.50139195063,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        }
+      },
+      "plateau_guard": {
+        "harness_pass": true,
+        "tool_pass": true,
+        "agree": true
+      },
+      "row": {
+        "tool_psrr_db": 32.79871513858,
+        "harness_psrr_db": 6.4335,
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "verdict_source": "offline join with the open-loop klt sim envelope (not a klt verdict)"
+      }
+    },
+    {
+      "point_id": "mos_tt_27C_1.32V",
+      "process": "mos_tt",
+      "temperature_c": 27,
+      "vdd_v": 1.32,
+      "av0_db_joined": 43.99699181373,
+      "metrics": {
+        "avs0_db": {
+          "harness": 38.2646,
+          "tool": 10.52682923867,
+          "delta": -27.73777076133,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_1khz_db": {
+          "harness": 41.0892,
+          "tool": 10.52616174105,
+          "delta": -30.563038258949998,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_plateau_delta_db": {
+          "harness": 0.0004782,
+          "tool": 6.995293233558e-12,
+          "delta": -0.0004781999930047068,
+          "tolerance": 0.005,
+          "unit": "dB",
+          "within": true
+        },
+        "psrr_db": {
+          "harness": 4.7291,
+          "tool": 33.47016257506,
+          "delta": 28.741062575060003,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "psrr_1khz_db": {
+          "harness": 1.9045,
+          "tool": 33.47083007268,
+          "delta": 31.566330072680003,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        }
+      },
+      "plateau_guard": {
+        "harness_pass": true,
+        "tool_pass": true,
+        "agree": true
+      },
+      "row": {
+        "tool_psrr_db": 33.47016257506,
+        "harness_psrr_db": 4.7291,
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "verdict_source": "offline join with the open-loop klt sim envelope (not a klt verdict)"
+      }
+    },
+    {
+      "point_id": "mos_tt_125C_1.08V",
+      "process": "mos_tt",
+      "temperature_c": 125,
+      "vdd_v": 1.08,
+      "av0_db_joined": 39.42293726718,
+      "metrics": {
+        "avs0_db": {
+          "harness": 31.9604,
+          "tool": 10.3445868549,
+          "delta": -21.6158131451,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_1khz_db": {
+          "harness": 35.4336,
+          "tool": 10.34418555362,
+          "delta": -25.089414446379998,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_plateau_delta_db": {
+          "harness": 0.0002662,
+          "tool": 4.201083925182e-12,
+          "delta": -0.0002661999957989161,
+          "tolerance": 0.005,
+          "unit": "dB",
+          "within": true
+        },
+        "psrr_db": {
+          "harness": 6.9739,
+          "tool": 29.078350412279995,
+          "delta": 22.104450412279995,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "psrr_1khz_db": {
+          "harness": 3.5007,
+          "tool": 29.078751713559996,
+          "delta": 25.578051713559994,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        }
+      },
+      "plateau_guard": {
+        "harness_pass": true,
+        "tool_pass": true,
+        "agree": true
+      },
+      "row": {
+        "tool_psrr_db": 29.078350412279995,
+        "harness_psrr_db": 6.9739,
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "verdict_source": "offline join with the open-loop klt sim envelope (not a klt verdict)"
+      }
+    },
+    {
+      "point_id": "mos_tt_125C_1.20V",
+      "process": "mos_tt",
+      "temperature_c": 125,
+      "vdd_v": 1.2,
+      "av0_db_joined": 40.8551165987,
+      "metrics": {
+        "avs0_db": {
+          "harness": 36.0035,
+          "tool": 10.1395579751,
+          "delta": -25.863942024900002,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_1khz_db": {
+          "harness": 37.7365,
+          "tool": 10.13907954897,
+          "delta": -27.597420451029997,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_plateau_delta_db": {
+          "harness": 0.000155,
+          "tool": 4.972022793481e-12,
+          "delta": -0.0001549999950279772,
+          "tolerance": 0.005,
+          "unit": "dB",
+          "within": true
+        },
+        "psrr_db": {
+          "harness": 4.2583,
+          "tool": 30.7155586236,
+          "delta": 26.457258623599998,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "psrr_1khz_db": {
+          "harness": 2.5253,
+          "tool": 30.716037049729998,
+          "delta": 28.190737049729996,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        }
+      },
+      "plateau_guard": {
+        "harness_pass": true,
+        "tool_pass": true,
+        "agree": true
+      },
+      "row": {
+        "tool_psrr_db": 30.7155586236,
+        "harness_psrr_db": 4.2583,
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "verdict_source": "offline join with the open-loop klt sim envelope (not a klt verdict)"
+      }
+    },
+    {
+      "point_id": "mos_tt_125C_1.32V",
+      "process": "mos_tt",
+      "temperature_c": 125,
+      "vdd_v": 1.32,
+      "av0_db_joined": 42.09495567249,
+      "metrics": {
+        "avs0_db": {
+          "harness": 38.4899,
+          "tool": 10.46820029555,
+          "delta": -28.02169970445,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_1khz_db": {
+          "harness": 39.2102,
+          "tool": 10.4676297107,
+          "delta": -28.742570289299998,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_plateau_delta_db": {
+          "harness": 0.0001002,
+          "tool": 5.961453553027e-12,
+          "delta": -0.00010019999403854644,
+          "tolerance": 0.005,
+          "unit": "dB",
+          "within": true
+        },
+        "psrr_db": {
+          "harness": 2.9983,
+          "tool": 31.626755376940004,
+          "delta": 28.628455376940003,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "psrr_1khz_db": {
+          "harness": 2.278,
+          "tool": 31.62732596179,
+          "delta": 29.34932596179,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        }
+      },
+      "plateau_guard": {
+        "harness_pass": true,
+        "tool_pass": true,
+        "agree": true
+      },
+      "row": {
+        "tool_psrr_db": 31.626755376940004,
+        "harness_psrr_db": 2.9983,
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "verdict_source": "offline join with the open-loop klt sim envelope (not a klt verdict)"
+      }
+    },
+    {
+      "point_id": "mos_ss_-40C_1.08V",
+      "process": "mos_ss",
+      "temperature_c": -40,
+      "vdd_v": 1.08,
+      "av0_db_joined": 44.54311265863,
+      "metrics": {
+        "avs0_db": {
+          "harness": 14.7784,
+          "tool": 12.44834118972,
+          "delta": -2.330058810279999,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_1khz_db": {
+          "harness": 35.2669,
+          "tool": 12.44657722507,
+          "delta": -22.82032277493,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_plateau_delta_db": {
+          "harness": 0.0660786,
+          "tool": 1.786304437701e-11,
+          "delta": -0.06607859998213696,
+          "tolerance": 0.005,
+          "unit": "dB",
+          "within": false
+        },
+        "psrr_db": {
+          "harness": 29.5448,
+          "tool": 32.09477146891,
+          "delta": 2.549971468909998,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "psrr_1khz_db": {
+          "harness": 9.0563,
+          "tool": 32.09653543356,
+          "delta": 23.04023543356,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        }
+      },
+      "plateau_guard": {
+        "harness_pass": false,
+        "tool_pass": true,
+        "agree": false
+      },
+      "row": {
+        "tool_psrr_db": 32.09477146891,
+        "harness_psrr_db": 29.5448,
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "verdict_source": "offline join with the open-loop klt sim envelope (not a klt verdict)"
+      }
+    },
+    {
+      "point_id": "mos_ss_-40C_1.20V",
+      "process": "mos_ss",
+      "temperature_c": -40,
+      "vdd_v": 1.2,
+      "av0_db_joined": 45.72304849019,
+      "metrics": {
+        "avs0_db": {
+          "harness": 29.0517,
+          "tool": 10.85320048906,
+          "delta": -18.19849951094,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_1khz_db": {
+          "harness": 40.2876,
+          "tool": 10.85215929537,
+          "delta": -29.435440704629997,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_plateau_delta_db": {
+          "harness": 0.0083333,
+          "tool": 1.07256425963e-11,
+          "delta": -0.008333299989274357,
+          "tolerance": 0.005,
+          "unit": "dB",
+          "within": false
+        },
+        "psrr_db": {
+          "harness": 15.9377,
+          "tool": 34.86984800113,
+          "delta": 18.932148001130003,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "psrr_1khz_db": {
+          "harness": 4.7018,
+          "tool": 34.87088919482,
+          "delta": 30.169089194820003,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        }
+      },
+      "plateau_guard": {
+        "harness_pass": true,
+        "tool_pass": true,
+        "agree": true
+      },
+      "row": {
+        "tool_psrr_db": 34.86984800113,
+        "harness_psrr_db": 15.9377,
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "verdict_source": "offline join with the open-loop klt sim envelope (not a klt verdict)"
+      }
+    },
+    {
+      "point_id": "mos_ss_-40C_1.32V",
+      "process": "mos_ss",
+      "temperature_c": -40,
+      "vdd_v": 1.32,
+      "av0_db_joined": 46.77840361089,
+      "metrics": {
+        "avs0_db": {
+          "harness": 36.5609,
+          "tool": 10.56947633975,
+          "delta": -25.991423660249996,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_1khz_db": {
+          "harness": 43.5652,
+          "tool": 10.56841814897,
+          "delta": -32.99678185102999,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_plateau_delta_db": {
+          "harness": 0.0071503,
+          "tool": 1.09690034833e-11,
+          "delta": -0.007150299989030997,
+          "tolerance": 0.005,
+          "unit": "dB",
+          "within": false
+        },
+        "psrr_db": {
+          "harness": 8.6356,
+          "tool": 36.20892727114,
+          "delta": 27.57332727114,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "psrr_1khz_db": {
+          "harness": 1.6313,
+          "tool": 36.20998546192,
+          "delta": 34.578685461919996,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        }
+      },
+      "plateau_guard": {
+        "harness_pass": true,
+        "tool_pass": true,
+        "agree": true
+      },
+      "row": {
+        "tool_psrr_db": 36.20892727114,
+        "harness_psrr_db": 8.6356,
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "verdict_source": "offline join with the open-loop klt sim envelope (not a klt verdict)"
+      }
+    },
+    {
+      "point_id": "mos_ss_27C_1.08V",
+      "process": "mos_ss",
+      "temperature_c": 27,
+      "vdd_v": 1.08,
+      "av0_db_joined": 42.55065497556,
+      "metrics": {
+        "avs0_db": {
+          "harness": 22.3819,
+          "tool": 11.72107239562,
+          "delta": -10.660827604380001,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_1khz_db": {
+          "harness": 34.7916,
+          "tool": 11.72015967353,
+          "delta": -23.071440326470004,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_plateau_delta_db": {
+          "harness": 0.0193402,
+          "tool": 9.322320693173e-12,
+          "delta": -0.019340199990677678,
+          "tolerance": 0.005,
+          "unit": "dB",
+          "within": false
+        },
+        "psrr_db": {
+          "harness": 19.893,
+          "tool": 30.829582579940002,
+          "delta": 10.936582579940001,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "psrr_1khz_db": {
+          "harness": 7.4833,
+          "tool": 30.830495302030002,
+          "delta": 23.347195302030002,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        }
+      },
+      "plateau_guard": {
+        "harness_pass": true,
+        "tool_pass": true,
+        "agree": true
+      },
+      "row": {
+        "tool_psrr_db": 30.829582579940002,
+        "harness_psrr_db": 19.893,
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "verdict_source": "offline join with the open-loop klt sim envelope (not a klt verdict)"
+      }
+    },
+    {
+      "point_id": "mos_ss_27C_1.20V",
+      "process": "mos_ss",
+      "temperature_c": 27,
+      "vdd_v": 1.2,
+      "av0_db_joined": 43.75185306771,
+      "metrics": {
+        "avs0_db": {
+          "harness": 31.4629,
+          "tool": 10.76882326569,
+          "delta": -20.694076734310002,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_1khz_db": {
+          "harness": 39.2597,
+          "tool": 10.76806962941,
+          "delta": -28.491630370590002,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_plateau_delta_db": {
+          "harness": 0.0087915,
+          "tool": 7.840839089113e-12,
+          "delta": -0.008791499992159162,
+          "tolerance": 0.005,
+          "unit": "dB",
+          "within": false
+        },
+        "psrr_db": {
+          "harness": 11.5841,
+          "tool": 32.98302980202,
+          "delta": 21.39892980202,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "psrr_1khz_db": {
+          "harness": 3.7873,
+          "tool": 32.9837834383,
+          "delta": 29.1964834383,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        }
+      },
+      "plateau_guard": {
+        "harness_pass": true,
+        "tool_pass": true,
+        "agree": true
+      },
+      "row": {
+        "tool_psrr_db": 32.98302980202,
+        "harness_psrr_db": 11.5841,
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "verdict_source": "offline join with the open-loop klt sim envelope (not a klt verdict)"
+      }
+    },
+    {
+      "point_id": "mos_ss_27C_1.32V",
+      "process": "mos_ss",
+      "temperature_c": 27,
+      "vdd_v": 1.32,
+      "av0_db_joined": 44.85819349188,
+      "metrics": {
+        "avs0_db": {
+          "harness": 36.6746,
+          "tool": 10.82584866948,
+          "delta": -25.84875133052,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_1khz_db": {
+          "harness": 41.7543,
+          "tool": 10.82502954746,
+          "delta": -30.929270452540003,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_plateau_delta_db": {
+          "harness": 0.0074982,
+          "tool": 8.462563982903e-12,
+          "delta": -0.007498199991537436,
+          "tolerance": 0.005,
+          "unit": "dB",
+          "within": false
+        },
+        "psrr_db": {
+          "harness": 7.0825,
+          "tool": 34.032344822400006,
+          "delta": 26.949844822400006,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "psrr_1khz_db": {
+          "harness": 2.0028,
+          "tool": 34.033163944420004,
+          "delta": 32.03036394442,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        }
+      },
+      "plateau_guard": {
+        "harness_pass": true,
+        "tool_pass": true,
+        "agree": true
+      },
+      "row": {
+        "tool_psrr_db": 34.032344822400006,
+        "harness_psrr_db": 7.0825,
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "verdict_source": "offline join with the open-loop klt sim envelope (not a klt verdict)"
+      }
+    },
+    {
+      "point_id": "mos_ss_125C_1.08V",
+      "process": "mos_ss",
+      "temperature_c": 125,
+      "vdd_v": 1.08,
+      "av0_db_joined": 40.04173187305,
+      "metrics": {
+        "avs0_db": {
+          "harness": 27.3984,
+          "tool": 11.28454858311,
+          "delta": -16.11385141689,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_1khz_db": {
+          "harness": 34.1952,
+          "tool": 11.2840141488,
+          "delta": -22.9111858512,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_plateau_delta_db": {
+          "harness": 0.0067559,
+          "tool": 5.51025891582e-12,
+          "delta": -0.006755899994489741,
+          "tolerance": 0.005,
+          "unit": "dB",
+          "within": false
+        },
+        "psrr_db": {
+          "harness": 12.3126,
+          "tool": 28.757183289939995,
+          "delta": 16.444583289939995,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "psrr_1khz_db": {
+          "harness": 5.5158,
+          "tool": 28.757717724249996,
+          "delta": 23.241917724249998,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        }
+      },
+      "plateau_guard": {
+        "harness_pass": true,
+        "tool_pass": true,
+        "agree": true
+      },
+      "row": {
+        "tool_psrr_db": 28.757183289939995,
+        "harness_psrr_db": 12.3126,
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "verdict_source": "offline join with the open-loop klt sim envelope (not a klt verdict)"
+      }
+    },
+    {
+      "point_id": "mos_ss_125C_1.20V",
+      "process": "mos_ss",
+      "temperature_c": 125,
+      "vdd_v": 1.2,
+      "av0_db_joined": 41.46636592767,
+      "metrics": {
+        "avs0_db": {
+          "harness": 33.3971,
+          "tool": 10.6060231888,
+          "delta": -22.7910768112,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_1khz_db": {
+          "harness": 37.6844,
+          "tool": 10.60544936968,
+          "delta": -27.078950630319994,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_plateau_delta_db": {
+          "harness": 0.0044202,
+          "tool": 5.979217121421e-12,
+          "delta": -0.004420199994020783,
+          "tolerance": 0.005,
+          "unit": "dB",
+          "within": true
+        },
+        "psrr_db": {
+          "harness": 7.4994,
+          "tool": 30.860342738869996,
+          "delta": 23.360942738869994,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "psrr_1khz_db": {
+          "harness": 3.2121,
+          "tool": 30.860916557989995,
+          "delta": 27.648816557989996,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        }
+      },
+      "plateau_guard": {
+        "harness_pass": true,
+        "tool_pass": true,
+        "agree": true
+      },
+      "row": {
+        "tool_psrr_db": 30.860342738869996,
+        "harness_psrr_db": 7.4994,
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "verdict_source": "offline join with the open-loop klt sim envelope (not a klt verdict)"
+      }
+    },
+    {
+      "point_id": "mos_ss_125C_1.32V",
+      "process": "mos_ss",
+      "temperature_c": 125,
+      "vdd_v": 1.32,
+      "av0_db_joined": 42.67998727206,
+      "metrics": {
+        "avs0_db": {
+          "harness": 37.1041,
+          "tool": 10.77242072924,
+          "delta": -26.331679270760002,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_1khz_db": {
+          "harness": 39.6394,
+          "tool": 10.77175812441,
+          "delta": -28.867641875590003,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_plateau_delta_db": {
+          "harness": 0.0030526,
+          "tool": 6.851408329567e-12,
+          "delta": -0.0030525999931485916,
+          "tolerance": 0.005,
+          "unit": "dB",
+          "within": true
+        },
+        "psrr_db": {
+          "harness": 4.893,
+          "tool": 31.907566542820003,
+          "delta": 27.014566542820003,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "psrr_1khz_db": {
+          "harness": 2.3577,
+          "tool": 31.908229147650005,
+          "delta": 29.550529147650003,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        }
+      },
+      "plateau_guard": {
+        "harness_pass": true,
+        "tool_pass": true,
+        "agree": true
+      },
+      "row": {
+        "tool_psrr_db": 31.907566542820003,
+        "harness_psrr_db": 4.893,
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "verdict_source": "offline join with the open-loop klt sim envelope (not a klt verdict)"
+      }
+    },
+    {
+      "point_id": "mos_ff_-40C_1.08V",
+      "process": "mos_ff",
+      "temperature_c": -40,
+      "vdd_v": 1.08,
+      "av0_db_joined": 43.4114548632,
+      "metrics": {
+        "avs0_db": {
+          "harness": 34.2637,
+          "tool": 8.749098113273,
+          "delta": -25.514601886727,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_1khz_db": {
+          "harness": 39.7534,
+          "tool": 8.7485487213,
+          "delta": -31.0048512787,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_plateau_delta_db": {
+          "harness": 0.000107,
+          "tool": 5.750067089139e-12,
+          "delta": -0.00010699999424993291,
+          "tolerance": 0.005,
+          "unit": "dB",
+          "within": true
+        },
+        "psrr_db": {
+          "harness": 8.0229,
+          "tool": 34.662356749927,
+          "delta": 26.639456749927,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "psrr_1khz_db": {
+          "harness": 2.5332,
+          "tool": 34.662906141899995,
+          "delta": 32.129706141899995,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        }
+      },
+      "plateau_guard": {
+        "harness_pass": true,
+        "tool_pass": true,
+        "agree": true
+      },
+      "row": {
+        "tool_psrr_db": 34.662356749927,
+        "harness_psrr_db": 8.0229,
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "verdict_source": "offline join with the open-loop klt sim envelope (not a klt verdict)"
+      }
+    },
+    {
+      "point_id": "mos_ff_-40C_1.20V",
+      "process": "mos_ff",
+      "temperature_c": -40,
+      "vdd_v": 1.2,
+      "av0_db_joined": 44.46493156213,
+      "metrics": {
+        "avs0_db": {
+          "harness": 37.7552,
+          "tool": 9.292985453477,
+          "delta": -28.462214546523,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_1khz_db": {
+          "harness": 41.4438,
+          "tool": 9.292361907821,
+          "delta": -32.151438092179006,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_plateau_delta_db": {
+          "harness": 8.64e-05,
+          "tool": 6.529887741635e-12,
+          "delta": -8.639999347011226e-05,
+          "tolerance": 0.005,
+          "unit": "dB",
+          "within": true
+        },
+        "psrr_db": {
+          "harness": 5.3341,
+          "tool": 35.171946108652996,
+          "delta": 29.837846108652997,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "psrr_1khz_db": {
+          "harness": 1.6455,
+          "tool": 35.172569654309,
+          "delta": 33.527069654309,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        }
+      },
+      "plateau_guard": {
+        "harness_pass": true,
+        "tool_pass": true,
+        "agree": true
+      },
+      "row": {
+        "tool_psrr_db": 35.171946108652996,
+        "harness_psrr_db": 5.3341,
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "verdict_source": "offline join with the open-loop klt sim envelope (not a klt verdict)"
+      }
+    },
+    {
+      "point_id": "mos_ff_-40C_1.32V",
+      "process": "mos_ff",
+      "temperature_c": -40,
+      "vdd_v": 1.32,
+      "av0_db_joined": 45.52083311748,
+      "metrics": {
+        "avs0_db": {
+          "harness": 39.8741,
+          "tool": 9.832743501588,
+          "delta": -30.041356498412,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_1khz_db": {
+          "harness": 42.5766,
+          "tool": 9.832020877055,
+          "delta": -32.744579122945,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_plateau_delta_db": {
+          "harness": 6.92e-05,
+          "tool": 7.533529355896e-12,
+          "delta": -6.919999246647065e-05,
+          "tolerance": 0.005,
+          "unit": "dB",
+          "within": true
+        },
+        "psrr_db": {
+          "harness": 4.261,
+          "tool": 35.688089615892004,
+          "delta": 31.427089615892005,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "psrr_1khz_db": {
+          "harness": 1.5585,
+          "tool": 35.688812240425,
+          "delta": 34.130312240425,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        }
+      },
+      "plateau_guard": {
+        "harness_pass": true,
+        "tool_pass": true,
+        "agree": true
+      },
+      "row": {
+        "tool_psrr_db": 35.688089615892004,
+        "harness_psrr_db": 4.261,
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "verdict_source": "offline join with the open-loop klt sim envelope (not a klt verdict)"
+      }
+    },
+    {
+      "point_id": "mos_ff_27C_1.08V",
+      "process": "mos_ff",
+      "temperature_c": 27,
+      "vdd_v": 1.08,
+      "av0_db_joined": 41.75216213168,
+      "metrics": {
+        "avs0_db": {
+          "harness": 35.0126,
+          "tool": 9.051407282256,
+          "delta": -25.961192717743998,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_1khz_db": {
+          "harness": 38.3787,
+          "tool": 9.050961816578,
+          "delta": -29.327738183422,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_plateau_delta_db": {
+          "harness": 4.67e-05,
+          "tool": 4.723332835965e-12,
+          "delta": -4.669999527666716e-05,
+          "tolerance": 0.005,
+          "unit": "dB",
+          "within": true
+        },
+        "psrr_db": {
+          "harness": 5.9101,
+          "tool": 32.700754849424,
+          "delta": 26.790654849424,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "psrr_1khz_db": {
+          "harness": 2.544,
+          "tool": 32.701200315102,
+          "delta": 30.157200315102,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        }
+      },
+      "plateau_guard": {
+        "harness_pass": true,
+        "tool_pass": true,
+        "agree": true
+      },
+      "row": {
+        "tool_psrr_db": 32.700754849424,
+        "harness_psrr_db": 5.9101,
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "verdict_source": "offline join with the open-loop klt sim envelope (not a klt verdict)"
+      }
+    },
+    {
+      "point_id": "mos_ff_27C_1.20V",
+      "process": "mos_ff",
+      "temperature_c": 27,
+      "vdd_v": 1.2,
+      "av0_db_joined": 42.89246936348,
+      "metrics": {
+        "avs0_db": {
+          "harness": 38.0111,
+          "tool": 9.57243811321,
+          "delta": -28.43866188679,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_1khz_db": {
+          "harness": 39.9363,
+          "tool": 9.571919956023,
+          "delta": -30.364380043977,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_plateau_delta_db": {
+          "harness": 3.15e-05,
+          "tool": 5.440980999083e-12,
+          "delta": -3.1499994559019e-05,
+          "tolerance": 0.005,
+          "unit": "dB",
+          "within": true
+        },
+        "psrr_db": {
+          "harness": 3.987,
+          "tool": 33.32003125027,
+          "delta": 29.333031250269997,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "psrr_1khz_db": {
+          "harness": 2.0618,
+          "tool": 33.320549407456994,
+          "delta": 31.258749407456996,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        }
+      },
+      "plateau_guard": {
+        "harness_pass": true,
+        "tool_pass": true,
+        "agree": true
+      },
+      "row": {
+        "tool_psrr_db": 33.32003125027,
+        "harness_psrr_db": 3.987,
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "verdict_source": "offline join with the open-loop klt sim envelope (not a klt verdict)"
+      }
+    },
+    {
+      "point_id": "mos_ff_27C_1.32V",
+      "process": "mos_ff",
+      "temperature_c": 27,
+      "vdd_v": 1.32,
+      "av0_db_joined": 44.012817648,
+      "metrics": {
+        "avs0_db": {
+          "harness": 40.1385,
+          "tool": 10.09225113049,
+          "delta": -30.046248869510002,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_1khz_db": {
+          "harness": 41.1443,
+          "tool": 10.09164265175,
+          "delta": -31.05265734825,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_plateau_delta_db": {
+          "harness": 2.21e-05,
+          "tool": 6.355804771374e-12,
+          "delta": -2.2099993644195227e-05,
+          "tolerance": 0.005,
+          "unit": "dB",
+          "within": true
+        },
+        "psrr_db": {
+          "harness": 2.9988,
+          "tool": 33.920566517510004,
+          "delta": 30.921766517510004,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "psrr_1khz_db": {
+          "harness": 1.993,
+          "tool": 33.92117499625,
+          "delta": 31.928174996250004,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        }
+      },
+      "plateau_guard": {
+        "harness_pass": true,
+        "tool_pass": true,
+        "agree": true
+      },
+      "row": {
+        "tool_psrr_db": 33.920566517510004,
+        "harness_psrr_db": 2.9988,
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "verdict_source": "offline join with the open-loop klt sim envelope (not a klt verdict)"
+      }
+    },
+    {
+      "point_id": "mos_ff_125C_1.08V",
+      "process": "mos_ff",
+      "temperature_c": 125,
+      "vdd_v": 1.08,
+      "av0_db_joined": 39.62574381412,
+      "metrics": {
+        "avs0_db": {
+          "harness": 35.3396,
+          "tool": 9.705418740208,
+          "delta": -25.634181259791998,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_1khz_db": {
+          "harness": 36.3987,
+          "tool": 9.705051604135,
+          "delta": -26.693648395864997,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_plateau_delta_db": {
+          "harness": 7.6e-06,
+          "tool": 3.831601702586e-12,
+          "delta": -7.5999961683982975e-06,
+          "tolerance": 0.005,
+          "unit": "dB",
+          "within": true
+        },
+        "psrr_db": {
+          "harness": 3.7395,
+          "tool": 29.920325073912,
+          "delta": 26.180825073912,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "psrr_1khz_db": {
+          "harness": 2.6804,
+          "tool": 29.920692209985,
+          "delta": 27.240292209985,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        }
+      },
+      "plateau_guard": {
+        "harness_pass": true,
+        "tool_pass": true,
+        "agree": true
+      },
+      "row": {
+        "tool_psrr_db": 29.920325073912,
+        "harness_psrr_db": 3.7395,
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "verdict_source": "offline join with the open-loop klt sim envelope (not a klt verdict)"
+      }
+    },
+    {
+      "point_id": "mos_ff_125C_1.20V",
+      "process": "mos_ff",
+      "temperature_c": 125,
+      "vdd_v": 1.2,
+      "av0_db_joined": 41.02785068972,
+      "metrics": {
+        "avs0_db": {
+          "harness": 37.9353,
+          "tool": 9.736840209659,
+          "delta": -28.198459790340998,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_1khz_db": {
+          "harness": 38.095,
+          "tool": 9.736390625553,
+          "delta": -28.358609374447,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_plateau_delta_db": {
+          "harness": 4.6e-06,
+          "tool": 4.714451051768e-12,
+          "delta": -4.599995285548948e-06,
+          "tolerance": 0.005,
+          "unit": "dB",
+          "within": true
+        },
+        "psrr_db": {
+          "harness": 2.5244,
+          "tool": 31.291010480060997,
+          "delta": 28.766610480060997,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "psrr_1khz_db": {
+          "harness": 2.3647,
+          "tool": 31.291460064166998,
+          "delta": 28.926760064167,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        }
+      },
+      "plateau_guard": {
+        "harness_pass": true,
+        "tool_pass": true,
+        "agree": true
+      },
+      "row": {
+        "tool_psrr_db": 31.291010480060997,
+        "harness_psrr_db": 2.5244,
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "verdict_source": "offline join with the open-loop klt sim envelope (not a klt verdict)"
+      }
+    },
+    {
+      "point_id": "mos_ff_125C_1.32V",
+      "process": "mos_ff",
+      "temperature_c": 125,
+      "vdd_v": 1.32,
+      "av0_db_joined": 42.26143460363,
+      "metrics": {
+        "avs0_db": {
+          "harness": 39.8214,
+          "tool": 10.09854740324,
+          "delta": -29.72285259676,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_1khz_db": {
+          "harness": 39.4366,
+          "tool": 10.09800605412,
+          "delta": -29.33859394588,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_plateau_delta_db": {
+          "harness": 3e-06,
+          "tool": 5.623945753541e-12,
+          "delta": -2.9999943760542465e-06,
+          "tolerance": 0.005,
+          "unit": "dB",
+          "within": true
+        },
+        "psrr_db": {
+          "harness": 1.8709,
+          "tool": 32.16288720039,
+          "delta": 30.291987200390004,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "psrr_1khz_db": {
+          "harness": 2.2557,
+          "tool": 32.16342854951,
+          "delta": 29.90772854951,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        }
+      },
+      "plateau_guard": {
+        "harness_pass": true,
+        "tool_pass": true,
+        "agree": true
+      },
+      "row": {
+        "tool_psrr_db": 32.16288720039,
+        "harness_psrr_db": 1.8709,
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": true,
+        "verdict_source": "offline join with the open-loop klt sim envelope (not a klt verdict)"
+      }
+    },
+    {
+      "point_id": "mos_sf_-40C_1.08V",
+      "process": "mos_sf",
+      "temperature_c": -40,
+      "vdd_v": 1.08,
+      "av0_db_joined": 44.43946381663,
+      "metrics": {
+        "avs0_db": {
+          "harness": 23.0778,
+          "tool": 11.26771260563,
+          "delta": -11.810087394369999,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_1khz_db": {
+          "harness": 36.9109,
+          "tool": 11.26661168368,
+          "delta": -25.644288316319997,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_plateau_delta_db": {
+          "harness": 0.0064289,
+          "tool": 1.132605120802e-11,
+          "delta": -0.006428899988673949,
+          "tolerance": 0.005,
+          "unit": "dB",
+          "within": false
+        },
+        "psrr_db": {
+          "harness": 20.9453,
+          "tool": 33.171751211,
+          "delta": 12.226451211,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "psrr_1khz_db": {
+          "harness": 7.1122,
+          "tool": 33.17285213295,
+          "delta": 26.060652132949997,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        }
+      },
+      "plateau_guard": {
+        "harness_pass": true,
+        "tool_pass": true,
+        "agree": true
+      },
+      "row": {
+        "tool_psrr_db": 33.171751211,
+        "harness_psrr_db": 20.9453,
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "verdict_source": "offline join with the open-loop klt sim envelope (not a klt verdict)"
+      }
+    },
+    {
+      "point_id": "mos_sf_-40C_1.20V",
+      "process": "mos_sf",
+      "temperature_c": -40,
+      "vdd_v": 1.2,
+      "av0_db_joined": 45.59007136918,
+      "metrics": {
+        "avs0_db": {
+          "harness": 33.857,
+          "tool": 10.22452713158,
+          "delta": -23.63247286842,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_1khz_db": {
+          "harness": 41.5375,
+          "tool": 10.22361605605,
+          "delta": -31.313883943950003,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_plateau_delta_db": {
+          "harness": 0.0026199,
+          "tool": 9.404033107785e-12,
+          "delta": -0.002619899990595967,
+          "tolerance": 0.005,
+          "unit": "dB",
+          "within": true
+        },
+        "psrr_db": {
+          "harness": 10.5053,
+          "tool": 35.365544237600005,
+          "delta": 24.860244237600007,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "psrr_1khz_db": {
+          "harness": 2.8248,
+          "tool": 35.366455313130004,
+          "delta": 32.54165531313,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        }
+      },
+      "plateau_guard": {
+        "harness_pass": true,
+        "tool_pass": true,
+        "agree": true
+      },
+      "row": {
+        "tool_psrr_db": 35.365544237600005,
+        "harness_psrr_db": 10.5053,
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "verdict_source": "offline join with the open-loop klt sim envelope (not a klt verdict)"
+      }
+    },
+    {
+      "point_id": "mos_sf_-40C_1.32V",
+      "process": "mos_sf",
+      "temperature_c": -40,
+      "vdd_v": 1.32,
+      "av0_db_joined": 46.66605988465,
+      "metrics": {
+        "avs0_db": {
+          "harness": 38.1841,
+          "tool": 10.33828941229,
+          "delta": -27.845810587709998,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_1khz_db": {
+          "harness": 43.5813,
+          "tool": 10.33728181425,
+          "delta": -33.24401818575,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_plateau_delta_db": {
+          "harness": 0.0025745,
+          "tool": 1.051958520293e-11,
+          "delta": -0.0025744999894804148,
+          "tolerance": 0.005,
+          "unit": "dB",
+          "within": true
+        },
+        "psrr_db": {
+          "harness": 6.697,
+          "tool": 36.327770472359994,
+          "delta": 29.630770472359995,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "psrr_1khz_db": {
+          "harness": 1.2998,
+          "tool": 36.3287780704,
+          "delta": 35.0289780704,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        }
+      },
+      "plateau_guard": {
+        "harness_pass": true,
+        "tool_pass": true,
+        "agree": true
+      },
+      "row": {
+        "tool_psrr_db": 36.327770472359994,
+        "harness_psrr_db": 6.697,
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "verdict_source": "offline join with the open-loop klt sim envelope (not a klt verdict)"
+      }
+    },
+    {
+      "point_id": "mos_sf_27C_1.08V",
+      "process": "mos_sf",
+      "temperature_c": 27,
+      "vdd_v": 1.08,
+      "av0_db_joined": 42.68399465672,
+      "metrics": {
+        "avs0_db": {
+          "harness": 28.2409,
+          "tool": 10.79231946433,
+          "delta": -17.44858053567,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_1khz_db": {
+          "harness": 36.6717,
+          "tool": 10.79159846675,
+          "delta": -25.880101533250002,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_plateau_delta_db": {
+          "harness": 0.0031116,
+          "tool": 7.471356866517e-12,
+          "delta": -0.003111599992528643,
+          "tolerance": 0.005,
+          "unit": "dB",
+          "within": true
+        },
+        "psrr_db": {
+          "harness": 13.956,
+          "tool": 31.891675192390004,
+          "delta": 17.935675192390004,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "psrr_1khz_db": {
+          "harness": 5.5252,
+          "tool": 31.892396189970004,
+          "delta": 26.367196189970002,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        }
+      },
+      "plateau_guard": {
+        "harness_pass": true,
+        "tool_pass": true,
+        "agree": true
+      },
+      "row": {
+        "tool_psrr_db": 31.891675192390004,
+        "harness_psrr_db": 13.956,
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "verdict_source": "offline join with the open-loop klt sim envelope (not a klt verdict)"
+      }
+    },
+    {
+      "point_id": "mos_sf_27C_1.20V",
+      "process": "mos_sf",
+      "temperature_c": 27,
+      "vdd_v": 1.2,
+      "av0_db_joined": 43.87406022958,
+      "metrics": {
+        "avs0_db": {
+          "harness": 35.5724,
+          "tool": 10.35935163158,
+          "delta": -25.213048368420004,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_1khz_db": {
+          "harness": 40.2729,
+          "tool": 10.35863431933,
+          "delta": -29.91426568067,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_plateau_delta_db": {
+          "harness": 0.0019508,
+          "tool": 7.446487870766e-12,
+          "delta": -0.001950799992553512,
+          "tolerance": 0.005,
+          "unit": "dB",
+          "within": true
+        },
+        "psrr_db": {
+          "harness": 7.3353,
+          "tool": 33.514708598000006,
+          "delta": 26.179408598000006,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "psrr_1khz_db": {
+          "harness": 2.6348,
+          "tool": 33.51542591025,
+          "delta": 30.880625910250004,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        }
+      },
+      "plateau_guard": {
+        "harness_pass": true,
+        "tool_pass": true,
+        "agree": true
+      },
+      "row": {
+        "tool_psrr_db": 33.514708598000006,
+        "harness_psrr_db": 7.3353,
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "verdict_source": "offline join with the open-loop klt sim envelope (not a klt verdict)"
+      }
+    },
+    {
+      "point_id": "mos_sf_27C_1.32V",
+      "process": "mos_sf",
+      "temperature_c": 27,
+      "vdd_v": 1.32,
+      "av0_db_joined": 45.01477680849,
+      "metrics": {
+        "avs0_db": {
+          "harness": 38.9633,
+          "tool": 10.5909705267,
+          "delta": -28.3723294733,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_1khz_db": {
+          "harness": 42.0032,
+          "tool": 10.59015244467,
+          "delta": -31.41304755533,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_plateau_delta_db": {
+          "harness": 0.00163,
+          "tool": 8.540723683836e-12,
+          "delta": -0.0016299999914592763,
+          "tolerance": 0.005,
+          "unit": "dB",
+          "within": true
+        },
+        "psrr_db": {
+          "harness": 4.9035,
+          "tool": 34.42380628179,
+          "delta": 29.52030628179,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "psrr_1khz_db": {
+          "harness": 1.8636,
+          "tool": 34.42462436382,
+          "delta": 32.56102436382,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        }
+      },
+      "plateau_guard": {
+        "harness_pass": true,
+        "tool_pass": true,
+        "agree": true
+      },
+      "row": {
+        "tool_psrr_db": 34.42380628179,
+        "harness_psrr_db": 4.9035,
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "verdict_source": "offline join with the open-loop klt sim envelope (not a klt verdict)"
+      }
+    },
+    {
+      "point_id": "mos_sf_125C_1.08V",
+      "process": "mos_sf",
+      "temperature_c": 125,
+      "vdd_v": 1.08,
+      "av0_db_joined": 40.58811585497,
+      "metrics": {
+        "avs0_db": {
+          "harness": 32.4904,
+          "tool": 10.36071696767,
+          "delta": -22.12968303233,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_1khz_db": {
+          "harness": 36.0041,
+          "tool": 10.36019557802,
+          "delta": -25.64390442198,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_plateau_delta_db": {
+          "harness": 0.0007966,
+          "tool": 5.396572078098e-12,
+          "delta": -0.0007965999946034279,
+          "tolerance": 0.005,
+          "unit": "dB",
+          "within": true
+        },
+        "psrr_db": {
+          "harness": 7.6098,
+          "tool": 30.227398887299998,
+          "delta": 22.617598887299998,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "psrr_1khz_db": {
+          "harness": 4.0961,
+          "tool": 30.227920276949998,
+          "delta": 26.13182027695,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        }
+      },
+      "plateau_guard": {
+        "harness_pass": true,
+        "tool_pass": true,
+        "agree": true
+      },
+      "row": {
+        "tool_psrr_db": 30.227398887299998,
+        "harness_psrr_db": 7.6098,
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "verdict_source": "offline join with the open-loop klt sim envelope (not a klt verdict)"
+      }
+    },
+    {
+      "point_id": "mos_sf_125C_1.20V",
+      "process": "mos_sf",
+      "temperature_c": 125,
+      "vdd_v": 1.2,
+      "av0_db_joined": 41.90008146846,
+      "metrics": {
+        "avs0_db": {
+          "harness": 36.8916,
+          "tool": 10.2621711766,
+          "delta": -26.629428823399998,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_1khz_db": {
+          "harness": 38.5691,
+          "tool": 10.26157988668,
+          "delta": -28.30752011332,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_plateau_delta_db": {
+          "harness": 0.0005181,
+          "tool": 6.121325668573e-12,
+          "delta": -0.0005180999938786743,
+          "tolerance": 0.005,
+          "unit": "dB",
+          "within": true
+        },
+        "psrr_db": {
+          "harness": 4.3624,
+          "tool": 31.637910291860003,
+          "delta": 27.27551029186,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "psrr_1khz_db": {
+          "harness": 2.6849,
+          "tool": 31.63850158178,
+          "delta": 28.953601581780003,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        }
+      },
+      "plateau_guard": {
+        "harness_pass": true,
+        "tool_pass": true,
+        "agree": true
+      },
+      "row": {
+        "tool_psrr_db": 31.637910291860003,
+        "harness_psrr_db": 4.3624,
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "verdict_source": "offline join with the open-loop klt sim envelope (not a klt verdict)"
+      }
+    },
+    {
+      "point_id": "mos_sf_125C_1.32V",
+      "process": "mos_sf",
+      "temperature_c": 125,
+      "vdd_v": 1.32,
+      "av0_db_joined": 43.12258408887,
+      "metrics": {
+        "avs0_db": {
+          "harness": 39.4839,
+          "tool": 10.52126767723,
+          "delta": -28.96263232277,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_1khz_db": {
+          "harness": 40.1434,
+          "tool": 10.52057066952,
+          "delta": -29.622829330480002,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_plateau_delta_db": {
+          "harness": 0.0003628,
+          "tool": 7.258194045789e-12,
+          "delta": -0.00036279999274180594,
+          "tolerance": 0.005,
+          "unit": "dB",
+          "within": true
+        },
+        "psrr_db": {
+          "harness": 2.957,
+          "tool": 32.60131641164,
+          "delta": 29.64431641164,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "psrr_1khz_db": {
+          "harness": 2.2975,
+          "tool": 32.60201341935,
+          "delta": 30.304513419350002,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        }
+      },
+      "plateau_guard": {
+        "harness_pass": true,
+        "tool_pass": true,
+        "agree": true
+      },
+      "row": {
+        "tool_psrr_db": 32.60131641164,
+        "harness_psrr_db": 2.957,
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "verdict_source": "offline join with the open-loop klt sim envelope (not a klt verdict)"
+      }
+    },
+    {
+      "point_id": "mos_fs_-40C_1.08V",
+      "process": "mos_fs",
+      "temperature_c": -40,
+      "vdd_v": 1.08,
+      "av0_db_joined": 43.09826553542,
+      "metrics": {
+        "avs0_db": {
+          "harness": 30.5975,
+          "tool": 9.145536432435,
+          "delta": -21.451963567565002,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_1khz_db": {
+          "harness": 38.2978,
+          "tool": 9.14495473492,
+          "delta": -29.152845265080003,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_plateau_delta_db": {
+          "harness": 0.0003049,
+          "tool": 6.121325668573e-12,
+          "delta": -0.0003048999938786743,
+          "tolerance": 0.005,
+          "unit": "dB",
+          "within": true
+        },
+        "psrr_db": {
+          "harness": 11.7989,
+          "tool": 33.952729102984996,
+          "delta": 22.153829102984997,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "psrr_1khz_db": {
+          "harness": 4.0986,
+          "tool": 33.9533108005,
+          "delta": 29.854710800499998,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        }
+      },
+      "plateau_guard": {
+        "harness_pass": true,
+        "tool_pass": true,
+        "agree": true
+      },
+      "row": {
+        "tool_psrr_db": 33.952729102984996,
+        "harness_psrr_db": 11.7989,
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "verdict_source": "offline join with the open-loop klt sim envelope (not a klt verdict)"
+      }
+    },
+    {
+      "point_id": "mos_fs_-40C_1.20V",
+      "process": "mos_fs",
+      "temperature_c": -40,
+      "vdd_v": 1.2,
+      "av0_db_joined": 44.11971891634,
+      "metrics": {
+        "avs0_db": {
+          "harness": 35.7069,
+          "tool": 9.379532006484,
+          "delta": -26.327367993516,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_1khz_db": {
+          "harness": 41.0324,
+          "tool": 9.37891204703,
+          "delta": -31.653487952970004,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_plateau_delta_db": {
+          "harness": 0.0003224,
+          "tool": 6.462386181738e-12,
+          "delta": -0.0003223999935376138,
+          "tolerance": 0.005,
+          "unit": "dB",
+          "within": true
+        },
+        "psrr_db": {
+          "harness": 7.1421,
+          "tool": 34.740186909856,
+          "delta": 27.598086909856,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "psrr_1khz_db": {
+          "harness": 1.8166,
+          "tool": 34.74080686931,
+          "delta": 32.92420686931,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        }
+      },
+      "plateau_guard": {
+        "harness_pass": true,
+        "tool_pass": true,
+        "agree": true
+      },
+      "row": {
+        "tool_psrr_db": 34.740186909856,
+        "harness_psrr_db": 7.1421,
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "verdict_source": "offline join with the open-loop klt sim envelope (not a klt verdict)"
+      }
+    },
+    {
+      "point_id": "mos_fs_-40C_1.32V",
+      "process": "mos_fs",
+      "temperature_c": -40,
+      "vdd_v": 1.32,
+      "av0_db_joined": 45.13282085236,
+      "metrics": {
+        "avs0_db": {
+          "harness": 37.8688,
+          "tool": 10.05609774253,
+          "delta": -27.81270225747,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_1khz_db": {
+          "harness": 42.2471,
+          "tool": 10.05538687964,
+          "delta": -32.191713120360006,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_plateau_delta_db": {
+          "harness": 0.0002942,
+          "tool": 7.450040584445e-12,
+          "delta": -0.0002941999925499594,
+          "tolerance": 0.005,
+          "unit": "dB",
+          "within": true
+        },
+        "psrr_db": {
+          "harness": 5.867,
+          "tool": 35.07672310983,
+          "delta": 29.209723109829998,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "psrr_1khz_db": {
+          "harness": 1.4887,
+          "tool": 35.07743397272,
+          "delta": 33.58873397272,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        }
+      },
+      "plateau_guard": {
+        "harness_pass": true,
+        "tool_pass": true,
+        "agree": true
+      },
+      "row": {
+        "tool_psrr_db": 35.07672310983,
+        "harness_psrr_db": 5.867,
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "verdict_source": "offline join with the open-loop klt sim envelope (not a klt verdict)"
+      }
+    },
+    {
+      "point_id": "mos_fs_27C_1.08V",
+      "process": "mos_fs",
+      "temperature_c": 27,
+      "vdd_v": 1.08,
+      "av0_db_joined": 41.12963778173,
+      "metrics": {
+        "avs0_db": {
+          "harness": 32.0998,
+          "tool": 9.559710930398,
+          "delta": -22.540089069602004,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_1khz_db": {
+          "harness": 37.0841,
+          "tool": 9.559276862497,
+          "delta": -27.524823137503,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_plateau_delta_db": {
+          "harness": 0.0001742,
+          "tool": 4.600764214047e-12,
+          "delta": -0.0001741999953992358,
+          "tolerance": 0.005,
+          "unit": "dB",
+          "within": true
+        },
+        "psrr_db": {
+          "harness": 8.4205,
+          "tool": 31.569926851332,
+          "delta": 23.149426851332,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "psrr_1khz_db": {
+          "harness": 3.4362,
+          "tool": 31.570360919232996,
+          "delta": 28.134160919232997,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        }
+      },
+      "plateau_guard": {
+        "harness_pass": true,
+        "tool_pass": true,
+        "agree": true
+      },
+      "row": {
+        "tool_psrr_db": 31.569926851332,
+        "harness_psrr_db": 8.4205,
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "verdict_source": "offline join with the open-loop klt sim envelope (not a klt verdict)"
+      }
+    },
+    {
+      "point_id": "mos_fs_27C_1.20V",
+      "process": "mos_fs",
+      "temperature_c": 27,
+      "vdd_v": 1.2,
+      "av0_db_joined": 42.33164948391,
+      "metrics": {
+        "avs0_db": {
+          "harness": 35.4197,
+          "tool": 9.651556016581,
+          "delta": -25.768143983418998,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_1khz_db": {
+          "harness": 39.3235,
+          "tool": 9.651062246746,
+          "delta": -29.672437753254002,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_plateau_delta_db": {
+          "harness": 0.0001982,
+          "tool": 5.15498754794e-12,
+          "delta": -0.00019819999484501244,
+          "tolerance": 0.005,
+          "unit": "dB",
+          "within": true
+        },
+        "psrr_db": {
+          "harness": 6.034,
+          "tool": 32.680093467329,
+          "delta": 26.646093467329003,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "psrr_1khz_db": {
+          "harness": 2.1302,
+          "tool": 32.680587237164,
+          "delta": 30.550387237164,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        }
+      },
+      "plateau_guard": {
+        "harness_pass": true,
+        "tool_pass": true,
+        "agree": true
+      },
+      "row": {
+        "tool_psrr_db": 32.680093467329,
+        "harness_psrr_db": 6.034,
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "verdict_source": "offline join with the open-loop klt sim envelope (not a klt verdict)"
+      }
+    },
+    {
+      "point_id": "mos_fs_27C_1.32V",
+      "process": "mos_fs",
+      "temperature_c": 27,
+      "vdd_v": 1.32,
+      "av0_db_joined": 43.41884738292,
+      "metrics": {
+        "avs0_db": {
+          "harness": 37.8548,
+          "tool": 10.27600472609,
+          "delta": -27.578795273909996,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_1khz_db": {
+          "harness": 40.5916,
+          "tool": 10.27543024173,
+          "delta": -30.31616975827,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_plateau_delta_db": {
+          "harness": 0.000148,
+          "tool": 6.014744258209e-12,
+          "delta": -0.00014799999398525573,
+          "tolerance": 0.005,
+          "unit": "dB",
+          "within": true
+        },
+        "psrr_db": {
+          "harness": 4.6519,
+          "tool": 33.14284265683,
+          "delta": 28.490942656829997,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "psrr_1khz_db": {
+          "harness": 1.9151,
+          "tool": 33.14341714119,
+          "delta": 31.22831714119,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        }
+      },
+      "plateau_guard": {
+        "harness_pass": true,
+        "tool_pass": true,
+        "agree": true
+      },
+      "row": {
+        "tool_psrr_db": 33.14284265683,
+        "harness_psrr_db": 4.6519,
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "verdict_source": "offline join with the open-loop klt sim envelope (not a klt verdict)"
+      }
+    },
+    {
+      "point_id": "mos_fs_125C_1.08V",
+      "process": "mos_fs",
+      "temperature_c": 125,
+      "vdd_v": 1.08,
+      "av0_db_joined": 38.22934570799,
+      "metrics": {
+        "avs0_db": {
+          "harness": 31.5519,
+          "tool": 11.32827033989,
+          "delta": -20.22362966011,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_1khz_db": {
+          "harness": 34.6168,
+          "tool": 11.32796170366,
+          "delta": -23.288838296339996,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_plateau_delta_db": {
+          "harness": 6.7e-05,
+          "tool": 3.25783844346e-12,
+          "delta": -6.699999674216156e-05,
+          "tolerance": 0.005,
+          "unit": "dB",
+          "within": true
+        },
+        "psrr_db": {
+          "harness": 6.2293,
+          "tool": 26.9010753681,
+          "delta": 20.6717753681,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "psrr_1khz_db": {
+          "harness": 3.1644,
+          "tool": 26.901384004329998,
+          "delta": 23.736984004329997,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        }
+      },
+      "plateau_guard": {
+        "harness_pass": true,
+        "tool_pass": true,
+        "agree": true
+      },
+      "row": {
+        "tool_psrr_db": 26.9010753681,
+        "harness_psrr_db": 6.2293,
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "verdict_source": "offline join with the open-loop klt sim envelope (not a klt verdict)"
+      }
+    },
+    {
+      "point_id": "mos_fs_125C_1.20V",
+      "process": "mos_fs",
+      "temperature_c": 125,
+      "vdd_v": 1.2,
+      "av0_db_joined": 40.12023037882,
+      "metrics": {
+        "avs0_db": {
+          "harness": 35.2713,
+          "tool": 10.16043368008,
+          "delta": -25.110866319919996,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_1khz_db": {
+          "harness": 37.1395,
+          "tool": 10.1600304658,
+          "delta": -26.9794695342,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_plateau_delta_db": {
+          "harness": 4.88e-05,
+          "tool": 4.227729277773e-12,
+          "delta": -4.879999577227072e-05,
+          "tolerance": 0.005,
+          "unit": "dB",
+          "within": true
+        },
+        "psrr_db": {
+          "harness": 4.2971,
+          "tool": 29.959796698739996,
+          "delta": 25.662696698739996,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "psrr_1khz_db": {
+          "harness": 2.4289,
+          "tool": 29.96019991302,
+          "delta": 27.53129991302,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        }
+      },
+      "plateau_guard": {
+        "harness_pass": true,
+        "tool_pass": true,
+        "agree": true
+      },
+      "row": {
+        "tool_psrr_db": 29.959796698739996,
+        "harness_psrr_db": 4.2971,
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "verdict_source": "offline join with the open-loop klt sim envelope (not a klt verdict)"
+      }
+    },
+    {
+      "point_id": "mos_fs_125C_1.32V",
+      "process": "mos_fs",
+      "temperature_c": 125,
+      "vdd_v": 1.32,
+      "av0_db_joined": 41.4247631761,
+      "metrics": {
+        "avs0_db": {
+          "harness": 37.7983,
+          "tool": 10.33911818541,
+          "delta": -27.459181814589996,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_1khz_db": {
+          "harness": 38.6177,
+          "tool": 10.33862983024,
+          "delta": -28.279070169759997,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "avs_plateau_delta_db": {
+          "harness": 2.96e-05,
+          "tool": 5.144329406903e-12,
+          "delta": -2.9599994855670594e-05,
+          "tolerance": 0.005,
+          "unit": "dB",
+          "within": true
+        },
+        "psrr_db": {
+          "harness": 3.0691,
+          "tool": 31.08564499069,
+          "delta": 28.01654499069,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        },
+        "psrr_1khz_db": {
+          "harness": 2.2497,
+          "tool": 31.08613334586,
+          "delta": 28.836433345859998,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": false
+        }
+      },
+      "plateau_guard": {
+        "harness_pass": true,
+        "tool_pass": true,
+        "agree": true
+      },
+      "row": {
+        "tool_psrr_db": 31.08564499069,
+        "harness_psrr_db": 3.0691,
+        "tool_pass": true,
+        "harness_pass": true,
+        "agree": true,
+        "harness_within_tolerance_of_bound": false,
+        "verdict_source": "offline join with the open-loop klt sim envelope (not a klt verdict)"
+      }
+    }
+  ],
+  "status": "disagree",
+  "inputs": {
+    "envelope": {
+      "path": "sim/cmrr-psrr/klt/records/20261015-103521-0f41068.sim.json",
+      "sha256": "807317288e41c8ce5532de94eb23745e50d1428929415e5faa52fdb82d197b28"
+    },
+    "harness_csv": {
+      "path": "sim/cmrr-psrr/records/20260921-151815-707b34c.csv",
+      "sha256": "ede23361c795e73e0476da9ea4f3f05140af1a6927fb6878fca2ee2c4f728c6a"
+    },
+    "openloop_envelope": {
+      "path": "sim/open-loop-ac/klt/records/20261016-161057-8caa272.ac.sim.json",
+      "sha256": "2203aae8155ecde848f44f84e43e9b9d56bff6827e7ae90ba84528e11aaddfff"
+    },
+    "openloop_csv": {
+      "path": "sim/open-loop-ac/records/20261015-103057-895d555.csv",
+      "sha256": "7b3c46a75dfe14a56346cdf68b0704de1d8574748ed6f4e8bcff7424455e80a2"
+    }
+  },
+  "provenance": {
+    "record_id": "20261016-171154-ff5ee9a",
+    "repo_git_sha": "ff5ee9a",
+    "note": "offline join issue 99; no simulator run"
+  }
+}

@@ -19,8 +19,11 @@
 #
 # One envelope: it carries the supply-to-output gain Avs only. PSRR also needs
 # the same-point open-loop gain Av0, which compare.py joins offline from the
-# committed open-loop HARNESS record (not a `klt sim` envelope), so the PSRR
-# verdict in compare.json is an offline verdict, not the tool's.
+# committed open-loop `klt sim` AC envelope (sim/open-loop-ac/klt/records/
+# *.ac.sim.json, measurement av0_db; PSRR_OPENLOOP_ENVELOPE), cross-checked
+# against the open-loop harness CSV. Both operands are `klt sim` outputs, but the
+# PSRR verdict in compare.json is still an offline verdict (a two-envelope
+# join), not the tool's.
 #
 # Backend: the request declares `"backend": "batch"` (2am's EDA batch fleet):
 # 45 AC corners is a grid, and grids do not run on shared dispatch hosts. If a
@@ -69,6 +72,9 @@ HARNESS_CSV="sim/cmrr-psrr/records/${HARNESS_ID}.csv"
 # the tool values as outside the old harness record's tolerance: expected, and
 # the point of the re-derivation. Override with PSRR_OPENLOOP_CSV.
 OPENLOOP_CSV="${PSRR_OPENLOOP_CSV:-sim/open-loop-ac/records/20261015-103057-895d555.csv}"
+# Av0 source of the PSRR join (issue #99): the open-loop klt sim AC envelope of
+# the same grounded-inn bench; OPENLOOP_CSV above is then only the cross-check.
+OPENLOOP_ENVELOPE="${PSRR_OPENLOOP_ENVELOPE:-sim/open-loop-ac/klt/records/20261016-161057-8caa272.ac.sim.json}"
 
 klt_begin_record psrr
 BACKEND_ARGS=()
@@ -159,4 +165,5 @@ KLT_PROVENANCE_EXTRA=("backend_override=${PSRR_KLT_BACKEND:-none (request field:
                       "submit_mode=${MODE}")
 klt_compare_and_finish \
   --harness-csv "${HARNESS_CSV}" \
+  --openloop-envelope "${OPENLOOP_ENVELOPE}" \
   --openloop-csv "${OPENLOOP_CSV}"

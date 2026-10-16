@@ -5,19 +5,24 @@ Usage:
 
     compare.py validate <envelope.json>
     compare.py compare --envelope <psrr.sim.json> --harness-csv <cmrr-psrr record.csv> \
-        --openloop-csv <open-loop-ac record.csv> [--json-out <report.json>] \
-        [--provenance key=value ...]
+        (--openloop-envelope <open-loop-ac ac.sim.json> | --openloop-csv <open-loop-ac record.csv>) \
+        [--openloop-csv <open-loop-ac record.csv>  (cross-check when an envelope is the source)] \
+        [--json-out <report.json>] [--provenance key=value ...]
 
 Offline and stdlib-only: it reads committed files and runs no simulator.
 
 What the envelope is, and is not. psrr.request.json measures ONE excitation: the
 supply-to-output gain Avs (Vdd carries `ac 1`). PSRR = Av0 - Avs0 (dB) also
 needs the differential gain Av0 of the same point, a different excitation that
-one AC solve cannot carry. `compare` therefore joins the same-point Av0 from the
-committed open-loop HARNESS record (not a `klt sim` Av0 envelope) on the full
-(process, temperature, VDD) key and applies the ratified bound offline. That
-PSRR verdict is this script's, not `klt sim`'s: the only limit the tool grades
-is the harness's flat-shelf plateau guard.
+one AC solve cannot carry. `compare` therefore joins the same-point Av0 on the
+full (process, temperature, VDD) key and applies the ratified bound offline.
+Av0 comes from the committed open-loop `klt sim` AC envelope
+(--openloop-envelope, measurement `av0_db`; issue #99), so both operands are
+`klt sim` outputs; --openloop-csv (the open-loop harness record) is the legacy
+source and, when given beside an envelope, a cross-check: the per-point
+envelope-joined vs CSV-joined PSRR is reported in `av0_join`. The PSRR verdict
+is this script's, not `klt sim`'s: the only limit the tool grades is the
+harness's flat-shelf plateau guard.
 
 `validate` is the gate sim/cmrr-psrr/klt/run.sh applies before an envelope may
 enter records/: exactly the 45-point ratified grid, one corner per (process,
@@ -93,6 +98,13 @@ TOLERANCES = {
     "avs_plateau_delta_db": {"abs": 0.005, "rel": 0.0, "unit": "dB"},
     "psrr_db": {"abs": 0.02, "rel": 0.0, "unit": "dB"},
     "psrr_1khz_db": {"abs": 0.02, "rel": 0.0, "unit": "dB"},
+    # Av0 from the open-loop envelope vs the open-loop harness CSV: the same
+    # bench on two hosts (DR-0005), the same 0.02 dB argument as avs0_db.
+    # MEASURED (sim/open-loop-ac/klt/records/20261016-161057-8caa272.compare.json):
+    # largest |envelope - CSV| 4.95e-5 dB, the CSV's print precision. PSRR is
+    # Av0 - Avs0 with Avs0 common to both joins, so its envelope-vs-CSV
+    # difference IS the Av0 difference and carries the same tolerance.
+    "av0_db": {"abs": 0.02, "rel": 0.0, "unit": "dB"},
 }
 
 
@@ -105,6 +117,14 @@ def index_envelope(env: dict, label: str = "envelope") -> Dict[Key, Dict[str, ob
     """The shared envelope gate (klt_envelope.index_envelope), additionally
     refusing a measurement whose status is in REJECT_STATUSES."""
     return E.index_envelope(env, label, MEASUREMENTS, reject_statuses=REJECT_STATUSES)
+
+
+def index_openloop_envelope(env: dict, label: str = "open-loop envelope") -> Dict[Key, Dict[str, object]]:
+    """The open-loop `klt sim` AC envelope as an Av0 source: the shared gate with
+    `av0_db` required once, finite and not skipped/errored/inconclusive per
+    corner. The measurement's own pass/fail status is not a defect here (a
+    verdict on Av0 is the open-loop bench's, not this join's)."""
+    return E.index_envelope(env, label, ("av0_db",), reject_statuses=REJECT_STATUSES)
 
 
 # ------------------------------------------------------------- CSV records
@@ -124,13 +144,27 @@ def load_openloop_csv(path: str) -> Dict[Key, Dict[str, float]]:
 
 
 # ----------------------------------------------------------------- compare
+_AV0_DESC = {"open-loop-envelope": "the open-loop `klt sim` AC envelope's Av0 (av0_db)",
+             "open-loop-csv": "the open-loop harness record's Av0"}
+_AV0_LABEL = {"open-loop-envelope": "open-loop envelope", "open-loop-csv": "open-loop CSV"}
+_VERDICT_SOURCE = {"open-loop-envelope": "offline join with the open-loop klt sim envelope (not a klt verdict)",
+                   "open-loop-csv": "offline join with the open-loop harness record (not a klt verdict)"}
 _tol = functools.partial(E.tol, TOLERANCES)
 
 
 def compare(tool: Dict[Key, Dict[str, object]], harness: Dict[Key, Dict[str, float]],
-            openloop: Dict[Key, Dict[str, float]], env: Optional[dict] = None) -> dict:
+            openloop: Dict[Key, Dict[str, object]], env: Optional[dict] = None, *,
+            av0_source: str = "open-loop-csv",
+            av0_crosscheck: Optional[Dict[Key, Dict[str, float]]] = None) -> dict:
+    """`openloop` is the same-point Av0 source ({key: {"av0_db": ...}}): the open-loop
+    `klt sim` envelope (av0_source "open-loop-envelope") or the open-loop harness CSV
+    ("open-loop-csv"). `av0_crosscheck`, the CSV records when an envelope is the
+    source, adds the envelope-joined vs CSV-joined PSRR comparison."""
+    if av0_source not in ("open-loop-envelope", "open-loop-csv"):
+        raise InputError(f"unknown Av0 source {av0_source!r}")
     problems: List[str] = []
-    for label, d in (("envelope", tool), ("harness CSV", harness), ("open-loop CSV", openloop)):
+    for label, d in (("envelope", tool), ("harness CSV", harness), (_AV0_LABEL[av0_source], openloop)) + (
+            (("open-loop CSV cross-check", av0_crosscheck),) if av0_crosscheck is not None else ()):
         E.check_grid(d.keys(), label, problems)
     for k in expected_keys():
         if k in tool:
@@ -152,7 +186,7 @@ def compare(tool: Dict[Key, Dict[str, object]], harness: Dict[Key, Dict[str, flo
         # The harness divided this very Av0 out; a different value would mean the
         # two records are not from the same open-loop run.
         if not math.isclose(av0, h["av0_db"], rel_tol=0, abs_tol=1e-9):
-            joins_inconsistent.append(f"{key_str(k)}: open-loop av0_db {av0} != harness-recorded av0_db {h['av0_db']}")
+            joins_inconsistent.append(f"{key_str(k)}: {av0_source} av0_db {av0} != harness-recorded av0_db {h['av0_db']}")
         tv_all = {
             "avs0_db": t["avs0_db"],
             "avs_1khz_db": t["avs_1khz_db"],
@@ -186,7 +220,7 @@ def compare(tool: Dict[Key, Dict[str, object]], harness: Dict[Key, Dict[str, flo
         row = {"tool_psrr_db": tool_psrr, "harness_psrr_db": harness_psrr, "tool_pass": tool_pass,
                "harness_pass": harness_pass, "agree": tool_pass == harness_pass,
                "harness_within_tolerance_of_bound": near,
-               "verdict_source": "offline join with the open-loop harness record (not a klt verdict)"}
+               "verdict_source": _VERDICT_SOURCE[av0_source]}
         if tool_pass != harness_pass:
             verdict_disagreements.append({"point": key_str(k), "row": "psrr_dc_shelf", "harness": harness_psrr,
                                           "tool": tool_psrr, "bound": PSRR_BOUND_DB,
@@ -211,7 +245,7 @@ def compare(tool: Dict[Key, Dict[str, object]], harness: Dict[Key, Dict[str, flo
                        "verdict": "pass" if worst_tool[0] >= PSRR_BOUND_DB else "fail"},
         "harness_worst": {"point": worst_harness[1], "value": worst_harness[0],
                           "verdict": "pass" if worst_harness[0] >= PSRR_BOUND_DB else "fail"},
-        "verdict_source": "offline join of the tool's Avs with the harness open-loop Av0; not a klt verdict",
+        "verdict_source": f"offline join of the tool's Avs with {_AV0_DESC[av0_source]}; not a klt verdict",
     }
     if env is not None:
         summary["tool_plateau_guard"] = {}
@@ -219,8 +253,39 @@ def compare(tool: Dict[Key, Dict[str, object]], harness: Dict[Key, Dict[str, flo
             if m.get("name") == "avs_plateau_delta_db":
                 summary["tool_plateau_guard"] = {"status": m.get("status"), "limits": m.get("limits"),
                                                  "worst_case": m.get("worst_case")}
+    av0_join = {"source": av0_source, "source_description": _AV0_DESC[av0_source]}
+    join_oot: List[str] = []
+    if av0_crosscheck is not None:
+        join_points = []
+        for p in points:
+            k = make_key(p["process"], p["temperature_c"], p["vdd_v"])
+            csv_av0 = float(av0_crosscheck[k]["av0_db"])
+            d_av0 = p["av0_db_joined"] - csv_av0
+            avs0 = float(tool[k]["avs0_db"])
+            psrr_env, psrr_csv = p["av0_db_joined"] - avs0, csv_av0 - avs0
+            tol = _tol("av0_db", csv_av0)
+            within = abs(d_av0) <= tol
+            agree = (psrr_env >= PSRR_BOUND_DB) == (psrr_csv >= PSRR_BOUND_DB)
+            join_points.append({"point_id": p["point_id"], "av0_envelope_db": p["av0_db_joined"],
+                                "av0_csv_db": csv_av0, "av0_delta_db": d_av0, "tolerance_db": tol,
+                                "psrr_envelope_join_db": psrr_env, "psrr_csv_join_db": psrr_csv,
+                                "psrr_delta_db": psrr_env - psrr_csv, "within": within, "verdicts_agree": agree})
+            if not within:
+                join_oot.append(f"{p['point_id']} av0_db: envelope {p['av0_db_joined']:.9g} vs open-loop CSV "
+                                f"{csv_av0:.9g} (delta {d_av0:.3g} dB, tolerance {tol:.3g})")
+            if not agree:
+                join_oot.append(f"{p['point_id']} PSRR bound verdict: envelope join {psrr_env:.6g} vs CSV join {psrr_csv:.6g}")
+        worst = max(join_points, key=lambda q: abs(q["av0_delta_db"]))
+        av0_join.update({
+            "tolerance": TOLERANCES["av0_db"], "max_abs_av0_delta_db": abs(worst["av0_delta_db"]),
+            "max_abs_av0_delta_point": worst["point_id"],
+            "worst_psrr_envelope_join": min(((q["psrr_envelope_join_db"], q["point_id"]) for q in join_points)),
+            "worst_psrr_csv_join": min(((q["psrr_csv_join_db"], q["point_id"]) for q in join_points)),
+            "out_of_tolerance": join_oot, "points": join_points,
+            "status": "agree" if not join_oot else "disagree"})
     return {
         "schema": "sg13g2-opamp/cmrr-psrr/klt-compare/1",
+        "av0_join": av0_join,
         "points_compared": len(points),
         "tolerances": TOLERANCES,
         "out_of_tolerance": out_of_tol,
@@ -229,7 +294,7 @@ def compare(tool: Dict[Key, Dict[str, object]], harness: Dict[Key, Dict[str, flo
         "unexplained_bound_verdict_disagreements": len(unexplained),
         "row": summary,
         "points": points,
-        "status": "agree" if not (out_of_tol or unexplained or joins_inconsistent) else "disagree",
+        "status": "agree" if not (out_of_tol or unexplained or joins_inconsistent or join_oot) else "disagree",
     }
 
 
@@ -239,21 +304,40 @@ def _text_summary(rep: dict) -> str:
              f"  PSRR bound >= {r['bound']['min']} dB (offline join): tool worst {r['tool_worst']['point']} = "
              f"{r['tool_worst']['value']:.6g} ({r['tool_worst']['verdict']}); harness worst "
              f"{r['harness_worst']['point']} = {r['harness_worst']['value']:.6g} ({r['harness_worst']['verdict']})"]
+    j = rep["av0_join"]
+    lines.append(f"  Av0 source: {j['source']}")
+    if "points" in j:
+        lines.append(f"  Av0 envelope vs open-loop CSV: max |delta| {j['max_abs_av0_delta_db']:.3g} dB at "
+                     f"{j['max_abs_av0_delta_point']} (tolerance {j['tolerance']['abs']} dB); worst PSRR envelope join "
+                     f"{j['worst_psrr_envelope_join'][1]} = {j['worst_psrr_envelope_join'][0]:.6g}, CSV join "
+                     f"{j['worst_psrr_csv_join'][1]} = {j['worst_psrr_csv_join'][0]:.6g}; status {j['status']}")
+        for line in j["out_of_tolerance"]:
+            lines.append(f"  AV0 JOIN OUT OF TOLERANCE: {line}")
     for line in rep["join_inconsistencies"]:
         lines.append(f"  JOIN INCONSISTENT: {line}")
     return "\n".join(E.summary_tail(lines, rep))
 
 
 def _run(a, tool: Dict[Key, Dict[str, object]], env: dict) -> dict:
-    return compare(tool, load_harness_csv(a.harness_csv), load_openloop_csv(a.openloop_csv), env)
+    if not (a.openloop_envelope or a.openloop_csv):
+        raise InputError("an Av0 source is required: --openloop-envelope and/or --openloop-csv")
+    harness = load_harness_csv(a.harness_csv)
+    if a.openloop_envelope:
+        src = index_openloop_envelope(E.read_envelope(a.openloop_envelope), a.openloop_envelope)
+        cross = load_openloop_csv(a.openloop_csv) if a.openloop_csv else None
+        return compare(tool, harness, src, env, av0_source="open-loop-envelope", av0_crosscheck=cross)
+    return compare(tool, harness, load_openloop_csv(a.openloop_csv), env)
+
 
 def main(argv: Optional[List[str]] = None) -> int:
     return E.run_cli(
         argv, description=__doc__.split("\n\n")[0], compare_help="join the envelope with the harness records",
-        harness_args=(("--harness-csv", {"required": True}), ("--openloop-csv", {"required": True})),
+        harness_args=(("--harness-csv", {"required": True}), ("--openloop-envelope", {"default": None}),
+                      ("--openloop-csv", {"default": None})),
         index_fn=index_envelope,
         run=_run,
-        inputs=(("harness_csv", "harness_csv", True), ("openloop_csv", "openloop_csv", True)),
+        inputs=(("harness_csv", "harness_csv", True), ("openloop_envelope", "openloop_envelope", True),
+                ("openloop_csv", "openloop_csv", True)),
         summary=_text_summary)
 
 
