@@ -20,6 +20,8 @@ _None._
 `loom:important`; taken before unlabelled work.
 
 - **#85**: sim: express the open-loop AC bench as a `klt sim` request, the first gradable envelope toward T1 item 5
+- **#99**: sim: express the PSRR bench as a klt sim request (T1 item 5 coverage, follow-up to #85)
+- **#100**: sim: express the output-swing bench as a klt sim request (T1 item 5 coverage, follow-up to #85)
 - **#237**: design: reconcile schematic device representation with drawn fingering before citing post-layout (T1 item 7)
 
 ## Ready
@@ -72,7 +74,7 @@ _None._
 |------|-------|
 | Operator merge-risk holds | 0 |
 | Very important | 0 |
-| Important | 2 |
+| Important | 4 |
 | Ready (`loom:issue`) | 0 |
 | In Progress (`loom:building`) | 0 |
 | PRs awaiting review | 0 |
