@@ -135,19 +135,106 @@ Each step is a study to propose, not an authorization to run anything.
 
 ## 5. Offset contribution (issue #239)
 
-*Stub heading for #239.* Issue #239 is the offset contribution to this same
-plan, not a competing specification and not a separate permission to loosen
-the offset bound. Its PR fills this section; if it edits this file
-concurrently, it waits for the #101 PR to merge. This section must keep:
+Issue #239 is the offset contribution to this same plan, not a competing
+specification and not a separate permission to loosen the offset bound. It
+selects no circuit change, margin amount or tolerance, and it does not edit
+any file under `spec/`, `signoff/` or `sim/`.
 
-- the literal limit (<= 21.9 mV) and the raw 21.9273527 mV, a miss of
-  0.027 mV;
-- the existing 45-point offset coverage with its single failing point
-  (`mos_fs_125C_1.08V`); the other 44 pass **[derived]**;
-- the distinction between **systematic** offset (this row, nominal-device,
-  deterministic, corner-only) and **statistical** mismatch/yield work
-  (#105, #108; mismatch-driven 3σ is measured `[P]` and not ratified), which
-  this plan does not touch.
+### 5.1 Binding point and raw margin [derived]
+
+- Literal limit: **<= 21.9 mV**, graded on the raw value.
+- Raw extremum: **21.9273527 mV** at `mos_fs_125C_1.08V`, a miss of
+  **-0.0273527 mV** (`vos_null_v`,
+  `sim/input-offset/records/20260918-203858-90844d2.csv`). The `klt sim`
+  envelope `sim/input-offset/klt/records/20261015-081722-8e276bc.sim.json`
+  reports the same point and value.
+- **One of 45** grid points exceeds the limit; the other 44 pass. The raw
+  FAIL and the 45-point coverage are preserved as they are.
+- Next-worst point: `mos_ss_125C_1.08V` at 21.1370862 mV (+0.763 mV margin).
+  `mos_tt_125C_1.08V` is 20.5745761 mV. Best point: `mos_sf_-40C_1.32V` at
+  11.4304056 mV, the best case in the committed characterization report
+  (for example `signoff/characterization/reports/20261012-003507-e721143.json`).
+- Offset is positive at all 45 points (a one-sided systematic term), per
+  `sim/input-offset/README.md` "What drives it, and how it varies".
+
+### 5.2 What sets the systematic term
+
+- **Mechanism** [derived, qualitative]: M4 is forced by M3's diode
+  connection to carry about I_D1 at the diode Vsg, while M6's bias point
+  independently needs d2 near VDD - 0.55 V; the input pair carries a built-in
+  Vgs imbalance to reconcile the two (`design/opamp_sizing.md`, "Expected
+  systematic offset (qualitative)", about line 254).
+- **Axes** [derived] (`sim/input-offset/README.md`, line 205 onward):
+  temperature is the strongest axis (at `mos_tt`/1.20 V, 13.51 mV at -40 °C,
+  15.72 mV at 27 °C, 18.53 mV at 125 °C); supply is next, inversely (at
+  `mos_tt`/27 °C, 17.43 mV at 1.08 V down to 14.46 mV at 1.32 V); the process
+  corner moves it by only 1.65 to 2.93 mV within a (temperature, supply)
+  cell.
+- **Tracks gain inversely** [derived]: the worst offset point is also the
+  lowest-gain point. In the same record, the bench's own local gain at
+  `mos_fs_125C_1.08V` is `av_local_db` 38.0166 dB, and its open-loop AC
+  column `av0_db_ac_record` is 37.7812 dB (the superseded floating-`inn`
+  figure; see section 1). Measured V(d1) - V(d2) at that point is
+  0.505526981 - 0.333898685 = 0.171628 V, of which the offset is about
+  12.8 %; at the best point (0.767607092 - 0.579961715 = 0.187645 V) it is
+  about 6.1 %.
+- **Corner-to-corner attribution** [hypothesis, not traced]: that the extra
+  FS/125 °C/1.08 V offset comes from the lower stage-1 gain moving d2 away
+  from the diode-mirror node is consistent with the mechanism and the d2
+  values (0.3339 V at FS against 0.3059 V at SS and 0.3603 V at TT, same
+  125 °C / 1.08 V), but no record separates it from, for example, the
+  threshold shift of the input pair itself.
+
+### 5.3 Candidate investigation steps for the offset row
+
+None is selected and no amount is proposed. Each relies on the gm/ID study
+(`sim/gm-id-characterization/records/20260909-063633-b402592.csv`, the
+anchor of `design/opamp_sizing.md`; a later record
+`20260928-161200-a6fa678.csv` also exists) and must be re-derived against
+the measured corner values before any number is trusted.
+
+| Step | gm/ID characterization it relies on | Expected direction | Status |
+|---|---|---|---|
+| O1. Quantify how much of the 21.9273527 mV is the d2/diode-node mismatch, from per-point d1, d2 and tail columns of the existing record | PMOS 0.52 µm Vsg versus current (M3/M4) and NMOS 0.13 µm Vgs (M1/M2) rows | none; this is attribution only, no change | derived from cited columns; the attribution itself is a **hypothesis, not traced** |
+| O2. Re-balance M6/M4 current and Vsg so d2 sits closer to the diode-mirror node (candidate C, section 3) | PMOS 0.52 µm and 1.04 µm Vsg-at-current rows (M4, M6) | offset +; swing ? (M6 sets the upper headroom); Iq, GBW, PM and slew to re-check | **hypothesis, not traced** |
+| O3. Raise stage-1 gain, which shrinks the input-referred share of the same imbalance (candidate D) | gm/gds versus L rows for M1/M2 and M3/M4 | offset +; gain +; noise 0 (same binding corner for gain and noise); ICMR, PM, GBW to re-check | **hypothesis, not traced** |
+| O4. Longer or larger input pair (candidate B) | NMOS gm/ID versus L rows | offset ? (the systematic term is not an area law; the statistical term is, see 5.5); gain +; noise + (DR-0003); GBW, ICMR, CMRR to re-check | DR-0003 figures are derived; the offset effect is a **hypothesis, not traced** |
+
+Coupling on the other three failing rows follows section 3. The offset,
+gain and noise rows bind at the same corner, so a change that helps one may
+move another; the coupled rows with small raw margins (Iq 0.045 µA, slew
+7.5144 against 7.51 V/µs, PM 61.99° against 60°) are listed in section 3.
+
+### 5.4 Consistency across files [derived]
+
+The 21.9 mV limit, the raw FAIL and "one miss among 45" are the same in
+`spec/target-spec.md` (line 125), `spec/integrator.json` (line 28,
+`offset_systematic_mv_worst_max` 21.9), `spec/consumers.md` (lines 70 and
+90), `signoff/README.md` (line 484, the offset coverage row) and T1 item 5.
+That the input-offset envelope is committed (`signoff/README.md`, line 489)
+is **envelope coverage, not numerical acceptance**. This section describes
+those files and edits none of them. Any future change that moves the
+measured value or the bound needs a newly minted characterization report
+from an authorized run and the updates listed in section 7.
+
+### 5.5 Systematic versus statistical
+
+This row is the systematic (nominal-device, deterministic, corner-only)
+offset. The mismatch-driven 3σ (26.4 to 27.4 mV, `sim/input-offset/records/mc-20260921-174056-0a509fb.csv`,
+measured `[P]`, not re-ratified) and any yield work (#105, #108) are
+separate, are not touched here, and are not folded into the systematic
+claim above. Meeting the systematic bound would not change the statistical
+picture.
+
+### 5.6 Validation sub-plan
+
+For a future, separately authorized design change; nothing here is run by
+this PR. Re-run the `sim/input-offset` 45-point grid as a `klt sim` request
+(batch fleet) against the **unchanged** 21.9 mV limit with raw-value grading;
+append new records, never edit existing ones; mint a new characterization
+report only from an actually authorized run. No bench is attested that has
+not been run, and no rounding or guard band is applied. The general rules
+are in section 6.
 
 ## 6. Prospective validation plan
 
