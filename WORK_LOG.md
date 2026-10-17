@@ -4,6 +4,8 @@
 
 ### 2026-10-17
 
+- **PR #267**: feat(signoff): cite klt sim envelopes for T1 item 5 with declared gaps
+- **Issue #266** (closed): T1 item 5: cite the committed klt sim envelopes as a multi-row citation with declared gaps (klayout-tools#2959)
 - **PR #263**: docs: record completed PR #27 authority search in DR-0009
 - **PR #258**: refactor: share raw-artifact pin validation and read loop across characterization families
 - **Issue #256** (closed): Collapse triplicated raw-artifact pin validation and pin-check/read loops in characterization generate.py
