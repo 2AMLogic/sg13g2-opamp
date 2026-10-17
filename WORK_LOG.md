@@ -2,6 +2,11 @@
 
 <!-- Maintained by the Loom Guide role. Newest entries first. -->
 
+### 2026-10-17
+
+- **PR #253**: refactor: move open-loop-ac compare.py onto shared klt_envelope helpers
+- **Issue #252** (closed): Consolidate open-loop-ac compare.py onto shared klt_envelope (drop ~65 LOC of duplicated helpers)
+
 ### 2026-10-16
 
 - **PR #250**: sim: join PSRR Av0 from the open-loop klt sim envelope
