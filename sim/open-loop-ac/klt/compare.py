@@ -40,34 +40,22 @@ from __future__ import annotations
 
 import argparse
 import csv
-import hashlib
+import functools
 import json
 import math
 import os
 import sys
-from typing import Dict, Iterable, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
-# ---------------------------------------------------------------- the grid
-# spec/target-spec.md section 1 [DR-1]/[DR-2]: cornerMOSlv.lib's five
-# sections x {-40, 27, 125} C x {1.08, 1.20, 1.32} V.
-PROCESSES = ("mos_tt", "mos_ss", "mos_ff", "mos_sf", "mos_fs")
-TEMPERATURES = (-40, 27, 125)
-SUPPLIES = (1.08, 1.20, 1.32)
-
-Key = Tuple[str, int, float]
-
-
-def expected_keys() -> List[Key]:
-    return [(p, t, v) for p in PROCESSES for t in TEMPERATURES for v in SUPPLIES]
-
-
-def make_key(process: str, temp, vdd) -> Key:
-    return (str(process), int(round(float(temp))), round(float(vdd), 3))
-
-
-def key_str(k: Key) -> str:
-    """The harness's own point_id spelling, e.g. mos_fs_125C_1.08V."""
-    return f"{k[0]}_{k[1]}C_{k[2]:.2f}V"
+# The grid, the key helpers, InputError and the envelope gate are shared by
+# every sim/*/klt/compare.py: sim/tools/klt_envelope.py (issue #142).
+_TOOLS = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "tools"))
+if _TOOLS not in sys.path:
+    sys.path.insert(0, _TOOLS)
+import klt_envelope as E  # noqa: E402
+from klt_envelope import (  # noqa: E402,F401  (re-exported: tests and callers use C.<name>)
+    PROCESSES, TEMPERATURES, SUPPLIES, Key, InputError, expected_keys, make_key, key_str,
+)
 
 
 # ----------------------------------------------------------- measurements
@@ -157,26 +145,15 @@ TOLERANCES = {
     "vtail_dc_v": {"abs": 1e-6, "rel": 1e-3, "unit": "V"},
     "vibias_dc_v": {"abs": 1e-6, "rel": 1e-3, "unit": "V"},
 }
+_tol = functools.partial(E.tol, TOLERANCES)
 
 GBW_METHOD_BIAS_MAX = (1 + 10 ** (1 / 20)) / 2 / math.sqrt(10 ** (1 / 20)) - 1
-
-
-class InputError(Exception):
-    """Inputs cannot be compared at all (exit 2)."""
-
-
-def _finite(x) -> bool:
-    return isinstance(x, (int, float)) and not isinstance(x, bool) and math.isfinite(x)
 
 
 # --------------------------------------------------------------- envelopes
 def load_envelope(path: str, kind: str) -> Tuple[dict, Dict[Key, Dict[str, float]]]:
     """Validate one `klt sim` envelope and index its corners by grid key."""
-    try:
-        with open(path) as f:
-            env = json.load(f)
-    except (OSError, ValueError) as e:
-        raise InputError(f"{path}: unreadable envelope ({e})")
+    env = E.read_envelope(path)
     return env, index_envelope(env, kind, path)
 
 
@@ -228,25 +205,16 @@ def index_envelope(env: dict, kind: str, label: str = "envelope") -> Dict[Key, D
             if m is None:
                 problems.append(f"{key_str(k)}: measurement {n} missing")
                 continue
-            if not _finite(m.get("value")):
+            if not E.finite(m.get("value")):
                 problems.append(f"{key_str(k)}: measurement {n} value {m.get('value')!r} is missing or non-finite")
                 continue
             vals[n] = float(m["value"])
             vals[n + "__status"] = m.get("status")
         out[k] = vals
-    _check_grid(out.keys(), label, problems)
+    E.check_grid(out.keys(), label, problems)
     if problems:
         raise InputError(f"{label}: " + "; ".join(problems))
     return out
-
-
-def _check_grid(keys: Iterable[Key], label: str, problems: List[str]) -> None:
-    got = set(keys)
-    want = set(expected_keys())
-    for k in sorted(want - got):
-        problems.append(f"{key_str(k)}: missing from {label}")
-    for k in sorted(got - want):
-        problems.append(f"{key_str(k)}: not a point of the ratified grid")
 
 
 # ----------------------------------------------------------------- harness
@@ -295,7 +263,7 @@ def load_harness_csv(path: str) -> Dict[Key, Dict[str, object]]:
                     problems.append(f"{key_str(k)}: harness {col} {raw!r} is missing or non-finite")
                 row[col] = v
             out[k] = row
-    _check_grid(out.keys(), "harness CSV", problems)
+    E.check_grid(out.keys(), "harness CSV", problems)
     if problems:
         raise InputError(f"{path}: " + "; ".join(problems))
     return out
@@ -327,11 +295,6 @@ def gbw_method_bias(ac_csv: str) -> float:
 
 
 # ----------------------------------------------------------------- compare
-def _tol(metric: str, ref: float) -> float:
-    t = TOLERANCES[metric]
-    return t["abs"] + t["rel"] * abs(ref)
-
-
 def _passes(value: float, kind: str, bound: float) -> bool:
     return value >= bound if kind == "min" else value <= bound
 
@@ -342,7 +305,7 @@ def compare(ac: Dict[Key, Dict[str, float]], op: Dict[Key, Dict[str, float]],
             ac_env: Optional[dict] = None, op_env: Optional[dict] = None) -> dict:
     problems: List[str] = []
     for label, d in (("ac envelope", ac), ("op envelope", op), ("harness CSV", harness)):
-        _check_grid(d.keys(), label, problems)
+        E.check_grid(d.keys(), label, problems)
     if problems:
         raise InputError("; ".join(problems))
 
@@ -451,14 +414,6 @@ def compare(ac: Dict[Key, Dict[str, float]], op: Dict[Key, Dict[str, float]],
     }
 
 
-def _sha256(path: str) -> str:
-    h = hashlib.sha256()
-    with open(path, "rb") as f:
-        for chunk in iter(lambda: f.read(1 << 16), b""):
-            h.update(chunk)
-    return h.hexdigest()
-
-
 def _text_summary(rep: dict) -> str:
     lines = [f"compare: {rep['points_compared']} points, status {rep['status']}"]
     for row, e in rep["rows"].items():
@@ -510,7 +465,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         return 2
 
     if a.cmd == "compare":
-        rep["inputs"] = {name: {"path": p, "sha256": _sha256(p)} for name, p in
+        rep["inputs"] = {name: {"path": p, "sha256": E.sha256_file(p)} for name, p in
                          (("ac_envelope", a.ac), ("op_envelope", a.op), ("harness_csv", a.harness_csv))}
         rep["inputs"]["harness_ac_dir"] = {"path": a.harness_ac_dir}  # None: klt-measured baseline
         rep["provenance"] = dict(kv.split("=", 1) for kv in a.provenance)
