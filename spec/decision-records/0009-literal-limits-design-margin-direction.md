@@ -83,8 +83,11 @@ ratification record".
 - Repository issue search for `RATIFY-KEY`, `ratification key` and
   `loom:auto-merge-ok`. Hits are #16 (the ratification issue), #32 and #114
   (later re-ratifications), #106 (reviewer-tree install), and #3, #99, #100,
-  #101, #162, #239, which mention the keys in passing; only titles were
-  listed for those, and their bodies and comments were not read. The
+  #101, #162, #239, which mention the keys in passing; a follow-up
+  read of the bodies and comments of #3, #16, #32, #99, #100, #101, #106,
+  #114, #162 and #239 (grep for `RATIFY-KEY`, `ratification key`,
+  `loom:auto-merge-ok`, `EE key`, `market key`) found no key verdict for
+  PR #27. The
   `loom:auto-merge-ok` search returned nothing. Issue #16's comments are Curator/Champion
   evaluations; #106's comments say merge alone does not prove two-key
   ratification.
@@ -99,7 +102,10 @@ and by DR-0002's own text a merge alone does not establish it. This record
 does **not** assert that no authority exists elsewhere: key verdicts may
 have been given in a venue this search did not cover (for example the
 upstream epic [2AMLogic/2am#372](https://github.com/2AMLogic/2am/issues/372)
-or an operator channel). The search did not read that epic's comments.
+or an operator channel). A follow-up read of that epic (body and comments, 2026-10-17) found it
+names other repositories' PRs (sky130-sar-adc#46, sky130-pll#53,
+gf180-pll#158, sky130-bandgap#197, gf180-ldo#127, sky130-ldo#50) and
+no verdict for sg13g2-opamp PR #27; it was not searched beyond that text.
 
 **Consequences, none of which is a decision taken here.**
 
