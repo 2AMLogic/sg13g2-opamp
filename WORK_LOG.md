@@ -4,6 +4,9 @@
 
 ### 2026-10-17
 
+- **PR #259**: docs: plan four-row design margin and record literal-limit direction
+- **PR #257**: refactor: delegate open-loop-ac index_envelope to shared klt_envelope gate
+- **Issue #255** (closed): Remove duplicated index_envelope body in open-loop-ac compare.py (delegate to klt_envelope)
 - **PR #253**: refactor: move open-loop-ac compare.py onto shared klt_envelope helpers
 - **Issue #252** (closed): Consolidate open-loop-ac compare.py onto shared klt_envelope (drop ~65 LOC of duplicated helpers)
 
