@@ -21,6 +21,50 @@
       "kind": "lvs",
       "content_hash": "sha256:07fcb21698709178395cb2f04ba998c3752efb6eff24aace7626d9ffc10e553e"
     },
+    "5": [
+      {
+        "file": "sim/open-loop-ac/klt/records/20261016-161057-8caa272.ac.sim.json",
+        "kind": "sim",
+        "content_hash": "sha256:971cc277f4a50bf56f552556b66f87c94afc676277d7fba1494fa09bd9aba6e5",
+        "rows": [
+          "dc_gain",
+          "gbw",
+          "phase_margin"
+        ]
+      },
+      {
+        "file": "sim/open-loop-ac/klt/records/20261016-161057-8caa272.op.sim.json",
+        "kind": "sim",
+        "content_hash": "sha256:971cc277f4a50bf56f552556b66f87c94afc676277d7fba1494fa09bd9aba6e5",
+        "rows": [
+          "quiescent_current"
+        ]
+      },
+      {
+        "file": "sim/slew-rate/klt/records/20261015-063443-80878d7.sim.json",
+        "kind": "sim",
+        "content_hash": "sha256:b624179671b9de8c3513cc1b49c5018c0f6193b5512abb7b60d6a70619224310",
+        "rows": [
+          "slew_rate"
+        ]
+      },
+      {
+        "file": "sim/input-noise/klt/records/20261015-061719-80878d7.sim.json",
+        "kind": "sim",
+        "content_hash": "sha256:20789691be7a11a265ad2ab47df5b2eb06de7fb2ac82a2ddff841857c9771837",
+        "rows": [
+          "input_noise"
+        ]
+      },
+      {
+        "file": "sim/input-offset/klt/records/20261015-081722-8e276bc.sim.json",
+        "kind": "sim",
+        "content_hash": "sha256:734deac41010eb6fcab90a7579a221298941343196be33e4435f531ccb9d4f0a",
+        "rows": [
+          "offset_systematic"
+        ]
+      }
+    ],
     "8": {
       "file": "signoff/evidence/characterization.json",
       "content_hash": "sha256:2b03a001b32374168133524dd19d18ad0d501d49197b5cd59b713035372de476"
@@ -43,6 +87,51 @@
         "file": "layout/opamp_core/lvs_report.json",
         "kind": "lvs",
         "content_hash": "sha256:07fcb21698709178395cb2f04ba998c3752efb6eff24aace7626d9ffc10e553e"
+      }
+    ]
+  },
+  "spec_rows": {
+    "5": [
+      {
+        "id": "dc_gain"
+      },
+      {
+        "id": "gbw"
+      },
+      {
+        "id": "phase_margin"
+      },
+      {
+        "id": "quiescent_current"
+      },
+      {
+        "id": "slew_rate"
+      },
+      {
+        "id": "input_noise"
+      },
+      {
+        "id": "offset_systematic"
+      },
+      {
+        "id": "psrr",
+        "gap": "no single klt sim form: PSRR is a two-envelope join (supply-gain envelope + open-loop Av0) graded offline; owner #99"
+      },
+      {
+        "id": "swing_headroom_vdd",
+        "gap": "45-corner klt sim request not yet written or run; owner #100"
+      },
+      {
+        "id": "swing_headroom_vss",
+        "gap": "45-corner klt sim request not yet written or run; owner #100"
+      },
+      {
+        "id": "swing_span",
+        "gap": "45-corner klt sim request not yet written or run; owner #100"
+      },
+      {
+        "id": "cmrr_mismatch",
+        "gap": "ratified row is a 300-draw statistical reduction a klt sim request cannot express; item-6 form tracked in #105"
       }
     ]
   }

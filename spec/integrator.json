@@ -55,7 +55,7 @@
     "t1_items_total": 11,
     "t1_items_met": 7,
     "statement": "T1 ('sim-validated') rung: 7 of 11 checklist items met per the newest klt signoff record; not a hand-guessed tier.",
-    "source_record": "signoff/reports/20261012-003544-e721143.signoff.json"
+    "source_record": "signoff/reports/20261017-192606-ae711de.signoff.json"
   },
   "consumers": [
     {
@@ -75,6 +75,6 @@
     "sg13g2_bandgap_commit": "2AMLogic/sg13g2-bandgap @ 463c1af",
     "sg13g2_ldo_commit": "2AMLogic/sg13g2-ldo @ 4fbfa18",
     "this_repo_commit": "2AMLogic/sg13g2-opamp @ 9d49d96",
-    "signoff_record": "signoff/reports/20261012-003544-e721143.signoff.json"
+    "signoff_record": "signoff/reports/20261017-192606-ae711de.signoff.json"
   }
 }

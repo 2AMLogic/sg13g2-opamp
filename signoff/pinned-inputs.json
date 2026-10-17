@@ -56,6 +56,13 @@
         "2": "layout/opamp_core/opamp_core.gds",
         "3": "layout/opamp_core/opamp_core.gds",
         "4": "layout/opamp_core/opamp_core.gds",
+        "5": [
+            "sim/open-loop-ac/klt/tb_openloop_ac.body.spice",
+            "sim/open-loop-ac/klt/tb_openloop_ac.body.spice",
+            "sim/slew-rate/klt/tb_slew.body.spice",
+            "sim/input-noise/klt/tb_noise.body.spice",
+            "sim/input-offset/klt/tb_offset.body.spice"
+        ],
         "8": "signoff/characterization/reports/20261012-003507-e721143.json",
         "9": "signoff/evidence/testbenches.txt",
         "10": "signoff/evidence/hygiene.txt",

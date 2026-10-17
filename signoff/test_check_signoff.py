@@ -267,6 +267,22 @@ class ManifestTest(FixtureCase):
         ev["1"] = [ev["1"]]
         self.assertFails("accept the compound")
 
+    def test_item_5_accepts_a_list_of_sim_citations(self):
+        # klayout-tools#2959: item 5 cites several `klt sim` envelopes. The
+        # list needs no `erc` part (that binding is item 11's alone) and its
+        # pins are re-hashed one per part like any compound citation.
+        cite = {**self.manifest["evidence"]["1"], "kind": "sim", "rows": ["r"]}
+        self.manifest["evidence"]["5"] = [cite]
+        self.pins["inputs"]["5"] = ["art/a.txt"]
+        self.assertEqual(self.run_checks(), [])
+
+    def test_item_5_list_pin_changed(self):
+        cite = {**self.manifest["evidence"]["1"], "kind": "sim", "rows": ["r"]}
+        self.manifest["evidence"]["5"] = [cite]
+        self.pins["inputs"]["5"] = ["art/a.txt"]
+        (self.root / "art" / "a.txt").write_text("changed")
+        self.assertFails("has changed since evidence['5[0]']")
+
     def test_empty_compound_list(self):
         self.manifest["evidence"]["11"] = []
         self.assertFails("is an empty list")
