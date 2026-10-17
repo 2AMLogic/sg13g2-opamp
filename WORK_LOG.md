@@ -4,6 +4,10 @@
 
 ### 2026-10-17
 
+- **PR #258**: refactor: share raw-artifact pin validation and read loop across characterization families
+- **Issue #256** (closed): Collapse triplicated raw-artifact pin validation and pin-check/read loops in characterization generate.py
+- **PR #261**: docs: add offset analysis to the design-margin plan
+- **Issue #239** (closed): Prepare the offset-margin contribution to #101 while retaining the literal 21.9 mV limit
 - **PR #259**: docs: plan four-row design margin and record literal-limit direction
 - **PR #257**: refactor: delegate open-loop-ac index_envelope to shared klt_envelope gate
 - **Issue #255** (closed): Remove duplicated index_envelope body in open-loop-ac compare.py (delegate to klt_envelope)
