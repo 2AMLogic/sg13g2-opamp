@@ -158,63 +158,7 @@ def load_envelope(path: str, kind: str) -> Tuple[dict, Dict[Key, Dict[str, float
 
 
 def index_envelope(env: dict, kind: str, label: str = "envelope") -> Dict[Key, Dict[str, float]]:
-    names = KIND_MEASUREMENTS[kind]
-    if not isinstance(env, dict):
-        raise InputError(f"{label}: not a JSON object")
-    if "error" in env:
-        raise InputError(f"{label}: klt error envelope: {env['error']}")
-    corners = env.get("corners")
-    if not isinstance(corners, list):
-        raise InputError(f"{label}: no corners[] array")
-    if env.get("corner_count") != len(corners):
-        raise InputError(f"{label}: corner_count {env.get('corner_count')} != len(corners) {len(corners)}")
-    cov = env.get("coverage")
-    if not isinstance(cov, dict):
-        raise InputError(f"{label}: no coverage block")
-    if cov.get("nothing_checked") is not False:
-        raise InputError(f"{label}: coverage.nothing_checked is {cov.get('nothing_checked')!r}, expected false")
-    if cov.get("skipped"):
-        raise InputError(f"{label}: coverage.skipped is non-empty ({len(cov['skipped'])} item(s)), e.g. {cov['skipped'][0]}")
-    if env.get("status") not in ("pass", "fail"):
-        raise InputError(f"{label}: aggregate status {env.get('status')!r} -- only a complete pass/fail run is evidence")
-
-    out: Dict[Key, Dict[str, float]] = {}
-    problems: List[str] = []
-    for c in corners:
-        cid = c.get("corner_id")
-        supply = c.get("supply_v") or {}
-        if "vdd" not in supply or "vinp" not in supply or c.get("process") is None:
-            problems.append(f"{cid}: missing process or supply_v.vdd/vinp")
-            continue
-        k = make_key(c["process"], c.get("temperature_c"), supply["vdd"])
-        if k in out:
-            problems.append(f"{key_str(k)}: duplicate corner")
-            continue
-        if not math.isclose(float(supply["vinp"]), float(supply["vdd"]) / 2, rel_tol=0, abs_tol=1e-9):
-            problems.append(f"{key_str(k)}: vinp {supply['vinp']} != vdd/2 ({supply['vdd']}/2)")
-        if c.get("status") not in ("pass", "fail"):
-            problems.append(f"{key_str(k)}: corner status {c.get('status')!r}")
-        vals: Dict[str, float] = {}
-        by_name = {}
-        for m in c.get("measurements") or []:
-            if m.get("name") in by_name:
-                problems.append(f"{key_str(k)}: measurement {m.get('name')} reported twice")
-            by_name[m.get("name")] = m
-        for n in names:
-            m = by_name.get(n)
-            if m is None:
-                problems.append(f"{key_str(k)}: measurement {n} missing")
-                continue
-            if not E.finite(m.get("value")):
-                problems.append(f"{key_str(k)}: measurement {n} value {m.get('value')!r} is missing or non-finite")
-                continue
-            vals[n] = float(m["value"])
-            vals[n + "__status"] = m.get("status")
-        out[k] = vals
-    E.check_grid(out.keys(), label, problems)
-    if problems:
-        raise InputError(f"{label}: " + "; ".join(problems))
-    return out
+    return E.index_envelope(env, label, KIND_MEASUREMENTS[kind])
 
 
 # ----------------------------------------------------------------- harness
