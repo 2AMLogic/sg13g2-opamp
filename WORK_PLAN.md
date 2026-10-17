@@ -13,13 +13,12 @@ _None._
 
 `loom:very-important` (one counts per workspace); every stage takes these first.
 
-_None._
+- **#99**: sim: express the PSRR bench as a klt sim request (T1 item 5 coverage, follow-up to #85)
 
 ## Important
 
 `loom:important`; taken before unlabelled work.
 
-- **#99**: sim: express the PSRR bench as a klt sim request (T1 item 5 coverage, follow-up to #85)
 - **#100**: sim: express the output-swing bench as a klt sim request (T1 item 5 coverage, follow-up to #85)
 - **#237**: design: reconcile schematic device representation with drawn fingering before citing post-layout (T1 item 7)
 
@@ -70,8 +69,8 @@ _None._
 | Bucket | Count |
 |------|-------|
 | Operator merge-risk holds | 0 |
-| Very important | 0 |
-| Important | 3 |
+| Very important | 1 |
+| Important | 2 |
 | Ready (`loom:issue`) | 1 |
 | In Progress (`loom:building`) | 0 |
 | PRs awaiting review | 0 |
