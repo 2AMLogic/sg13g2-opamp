@@ -437,6 +437,24 @@ def _validate_mc_samples_selection(key: str, ms, records: dict) -> None:
             raise SelectionError(f"{where}.files[{pid!r}] needs string `path` and `sha256` (a sample file is never named without its pin)")
 
 
+def _validate_raw_pins(where: str, files, kinds: tuple, shape: str) -> None:
+    """Shape of a `*_raw` record's `files`: a non-empty object of point_id ->
+    exactly `kinds`, each a pin with a string `path` and `sha256`. `shape` is
+    the family's rendering of the entry in the "non-empty object" message."""
+    if not isinstance(files, dict) or not files:
+        raise SelectionError(f"{where}.files must be a non-empty object of point_id -> {shape}")
+    for pid, entry in files.items():
+        if not isinstance(entry, dict) or sorted(entry) != sorted(kinds):
+            raise SelectionError(f"{where}.files[{pid!r}] needs exactly {list(kinds)}")
+        for kind in kinds:
+            pin = entry[kind]
+            if not (isinstance(pin, dict) and isinstance(pin.get("path"), str) and isinstance(pin.get("sha256"), str)):
+                raise SelectionError(
+                    f"{where}.files[{pid!r}].{kind} needs string `path` and `sha256` "
+                    "(a raw artifact is never named without its pin)"
+                )
+
+
 NOISE_PIN_KINDS = ("log", "spectrum")
 
 
@@ -455,19 +473,7 @@ def _validate_noise_raw_selection(key: str, nr) -> None:
     }
     if band != want:
         raise SelectionError(f"{where}.band must be exactly {want} (the documented band the shared post-processing enforces)")
-    files = nr.get("files")
-    if not isinstance(files, dict) or not files:
-        raise SelectionError(f"{where}.files must be a non-empty object of point_id -> {{log, spectrum}}")
-    for pid, entry in files.items():
-        if not isinstance(entry, dict) or sorted(entry) != sorted(NOISE_PIN_KINDS):
-            raise SelectionError(f"{where}.files[{pid!r}] needs exactly {list(NOISE_PIN_KINDS)}")
-        for kind in NOISE_PIN_KINDS:
-            pin = entry[kind]
-            if not (isinstance(pin, dict) and isinstance(pin.get("path"), str) and isinstance(pin.get("sha256"), str)):
-                raise SelectionError(
-                    f"{where}.files[{pid!r}].{kind} needs string `path` and `sha256` "
-                    "(a raw artifact is never named without its pin)"
-                )
+    _validate_raw_pins(where, nr.get("files"), NOISE_PIN_KINDS, f"{{log, spectrum}}")
 
 
 SLEW_PIN_KINDS = ("tran", "netlist")
@@ -484,19 +490,7 @@ def _validate_slew_raw_selection(key: str, sr) -> None:
             f"{where}.config must be exactly {slew_post.CONFIG} (the measurement configuration of "
             "sim/slew-rate/run_slew_sweep.sh that the shared post-processing is defined for)"
         )
-    files = sr.get("files")
-    if not isinstance(files, dict) or not files:
-        raise SelectionError(f"{where}.files must be a non-empty object of point_id -> {{tran, netlist}}")
-    for pid, entry in files.items():
-        if not isinstance(entry, dict) or sorted(entry) != sorted(SLEW_PIN_KINDS):
-            raise SelectionError(f"{where}.files[{pid!r}] needs exactly {list(SLEW_PIN_KINDS)}")
-        for kind in SLEW_PIN_KINDS:
-            pin = entry[kind]
-            if not (isinstance(pin, dict) and isinstance(pin.get("path"), str) and isinstance(pin.get("sha256"), str)):
-                raise SelectionError(
-                    f"{where}.files[{pid!r}].{kind} needs string `path` and `sha256` "
-                    "(a raw artifact is never named without its pin)"
-                )
+    _validate_raw_pins(where, sr.get("files"), SLEW_PIN_KINDS, f"{{tran, netlist}}")
 
 
 SWING_PIN_KINDS = ("coarse_csv", "coarse_netlist", "fine_csv", "fine_netlist")
@@ -514,19 +508,7 @@ def _validate_swing_raw_selection(key: str, sw) -> None:
             f"{where}.config must be exactly {swing_post.CONFIG} (the measurement configuration of "
             "sim/output-swing/run_swing_sweep.sh that the shared post-processing is defined for)"
         )
-    files = sw.get("files")
-    if not isinstance(files, dict) or not files:
-        raise SelectionError(f"{where}.files must be a non-empty object of point_id -> {list(SWING_PIN_KINDS)}")
-    for pid, entry in files.items():
-        if not isinstance(entry, dict) or sorted(entry) != sorted(SWING_PIN_KINDS):
-            raise SelectionError(f"{where}.files[{pid!r}] needs exactly {list(SWING_PIN_KINDS)}")
-        for kind in SWING_PIN_KINDS:
-            pin = entry[kind]
-            if not (isinstance(pin, dict) and isinstance(pin.get("path"), str) and isinstance(pin.get("sha256"), str)):
-                raise SelectionError(
-                    f"{where}.files[{pid!r}].{kind} needs string `path` and `sha256` "
-                    "(a raw artifact is never named without its pin)"
-                )
+    _validate_raw_pins(where, sw.get("files"), SWING_PIN_KINDS, f"{list(SWING_PIN_KINDS)}")
 
 
 # --------------------------------------------------------------------------
@@ -1078,55 +1060,76 @@ def _load_sample_population(repo: Path, key: str, ms: dict, expected: list, reco
     }
 
 
+def _check_raw_pins(key: str, noun: str, files: dict, expected_ids: list, kinds: tuple,
+                    want_name, errors: list) -> None:
+    """Pin-level checks shared by every raw-artifact family: no pin for a point
+    outside the grid, no path pinned twice, and each filename belongs to its
+    own point. `want_name(pid, kind)` is the family's filename rule."""
+    for pid in sorted(set(files) - set(expected_ids)):
+        errors.append(f"record {key}: raw {noun} artifacts pinned for {pid!r}, which is outside the expected grid")
+    seen_paths: dict[str, str] = {}
+    for pid in expected_ids:
+        entry = files.get(pid)
+        if entry is None:
+            continue
+        for kind in kinds:
+            rel = entry[kind]["path"]
+            owner = f"point {pid} {kind}"
+            if rel in seen_paths:
+                errors.append(f"record {key}: {rel} is pinned twice ({seen_paths[rel]} and {owner}); one raw artifact per point and kind")
+            seen_paths[rel] = owner
+            want = want_name(pid, kind)
+            if Path(rel).name != want:
+                errors.append(f"record {key}: point {pid}: {kind} pin names {rel}, which belongs to another point (expected file {want})")
+
+
+def _read_pinned_raw(repo: Path, key: str, pid: str, noun: str, missing_phrase: str, entry,
+                     kinds: tuple, errors: list) -> dict | None:
+    """Read one grid point's pinned raw artifacts as UTF-8 text, refusing a
+    missing file or a sha256 that does not match its selection pin. Returns
+    {kind: text}, or None when the point has no pin or any artifact failed
+    (problems are appended to `errors`)."""
+    if entry is None:
+        errors.append(f"record {key}: point {pid}: no pinned raw {noun} {missing_phrase}")
+        return None
+    texts = {}
+    for kind in kinds:
+        rel, pinned = entry[kind]["path"], entry[kind]["sha256"]
+        path = repo / rel
+        if not path.is_file():
+            errors.append(f"record {key}: point {pid}: missing raw {noun} {kind} {rel}")
+            continue
+        actual = sha256_file(path)
+        if actual != pinned:
+            errors.append(
+                f"record {key}: point {pid}: {rel} does not match its selection pin "
+                f"(pinned {pinned}, actual {actual}) -- re-select deliberately, "
+                "never re-read silently"
+            )
+            continue
+        try:
+            texts[kind] = path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError) as exc:
+            errors.append(f"record {key}: point {pid}: cannot read {rel} ({exc})")
+    return texts if len(texts) == len(kinds) else None
+
+
 def _load_noise_population(repo: Path, key: str, nr: dict, expected: list, errors: list) -> dict | None:
     """Pin-check and strictly parse each grid point's raw noise log and in-band
     spectrum. None when anything is wrong; problems name point and file."""
     n_err = len(errors)
     files = nr["files"]
     expected_ids = [pid for pid, _ in expected]
-    for pid in sorted(set(files) - set(expected_ids)):
-        errors.append(f"record {key}: raw noise artifacts pinned for {pid!r}, which is outside the expected grid")
-    seen_paths: dict[str, str] = {}
-    for pid in expected_ids:
-        entry = files.get(pid)
-        if entry is None:
-            continue
-        for kind in NOISE_PIN_KINDS:
-            rel = entry[kind]["path"]
-            owner = f"point {pid} {kind}"
-            if rel in seen_paths:
-                errors.append(f"record {key}: {rel} is pinned twice ({seen_paths[rel]} and {owner}); one raw artifact per point and kind")
-            seen_paths[rel] = owner
-            stem = Path(rel).name
-            want = f"{pid}.log" if kind == "log" else f"{pid}_noise.csv"
-            if stem != want:
-                errors.append(f"record {key}: point {pid}: {kind} pin names {rel}, which belongs to another point (expected file {want})")
+    _check_raw_pins(
+        key, "noise", files, expected_ids, NOISE_PIN_KINDS,
+        lambda pid, kind: f"{pid}.log" if kind == "log" else f"{pid}_noise.csv",
+        errors)
     points: dict = {}
     for pid in expected_ids:
         entry = files.get(pid)
-        if entry is None:
-            errors.append(f"record {key}: point {pid}: no pinned raw noise log/spectrum (every grid point needs both)")
-            continue
-        texts = {}
-        for kind in NOISE_PIN_KINDS:
-            rel, pinned = entry[kind]["path"], entry[kind]["sha256"]
-            path = repo / rel
-            if not path.is_file():
-                errors.append(f"record {key}: point {pid}: missing raw noise {kind} {rel}")
-                continue
-            actual = sha256_file(path)
-            if actual != pinned:
-                errors.append(
-                    f"record {key}: point {pid}: {rel} does not match its selection pin "
-                    f"(pinned {pinned}, actual {actual}) -- re-select deliberately, "
-                    "never re-read silently"
-                )
-                continue
-            try:
-                texts[kind] = path.read_text(encoding="utf-8")
-            except (OSError, UnicodeDecodeError) as exc:
-                errors.append(f"record {key}: point {pid}: cannot read {rel} ({exc})")
-        if len(texts) != len(NOISE_PIN_KINDS):
+        texts = _read_pinned_raw(
+            repo, key, pid, "noise", "log/spectrum (every grid point needs both)", entry, NOISE_PIN_KINDS, errors)
+        if texts is None:
             continue
         try:
             token, value = noise_post.parse_log_total(texts["log"], entry["log"]["path"])
@@ -1154,48 +1157,16 @@ def _load_slew_population(repo: Path, key: str, sr: dict, expected: list, errors
     files = sr["files"]
     cfg = {k: float(v) for k, v in sr["config"].items()}
     expected_ids = [pid for pid, _ in expected]
-    for pid in sorted(set(files) - set(expected_ids)):
-        errors.append(f"record {key}: raw slew artifacts pinned for {pid!r}, which is outside the expected grid")
-    seen_paths: dict[str, str] = {}
-    for pid in expected_ids:
-        entry = files.get(pid)
-        if entry is None:
-            continue
-        for kind in SLEW_PIN_KINDS:
-            rel = entry[kind]["path"]
-            owner = f"point {pid} {kind}"
-            if rel in seen_paths:
-                errors.append(f"record {key}: {rel} is pinned twice ({seen_paths[rel]} and {owner}); one raw artifact per point and kind")
-            seen_paths[rel] = owner
-            want = f"{pid}_tran.csv" if kind == "tran" else f"{pid}.spice"
-            if Path(rel).name != want:
-                errors.append(f"record {key}: point {pid}: {kind} pin names {rel}, which belongs to another point (expected file {want})")
+    _check_raw_pins(
+        key, "slew", files, expected_ids, SLEW_PIN_KINDS,
+        lambda pid, kind: f"{pid}_tran.csv" if kind == "tran" else f"{pid}.spice",
+        errors)
     points: dict = {}
     for pid in expected_ids:
         entry = files.get(pid)
-        if entry is None:
-            errors.append(f"record {key}: point {pid}: no pinned raw slew waveform/netlist (every grid point needs both)")
-            continue
-        texts = {}
-        for kind in SLEW_PIN_KINDS:
-            rel, pinned = entry[kind]["path"], entry[kind]["sha256"]
-            path = repo / rel
-            if not path.is_file():
-                errors.append(f"record {key}: point {pid}: missing raw slew {kind} {rel}")
-                continue
-            actual = sha256_file(path)
-            if actual != pinned:
-                errors.append(
-                    f"record {key}: point {pid}: {rel} does not match its selection pin "
-                    f"(pinned {pinned}, actual {actual}) -- re-select deliberately, "
-                    "never re-read silently"
-                )
-                continue
-            try:
-                texts[kind] = path.read_text(encoding="utf-8")
-            except (OSError, UnicodeDecodeError) as exc:
-                errors.append(f"record {key}: point {pid}: cannot read {rel} ({exc})")
-        if len(texts) != len(SLEW_PIN_KINDS):
+        texts = _read_pinned_raw(
+            repo, key, pid, "slew", "waveform/netlist (every grid point needs both)", entry, SLEW_PIN_KINDS, errors)
+        if texts is None:
             continue
         tran_rel, net_rel = entry["tran"]["path"], entry["netlist"]["path"]
         try:
@@ -1278,50 +1249,19 @@ def _load_swing_population(repo: Path, key: str, sw: dict, expected: list, error
     fine_step = cfg["fine_step_v"]
     halfspan = cfg["fine_halfspan_v"]
     expected_ids = [pid for pid, _ in expected]
-    for pid in sorted(set(files) - set(expected_ids)):
-        errors.append(f"record {key}: raw swing artifacts pinned for {pid!r}, which is outside the expected grid")
-    seen_paths: dict[str, str] = {}
-    for pid in expected_ids:
-        entry = files.get(pid)
-        if entry is None:
-            continue
-        for kind in SWING_PIN_KINDS:
-            rel = entry[kind]["path"]
-            owner = f"point {pid} {kind}"
-            if rel in seen_paths:
-                errors.append(f"record {key}: {rel} is pinned twice ({seen_paths[rel]} and {owner}); one raw artifact per point and kind")
-            seen_paths[rel] = owner
-            want = f"{pid}_{'coarse' if kind.startswith('coarse') else 'fine'}{'.csv' if kind.endswith('csv') else '.spice'}"
-            if Path(rel).name != want:
-                errors.append(f"record {key}: point {pid}: {kind} pin names {rel}, which belongs to another point (expected file {want})")
+    _check_raw_pins(
+        key, "swing", files, expected_ids, SWING_PIN_KINDS,
+        lambda pid, kind: (
+            f"{pid}_{'coarse' if kind.startswith('coarse') else 'fine'}{'.csv' if kind.endswith('csv') else '.spice'}"),
+        errors)
     points: dict = {}
     for pid in expected_ids:
         entry = files.get(pid)
-        if entry is None:
-            errors.append(f"record {key}: point {pid}: no pinned raw swing curves/netlists (every grid point needs all four)")
+        texts = _read_pinned_raw(
+            repo, key, pid, "swing", "curves/netlists (every grid point needs all four)", entry, SWING_PIN_KINDS, errors)
+        if texts is None:
             continue
         pt_err = len(errors)
-        texts = {}
-        for kind in SWING_PIN_KINDS:
-            rel, pinned = entry[kind]["path"], entry[kind]["sha256"]
-            path = repo / rel
-            if not path.is_file():
-                errors.append(f"record {key}: point {pid}: missing raw swing {kind} {rel}")
-                continue
-            actual = sha256_file(path)
-            if actual != pinned:
-                errors.append(
-                    f"record {key}: point {pid}: {rel} does not match its selection pin "
-                    f"(pinned {pinned}, actual {actual}) -- re-select deliberately, "
-                    "never re-read silently"
-                )
-                continue
-            try:
-                texts[kind] = path.read_text(encoding="utf-8")
-            except (OSError, UnicodeDecodeError) as exc:
-                errors.append(f"record {key}: point {pid}: cannot read {rel} ({exc})")
-        if len(texts) != len(SWING_PIN_KINDS):
-            continue
         cc_rel, cn_rel = entry["coarse_csv"]["path"], entry["coarse_netlist"]["path"]
         fc_rel, fn_rel = entry["fine_csv"]["path"], entry["fine_netlist"]["path"]
         try:
