@@ -27,13 +27,12 @@ _None._
 Human-approved issues ready for implementation (`loom:issue`).
 
 - **#3**: Track the gap to T1 sim-validated / bronze (klayout-tools design-evidence tiers)
-- **#99**: sim: express the PSRR bench as a klt sim request (T1 item 5 coverage, follow-up to #85)
 
 ## In Progress
 
 Issues currently being built (`loom:building`).
 
-_None._
+- **#99**: sim: express the PSRR bench as a klt sim request (T1 item 5 coverage, follow-up to #85)
 
 ## PRs Awaiting Review
 
@@ -72,8 +71,8 @@ _None._
 | Operator merge-risk holds | 0 |
 | Very important | 1 |
 | Important | 2 |
-| Ready (`loom:issue`) | 2 |
-| In Progress (`loom:building`) | 0 |
+| Ready (`loom:issue`) | 1 |
+| In Progress (`loom:building`) | 1 |
 | PRs awaiting review | 0 |
 | Approved PRs awaiting merge | 0 |
 | Curated | 5 |
