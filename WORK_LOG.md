@@ -4,6 +4,7 @@
 
 ### 2026-10-17
 
+- **PR #263**: docs: record completed PR #27 authority search in DR-0009
 - **PR #258**: refactor: share raw-artifact pin validation and read loop across characterization families
 - **Issue #256** (closed): Collapse triplicated raw-artifact pin validation and pin-check/read loops in characterization generate.py
 - **PR #261**: docs: add offset analysis to the design-margin plan
