@@ -297,7 +297,8 @@ def check_erc_spec_binding(manifest_evidence: dict, failures: Failures) -> None:
     `kind`, not by list position or report filename.
     """
     for key, entry in manifest_evidence.items():
-        if not isinstance(entry, list):
+        # Only item 11 cites an ERC run; item 5's list is `klt sim` envelopes.
+        if key != "11" or not isinstance(entry, list):
             continue
         for index, part in enumerate(entry):
             if isinstance(part, dict) and part.get("kind") == "erc":

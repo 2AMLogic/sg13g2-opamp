@@ -73,7 +73,9 @@ A clean DRC, or any pre-layout corner sweep — however thorough — renders
 
 ## What the manifest cites, and what it deliberately does not
 
-**The manifest cites eight items: 1, 9 and 10 (the inventories below),
+**The manifest cites nine items: 1, 9 and 10 (the inventories below),
+5 (the `klt sim` envelopes, with declared gaps; see "Item 5 envelope
+coverage" below),
 8 (the characterization report, below) and 2 (Layout), 3 (DRC clean),
 4 (LVS clean) and 11 (Power delivery, structural).** The layout items are about the same
 committed stream, `layout/opamp_core/opamp_core.gds`, and every one of them
@@ -389,17 +391,13 @@ the drawn metal and asserts the nine nets are wired as
 floating — but that is not LVS (no device recognition, extraction stops at
 Metal1) and is deliberately **not** cited as item 4 or item 11.
 
-**Items 5 and 6 are uncited because this repo's evidence is not in a
-gradable shape.** `spec/target-spec.md` is partially ratified (decision
-record [`0002-target-spec-ratification.md`](../spec/decision-records/0002-target-spec-ratification.md),
-`[DR-2]` — one bound per measured row), and seven bench suites
-(`sim/gm-id-characterization`, `sim/open-loop-ac`, `sim/input-offset`,
-`sim/input-noise`, `sim/slew-rate`, `sim/output-swing`, `sim/cmrr-psrr`)
-record append-only CSV + Markdown evidence against the PVT grid. But item 5
-accepts only a `klt sim` JSON envelope and item 6 only a `klt yield` one,
-and this repo's records are harness-native artifacts, not envelopes — so
-until either an envelope-producing bench lands or a wrapper is introduced
-upstream, both rows correctly render `no_evidence`.
+**Item 5 is cited as a multi-row list of committed `klt sim` envelopes with
+declared gaps (issue #266, klayout-tools#2959); item 6 is still uncited.**
+Item 5 renders `unmet` / `check_failed`, not `no_evidence`: see "Item 5
+envelope coverage, per ratified row" below. Item 6 accepts only a `klt
+yield` envelope and this repo's Monte Carlo records are harness-native
+artifacts, so until an envelope-producing bench lands or a wrapper is
+introduced upstream, it correctly renders `no_evidence`.
 
 Item 6: the Monte Carlo campaigns now exist (offset random half, issue #17,
 `sim/input-offset/records/mc-20260921-174056-0a509fb*`; mismatch-inclusive
@@ -467,11 +465,20 @@ does not mean:
 
 ### Item 5 envelope coverage, per ratified row
 
-Item 5 asks for "every spec row at its bound corners". So the manifest cites
-it only once **every** ratified row of `spec/target-spec.md` §2 has a `klt
-sim` envelope. An envelope covering a subset would grade `met` while
-proving less than the item says. Until then the item stays deliberately
-uncited, and the manifest has no item 5 entry. Per row, today:
+Item 5 asks for "every spec row at its bound corners". The manifest cites
+the committed envelopes as a list, each naming the rows it covers, against
+`spec_rows."5"`, the ratified rows of `signoff/characterization/selection.json`
+(`class: ratified`). Rows no envelope measures are declared `gap`, which keeps
+the item `unmet` / `partial_coverage` and is never read as covered. Today the
+item renders `unmet` / `check_failed`: two cited envelopes are recorded bound
+misses (`failed_rows` = `input_noise`, `offset_systematic`; not relaxed), and
+`detail.declared_gaps` lists exactly five rows: `psrr` (#99), `swing_headroom_vdd`,
+`swing_headroom_vss`, `swing_span` (#100) and `cmrr_mismatch` (statistical
+reduction, item-6 form #105). The `cmrr-psrr` supply-gain envelope measures
+`avs0_db` only, covers no row and is not cited. When #99 or #100 land they
+only replace a `gap` with a citation. Not declared: `cmrr_systematic`
+(superseded by DR-4), `offset_mc_3sigma`, `offset_mc_total`, `icmr_*`
+(measured, unratified) and `area` (pending). Per row, today:
 
 | Ratified row | Bench | `klt sim` request | Envelope committed | Tracker |
 |---|---|---|---|---|
@@ -486,7 +493,7 @@ uncited, and the manifest has no item 5 entry. Per row, today:
 | PSRR ≥ 1.87 dB (DC shelf) | `sim/cmrr-psrr/` | yes, `sim/cmrr-psrr/klt/` (supply-gain request, shard bridge, runner and comparator; `inn` AC-grounded, issue #241). PSRR+ = Av0 − Avs0 is a two-envelope join on (process, temperature, VDD): Avs0 from the supply-gain envelope, Av0 from the open-loop `klt sim` AC envelope; the ratified bound is applied offline because one AC solve cannot carry both excitations, so the PSRR verdict is the comparator's, not a `klt sim` verdict | **yes**: grounded-`inn` supply-gain envelope `sim/cmrr-psrr/klt/records/20261015-103521-0f41068.sim.json` (45 unique points, fleet job `klt-sim-ebfce5fa6940`) joined to `sim/open-loop-ac/klt/records/20261016-161057-8caa272.ac.sim.json` (`av0_db`); join record `klt/records/20261016-171154-ff5ee9a.compare.json`. PSRR+ worst 26.90 dB at `mos_fs`/125 °C/1.08 V, 0 of 45 failing the bound. The envelope-joined PSRR differs from the open-loop-CSV-joined PSRR by at most 4.95e-5 dB (tolerance 0.02 dB, 45 of 45 within). It supersedes the floating-`inn` record `20261010-094256-469573d` (worst 1.8709 dB) | [#99](https://github.com/2AMLogic/sg13g2-opamp/issues/99) |
 | Output swing (headroom ≥ 251/141 mV, span ≥ 0.571 V) | `sim/output-swing/` | partial, `sim/output-swing/klt/` (one-point `mos_tt`/27 °C/1.20 V prototype request, runner and comparator delivered; all three ratified numbers are native `klt sim` measurements with the literal bounds; the 45-point grid request is not yet written) | **no**: one-point prototype only (`klt/records/*.nominal.sim.json`), not evidence; 45-point run deferred | [#100](https://github.com/2AMLogic/sg13g2-opamp/issues/100) |
 
-Seven of ten rows have a complete `klt sim` request, and one more (output swing) has a partial one (a one-point prototype request, no grid request yet): request coverage is not delivered evidence. **The open-loop AC bench (four rows: DC gain, GBW, phase margin, Iq), slew-rate (job `klt-sim-9649fa050398`), input-noise and input-offset (systematic) rows have complete committed envelopes; PSRR is covered by a two-envelope join (below); CMRR and output swing are not covered. Eight of ten ratified rows are covered; item 5 stays uncited.** The open-loop request was first submitted to the batch fleet on 2026-10-09 and rejected before simulating, because the fleet runner's klt (0.5.0) was older than the client (`batch_runner_version_mismatch`, exit 87; 2AMLogic/2am#2193, since closed with the runner pinned to 0.7.0). It was re-run on 2026-10-16 (client 0.7.1.dev, runner 0.7.0, ngspice-46 on the fleet) through `sim/open-loop-ac/klt/run.sh`: all four rows pass at all 45 corners, on the grounded-`inn` bench, and the envelopes are compared with the grounded-`inn` record `sim/open-loop-ac/records/20261015-103057-895d555.csv` (the floating-`inn` record `20260910-221601-22feaba` is superseded: its Av0 worst case of 37.7812 dB, a miss, was a property of that bench's floating `inn`, not of the amplifier; the shift to 38.2293 dB is attributed in `sim/open-loop-ac/README.md`). The slew-rate request was rejected the same way on 2026-10-09 (job `klt-sim-994a710c60f3`), then ran on 2026-10-15 once the runner matched; `sim/slew-rate/README.md` → "The `klt sim` path" has the history, including the fleet thread-oversubscription timeout and its `set num_threads=1` workaround (2AMLogic/klayout-tools#2970). The PSRR request (`sim/cmrr-psrr/klt/`, #99) measures the supply gain only, so the row is a two-envelope join, not a single `klt sim` ratio: the same-point Av0 comes from the committed open-loop `klt sim` AC envelope (`av0_db`), and the ratified bound is applied offline by `compare.py`. The grounded-`inn` supply-gain envelope `20261015-103521-0f41068` (worst 26.90 dB, 0 of 45 failing) supersedes the floating-`inn` `20261010-094256-469573d`; the join check against the open-loop CSV passes (`20261016-171154-ff5ee9a.compare.json`). Unlike the two above, the original (floating-`inn`) run did run on the fleet: the one-request form cannot run on the klt 0.5.0 runner, so the 45-point grid ran as five per-process shard jobs (`sim/cmrr-psrr/klt/shard.py`, client klt 0.6.0) and the merged envelope (45 unique points, 44 pass, one plateau-guard limit miss kept) is committed with its comparison against the harness record (`sim/cmrr-psrr/README.md` → "Measured comparison"). The input-noise request ran on the fleet in one 45-point job (client and runner klt 0.7.0) and its envelope is committed with its harness comparison (`sim/input-noise/README.md` → "Comparison tolerance (measured)"); the verdict is a recorded bound miss at one corner, not a pass, and the earlier one-corner local prototype never counted toward coverage. The input-offset (systematic) request also ran on the fleet in one 45-point job (client and runner klt 0.7.0) and its envelope is committed with its harness comparison (`sim/input-offset/README.md` → "The `klt sim` path"); its verdict is likewise a recorded bound miss at one corner (+21.927 mV against the ratified +21.9 mV), not relaxed. That run was submitted with `klt sim` directly, not through `run.sh`, because this dispatch host's preflight cannot pass (ngspice-42, no OSDI build), so that record has no `.env.json` sidecar. It still does not touch the manifest.
+Seven of ten rows have a complete `klt sim` request, and one more (output swing) has a partial one (a one-point prototype request, no grid request yet): request coverage is not delivered evidence. **The open-loop AC bench (four rows: DC gain, GBW, phase margin, Iq), slew-rate (job `klt-sim-9649fa050398`), input-noise and input-offset (systematic) rows have complete committed envelopes; PSRR is covered by a two-envelope join (below); CMRR and output swing are not covered. Seven rows are cited in item 5 (two of them with recorded bound misses); PSRR, swing and CMRR are declared gaps.** The open-loop request was first submitted to the batch fleet on 2026-10-09 and rejected before simulating, because the fleet runner's klt (0.5.0) was older than the client (`batch_runner_version_mismatch`, exit 87; 2AMLogic/2am#2193, since closed with the runner pinned to 0.7.0). It was re-run on 2026-10-16 (client 0.7.1.dev, runner 0.7.0, ngspice-46 on the fleet) through `sim/open-loop-ac/klt/run.sh`: all four rows pass at all 45 corners, on the grounded-`inn` bench, and the envelopes are compared with the grounded-`inn` record `sim/open-loop-ac/records/20261015-103057-895d555.csv` (the floating-`inn` record `20260910-221601-22feaba` is superseded: its Av0 worst case of 37.7812 dB, a miss, was a property of that bench's floating `inn`, not of the amplifier; the shift to 38.2293 dB is attributed in `sim/open-loop-ac/README.md`). The slew-rate request was rejected the same way on 2026-10-09 (job `klt-sim-994a710c60f3`), then ran on 2026-10-15 once the runner matched; `sim/slew-rate/README.md` → "The `klt sim` path" has the history, including the fleet thread-oversubscription timeout and its `set num_threads=1` workaround (2AMLogic/klayout-tools#2970). The PSRR request (`sim/cmrr-psrr/klt/`, #99) measures the supply gain only, so the row is a two-envelope join, not a single `klt sim` ratio: the same-point Av0 comes from the committed open-loop `klt sim` AC envelope (`av0_db`), and the ratified bound is applied offline by `compare.py`. The grounded-`inn` supply-gain envelope `20261015-103521-0f41068` (worst 26.90 dB, 0 of 45 failing) supersedes the floating-`inn` `20261010-094256-469573d`; the join check against the open-loop CSV passes (`20261016-171154-ff5ee9a.compare.json`). Unlike the two above, the original (floating-`inn`) run did run on the fleet: the one-request form cannot run on the klt 0.5.0 runner, so the 45-point grid ran as five per-process shard jobs (`sim/cmrr-psrr/klt/shard.py`, client klt 0.6.0) and the merged envelope (45 unique points, 44 pass, one plateau-guard limit miss kept) is committed with its comparison against the harness record (`sim/cmrr-psrr/README.md` → "Measured comparison"). The input-noise request ran on the fleet in one 45-point job (client and runner klt 0.7.0) and its envelope is committed with its harness comparison (`sim/input-noise/README.md` → "Comparison tolerance (measured)"); the verdict is a recorded bound miss at one corner, not a pass, and the earlier one-corner local prototype never counted toward coverage. The input-offset (systematic) request also ran on the fleet in one 45-point job (client and runner klt 0.7.0) and its envelope is committed with its harness comparison (`sim/input-offset/README.md` → "The `klt sim` path"); its verdict is likewise a recorded bound miss at one corner (+21.927 mV against the ratified +21.9 mV), not relaxed. That run was submitted with `klt sim` directly, not through `run.sh`, because this dispatch host's preflight cannot pass (ngspice-42, no OSDI build), so that record has no `.env.json` sidecar. These envelopes are cited by the manifest as item 5 (pin `3a75c3a` → `44cc423`, which carries klayout-tools#2959).
 
 ## Disclosures that travel with the current claim
 
