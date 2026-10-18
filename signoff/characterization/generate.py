@@ -536,6 +536,29 @@ def _check_cmrr_linear(point: dict, draws) -> str | None:
     return None
 
 
+def _cell_problem(
+    field: str, cell: str | None, printed: str, source: str, digits: int, nan_ok: bool = True
+) -> str | None:
+    """Why `cell` is not `printed`, the bench's printf %.<digits>g serialization of
+    the value recomputed from `source` (a noun phrase for messages). `nan_ok`:
+    a recomputed `nan` is matched by a `nan` cell; otherwise it is never accepted."""
+    text = (cell or "").strip()
+    if nan_ok and printed == "nan":
+        return None if text.lower() == "nan" else (
+            f"{field} {text!r} but the {source} gives an undefined (nan) value"
+        )
+    value, why = parse_decimal(cell)
+    if value is None:
+        return f"{field}: {why}"
+    if value != Decimal(printed):
+        return (
+            f"{field} {value} is not {printed} recomputed from the {source} "
+            f"(the bench writes this quantity with printf %.{digits}g; the cell must be that "
+            f"serialization, with no tolerance beyond its {digits} digits)"
+        )
+    return None
+
+
 def _check_cmrr_mc_statistics(point: dict, pop: dict | None) -> str | None:
     """Every published CMRR mismatch statistic must follow from the pinned raw
     samples (SAMPLES_AUDIT_RULE), with Av0 joined from the pinned
@@ -563,7 +586,9 @@ def _check_cmrr_mc_statistics(point: dict, pop: dict | None) -> str | None:
             f"record {pop['join_csv']} (the summary may not carry its own Av0)"
         )
     vcm = vdd / 2.0
-    problem = _serialized_stat_problem("vcm_v", point.get("vcm_v"), vcm, 6)
+    problem = _cell_problem(
+        "vcm_v", point.get("vcm_v"), format(vcm, ".6g"), "pinned samples", 6, nan_ok=False
+    )
     if problem:
         return problem
     try:
@@ -582,30 +607,11 @@ def _check_cmrr_mc_statistics(point: dict, pop: dict | None) -> str | None:
         "cmrr_db_mean", "cmrr_db_p01", "cmrr_db_min", "cmrr_1khz_3sigma_db",
         "plateau_max_db",
     ):
-        problem = _serialized_stat_problem(field, point.get(field), st[field], 6)
+        problem = _cell_problem(
+            field, point.get(field), format(st[field], ".6g"), "pinned samples", 6, nan_ok=False
+        )
         if problem:
             return problem
-    return None
-
-
-def _noise_cell_problem(field: str, cell: str | None, recomputed: float) -> str | None:
-    """Why `cell` is not `recomputed` as the noise bench serializes it (%.6g;
-    `nan` where the quantity is undefined)."""
-    text = (cell or "").strip()
-    if recomputed != recomputed:
-        return None if text.lower() == "nan" else (
-            f"{field} {text!r} but the pinned spectrum gives an undefined (nan) value"
-        )
-    value, why = parse_decimal(cell)
-    if value is None:
-        return f"{field}: {why}"
-    printed = Decimal(noise_post.serialize(recomputed))
-    if value != printed:
-        return (
-            f"{field} {value} is not {printed} recomputed from the pinned spectrum "
-            "(the bench writes this quantity with printf %.6g; the cell must be that "
-            "serialization, with no tolerance beyond its 6 digits)"
-        )
     return None
 
 
@@ -633,7 +639,9 @@ def _check_noise_raw(point: dict, pop: dict | None) -> str | None:
     # (the cross-check ratio uses the LOGGED total, not the summary's).
     derived = noise_post.derive(raw["freqs"], raw["dens"], raw["value"])
     for field, value in zip(noise_post.SPECTRUM_FIELDS, derived):
-        problem = _noise_cell_problem(field, point.get(field), value)
+        problem = _cell_problem(
+            field, point.get(field), noise_post.serialize(value), "pinned spectrum", 6
+        )
         if problem:
             problems.append(f"[spectrum] {problem} ({raw['spectrum']})")
     return "; ".join(problems) or None
@@ -650,23 +658,6 @@ def _check_slew_worse_edge(point: dict, draws) -> str | None:
     return None
 
 
-def _slew_cell_problem(field: str, cell: str | None, printed: str) -> str | None:
-    """Why `cell` is not `printed` (the bench's serialization of the recomputed value)."""
-    text = (cell or "").strip()
-    if printed == "nan":
-        return None if text.lower() == "nan" else f"{field} {text!r} but the pinned waveform gives an undefined (nan) value"
-    value, why = parse_decimal(cell)
-    if value is None:
-        return f"{field}: {why}"
-    if value != Decimal(printed):
-        return (
-            f"{field} {value} is not {printed} recomputed from the pinned waveform "
-            "(the bench writes this quantity with printf %.6g; the cell must be that "
-            "serialization, with no tolerance beyond its 6 digits)"
-        )
-    return None
-
-
 def _check_slew_raw(point: dict, pop: dict | None) -> str | None:
     """The slew summary must follow from the pinned transient waveform
     (SLEW_AUDIT_RULE): every waveform-derived cell is recomputed by the shared
@@ -680,7 +671,9 @@ def _check_slew_raw(point: dict, pop: dict | None) -> str | None:
     where = f"({raw['tran']})"
     problems = []
     for field, expect in (("vdd_v", raw["vdd"]), ("vcm_v", raw["vcm"])):
-        problem = _slew_cell_problem(field, point.get(field), slew_post.serialize(expect))
+        problem = _cell_problem(
+            field, point.get(field), slew_post.serialize(expect), "pinned waveform", 6
+        )
         if problem:
             problems.append(f"{problem} (pinned rendered netlist {raw['netlist']})")
     m = slew_post.measure(raw["t"], raw["v"], raw["vcm"], raw["w_out"], raw["w_in"], raw["t2"], raw["t3"], raw["tstop"])
@@ -691,27 +684,10 @@ def _check_slew_raw(point: dict, pop: dict | None) -> str | None:
     cells = dict(zip(slew_post.FIELDS, slew_post.format_fields(m)))
     cells["sr_worst_v_per_us"] = slew_post.serialize(worst)
     for field in (*slew_post.FIELDS[:4], "sr_worst_v_per_us", *slew_post.FIELDS[4:]):
-        problem = _slew_cell_problem(field, point.get(field), cells[field])
+        problem = _cell_problem(field, point.get(field), cells[field], "pinned waveform", 6)
         if problem:
             problems.append(f"{problem} {where}")
     return "; ".join(problems) or None
-
-
-def _swing_cell_problem(field: str, cell: str | None, printed: str) -> str | None:
-    """Why `cell` is not `printed` (the bench's serialization of the recomputed value)."""
-    text = (cell or "").strip()
-    if printed == "nan":
-        return None if text.lower() == "nan" else f"{field} {text!r} but the pinned curves give an undefined (nan) value"
-    value, why = parse_decimal(cell)
-    if value is None:
-        return f"{field}: {why}"
-    if value != Decimal(printed):
-        return (
-            f"{field} {value} is not {printed} recomputed from the pinned raw curves "
-            "(the bench writes this quantity with printf %.9g; the cell must be that "
-            "serialization, with no tolerance beyond its 9 digits)"
-        )
-    return None
 
 
 def _check_swing_raw(point: dict, pop: dict | None) -> str | None:
@@ -728,7 +704,9 @@ def _check_swing_raw(point: dict, pop: dict | None) -> str | None:
     where = f"({raw['coarse_csv']}, {raw['fine_csv']})"
     problems = []
     for field, expect in (("vdd_v", raw["vdd"]), ("vcm_v", raw["vcm"])):
-        problem = _swing_cell_problem(field, point.get(field), swing_post.serialize(expect))
+        problem = _cell_problem(
+            field, point.get(field), swing_post.serialize(expect), "pinned raw curves", 9
+        )
         if problem:
             problems.append(f"{problem} (pinned rendered netlist {raw['fine_netlist']})")
     fine = raw["fine"]
@@ -754,7 +732,7 @@ def _check_swing_raw(point: dict, pop: dict | None) -> str | None:
     for field in swing_post.AUDIT_FIELDS:
         if field in ("vdd_v", "vcm_v"):
             continue  # compared above, against the pinned netlist
-        problem = _swing_cell_problem(field, point.get(field), recomputed[field])
+        problem = _cell_problem(field, point.get(field), recomputed[field], "pinned raw curves", 9)
         if problem:
             problems.append(f"{problem} {where}")
     return "; ".join(problems) or None
@@ -776,22 +754,6 @@ def _check_offset_magnitude(point: dict, draws) -> str | None:
 # writes it -- the same nine significant digits. Anything else differs beyond
 # its own serialization and is an error naming the point and the offending
 # field.
-
-
-def _serialized_stat_problem(field: str, cell: str | None, recomputed: float, digits: int = 9) -> str | None:
-    """Why `cell` is not `recomputed` at the bench's printf %.<digits>g precision."""
-    value, why = parse_decimal(cell)
-    if value is None:
-        return f"{field}: {why}"
-    printed = Decimal(format(recomputed, f".{digits}g"))
-    if value != printed:
-        return (
-            f"{field} {value} is not {printed} recomputed from the pinned "
-            f"{'draws' if digits == 9 else 'samples'} "
-            f"(the bench writes this statistic with printf %.{digits}g; the cell must be "
-            f"that serialization, with no tolerance beyond its {digits} digits)"
-        )
-    return None
 
 
 def _check_offset_mc_statistics(point: dict, draws: dict | None) -> str | None:
@@ -837,7 +799,9 @@ def _check_offset_mc_statistics(point: dict, draws: dict | None) -> str | None:
         parsed, _ = parse_decimal(cell)
         if parsed is not None and field in ("sigma_vos_v", "three_sigma_v") and parsed < 0:
             return f"{field} {cell} is negative (a spread magnitude cannot be)"
-        problem = _serialized_stat_problem(field, cell, recomputed)
+        problem = _cell_problem(
+            field, cell, format(recomputed, ".9g"), "pinned draws", 9, nan_ok=False
+        )
         if problem:
             return problem
     det, det_why = parse_decimal(point.get("vos_systematic_det_v"))
@@ -854,8 +818,13 @@ def _check_offset_mc_statistics(point: dict, draws: dict | None) -> str | None:
         return f"vos_total_wc_det_plus_3sigma_v: {total_why}"
     if total_value < 0:
         return f"vos_total_wc_det_plus_3sigma_v {total_cell} is negative (|systematic| + 3 sigma cannot be)"
-    return _serialized_stat_problem(
-        "vos_total_wc_det_plus_3sigma_v", total_cell, abs(float(det)) + 3.0 * sigma
+    return _cell_problem(
+        "vos_total_wc_det_plus_3sigma_v",
+        total_cell,
+        format(abs(float(det)) + 3.0 * sigma, ".9g"),
+        "pinned draws",
+        9,
+        nan_ok=False,
     )
 
 
