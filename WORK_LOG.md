@@ -4,6 +4,8 @@
 
 ### 2026-10-18
 
+- **PR #276**: refactor: move open-loop klt run.sh onto the shared klt_run_common helper
+- **Issue #274** (closed): Move sim/open-loop-ac/klt/run.sh onto klt_run_common.sh: last hand-copied klt wrapper, missing reservation/no-clobber/identity
 - **PR #272**: refactor: consolidate serialized-cell checkers into one _cell_problem helper
 - **Issue #271** (closed): Consolidate the four serialized-cell checkers in characterization generate.py into one helper
 - **PR #270**: docs(signoff): count PSRR's complete klt sim request in item-5 summary

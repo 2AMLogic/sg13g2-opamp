@@ -58,7 +58,6 @@ Issues carrying `loom:curated`.
 ## Proposed (Architect / Hermit)
 
 - **#105**: signoff: express the statistical rows as klt yield evidence for T1 item 6 (offset MC, mismatch CMRR) *(architect)*
-- **#274**: Move sim/open-loop-ac/klt/run.sh onto klt_run_common.sh: last hand-copied klt wrapper, missing reservation/no-clobber/identity *(hermit)*
 
 ## Epics
 
@@ -76,6 +75,6 @@ _None._
 | PRs awaiting review | 0 |
 | Approved PRs awaiting merge | 0 |
 | Curated | 4 |
-| Architect / Hermit proposals | 2 |
+| Architect / Hermit proposals | 1 |
 | Active epics | 0 |
 <!-- guide:plan-body:end -->
