@@ -4,6 +4,10 @@
 
 ### 2026-10-18
 
+- **PR #282**: refactor: define PVT temperature/supply axes and CL once in sim/preflight.sh
+- **Issue #281** (closed): Hold the temperature/supply grid axes and CL once in sim/preflight.sh (9 runners copy them; corners already centralized by #54)
+- **PR #280**: refactor: share the open-loop klt bench between pre- and post-layout legs
+- **Issue #279** (closed): Remove duplicated open-loop AC klt bench copies under sim/post-layout/klt/
 - **PR #276**: refactor: move open-loop klt run.sh onto the shared klt_run_common helper
 - **Issue #274** (closed): Move sim/open-loop-ac/klt/run.sh onto klt_run_common.sh: last hand-copied klt wrapper, missing reservation/no-clobber/identity
 - **PR #272**: refactor: consolidate serialized-cell checkers into one _cell_problem helper
