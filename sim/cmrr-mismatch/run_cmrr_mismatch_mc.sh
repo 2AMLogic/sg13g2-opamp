@@ -172,10 +172,10 @@ PLATEAU_TOL_DB="${PLATEAU_TOL_DB:-0.05}"     # same plateau guard tolerance as #
 
 # --- Sweep grid: identical order to sim/cmrr-psrr/ --------------------------
 CORNERS=("${SG13G2_MOS_CORNERS[@]}")
-TEMPS=(-40 27 125)
-VDDS=(1.08 1.20 1.32)
+TEMPS=("${SG13G2_TEMPS[@]}")
+VDDS=("${SG13G2_VDDS[@]}")
 # shellcheck disable=SC2034  # consumed by sg13g2_render_netlist (sim/preflight.sh) after this point
-CL_F="2e-12"
+CL_F="${SG13G2_CL_F}"
 
 point_ids=()
 point_corners=()

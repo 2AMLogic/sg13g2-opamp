@@ -140,11 +140,11 @@ cp "${DUT_NETLIST_SRC}" "${DUT_NETLIST_SNAPSHOT}"
 # family is drawn at N>=300 at EACH of its three temperatures, so the
 # "N>=300 per corner" requirement holds everywhere it is claimed.
 CORNERS=("${SG13G2_MOS_CORNERS[@]}")
-TEMPS=(-40 27 125)
+TEMPS=("${SG13G2_TEMPS[@]}")
 VDD="1.20"
 VCM="0.6"
 # shellcheck disable=SC2034  # consumed by sg13g2_render_netlist (sim/preflight.sh) after this point
-CL_F="2e-12"
+CL_F="${SG13G2_CL_F}"
 COARSE_START="-0.1"
 COARSE_STOP="0.1"
 COARSE_STEP="500e-6"

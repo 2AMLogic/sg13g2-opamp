@@ -50,10 +50,10 @@ CORNERS=("${SG13G2_MOS_CORNERS[@]}")
 # Temperature x supply grid: spec/target-spec.md Sec 1 ("Operating
 # temperature", "Supply voltage, VDD") -- crossed with the corner grid "at
 # testbench time", the same 45-point grid sim/open-loop-ac/ uses.
-TEMPS=(-40 27 125)
-VDDS=(1.08 1.20 1.32)
+TEMPS=("${SG13G2_TEMPS[@]}")
+VDDS=("${SG13G2_VDDS[@]}")
 # shellcheck disable=SC2034  # consumed by sg13g2_render_netlist (sim/preflight.sh) after this point
-CL_F="2e-12"
+CL_F="${SG13G2_CL_F}"
 
 # --- Drive and measurement conditions ------------------------------------
 # VSTEP_V: per-input antiphase step half-amplitude, so the differential

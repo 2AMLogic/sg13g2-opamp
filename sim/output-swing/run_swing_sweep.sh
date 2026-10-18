@@ -95,10 +95,10 @@ cp "${DUT_NETLIST_SRC}" "${DUT_NETLIST_SNAPSHOT}"
 # sim/open-loop-ac/ and sim/input-offset/, by construction -- the benches'
 # records are meant to be joined point-by-point on point_id.
 CORNERS=("${SG13G2_MOS_CORNERS[@]}")
-TEMPS=(-40 27 125)
-VDDS=(1.08 1.20 1.32)
+TEMPS=("${SG13G2_TEMPS[@]}")
+VDDS=("${SG13G2_VDDS[@]}")
 # shellcheck disable=SC2034  # consumed by sg13g2_render_netlist (sim/preflight.sh) after this point
-CL_F="2e-12"
+CL_F="${SG13G2_CL_F}"
 
 # --- AC-source admission (issue #224) ------------------------------------
 # Default-selected and explicit AC_RECORD_CSV sources get the SAME check,

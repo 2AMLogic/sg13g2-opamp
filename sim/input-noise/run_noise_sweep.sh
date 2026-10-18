@@ -123,10 +123,10 @@ CORNERS=("${SG13G2_MOS_CORNERS[@]}")
 # Temperature x supply grid: spec/target-spec.md Sec 1 ("Operating
 # temperature", "Supply voltage, VDD") -- the same 45-point grid
 # sim/open-loop-ac/run_pvt_sweep.sh runs.
-TEMPS=(-40 27 125)
-VDDS=(1.08 1.20 1.32)
+TEMPS=("${SG13G2_TEMPS[@]}")
+VDDS=("${SG13G2_VDDS[@]}")
 # shellcheck disable=SC2034  # consumed by sg13g2_render_netlist (sim/preflight.sh) after this point
-CL_F="2e-12"
+CL_F="${SG13G2_CL_F}"
 
 echo "point_id,corner,temp_c,vdd_v,vcm_v,op_pass,vout_dc_v,vd1_dc_v,vd2_dc_v,vtail_dc_v,vibias_dc_v,ivdd_total_a,clgain_100hz,clgain_1mhz,vni_int_vrms,vni_int_crosscheck_ratio,vni_100hz_v_rthz,vni_1khz_v_rthz,vni_10khz_v_rthz,vni_100khz_v_rthz,vni_1mhz_v_rthz,flicker_coeff_v2,thermal_floor_v_rthz,flicker_corner_hz,flicker_frac_of_msq" > "${CSV_OUT}.raw"
 
