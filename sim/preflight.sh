@@ -9,6 +9,8 @@
 # Exports NGSPICE_VERSION for the caller, exactly as
 # each script did on its own before this file existed, plus
 # SG13G2_MOS_CORNERS, the PDK's MOS process-corner set every harness sweeps,
+# SG13G2_TEMPS / SG13G2_VDDS / SG13G2_CL_F (the grid's other two axes and the
+# stated load),
 # and SG13G2_NGSPICE_ERR_RE, the broken-simulation log signature every harness
 # scans its raw ngspice log for (see their own headers below). Eight companion
 # functions cover the remaining shared per-caller work:
@@ -248,6 +250,26 @@ sg13g2_sim_broken() {
 #   against CLAUDE.md's "PVT corners on every recorded result").
 # shellcheck disable=SC2034  # consumed by callers after they source this file
 SG13G2_MOS_CORNERS=(mos_tt mos_ss mos_ff mos_sf mos_fs)
+
+# SG13G2_TEMPS / SG13G2_VDDS / SG13G2_CL_F
+#   The other two axes of the ratified PVT grid and the stated load
+#   capacitance, held once for the same reason as SG13G2_MOS_CORNERS above.
+#   SG13G2_TEMPS is the temperature axis (degC) and SG13G2_VDDS the supply
+#   axis (V), both from spec/target-spec.md section 1 [DR-2]; SG13G2_CL_F is
+#   the load capacitance (F) stated on every spec row [DR-1]. The order is
+#   load-bearing for the same point_id reason as the corner list.
+#
+#   Callers copy them into their own local names, as with CORNERS:
+#
+#     TEMPS=("${SG13G2_TEMPS[@]}")
+#     VDDS=("${SG13G2_VDDS[@]}")
+#     CL_F="${SG13G2_CL_F}"
+# shellcheck disable=SC2034  # consumed by callers after they source this file
+SG13G2_TEMPS=(-40 27 125)
+# shellcheck disable=SC2034  # consumed by callers after they source this file
+SG13G2_VDDS=(1.08 1.20 1.32)
+# shellcheck disable=SC2034  # consumed by callers after they source this file
+SG13G2_CL_F="2e-12"
 
 # sg13g2_preflight_require_netlist [--no-hint]
 #   Verify design/netlist/opamp_core.spice exists and is non-empty, exiting 3

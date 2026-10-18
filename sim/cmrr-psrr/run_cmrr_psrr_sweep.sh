@@ -95,10 +95,10 @@ cp "${DUT_NETLIST_SRC}" "${DUT_NETLIST_SNAPSHOT}"
 # crossed at testbench time with spec/target-spec.md Sec 1's temperature
 # and supply axes.
 CORNERS=("${SG13G2_MOS_CORNERS[@]}")
-TEMPS=(-40 27 125)
-VDDS=(1.08 1.20 1.32)
+TEMPS=("${SG13G2_TEMPS[@]}")
+VDDS=("${SG13G2_VDDS[@]}")
 # shellcheck disable=SC2034  # consumed by sg13g2_render_netlist (sim/preflight.sh) after this point
-CL_F="2e-12"
+CL_F="${SG13G2_CL_F}"
 
 # --- AC-source admission (issue #224) ------------------------------------
 # Default-selected and explicit AC_RECORD_CSV sources get the SAME check,

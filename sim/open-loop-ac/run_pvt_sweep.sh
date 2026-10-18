@@ -68,10 +68,10 @@ CORNERS=("${SG13G2_MOS_CORNERS[@]}")
 # Temperature x supply grid: spec/target-spec.md Sec 1 ("Operating
 # temperature", "Supply voltage, VDD") -- crossed with the corner grid "at
 # testbench time", which is exactly what this bench is.
-TEMPS=(-40 27 125)
-VDDS=(1.08 1.20 1.32)
+TEMPS=("${SG13G2_TEMPS[@]}")
+VDDS=("${SG13G2_VDDS[@]}")
 # shellcheck disable=SC2034  # consumed by sg13g2_render_netlist (sim/preflight.sh) after this point
-CL_F="2e-12"
+CL_F="${SG13G2_CL_F}"
 
 echo "point_id,corner,temp_c,vdd_v,vcm_v,op_pass,vout_dc_v,vd1_dc_v,vd2_dc_v,vtail_dc_v,vibias_dc_v,ivdd_total_a,ivdd_signal_path_a,av0_db,gbw_hz,pm_deg,gm_status,gm_db,gm_freq_hz" > "${CSV_OUT}.raw"
 
