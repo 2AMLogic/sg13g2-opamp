@@ -1526,9 +1526,11 @@ class NoiseRawAudit(unittest.TestCase):
 
     def test_undefined_quantity_must_serialize_as_nan(self):
         import noise_post
-        self.assertIsNone(generate._noise_cell_problem("x", "nan", float("nan")))
-        self.assertIsNotNone(generate._noise_cell_problem("x", "1.0", float("nan")))
-        self.assertIsNotNone(generate._noise_cell_problem("x", "nan", 1.0))
+        cell = lambda c, v, **kw: generate._cell_problem("x", c, noise_post.serialize(v), "pinned spectrum", 6, **kw)
+        self.assertIsNone(cell("nan", float("nan")))
+        self.assertIsNotNone(cell("1.0", float("nan")))
+        self.assertIsNotNone(cell("nan", 1.0))
+        self.assertIsNotNone(cell("nan", float("nan"), nan_ok=False))
         self.assertEqual(noise_post.serialize(float("nan")), "nan")
         self.assertEqual(noise_post.serialize(0.1 + 0.2), "0.3")
 
