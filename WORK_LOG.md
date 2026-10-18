@@ -2,6 +2,13 @@
 
 <!-- Maintained by the Loom Guide role. Newest entries first. -->
 
+### 2026-10-18
+
+- **PR #272**: refactor: consolidate serialized-cell checkers into one _cell_problem helper
+- **Issue #271** (closed): Consolidate the four serialized-cell checkers in characterization generate.py into one helper
+- **PR #270**: docs(signoff): count PSRR's complete klt sim request in item-5 summary
+- **Issue #99** (closed): sim: express the PSRR bench as a klt sim request (T1 item 5 coverage, follow-up to #85)
+
 ### 2026-10-17
 
 - **PR #267**: feat(signoff): cite klt sim envelopes for T1 item 5 with declared gaps
