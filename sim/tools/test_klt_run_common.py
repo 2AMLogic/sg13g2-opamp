@@ -285,5 +285,74 @@ class PublishNoClobber(unittest.TestCase):
                              ["dest", "src"])
 
 
+# Two envelopes per record id, bench-specific compare args, no identity
+# (issue #274: sim/open-loop-ac/klt/run.sh).
+DRIVER_PAIR = DRIVER.split('klt_begin_record stub')[0].replace(
+    'sg13g2_env_identity_begin()', 'sg13g2_env_identity_begin_unused()') + r"""
+KLT_RECORD_EXTS=(.ac.sim.json .op.sim.json .compare.json)
+KLT_IDENTITY=0
+klt_begin_record stub
+for kind in ac op; do
+  klt_run_request req.json "${SCRATCH}/${kind}.sim.json" "${SCRATCH}/${kind}.err"
+  klt_validate_envelope "${SCRATCH}/${kind}.sim.json" --kind "${kind}"
+done
+klt_require_complete
+for kind in ac op; do
+  klt_write_envelope "${SCRATCH}/${kind}.sim.json" ".${kind}.sim.json"
+done
+KLT_COMPARE_ENVELOPE_ARGS=(--ac a.json --op o.json)
+klt_compare_and_finish
+"""
+
+
+class PairOfEnvelopes(unittest.TestCase):
+    def fixture(self, d):
+        fx = Fixture(d)
+        fx.driver.write_text(DRIVER_PAIR)
+        return fx
+
+    def test_publishes_pair_and_compare_without_identity_sidecar(self):
+        with tempfile.TemporaryDirectory() as d:
+            fx = self.fixture(d)
+            r = fx.run(TAG="pair")
+            self.assertEqual(r.returncode, 0, r.stderr)
+            self.assertEqual(sorted(fx.snapshot()),
+                             [f"{RID}.ac.sim.json", f"{RID}.compare.json",
+                              f"{RID}.op.sim.json"])
+            self.assertIn(f"wrote records/{RID}.ac.sim.json", r.stdout)
+            self.assertIn(f"wrote records/{RID}.op.sim.json", r.stdout)
+            self.assertEqual(list(fx.tmp.iterdir()), [])
+
+    def test_any_existing_member_refuses_before_klt(self):
+        for ext in (".ac.sim.json", ".op.sim.json", ".compare.json"):
+            with self.subTest(ext=ext), tempfile.TemporaryDirectory() as d:
+                fx = self.fixture(d)
+                (fx.records / f"{RID}{ext}").write_text("old")
+                before = fx.snapshot()
+                r = fx.run(TAG="again")
+                self.assertEqual(r.returncode, 3, r.stderr)
+                self.assertEqual(fx.klt_calls(), 0)
+                self.assertEqual(fx.snapshot(), before)
+
+    def test_compare_receives_bench_envelope_args_not_default(self):
+        with tempfile.TemporaryDirectory() as d:
+            fx = self.fixture(d)
+            (fx.bench / "compare.py").write_text(
+                "import sys\n"
+                "if sys.argv[1] == 'validate': sys.exit(0)\n"
+                "a = sys.argv\n"
+                "assert '--ac' in a and '--op' in a and '--envelope' not in a, a\n"
+                "open(a[a.index('--json-out') + 1], 'w').write('{}')\n")
+            r = fx.run(TAG="args")
+            self.assertEqual(r.returncode, 0, r.stderr)
+
+    def test_failed_validation_publishes_nothing(self):
+        with tempfile.TemporaryDirectory() as d:
+            fx = self.fixture(d)
+            r = fx.run(TAG="bad", STUB_VALIDATE_RC="1")
+            self.assertEqual(r.returncode, 4, r.stderr)
+            self.assertEqual(fx.snapshot(), {})
+
+
 if __name__ == "__main__":
     unittest.main()

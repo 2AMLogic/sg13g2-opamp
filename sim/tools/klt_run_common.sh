@@ -30,14 +30,34 @@
 #                                          -> runs `klt sim`; sets `incomplete`
 #   klt_validate_envelope <out> [<validate args>...]
 #   klt_require_complete                   -> exit 4 if `incomplete` is set
-#   klt_write_envelope <out>               -> rechecks the model identity
+#   klt_write_envelope <out> [<ext>]       -> rechecks the model identity
 #                                             against the begin capture
 #                                             (issue #209; drift exits 4
 #                                             before anything is
 #                                             published), then copies into
-#                                             records/ (+ the <id>.env.json
-#                                             PDK identity sidecar, #191)
+#                                             records/<id><suffix><ext>
+#                                             (<ext> default .sim.json) (+
+#                                             the <id>.env.json PDK identity
+#                                             sidecar, #191)
 #   KLT_PROVENANCE_EXTRA=(key=value ...)   -> optional, placed before pdk=
+#   KLT_RECORD_EXTS=(.ac.sim.json ...)     -> optional, set before
+#                                             klt_begin_record: the destination
+#                                             extensions it refuses on
+#                                             (default .sim.json .compare.json
+#                                             .shards). A bench that publishes
+#                                             several envelopes per record id
+#                                             (open-loop-ac: .ac/.op) lists
+#                                             them all, plus .compare.json.
+#   KLT_COMPARE_ENVELOPE_ARGS=(--ac f ...) -> optional, used by
+#                                             klt_compare_and_finish in place
+#                                             of the default
+#                                             `--envelope records/<id>.sim.json`
+#   KLT_IDENTITY=0                         -> optional, set before
+#                                             klt_begin_record: skip the PDK/
+#                                             model identity capture and
+#                                             sidecar (default 1). Only for a
+#                                             bench whose run.sh does not
+#                                             source sim/preflight.sh.
 #   klt_compare_and_finish <compare args>...
 #                                          -> compare; exit 0 / 5
 #
@@ -82,6 +102,9 @@ KLT_RESERVATION=""
 RECORD_SUFFIX=""
 KLT_OK_NOTE="all points within tolerance"
 KLT_PROVENANCE_EXTRA=()
+KLT_RECORD_EXTS=()
+KLT_COMPARE_ENVELOPE_ARGS=()
+KLT_IDENTITY=1
 
 # Publication primitive: sg13g2_publish_noclobber lives in
 # sim/record-paths.sh -- the offline-sourceable split of sim/preflight.sh
@@ -123,7 +146,9 @@ klt_begin_record() {
   fi
   trap klt_release_reservation EXIT
   local taken=() f
-  for f in "${RECORDS_DIR}/${rec}.sim.json" "${RECORDS_DIR}/${rec}.compare.json" "${RECORDS_DIR}/${rec}.shards"; do
+  local exts=("${KLT_RECORD_EXTS[@]}")
+  [[ "${#exts[@]}" -gt 0 ]] || exts=(.sim.json .compare.json .shards)
+  for f in "${exts[@]/#/${RECORDS_DIR}/${rec}}"; do
     [[ -e "${f}" || -L "${f}" ]] && taken+=("${f}")
   done
   if [[ "${#taken[@]}" -gt 0 ]]; then
@@ -139,7 +164,9 @@ klt_begin_record() {
   # against a fresh capture before publishing anything. A capture failure is
   # a preflight failure (exit 3, reservation released by the EXIT trap): the
   # record would claim provenance it cannot vouch for, so nothing simulates.
-  sg13g2_env_identity_begin "${RECORD_ID}" "${SCRATCH}/${RECORD_ID}.env.json"
+  if [[ "${KLT_IDENTITY}" -ne 0 ]]; then
+    sg13g2_env_identity_begin "${RECORD_ID}" "${SCRATCH}/${RECORD_ID}.env.json"
+  fi
 }
 
 klt_release_reservation() {
@@ -187,18 +214,23 @@ klt_write_envelope() {
   # finalized-looking records/<id>.sim.json (exit 4; the raw envelope and
   # begin capture stay in SCRATCH). A later suffixed envelope of the same
   # id reuses the first sidecar, which must equal this run's begin capture.
-  sg13g2_env_identity_finalize "${RECORD_ID}" "${SCRATCH}/${RECORD_ID}.env.json" \
-    "${RECORDS_DIR}/${RECORD_ID}.env.json"
-  sg13g2_publish_noclobber "$1" "${RECORDS_DIR}/${RECORD_ID}${RECORD_SUFFIX}.sim.json" || exit 4
+  if [[ "${KLT_IDENTITY}" -ne 0 ]]; then
+    sg13g2_env_identity_finalize "${RECORD_ID}" "${SCRATCH}/${RECORD_ID}.env.json" \
+      "${RECORDS_DIR}/${RECORD_ID}.env.json"
+  fi
+  local dest="${RECORD_ID}${RECORD_SUFFIX}${2:-.sim.json}"
+  sg13g2_publish_noclobber "$1" "${RECORDS_DIR}/${dest}" || exit 4
+  echo "run.sh: wrote records/${dest}"
 }
 
 klt_compare_and_finish() {
-  echo "run.sh: wrote records/${RECORD_ID}${RECORD_SUFFIX}.sim.json"
   local rel="${SCRIPT_DIR#"${REPO_ROOT}"/}"
   local rec="${RECORD_ID}${RECORD_SUFFIX}"
   local cmp_rc=0
+  local env_args=("${KLT_COMPARE_ENVELOPE_ARGS[@]}")
+  [[ "${#env_args[@]}" -gt 0 ]] || env_args=(--envelope "${rel}/records/${rec}.sim.json")
   python3 "${rel}/compare.py" compare "$@" \
-    --envelope "${rel}/records/${rec}.sim.json" \
+    "${env_args[@]}" \
     --json-out "${SCRATCH}/${rec}.compare.json" \
     --provenance "record_id=${RECORD_ID}" \
     --provenance "repo_git_sha=${REPO_GIT_SHA}" \
