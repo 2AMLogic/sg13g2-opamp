@@ -333,7 +333,7 @@ Per-row verdicts of record, graded by `klt sim` against the unrounded ratified b
 | Iq (total, incl. `ibias`) | <= 119.7 uA | `mos_ss`/-40 C/1.32 V | 119.655 uA (margin 45 nA) | pass |
 
 **Which bench, and which baseline.** This bench has `Cinn_acgnd inn vss 1`
-(issue #241), the same grounded-`inn` form as `sim/post-layout/klt/`. The
+(issue #241), the same grounded-`inn` form that `sim/post-layout/` reads from this directory. The
 comparison baseline is therefore the grounded-`inn` klt record
 [`records/20261015-103057-895d555.csv`](records/20261015-103057-895d555.csv),
 not `records/20260910-221601-22feaba.csv`. That older harness record was
@@ -351,8 +351,8 @@ tolerance, with no bound-verdict disagreement. The largest differences are
 4.9e-5 dB (Av0), 49.9 Hz (GBW, 6e-6 relative), 4.9e-5 deg (PM) and 0.5 nA
 (Iq). That agreement is tight because the baseline was itself produced by
 `klt sim` on the same fleet with the same `.meas` method: it shows the bench
-is reproducible and that the `klt/` requests express the same circuit as the
-`sim/post-layout/klt/` requests. It is **not** an independent cross-check of
+is reproducible. The post-layout leg (`sim/post-layout/`) reads these same
+`klt/` requests, so the two legs run one bench by construction. It is **not** an independent cross-check of
 the tool against the legacy ngspice harness; that comparison was only possible
 for the floating-`inn` circuit, and this PR does not re-measure it. For the
 same reason `compare.py` is run without `--harness-ac-dir` here: there is no

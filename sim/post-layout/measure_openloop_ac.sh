@@ -5,7 +5,7 @@
 #   sim/post-layout/measure_openloop_ac.sh <dut-netlist>
 #
 # Measures the given device-under-test netlist with the committed open-loop AC
-# bench (sim/post-layout/klt/, the `klt sim` form of
+# bench (sim/open-loop-ac/klt/, the `klt sim` form of
 # sim/open-loop-ac/testbench/tb_openloop_ac.spice.tmpl) over the ratified
 # 45-point grid (cornerMOSlv.lib mos_tt/ss/ff/sf/fs x -40/27/125 C x
 # 1.08/1.20/1.32 V, CL = 2 pF [DR-1]) and prints, on stdout and nowhere else,

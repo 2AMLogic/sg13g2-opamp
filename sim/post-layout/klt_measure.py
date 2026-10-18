@@ -5,7 +5,7 @@
   klt_measure.py convert <ac-envelope.json> <op-envelope.json>   -> stdout
 
 `build` writes, into <artifacts-dir>, a circuit body (the committed open-loop
-AC bench, sim/post-layout/klt/tb_openloop_ac.body.spice, with its DUT include
+AC bench, sim/open-loop-ac/klt/tb_openloop_ac.body.spice, with its DUT include
 re-pointed at <dut-netlist>) and the AC and OP `klt sim` requests next to it.
 A flat DUT is included as-is; a `.SUBCKT` DUT (the netlist `klt pex` extracts)
 is included and instantiated as `Xdut` with pins matched BY NAME to the bench
@@ -28,7 +28,8 @@ import re
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-KLT_DIR = os.path.join(HERE, "klt")
+# The one bench definition, shared with the pre-layout leg (sim/open-loop-ac).
+KLT_DIR = os.path.join(HERE, "..", "open-loop-ac", "klt")
 PINS = ("vdd", "vss", "inn", "inp", "out", "ibias")
 DROP_NODES = re.compile(r"\bv\((d1|d2|tail)\)")
 # The ratified grid axes (spec/target-spec.md Sec 1); the requests carry them.
