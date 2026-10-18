@@ -13,7 +13,7 @@ _None._
 
 `loom:very-important` (one counts per workspace); every stage takes these first.
 
-- **#99**: sim: express the PSRR bench as a klt sim request (T1 item 5 coverage, follow-up to #85)
+_None._
 
 ## Important
 
@@ -32,15 +32,13 @@ Human-approved issues ready for implementation (`loom:issue`).
 
 Issues currently being built (`loom:building`).
 
-- **#99**: sim: express the PSRR bench as a klt sim request (T1 item 5 coverage, follow-up to #85)
-- **#271**: Consolidate the four serialized-cell checkers in characterization generate.py into one helper
+_None._
 
 ## PRs Awaiting Review
 
 PRs waiting on Judge (`loom:review-requested`).
 
-- **#270**: docs(signoff): count PSRR's complete klt sim request in item-5 summary
-- **#272**: refactor: consolidate serialized-cell checkers into one _cell_problem helper
+_None._
 
 ## Approved (Awaiting Merge)
 
@@ -53,7 +51,6 @@ _None._
 Issues carrying `loom:curated`.
 
 - **#86**: signoff: first `klt pex` post-layout run on opamp_core.gds (T1 item 7) *(curated)*
-- **#99**: sim: express the PSRR bench as a klt sim request (T1 item 5 coverage, follow-up to #85) *(curated)*
 - **#100**: sim: express the output-swing bench as a klt sim request (T1 item 5 coverage, follow-up to #85) *(curated)*
 - **#105**: signoff: express the statistical rows as klt yield evidence for T1 item 6 (offset MC, mismatch CMRR) *(curated)*
 - **#237**: design: reconcile schematic device representation with drawn fingering before citing post-layout (T1 item 7) *(curated)*
@@ -61,6 +58,7 @@ Issues carrying `loom:curated`.
 ## Proposed (Architect / Hermit)
 
 - **#105**: signoff: express the statistical rows as klt yield evidence for T1 item 6 (offset MC, mismatch CMRR) *(architect)*
+- **#274**: Move sim/open-loop-ac/klt/run.sh onto klt_run_common.sh: last hand-copied klt wrapper, missing reservation/no-clobber/identity *(hermit)*
 
 ## Epics
 
@@ -71,13 +69,13 @@ _None._
 | Bucket | Count |
 |------|-------|
 | Operator merge-risk holds | 0 |
-| Very important | 1 |
+| Very important | 0 |
 | Important | 2 |
 | Ready (`loom:issue`) | 1 |
-| In Progress (`loom:building`) | 2 |
-| PRs awaiting review | 2 |
+| In Progress (`loom:building`) | 0 |
+| PRs awaiting review | 0 |
 | Approved PRs awaiting merge | 0 |
-| Curated | 5 |
-| Architect / Hermit proposals | 1 |
+| Curated | 4 |
+| Architect / Hermit proposals | 2 |
 | Active epics | 0 |
 <!-- guide:plan-body:end -->
