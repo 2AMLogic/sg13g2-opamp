@@ -6,7 +6,7 @@
 #   bash sim/open-loop-ac/run_klt_record.sh
 #
 # Measures design/netlist/opamp_core.spice with the committed klt form of the
-# bench (sim/post-layout/klt/, via sim/post-layout/measure_openloop_ac.sh:
+# bench (sim/open-loop-ac/klt/, via sim/post-layout/measure_openloop_ac.sh:
 # one AC and one OP request, 45 corners each, CL = 2 pF [DR-1]) and writes
 #
 #   netlist-snapshots/<id>/opamp_core.spice    the DUT simulated

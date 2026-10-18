@@ -1,9 +1,9 @@
 # sim/post-layout
 
 `klt pex --measure-command` target for T1 item 7 (issue #86). Not a new bench:
-`klt/` holds the committed open-loop AC bench as `klt sim` requests (circuit
-body, AC request, OP request; the same files as the issue-#85 `sim/open-loop-ac`
-klt path, over the same ratified 45-point grid, CL = 2 pF), and the measure
+the committed open-loop AC bench as `klt sim` requests (circuit body, AC
+request, OP request) is read from `../open-loop-ac/klt/`, the single source for
+both the pre- and post-layout legs (issue #85 path), over the same ratified 45-point grid, CL = 2 pF), and the measure
 script runs them against whatever DUT netlist `klt pex` hands it (flat
 schematic, or the extracted `.SUBCKT`, instantiated as `Xdut` with pins matched
 by name).
@@ -41,7 +41,7 @@ be attributed to parasitics. The #237 probe (`sim/fingering-probe/`) has
 since quantified this. The representation difference carries the Iq delta
 (about -25 %) and most of the gain delta. The remaining AC deltas come from
 this bench leaving `inn` AC-floating (`Lbreak` with no C to ground; fixed
-by #241, `Cinn_acgnd inn vss 1` in `klt/tb_openloop_ac.body.spice`; the
+by #241, `Cinn_acgnd inn vss 1` in `sim/open-loop-ac/klt/tb_openloop_ac.body.spice`; the
 `pex_report.json` of #236 predates the fix and is superseded):
 with `inn` AC-grounded, the parasitics move GBW -0.4 % and PM -0.8 %. See
 `spec/decision-records/0008-drawn-fingering-device-representation.md` and
