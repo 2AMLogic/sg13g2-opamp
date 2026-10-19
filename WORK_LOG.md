@@ -4,6 +4,7 @@
 
 ### 2026-10-19
 
+- **PR #289**: docs: propose yield requirements for offset-random and mismatch-CMRR rows (DR-0010)
 - **PR #285**: refactor: pass PVT axes to cmrr-mismatch Python blocks via argv
 - **Issue #284** (closed): Dedupe PVT axes: cmrr-mismatch embedded Python re-hardcodes grid after #281
 - **PR #287**: refactor: load open-loop-ac harness CSV via shared loader
