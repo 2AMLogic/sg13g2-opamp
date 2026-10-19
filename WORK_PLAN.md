@@ -33,7 +33,7 @@ Human-approved issues ready for implementation (`loom:issue`).
 
 Issues currently being built (`loom:building`).
 
-_None._
+- **#108**: spec: ratify per-draw limits and target_yield for the statistical rows (offset random half, CMRR) -- needs a decision record
 
 ## PRs Awaiting Review
 
@@ -54,6 +54,7 @@ Issues carrying `loom:curated`.
 - **#86**: signoff: first `klt pex` post-layout run on opamp_core.gds (T1 item 7) *(curated)*
 - **#100**: sim: express the output-swing bench as a klt sim request (T1 item 5 coverage, follow-up to #85) *(curated)*
 - **#105**: signoff: express the statistical rows as klt yield evidence for T1 item 6 (offset MC, mismatch CMRR) *(curated)*
+- **#108**: spec: ratify per-draw limits and target_yield for the statistical rows (offset random half, CMRR) -- needs a decision record *(curated)*
 - **#237**: design: reconcile schematic device representation with drawn fingering before citing post-layout (T1 item 7) *(curated)*
 
 ## Proposed (Architect / Hermit)
@@ -72,10 +73,10 @@ _None._
 | Very important | 0 |
 | Important | 3 |
 | Ready (`loom:issue`) | 1 |
-| In Progress (`loom:building`) | 0 |
+| In Progress (`loom:building`) | 1 |
 | PRs awaiting review | 0 |
 | Approved PRs awaiting merge | 0 |
-| Curated | 4 |
+| Curated | 5 |
 | Architect / Hermit proposals | 1 |
 | Active epics | 0 |
 <!-- guide:plan-body:end -->
