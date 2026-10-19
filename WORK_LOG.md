@@ -2,6 +2,13 @@
 
 <!-- Maintained by the Loom Guide role. Newest entries first. -->
 
+### 2026-10-19
+
+- **PR #285**: refactor: pass PVT axes to cmrr-mismatch Python blocks via argv
+- **Issue #284** (closed): Dedupe PVT axes: cmrr-mismatch embedded Python re-hardcodes grid after #281
+- **PR #287**: refactor: load open-loop-ac harness CSV via shared loader
+- **Issue #286** (closed): Move open-loop-ac compare.py harness CSV loader onto shared load_harness_csv_rows (last hand-rolled copy; crashes on short rows)
+
 ### 2026-10-18
 
 - **PR #282**: refactor: define PVT temperature/supply axes and CL once in sim/preflight.sh
