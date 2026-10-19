@@ -14,7 +14,7 @@ No other row is statistical (noise, DC gain, GBW, PM, slew, swing, ICMR are
 | Row | Per-draw data committed | Ratified per-draw limit | `target_yield` | State |
 |---|---|---|---|---|
 | Input-referred offset, random half | yes: `sim/input-offset/records/mc-20260921-174056-0a509fb-draws.csv` (15 points x N=300, seeds per draw) | **none**. Row is "Ratified, systematic only [DR-2]"; mismatch 3 sigma is `[P]`. The one ratified offset number (+21.9 mV) is the systematic bound (precision under #101), not a per-draw yield limit | none in spec | blocked on a decision, #108 |
-| CMRR, mismatch-inclusive | **no**: only per-point summaries (`acm_lin_mean`, `acm_lin_sigma`, ...) | DR-0004's >= 26.68 dB is a +3 sigma aggregate, not a per-draw limit | none in spec | blocked on a bench change (#107) and a decision (#108) |
+| CMRR, mismatch-inclusive | yes: `sim/cmrr-mismatch/records/20260921-172304-65f5fb4-draws.csv` (45 points x N=300, per-point seed; no sample-set converter yet) | DR-0004's >= 26.68 dB is a +3 sigma aggregate, not a per-draw limit | none in spec | blocked on a decision (#108); #107 is closed |
 
 Not done, on purpose: inventing a limit or `target_yield`; reconstructing CMRR
 samples from mean/sigma; re-running either campaign (the harnesses are shell
@@ -51,7 +51,7 @@ revision (`signoff/klt-pin.txt`), not the host tool; see
 ## To close item 6
 
 1. Decision record binding per-draw limits and `target_yield` (#108).
-2. Persist CMRR per-draw samples (#107).
+2. Persist CMRR per-draw samples (#107, done); add a CMRR sample-set converter.
 3. `klt yield` with a `--limits` file and a real seeded negative control; commit
    the report under `sim/<bench>/records/`; add `"6"` to the manifest with its
    `content_hash`; run `signoff/regenerate.sh`.
