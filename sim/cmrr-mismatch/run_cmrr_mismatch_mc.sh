@@ -235,10 +235,11 @@ cmrr_mc_campaign_guard
 # ---------------------------------------------------------------------------
 stat_point() { # <point_index> <mc_sample_file> -> row on stdout
   python3 - "$1" "$2" "${AC_RECORD_CSV}" "${CMRR_RECORD_CSV}" \
-    "${OP_RAIL_FRAC}" "${OP_MID_FRAC}" "${PLATEAU_TOL_DB}" "${SCRIPT_DIR}" <<'PYEOF'
+    "${OP_RAIL_FRAC}" "${OP_MID_FRAC}" "${PLATEAU_TOL_DB}" "${SCRIPT_DIR}" \
+    "${CORNERS[*]}" "${TEMPS[*]}" "${VDDS[*]}" <<'PYEOF'
 import csv, math, sys
 
-pidx, file, ac_csv, cmrr_csv, rail_frac, mid_frac, plateau_tol, lib_dir = sys.argv[1:9]
+pidx, file, ac_csv, cmrr_csv, rail_frac, mid_frac, plateau_tol, lib_dir, corners_arg, temps_arg, vdds_arg = sys.argv[1:12]
 sys.path.insert(0, lib_dir)
 import mc_samples  # strict shared parser (issue #174), also used by make_draws_csv.sh
 pidx = int(pidx)
@@ -246,9 +247,9 @@ rail_frac, mid_frac, plateau_tol = float(rail_frac), float(mid_frac), float(plat
 
 # grid params from index (corner-major order, same as the bash arrays)
 CORNER = None; TEMP = None; VDD = None
-CORNERS = ['mos_tt', 'mos_ss', 'mos_ff', 'mos_sf', 'mos_fs']
-TEMPS = [-40, 27, 125]
-VDDS = ['1.08', '1.20', '1.32']
+CORNERS = corners_arg.split()
+TEMPS = [int(t) for t in temps_arg.split()]
+VDDS = vdds_arg.split()
 ci = pidx // 9; ti = (pidx % 9) // 3; vi = pidx % 3
 CORNER, TEMP, VDD = CORNERS[ci], TEMPS[ti], VDDS[vi]
 point_id = f"{CORNER}_{TEMP}C_{VDD}V"
@@ -387,11 +388,12 @@ if [[ "${PILOT_RESTORED}" != "1" ]]; then
   echo "run_cmrr_mismatch_mc.sh: pilot phase -- points: ${PILOT_A_IDX} ${point_ids[$PILOT_A_IDX]}, ${PILOT_B_IDX} ${point_ids[$PILOT_B_IDX]} at N=${MC_N_FLOOR}" >&2
   run_deck "${PILOT_A_IDX}" "${point_corners[$PILOT_A_IDX]}_mismatch" "${MC_N_FLOOR}" "pilot"
   run_deck "${PILOT_B_IDX}" "${point_corners[$PILOT_B_IDX]}_mismatch" "${MC_N_FLOOR}" "pilot"
-  pilot_out="$(python3 - "${CORNERS_OUT}" "${PILOT_A_IDX}" "${PILOT_B_IDX}" "${MC_TARGET_SIGMA_RE}" "${MC_N_FLOOR}" <<'PYEOF'
+  pilot_out="$(python3 - "${CORNERS_OUT}" "${PILOT_A_IDX}" "${PILOT_B_IDX}" "${MC_TARGET_SIGMA_RE}" "${MC_N_FLOOR}" \
+    "${CORNERS[*]}" "${TEMPS[*]}" "${VDDS[*]}" <<'PYEOF'
 import math, os, sys
 corners, a_idx, b_idx, sigma_re, floor_n = sys.argv[1], int(sys.argv[2]), int(sys.argv[3]), float(sys.argv[4]), int(sys.argv[5])
 def pid_of(i):
-    C = ['mos_tt','mos_ss','mos_ff','mos_sf','mos_fs']; T = [-40,27,125]; V = ['1.08','1.20','1.32']
+    C = sys.argv[6].split(); T = [int(t) for t in sys.argv[7].split()]; V = sys.argv[8].split()
     return f"{C[i//9]}_{T[(i%9)//3]}C_{V[i%3]}V"
 def sigma_of(i):
     acs = []
