@@ -174,43 +174,21 @@ HARNESS_OPTIONAL_COLUMNS = ("vout_dc_v", "vd1_dc_v", "vd2_dc_v", "vtail_dc_v",
 
 
 def load_harness_csv(path: str) -> Dict[Key, Dict[str, object]]:
-    out: Dict[Key, Dict[str, object]] = {}
-    problems: List[str] = []
     try:
-        f = open(path, newline="")
-    except OSError as e:
-        raise InputError(f"{path}: {e}")
-    with f:
-        reader = csv.DictReader(f)
-        columns = HARNESS_REQUIRED_COLUMNS + tuple(
-            c for c in HARNESS_OPTIONAL_COLUMNS if c in (reader.fieldnames or ()))
-        for r in reader:
-            k = make_key(r["corner"], r["temp_c"], r["vdd_v"])
-            if k in out:
-                problems.append(f"{key_str(k)}: duplicate row")
-                continue
-            if r.get("point_id") != key_str(k):
-                problems.append(f"{r.get('point_id')}: point_id disagrees with its corner/temp/vdd columns")
-            row: Dict[str, object] = {}
-            for col in columns:
-                raw = r.get(col)
-                if raw is None and col == "ivdd_total_a":
-                    raw = r.get("iq_a")  # klt-measured records spell it iq_a
-                if col == "op_pass":
-                    row[col] = raw
-                    continue
-                try:
-                    v = float(raw)
-                except (TypeError, ValueError):
-                    v = float("nan")
-                if not math.isfinite(v):
-                    problems.append(f"{key_str(k)}: harness {col} {raw!r} is missing or non-finite")
-                row[col] = v
-            out[k] = row
-    E.check_grid(out.keys(), "harness CSV", problems)
-    if problems:
-        raise InputError(f"{path}: " + "; ".join(problems))
-    return out
+        with open(path, newline="") as f:
+            header = next(csv.reader(f), [])
+    except (OSError, csv.Error, UnicodeDecodeError):
+        header = []  # the shared loader reports the unreadable file
+    # klt-measured records spell ivdd_total_a as iq_a.
+    iq = "iq_a" if "ivdd_total_a" not in header and "iq_a" in header else "ivdd_total_a"
+    columns = tuple(iq if c == "ivdd_total_a" else c for c in HARNESS_REQUIRED_COLUMNS) + tuple(
+        c for c in HARNESS_OPTIONAL_COLUMNS if c in header and c != "op_pass")
+    flags = ("op_pass",) if "op_pass" in header else ()
+    rows = E.load_harness_csv_rows(path, columns, "harness CSV", flag_columns=flags)
+    if iq != "ivdd_total_a":
+        for row in rows.values():
+            row["ivdd_total_a"] = row.pop(iq)
+    return rows
 
 
 def gbw_method_bias(ac_csv: str) -> float:
@@ -300,14 +278,14 @@ def compare(ac: Dict[Key, Dict[str, float]], op: Dict[Key, Dict[str, float]],
         tool_op_pass = all(op[k].get(n + "__status") == "pass" for n in OP_SANITY)
         op_sanity = {"tool_op_sanity_pass": tool_op_pass}
         if "op_pass" in h:
-            harness_op_pass = str(h["op_pass"]).strip() == "1"
+            harness_op_pass = h["op_pass"]
             op_sanity.update({"harness_op_pass": harness_op_pass,
                               "agree": harness_op_pass == tool_op_pass})
         if not tool_op_pass and "op_pass" not in h:
             out_of_tol.append(f"{key_str(k)} op sanity: tool sanity checks fail "
                               "(baseline carries no op_pass to compare against)")
         elif "op_pass" in h and not op_sanity["agree"]:
-            out_of_tol.append(f"{key_str(k)} op sanity: harness op_pass={h['op_pass']} vs tool sanity "
+            out_of_tol.append(f"{key_str(k)} op sanity: harness op_pass={int(h['op_pass'])} vs tool sanity "
                               f"{'pass' if tool_op_pass else 'fail'}")
 
         rows = {}
