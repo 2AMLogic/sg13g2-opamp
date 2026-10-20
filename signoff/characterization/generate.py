@@ -209,6 +209,38 @@ SWING_AUDIT_RULE = (
     "\"Cross-checks\") and stay outside this audit."
 )
 
+KLT_AUDIT_RULE = (
+    "Open-loop `klt sim` raw-evidence audit (issue #101): a record that "
+    "selects `klt_raw` (the AC and OP `klt sim` envelopes, the "
+    "`klt pex --measure-command` measurement document, both requests and the "
+    "bench circuit body, each sha256-pinned) is audited offline against them "
+    "in place of the legacy `op_pass` / `gm_status` validity columns it does "
+    "not carry. Both envelopes must be status pass with 45 unique, "
+    "diagnostic-free passing corners and agree on engine, model deck, PDK and "
+    "the simulated circuit: the DUT snapshot hash recorded in the envelope "
+    "must be the selected snapshot's, and the bench body must be the pinned "
+    "one with exactly one CL, `Lbreak inn out 1e18`, `Cinn_acgnd inn vss 1` "
+    "(inn AC-grounded), the 10 uA `Iibias` reference and a 1 V AC source on "
+    "inp; CL must be a load the record's own prose states. Per point the four "
+    "graded cells are recomputed from the raw envelopes -- Av0 and GBW "
+    "verbatim from the AC envelope, PM as 180 + degrees(phase at the 0 dB "
+    "crossing), Iq as the OP envelope's total VDD current (-i(vdd), which "
+    "INCLUDES the 10 uA ibias reference) -- and must equal the committed cell "
+    "as the converter serializes it (printf %.6g), and must also equal the "
+    "measurement document. The operating-point sanity the legacy `op_pass` "
+    "applied is recomputed from the raw OP values where they exist: Vcm = "
+    "VDD/2 (within the bench's 1e-4 fraction), |Vout - VDD/2| <= 0.15 VDD, "
+    "0.02 VDD <= Vout <= 0.98 VDD. The legacy check on the internal nodes "
+    "(vd1, vd2, vtail) and the gain-margin `gm_status` are NOT re-measured by "
+    "the corrected bench: the DC operating point does not depend on the AC "
+    "ground element, so the selected `dc_continuity` record is joined as the "
+    "stated evidence for them -- its point must have op_pass=1 and its Vout "
+    "and total VDD current must agree with the corrected OP envelope within "
+    "10 uV and 10 nA; that dependence is disclosed, never presented as a "
+    "fresh internal-node measurement. A missing, changed, stale-pinned or "
+    "inconsistent artifact is an error naming the point and file."
+)
+
 NOT_CLAIMED = [
     "Not item 5 or item 6 evidence: it is a generic, offline aggregation of "
     "harness-native records, not a `klt sim` or `klt yield` envelope, and the "
@@ -376,6 +408,13 @@ def load_selection(path: Path) -> dict:
             _validate_slew_raw_selection(key, rec["slew_raw"])
         if "swing_raw" in rec:
             _validate_swing_raw_selection(key, rec["swing_raw"])
+        if "klt_raw" in rec:
+            _validate_klt_raw_selection(key, rec["klt_raw"], selection["records"])
+            if "open_loop_klt_audit" not in rec.get("definition_checks", []):
+                raise SelectionError(
+                    f"selection: record {key}: `klt_raw` is named, so the definition check "
+                    "'open_loop_klt_audit' must run (raw evidence is never pinned and then ignored)"
+                )
         for name in rec.get("definition_checks", []):
             if name not in DEFINITION_CHECKS:
                 raise SelectionError(f"selection: record {key}: unknown definition check {name!r}")
@@ -399,6 +438,11 @@ def load_selection(path: Path) -> dict:
                 raise SelectionError(
                     f"selection: record {key}: definition check {name!r} verifies raw "
                     "noise artifacts; name hash-pinned `noise_raw` beside the summary"
+                )
+            if need == "klt" and rec.get("klt_raw") is None:
+                raise SelectionError(
+                    f"selection: record {key}: definition check {name!r} verifies the raw "
+                    "`klt sim` envelopes; name hash-pinned `klt_raw` beside the summary"
                 )
             if need == "swing" and rec.get("swing_raw") is None:
                 raise SelectionError(
@@ -828,6 +872,293 @@ def _check_offset_mc_statistics(point: dict, draws: dict | None) -> str | None:
     )
 
 
+KLT_RAW_KINDS = ("ac", "op", "measurement", "ac_request", "op_request", "bench_body")
+KLT_VOUT_TOL_V = 1e-5
+KLT_IVDD_TOL_A = 1e-8
+KLT_VCM_FRAC_TOL = 1e-4
+KLT_OFFSET_FRAC_MAX = 0.15
+KLT_RAIL_FRAC = 0.02
+KLT_AC_MEASUREMENTS = {
+    "av0_db": ".meas ac av0_db find vdb(out) at=1",
+    "gbw_hz": ".meas ac gbw_hz when vdb(out)=0",
+    "phase_at_ugf_rad": ".meas ac phase_at_ugf_rad find vp(out) when vdb(out)=0",
+}
+KLT_OP_MEASUREMENTS = {"ivdd_total_a": "-i(vdd)", "vout_dc_v": "v(out)"}
+KLT_BENCH_ELEMENTS = {
+    "Lbreak": r"Lbreak\s+inn\s+out\s+1e18",
+    "Cinn_acgnd": r"Cinn_acgnd\s+inn\s+vss\s+1",
+    "Iibias": r"Iibias\s+vdd\s+ibias\s+dc\s+10u",
+    "Vinp": r"Vinp\s+inp\s+0\s+dc\s+\S+\s+ac\s+1",
+}
+_KLT_CLOAD_RE = re.compile(r"^Cload\s+out\s+vss\s+(\S+)\s*$", re.IGNORECASE | re.MULTILINE)
+
+
+def _validate_klt_raw_selection(key: str, kr, records: dict) -> None:
+    """Shape of a record's `klt_raw` pin: one pinned file per kind, plus the
+    selected record that stands in for the DC checks the corrected bench does
+    not repeat."""
+    where = f"selection: record {key}: `klt_raw`"
+    if not isinstance(kr, dict) or sorted(kr) != ["dc_continuity", "files"]:
+        raise SelectionError(f"{where} must be an object with exactly `files` and `dc_continuity`")
+    if kr["dc_continuity"] not in records or kr["dc_continuity"] == key:
+        raise SelectionError(f"{where}.dc_continuity must name another selected record")
+    files = kr["files"]
+    if not isinstance(files, dict) or sorted(files) != sorted(KLT_RAW_KINDS):
+        raise SelectionError(f"{where}.files must have exactly {list(KLT_RAW_KINDS)}")
+    for kind, pin in files.items():
+        if not (isinstance(pin, dict) and isinstance(pin.get("path"), str) and isinstance(pin.get("sha256"), str)):
+            raise SelectionError(f"{where}.files.{kind} needs string `path` and `sha256` (a raw artifact is never named without its pin)")
+
+
+def _klt_corner_ids(env: dict, label: str, expected_ids: list, problems: list) -> dict:
+    """{point_id: corner} for an envelope, refusing duplicates, missing or
+    extra points, and any corner that is not a clean pass."""
+    out: dict = {}
+    for corner in env.get("corners") or []:
+        try:
+            pid = f"{corner['process']}_{int(corner['temperature_c'])}C_{float(corner['supply_v']['vdd']):.2f}V"
+        except (KeyError, TypeError, ValueError):
+            problems.append(f"{label}: a corner has no process/temperature/vdd identity")
+            continue
+        if pid in out:
+            problems.append(f"{label}: duplicate corner {pid}")
+        out[pid] = corner
+        if corner.get("status") != "pass" or corner.get("diagnostics"):
+            problems.append(f"{label}: point {pid} is not a clean pass (status {corner.get('status')!r}, {len(corner.get('diagnostics') or [])} diagnostic(s))")
+    for pid in expected_ids:
+        if pid not in out:
+            problems.append(f"{label}: no corner for point {pid}")
+    for pid in sorted(set(out) - set(expected_ids)):
+        problems.append(f"{label}: corner {pid} is outside the expected grid")
+    return out
+
+
+def _klt_values(corner: dict, wanted) -> dict:
+    got = {m.get("name"): m.get("value") for m in corner.get("measurements") or []}
+    return {name: got.get(name) for name in wanted}
+
+
+def _load_klt_population(repo: Path, key: str, kr: dict, expected: list, snapshot_rel: str,
+                         md_text: str, records: dict, errors: list) -> dict | None:
+    """Pin-check and strictly cross-check the open-loop `klt sim` evidence and
+    return the per-point raw values (KLT_AUDIT_RULE). None when anything is
+    wrong; problems name the artifact and point."""
+    n_err = len(errors)
+    expected_ids = [pid for pid, _ in expected]
+    docs: dict = {}
+    for kind in KLT_RAW_KINDS:
+        pin = kr["files"][kind]
+        path = repo / pin["path"]
+        if not path.is_file():
+            errors.append(f"record {key}: missing raw klt artifact {kind} {pin['path']}")
+            continue
+        actual = sha256_file(path)
+        if actual != pin["sha256"]:
+            errors.append(
+                f"record {key}: {pin['path']} does not match its selection pin "
+                f"(pinned {pin['sha256']}, actual {actual}) -- re-select deliberately, never re-read silently"
+            )
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+            docs[kind] = text if kind == "bench_body" else json.loads(text)
+        except (OSError, UnicodeDecodeError, ValueError) as exc:
+            errors.append(f"record {key}: cannot read {pin['path']} ({exc})")
+    if len(errors) > n_err:
+        return None
+    problems: list[str] = []
+    snap = repo / snapshot_rel
+    snap_hash = sha256_file(snap) if snap.is_file() else None
+    body_pin = kr["files"]["bench_body"]
+    envs = {}
+    for kind in ("ac", "op"):
+        env = docs[kind]
+        label = f"{kind} envelope {kr['files'][kind]['path']}"
+        if not isinstance(env, dict):
+            problems.append(f"{label}: not an object")
+            continue
+        count = env.get("corner_count")
+        if env.get("status") != "pass" or count != len(expected_ids) or env.get("passed") != count:
+            problems.append(f"{label}: status {env.get('status')!r}, {env.get('passed')} of {count} passed (need all {len(expected_ids)})")
+        for field in ("failed", "errored", "inconclusive"):
+            if env.get(field) != 0:
+                problems.append(f"{label}: {field} = {env.get(field)!r}")
+        if (env.get("diagnostic_counts") or {}).get("corners_with_diagnostics") != 0:
+            problems.append(f"{label}: corners carry diagnostics")
+        remote = (env.get("environment") or {}).get("remote") or {}
+        if not remote.get("job_id"):
+            problems.append(f"{label}: no environment.remote.job_id (not a batch run)")
+        envs[kind] = {"env": env, "corners": _klt_corner_ids(env, label, expected_ids, problems), "label": label}
+    if problems:
+        errors.extend(f"record {key}: klt raw evidence: {p}" for p in problems)
+        return None
+
+    ac_env, op_env = envs["ac"]["env"], envs["op"]["env"]
+    ea, eo = ac_env["environment"], op_env["environment"]
+    if ea.get("engine") != "ngspice" or ea.get("engine") != eo.get("engine") or ea.get("engine_version") != eo.get("engine_version"):
+        problems.append(f"the two envelopes disagree on the engine ({ea.get('engine')} {ea.get('engine_version')} vs {eo.get('engine')} {eo.get('engine_version')})")
+    version = str(ea.get("engine_version"))
+    for kind, env in (("ac", ac_env), ("op", op_env)):
+        e = env["environment"]
+        banner = ((e.get("remote") or {}).get("worker_environment") or {}).get("simulator", {}).get("version_banner")
+        if banner is not None and f"ngspice-{version}" not in banner:
+            problems.append(f"{kind} envelope: worker banner does not name ngspice-{version}")
+    if ea.get("models_lib_sha256") != eo.get("models_lib_sha256") or not ea.get("models_lib_sha256"):
+        problems.append("the two envelopes disagree on the model deck hash")
+    for kind, env in (("ac", ac_env), ("op", op_env)):
+        prov = env.get("provenance") or {}
+        if (prov.get("pdk") or {}).get("name") != "ihp-sg13g2":
+            problems.append(f"{kind} envelope: PDK is {(prov.get('pdk') or {}).get('name')!r}, not ihp-sg13g2")
+        deck = prov.get("deck") or {}
+        if deck.get("name") != "cornerMOSlv.lib" or deck.get("content_hash") != "sha256:" + str(env["environment"].get("models_lib_sha256")):
+            problems.append(f"{kind} envelope: model deck identity {deck.get('name')!r} {deck.get('content_hash')!r} is not cornerMOSlv.lib at the recorded models_lib_sha256")
+        closure = {c.get("path"): c.get("sha256") for c in env["environment"].get("netlist_closure") or []}
+        if closure.get(snapshot_rel) is None or "sha256:" + str(closure[snapshot_rel]) != snap_hash:
+            problems.append(f"{kind} envelope: simulated DUT {snapshot_rel} (closure sha256 {closure.get(snapshot_rel)}) is not the selected netlist snapshot ({snap_hash})")
+        if "sha256:" + str(closure.get(body_pin["path"])) != body_pin["sha256"] or "sha256:" + str(env["environment"].get("netlist_sha256")) != body_pin["sha256"]:
+            problems.append(f"{kind} envelope: simulated bench body is not the pinned {body_pin['path']}")
+        if (env.get("netlist") or {}).get("path") != body_pin["path"]:
+            problems.append(f"{kind} envelope: netlist path {(env.get('netlist') or {}).get('path')!r} is not the pinned bench body")
+    # requests: the measurement definitions the audit relies on
+    ac_req, op_req = docs["ac_request"], docs["op_request"]
+    if (ac_req.get("analysis") or {}).get("kind") != "ac" or (ac_req.get("analysis") or {}).get("args") != "dec 20 1 1g":
+        problems.append("ac request: analysis is not `ac dec 20 1 1g` (Av0 is read at 1 Hz)")
+    if (op_req.get("analysis") or {}).get("kind") != "op":
+        problems.append("op request: analysis is not `op`")
+    ac_defs = {m.get("name"): m.get("spice") for m in ac_req.get("measurements") or []}
+    for name, spice in KLT_AC_MEASUREMENTS.items():
+        if ac_defs.get(name) != spice:
+            problems.append(f"ac request: measurement {name} is {ac_defs.get(name)!r}, not {spice!r}")
+    op_defs = {m.get("name"): m.get("expr") for m in op_req.get("measurements") or []}
+    for name, expr in KLT_OP_MEASUREMENTS.items():
+        if op_defs.get(name) != expr:
+            problems.append(f"op request: measurement {name} is {op_defs.get(name)!r}, not {expr!r}")
+    for kind, req in (("ac", ac_req), ("op", op_req)):
+        if Path(str(req.get("netlist"))).name != Path(body_pin["path"]).name:
+            problems.append(f"{kind} request: netlist {req.get('netlist')!r} is not the pinned bench body")
+    # bench body: load and the AC-grounded loop
+    body = "\n".join(line for line in docs["bench_body"].splitlines() if not line.lstrip().startswith("*"))
+    loads = _KLT_CLOAD_RE.findall(body)
+    stated = {parse_capacitance(s)[0] for s in source_cl_statements(md_text)} - {None}
+    if len(loads) != 1:
+        problems.append(f"bench body: {len(loads)} Cload elements (need exactly one)")
+    else:
+        try:
+            cload = Decimal(loads[0])
+        except InvalidOperation:
+            cload = None
+        if cload is None or cload not in stated:
+            problems.append(f"bench body: Cload {loads[0]} is not a CL the record's own prose states ({sorted(source_cl_statements(md_text))})")
+    for name, pattern in KLT_BENCH_ELEMENTS.items():
+        if len(re.findall(r"^" + pattern + r"\s*$", body, re.MULTILINE | re.IGNORECASE)) != 1:
+            problems.append(f"bench body: element {name} is not present exactly once as `{pattern}`")
+
+    # DC continuity record (the stated stand-in for the internal-node check)
+    cont_key = kr["dc_continuity"]
+    cont = records.get(cont_key) or {}
+    cont_rows: dict = {}
+    cpath = repo / cont["csv"] if isinstance(cont.get("csv"), str) else None
+    if cpath is None or not cpath.is_file():
+        problems.append(f"dc_continuity record {cont_key}: CSV is missing")
+    elif sha256_file(cpath) != cont.get("csv_sha256"):
+        problems.append(f"dc_continuity record {cont_key}: {cont['csv']} does not match its selection pin")
+    else:
+        try:
+            _, crows = read_csv_rows(cpath)
+            cont_rows = {(r.get("point_id") or "").strip(): r for r in crows}
+        except (OSError, UnicodeDecodeError, csv.Error) as exc:
+            problems.append(f"dc_continuity record {cont_key}: cannot parse {cont['csv']} ({exc})")
+
+    measurement = {}
+    for corner in docs["measurement"].get("corners") or []:
+        try:
+            proc, vdd_s, temp_s = corner["corner_id"].split("/")
+            pid = f"{proc}_{int(temp_s[:-1])}C_{float(vdd_s[:-1]):.2f}V"
+        except (KeyError, ValueError, AttributeError):
+            problems.append(f"measurement document: unreadable corner id {corner.get('corner_id')!r}")
+            continue
+        measurement[pid] = {m.get("name"): m.get("value") for m in corner.get("measurements") or []}
+    points: dict = {}
+    for pid in expected_ids:
+        a = _klt_values(envs["ac"]["corners"][pid], KLT_AC_MEASUREMENTS)
+        o_corner = envs["op"]["corners"][pid]
+        o = _klt_values(o_corner, ("ivdd_total_a", "vout_dc_v", "op_vcm_frac", "op_vout_offset_frac", "op_vout_rail_frac"))
+        bad = [n for n, v in (*a.items(), *o.items()) if not isinstance(v, (int, float)) or isinstance(v, bool) or not math.isfinite(v)]
+        if bad:
+            problems.append(f"point {pid}: missing or non-finite raw value(s) {bad}")
+            continue
+        sup = o_corner.get("supply_v") or {}
+        if envs["ac"]["corners"][pid].get("supply_v") != sup:
+            problems.append(f"point {pid}: the AC and OP envelopes use different supplies")
+        points[pid] = {
+            "av0_db": a["av0_db"], "gbw_hz": a["gbw_hz"], "phase_rad": a["phase_at_ugf_rad"],
+            "ivdd": o["ivdd_total_a"], "vout": o["vout_dc_v"], "vdd": sup.get("vdd"), "vinp": sup.get("vinp"),
+            "reported": {k: o[k] for k in ("op_vcm_frac", "op_vout_offset_frac", "op_vout_rail_frac")},
+            "measurement": measurement.get(pid), "continuity": cont_rows.get(pid),
+        }
+    if problems:
+        errors.extend(f"record {key}: klt raw evidence: {p}" for p in problems)
+        return None
+    return {
+        "points": points, "version": version, "continuity_record": cont_key,
+        "jobs": {k: envs[k]["env"]["environment"]["remote"]["job_id"] for k in ("ac", "op")},
+        "ibias_a": 10e-6, "cload_f": float(loads[0]),
+    }
+
+
+def _check_open_loop_klt(point: dict, pop: dict | None) -> str | None:
+    """The graded cells and the operating-point validity must follow from the
+    pinned raw envelopes (KLT_AUDIT_RULE)."""
+    if pop is None:
+        return "cannot evaluate (no raw klt population available)"
+    pid = (point.get("point_id") or "").strip()
+    raw = pop["points"].get(pid)
+    if raw is None:
+        return "cannot evaluate (no pinned raw klt values for this point)"
+    problems = []
+    pm = 180.0 + math.degrees(raw["phase_rad"])
+    want = {"av0_db": raw["av0_db"], "gbw_hz": raw["gbw_hz"], "pm_deg": pm, "iq_a": raw["ivdd"]}
+    for field, value in want.items():
+        problem = _cell_problem(field, point.get(field), format(value, ".6g"), "pinned klt envelopes", 6, nan_ok=False)
+        if problem:
+            problems.append(problem)
+        meas = (raw["measurement"] or {}).get(field)
+        if not isinstance(meas, (int, float)) or not math.isfinite(meas) or abs(meas - value) > 1e-9 * max(1.0, abs(value)):
+            problems.append(f"{field}: the measurement document gives {meas!r}, not the envelope-derived {value!r}")
+    vdd, vinp, vout = raw["vdd"], raw["vinp"], raw["vout"]
+    if not all(isinstance(v, (int, float)) and math.isfinite(v) for v in (vdd, vinp)) or vdd <= 0:
+        return "; ".join(problems + ["the corner supplies are unreadable"])
+    recomputed = {
+        "op_vcm_frac": vinp / vdd,
+        "op_vout_offset_frac": abs(vout - vdd / 2.0) / vdd,
+        "op_vout_rail_frac": vout / vdd,
+    }
+    for name, value in recomputed.items():
+        if abs(raw["reported"][name] - value) > 1e-9:
+            problems.append(f"{name}: envelope reports {raw['reported'][name]!r} but the raw supplies/Vout give {value!r}")
+    if abs(recomputed["op_vcm_frac"] - 0.5) > KLT_VCM_FRAC_TOL:
+        problems.append(f"operating point: Vcm/VDD {recomputed['op_vcm_frac']:.6g} is not 1/2 (within {KLT_VCM_FRAC_TOL:g})")
+    if recomputed["op_vout_offset_frac"] > KLT_OFFSET_FRAC_MAX:
+        problems.append(f"operating point: |Vout - VDD/2| is {recomputed['op_vout_offset_frac']:.4g} VDD, beyond {KLT_OFFSET_FRAC_MAX}")
+    if not (KLT_RAIL_FRAC <= recomputed["op_vout_rail_frac"] <= 1.0 - KLT_RAIL_FRAC):
+        problems.append(f"operating point: Vout is {recomputed['op_vout_rail_frac']:.4g} VDD, within {KLT_RAIL_FRAC} of a rail")
+    cont = raw["continuity"]
+    ck = pop["continuity_record"]
+    if cont is None:
+        problems.append(f"dc_continuity record {ck} has no row for this point")
+    else:
+        if (cont.get("op_pass") or "").strip() != "1":
+            problems.append(f"dc_continuity record {ck}: op_pass={cont.get('op_pass')!r} (the legacy internal-node check did not pass)")
+        for name, col, tol in (("Vout", "vout_dc_v", KLT_VOUT_TOL_V), ("total VDD current", "ivdd_total_a", KLT_IVDD_TOL_A)):
+            ref, why = parse_decimal(cont.get(col))
+            now = raw["vout"] if col == "vout_dc_v" else raw["ivdd"]
+            if ref is None:
+                problems.append(f"dc_continuity record {ck}: {col}: {why}")
+            elif abs(float(ref) - now) > tol:
+                problems.append(f"{name} {now:.9g} differs from the dc_continuity record {ck} ({float(ref):.9g}) by more than {tol:g}")
+    return "; ".join(problems) or None
+
+
 # Each entry: (check(point, draws), needs a validated draws population). A
 # draws check runs only where that population loaded cleanly; its load reports
 # its own problems (point, line, reason) as record errors.
@@ -840,6 +1171,7 @@ DEFINITION_CHECKS = {
     "swing_raw_audit": (_check_swing_raw, "swing"),
     "offset_magnitude": (_check_offset_magnitude, False),
     "offset_mc_statistics": (_check_offset_mc_statistics, "draws"),
+    "open_loop_klt_audit": (_check_open_loop_klt, "klt"),
 }
 
 
@@ -1364,13 +1696,13 @@ def load_record(repo: Path, key: str, spec: dict, grid: dict, env: dict, records
     md_text = (repo / spec["md"]).read_text(encoding="utf-8")
     state["stated_cl"] = source_cl_statements(md_text)
     versions = sorted(set(NGSPICE_RE.findall(md_text)))
-    if len(versions) != 1:
+    if len(versions) != 1 and not (not versions and spec.get("klt_raw") is not None):
         errors.append(
             f"record {key}: {spec['md']} names {len(versions)} ngspice versions "
             f"({', '.join('ngspice-' + v for v in versions) or 'none'}) -- the "
             "simulation environment is not identifiable"
         )
-    else:
+    elif versions:
         src["ngspice"] = f"ngspice-{versions[0]}"
         if env.get("ngspice") and src["ngspice"] != env["ngspice"]:
             errors.append(
@@ -1540,13 +1872,41 @@ def load_record(repo: Path, key: str, spec: dict, grid: dict, env: dict, records
             "config": swr["config"],
         }
 
+    # 3g. raw `klt sim` envelopes (issue #101): the AC and OP envelopes, the
+    # measurement document, both requests and the bench body, cross-checked.
+    klt_pop: dict | None = None
+    kr = spec.get("klt_raw")
+    if kr is not None:
+        klt_pop = _load_klt_population(repo, key, kr, expected, spec["netlist_snapshot"], md_text, records or {}, errors)
+        src["klt_raw"] = {
+            "status": "verified" if klt_pop is not None else "error",
+            "points": len(expected),
+            "pins_sha256": sha256_bytes(canonical_json(kr["files"]).encode("utf-8")),
+            "dc_continuity": kr["dc_continuity"],
+        }
+        if klt_pop is not None:
+            src["klt_raw"]["jobs"] = klt_pop["jobs"]
+            src["klt_raw"]["ibias_a"] = klt_pop["ibias_a"]
+            src["klt_raw"]["cload_f"] = klt_pop["cload_f"]
+            envelope_ngspice = f"ngspice-{klt_pop['version']}"
+            if src["ngspice"] is None:
+                src["ngspice"] = envelope_ngspice
+            if src["ngspice"] != envelope_ngspice:
+                errors.append(f"record {key}: {spec['md']} names {src['ngspice']}, but the pinned envelopes ran {envelope_ngspice}")
+            if env.get("ngspice") and src["ngspice"] != env["ngspice"]:
+                errors.append(
+                    f"record {key}: ran on {src['ngspice']}, but sim/pdk.json pins "
+                    f"{env['ngspice']} -- mixed simulation environments are not "
+                    "combined silently"
+                )
+
     # 4. validity flags and definitions, per point
     conditions = spec.get("valid_when", [])
 
     def run_definition_checks(pid: str, row: dict) -> None:
         for name in spec.get("definition_checks", []):
             check, needs = DEFINITION_CHECKS[name]
-            pop = {"draws": draws_pass, "samples": sample_pop, "noise": noise_pop, "slew": slew_pop, "swing": swing_pop}.get(needs)
+            pop = {"draws": draws_pass, "samples": sample_pop, "noise": noise_pop, "slew": slew_pop, "swing": swing_pop, "klt": klt_pop}.get(needs)
             if needs and pop is None:
                 continue  # the population load above already reported why
             problem = check(row, pop)
@@ -2035,6 +2395,7 @@ def build_content(repo: Path, selection_path: Path) -> dict:
         "noise_audit_rule": NOISE_AUDIT_RULE,
         "slew_audit_rule": SLEW_AUDIT_RULE,
         "swing_audit_rule": SWING_AUDIT_RULE,
+        "klt_audit_rule": KLT_AUDIT_RULE,
         "environment": {
             "pdk_provenance": pdk_provenance_summary(records),
             "ngspice_pin": env.get("ngspice"),
@@ -2277,6 +2638,12 @@ def render_markdown(report: dict) -> str:
         claim = "verified for every selected record" if prov["pdk_reproducibility_verified"] else "**NOT claimed** (not every selected record has checked run-time PDK identity)"
         w(f"PDK reproducibility is {claim}. {prov['note']}.\n\n")
     def _draws_cell(src: dict) -> str:
+        klt = src.get("klt_raw")
+        if klt:
+            cell = f"{klt['points']} pinned klt-sim corners (`{_short(klt['pins_sha256'])}`, {klt['status']}"
+            if klt["status"] == "verified":
+                cell += f": batch jobs {klt['jobs']['ac']} / {klt['jobs']['op']}; DC continuity via `{klt['dc_continuity']}`"
+            return cell + ")"
         swing = src.get("swing_raw")
         if swing:
             return (
@@ -2336,6 +2703,9 @@ def render_markdown(report: dict) -> str:
     slew_rule = content.get("slew_audit_rule")
     if slew_rule and any(src.get("slew_raw") for src in content["sources"].values()):
         w(f"\n{slew_rule}\n\n")
+    klt_rule = content.get("klt_audit_rule")
+    if klt_rule and any(src.get("klt_raw") for src in content["sources"].values()):
+        w(f"\n{klt_rule}\n\n")
     swing_rule = content.get("swing_audit_rule")
     if swing_rule and any(src.get("swing_raw") for src in content["sources"].values()):
         w(f"\n{swing_rule}\n\n")

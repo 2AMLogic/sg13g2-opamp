@@ -47,15 +47,16 @@ SELECTION = REPO / generate.SELECTION_REL
 
 # Every ratified bound spec/target-spec.md section 2 binds today ([DR-2] and
 # the CMRR row's [DR-4]); output swing carries three bounds in one row.
-# The four ratified rows whose committed raw worst case misses the literal
+# The three ratified rows whose committed raw worst case misses the literal
 # DR-0002 bound and only rounds onto it at the bound's written decimals
 # (spec question 2AMLogic/sg13g2-opamp#101). Compared literally, they FAIL.
-LITERAL_FAIL_IDS = ["dc_gain", "input_noise", "offset_systematic", "swing_span"]
+# DC gain left this list when the selection moved to the corrected
+# inn-AC-grounded open-loop record (worst 38.2293 dB against 37.8 dB).
+LITERAL_FAIL_IDS = ["input_noise", "offset_systematic", "swing_span"]
 
 # (record, binding point, column, raw cell exactly AT the ratified bound once
-# scaled to the bound's unit) for each of the four rows above.
+# scaled to the bound's unit) for each of the rows above.
 AT_BOUND_CELLS = [
-    ("open-loop-ac", "mos_fs_125C_1.08V", "av0_db", "37.8"),           # >= 37.8 dB
     ("input-noise", "mos_fs_125C_1.08V", "vni_int_vrms", "0.0001089"),  # <= 108.9 µVrms
     ("input-offset", "mos_fs_125C_1.08V", "vos_null_v", "0.0219"),      # <= 21.9 mV (absmax)
     ("output-swing", "mos_ss_125C_1.08V", "swing_span_v", "0.571"),     # >= 0.571 V
@@ -95,6 +96,8 @@ class Fixture:
             if "swing_raw" in rec:
                 for entry in rec["swing_raw"]["files"].values():
                     files.update(pin["path"] for pin in entry.values())
+            if "klt_raw" in rec:
+                files.update(pin["path"] for pin in rec["klt_raw"]["files"].values())
         files.update({generate.SELECTION_REL, generate.GENERATOR_REL})
         for rel in files:
             dst = self.root / rel
@@ -130,6 +133,22 @@ class Fixture:
         rec["definition_checks"] = [c for c in rec["definition_checks"] if c != "cmrr_mc_statistics"]
         self.save_selection()
 
+    keep_klt_audit = False
+
+    def detach_klt_population(self) -> None:
+        """Controls that perturb the open-loop summary for THEIR OWN purpose
+        (a bound comparison) drop the raw klt-envelope audit (issue #101);
+        KltRawAudit tests that audit itself. The corrected record's prose names
+        no ngspice (the envelopes do), so the detached fixture's copy states
+        the pinned one, as a real legacy record's does."""
+        rec = self.selection["records"]["open-loop-ac"]
+        rec.pop("klt_raw", None)
+        rec["definition_checks"] = [c for c in rec.get("definition_checks", []) if c != "open_loop_klt_audit"]
+        md = self.root / rec["md"]
+        md.write_text(md.read_text(encoding="utf-8") + "\nRan on ngspice-46.\n", encoding="utf-8")
+        rec["md_sha256"] = generate.sha256_file(md)
+        self.save_selection()
+
     keep_noise_audit = False
 
     def detach_noise_population(self) -> None:
@@ -155,6 +174,8 @@ class Fixture:
     def rewrite_csv(self, key: str, transform, repin: bool = True) -> None:
         if key == "open-loop-ac" and not self.keep_cmrr_audit:
             self.detach_cmrr_population()
+        if key == "open-loop-ac" and not self.keep_klt_audit:
+            self.detach_klt_population()
         if key == "input-noise" and not self.keep_noise_audit:
             self.detach_noise_population()
         if key == "output-swing" and not self.keep_swing_audit:
@@ -246,7 +267,7 @@ class CommittedEvidence(unittest.TestCase):
             self.assertEqual(row["verdict"], "FAIL" if rid in LITERAL_FAIL_IDS else "PASS", rid)
 
     def test_overall_fail_and_spec_and_inventory_fully_covered(self):
-        # Literal comparison: the committed evidence misses four ratified
+        # Literal comparison: the committed evidence misses three ratified
         # bounds as written, so the report must not PASS.
         self.assertEqual(self.content["overall"]["verdict"], "FAIL")
         self.assertEqual(self.content["overall"]["ratified_pass"], len(RATIFIED_IDS) - len(LITERAL_FAIL_IDS))
@@ -294,7 +315,6 @@ class CommittedEvidence(unittest.TestCase):
         rows = rows_by_id(self.content)
         self.assertEqual(self.content["overall"]["fail_only_beyond_written_decimals"], LITERAL_FAIL_IDS)
         expected = {
-            "dc_gain": ("37.7812", "mos_fs_125C_1.08V"),
             "input_noise": ("108.949", "mos_fs_125C_1.08V"),
             "offset_systematic": ("21.9273527", "mos_fs_125C_1.08V"),
             "swing_span": ("0.570957773", "mos_ss_125C_1.08V"),
@@ -1220,7 +1240,23 @@ class CmrrMcStatistics(unittest.TestCase):
     def test_join_record_changed_is_rejected(self):
         # Alter the joined deterministic Av0 AND re-pin it: the summary's own
         # Av0 no longer matches the explicitly selected join.
-        self.fx.set_cell("open-loop-ac", self.POINT, "av0_db", "41.5")
+        self.fx.set_cell("open-loop-ac-floating-inn", self.POINT, "av0_db", "41.5")
+        self.assert_error(self.POINT, "av0_db")
+
+    def test_join_keeps_the_provenance_the_summary_was_measured_against(self):
+        # The CMRR summary states the Av0 of the superseded inn-floating
+        # record; selecting the corrected open-loop record as the primary
+        # open-loop source must not silently re-stamp it (issue #101).
+        join = self.fx.selection["records"][self.RECORD]["mc_samples"]["av0_join"]
+        self.assertEqual(join, "open-loop-ac-floating-inn")
+        self.assertNotEqual(
+            self.fx.selection["records"][join]["csv"], self.fx.selection["records"]["open-loop-ac"]["csv"]
+        )
+        self.assertEqual(self.fx.build()["errors"], [])
+        # Repointing the join at the corrected record is caught: its Av0 is
+        # not the one the pinned samples' summary carries.
+        self.fx.selection["records"][self.RECORD]["mc_samples"]["av0_join"] = "open-loop-ac"
+        self.fx.save_selection()
         self.assert_error(self.POINT, "av0_db")
 
     def test_join_record_must_be_a_selected_record(self):
@@ -1317,7 +1353,7 @@ class LoadCondition(unittest.TestCase):
         self.assertNotIn("verified:", row["load"])
 
     def test_contradiction_is_diagnosed_independent_of_electrical_pass_fail(self):
-        # dc_gain currently FAILs electrically; the load error must still be named.
+        # the load error is named whatever the electrical verdict is.
         self.row("dc_gain")["load_condition"]["cl"] = "5 pF"
         row = self.build_row("dc_gain")
         self.assertEqual(row["verdict"], "ERROR")
@@ -1335,6 +1371,7 @@ class LoadCondition(unittest.TestCase):
         self.assertEqual(self.build_row("gbw")["verdict"], "ERROR")
 
     def test_missing_source_metadata_is_disclosed_unverified(self):
+        self.fx.detach_klt_population()  # this control is about the prose load statement alone
         md = self.fx.root / self.fx.selection["records"]["open-loop-ac"]["md"]
         md.write_text(md.read_text(encoding="utf-8").replace("CL = 2e-12 F", "load stated elsewhere"), encoding="utf-8")
         self.fx.selection["records"]["open-loop-ac"]["md_sha256"] = generate.sha256_file(md)
@@ -1345,6 +1382,7 @@ class LoadCondition(unittest.TestCase):
         self.assertEqual(row["verdict"], "PASS")
 
     def test_source_contradicting_ratified_load_is_error(self):
+        self.fx.detach_klt_population()
         md = self.fx.root / self.fx.selection["records"]["open-loop-ac"]["md"]
         md.write_text(md.read_text(encoding="utf-8").replace("CL = 2e-12 F", "CL = 2e-10 F"), encoding="utf-8")
         self.fx.selection["records"]["open-loop-ac"]["md_sha256"] = generate.sha256_file(md)
@@ -1663,6 +1701,265 @@ class NoiseRawAudit(unittest.TestCase):
         runner = (REPO / "sim" / "input-noise" / "run_noise_sweep.sh").read_text(encoding="utf-8")
         self.assertIn("noise_post.py", runner)
         self.assertNotIn("PYEOF", runner.split("noise_post.py")[1].split("done")[0])
+
+
+class KltRawAudit(unittest.TestCase):
+    """Issue #101: the corrected open-loop record carries no `op_pass` /
+    `gm_status` columns, so its four graded rows are audited against the
+    hash-pinned `klt sim` envelopes (definition check open_loop_klt_audit).
+    Missing legacy columns are never permission to weaken validation."""
+
+    RECORD = "open-loop-ac"
+    POINT = "mos_tt_27C_1.20V"
+
+    def setUp(self) -> None:
+        self.fx = Fixture()
+        self.fx.keep_klt_audit = True
+
+    def tearDown(self) -> None:
+        self.fx.close()
+
+    def raw(self) -> dict:
+        return self.fx.selection["records"][self.RECORD]["klt_raw"]
+
+    def errors(self, content: dict) -> list:
+        out = list(content["errors"])
+        for row in content["rows"]:
+            out.extend(row["errors"])
+        return out
+
+    def assert_error(self, *fragments: str) -> list:
+        content = self.fx.build()
+        errors = self.errors(content)
+        self.assertEqual(content["overall"]["verdict"], "ERROR", errors)
+        for fragment in fragments:
+            self.assertTrue(any(fragment in e for e in errors), (fragment, errors))
+        return errors
+
+    def edit_json(self, kind, mutate, repin=True) -> None:
+        pin = self.raw()["files"][kind]
+        path = self.fx.root / pin["path"]
+        doc = json.loads(path.read_text(encoding="utf-8"))
+        mutate(doc)
+        path.write_text(json.dumps(doc), encoding="utf-8")
+        if repin:
+            pin["sha256"] = generate.sha256_file(path)
+            self.fx.save_selection()
+
+    def edit_text(self, kind, transform, repin=True) -> None:
+        pin = self.raw()["files"][kind]
+        path = self.fx.root / pin["path"]
+        path.write_text(transform(path.read_text(encoding="utf-8")), encoding="utf-8")
+        if repin:
+            pin["sha256"] = generate.sha256_file(path)
+            self.fx.save_selection()
+
+    def corner(self, doc, pid=None):
+        pid = pid or self.POINT
+        for c in doc["corners"]:
+            if f"{c['process']}_{c['temperature_c']}C_{c['supply_v']['vdd']:.2f}V" == pid:
+                return c
+        raise KeyError(pid)
+
+    def set_value(self, doc, name, value, pid=None):
+        for m in self.corner(doc, pid)["measurements"]:
+            if m["name"] == name:
+                m["value"] = value
+
+    # --- committed evidence -------------------------------------------------
+
+    def test_committed_evidence_verifies_all_45_points(self):
+        content = self.fx.build()
+        self.assertEqual(self.errors(content), [])
+        src = content["sources"][self.RECORD]
+        self.assertEqual((src["klt_raw"]["status"], src["klt_raw"]["points"]), ("verified", 45))
+        self.assertEqual(src["klt_raw"]["jobs"], {"ac": "klt-sim-2e841aaa76e0", "op": "klt-sim-15dd509f5239"})
+        self.assertEqual((src["valid_points"], src["ngspice"]), (45, "ngspice-46"))
+        self.assertEqual(src["pdk_provenance"]["status"], "legacy-unverified")
+
+    def test_corrected_rows_are_graded_from_the_new_record(self):
+        rows = rows_by_id(self.fx.build())
+        self.assertEqual(rows["dc_gain"]["source"]["record"], self.RECORD)
+        for rid, point, value in (
+            ("dc_gain", "mos_fs_125C_1.08V", "38.2293"),
+            ("gbw", "mos_ss_-40C_1.08V", "8.06239"),
+            ("phase_margin", "mos_ff_125C_1.32V", "61.9872"),
+            ("quiescent_current", "mos_ss_-40C_1.32V", "119.655"),
+        ):
+            row = rows[rid]
+            self.assertEqual((row["verdict"], row["measured_worst"]["point"], row["measured_worst"]["value"]),
+                             ("PASS", point, value), rid)
+
+    def test_report_exposes_audit_rule_and_status(self):
+        content = self.fx.build()
+        self.assertIn("Open-loop `klt sim` raw-evidence audit", content["klt_audit_rule"])
+        self.assertTrue(any("internal-node" in c for c in content["caveats"]))
+        md = generate.render_markdown(generate.make_report(content, "20260101-000000-abcd", self.fx.root))
+        self.assertIn("pinned klt-sim corners", md)
+
+    def test_summary_cells_follow_the_envelopes(self):
+        for column, value in (("av0_db", "41.0"), ("gbw_hz", "1.0e7"), ("pm_deg", "70.0"), ("iq_a", "0.0001")):
+            with self.subTest(column=column):
+                self.fx.close()
+                self.fx = Fixture()
+                self.fx.keep_klt_audit = True
+                self.fx.set_cell(self.RECORD, self.POINT, column, value)
+                self.assert_error(f"point {self.POINT} fails definition check open_loop_klt_audit", column)
+
+    # --- selection shape ----------------------------------------------------
+
+    def test_klt_raw_without_its_audit_is_refused(self):
+        self.fx.selection["records"][self.RECORD]["definition_checks"] = []
+        self.fx.save_selection()
+        with self.assertRaises(generate.SelectionError):
+            self.fx.build()
+
+    def test_audit_without_pinned_raw_evidence_is_refused(self):
+        del self.fx.selection["records"][self.RECORD]["klt_raw"]
+        self.fx.save_selection()
+        with self.assertRaises(generate.SelectionError):
+            self.fx.build()
+
+    def test_every_artifact_must_be_pinned(self):
+        for kind in generate.KLT_RAW_KINDS:
+            with self.subTest(kind=kind):
+                self.fx.close()
+                self.fx = Fixture()
+                del self.raw()["files"][kind]
+                self.fx.save_selection()
+                with self.assertRaises(generate.SelectionError):
+                    self.fx.build()
+
+    def test_continuity_record_must_be_another_selected_record(self):
+        for name in ("nope", self.RECORD):
+            with self.subTest(name=name):
+                self.raw()["dc_continuity"] = name
+                self.fx.save_selection()
+                with self.assertRaises(generate.SelectionError):
+                    self.fx.build()
+
+    # --- tampering ----------------------------------------------------------
+
+    def test_stale_pin_is_rejected_for_every_artifact(self):
+        for kind in generate.KLT_RAW_KINDS:
+            with self.subTest(kind=kind):
+                self.fx.close()
+                self.fx = Fixture()
+                path = self.fx.root / self.raw()["files"][kind]["path"]
+                path.write_text(path.read_text(encoding="utf-8") + "\n", encoding="utf-8")
+                self.assert_error("does not match its selection pin")
+
+    def test_missing_artifact_is_rejected(self):
+        (self.fx.root / self.raw()["files"]["op"]["path"]).unlink()
+        self.assert_error("missing raw klt artifact op")
+
+    def test_coherent_envelope_edit_still_fails_against_the_summary(self):
+        self.edit_json("ac", lambda d: self.set_value(d, "av0_db", 41.0))
+        errors = self.assert_error(f"point {self.POINT} fails definition check open_loop_klt_audit")
+        self.assertTrue(any("av0_db" in e for e in errors), errors)
+
+    def test_measurement_document_must_agree_with_the_envelopes(self):
+        def tweak(doc):
+            for c in doc["corners"]:
+                if c["corner_id"] == "mos_tt/1.20V/27C":
+                    for m in c["measurements"]:
+                        if m["name"] == "pm_deg":
+                            m["value"] += 0.5
+        self.edit_json("measurement", tweak)
+        self.assert_error("the measurement document gives")
+
+    def test_failed_envelope_is_not_evidence(self):
+        self.edit_json("op", lambda d: d.update(status="fail", failed=1, passed=44))
+        self.assert_error("op envelope", "klt raw evidence")
+
+    def test_missing_corner_is_rejected(self):
+        self.edit_json("ac", lambda d: d.update(corners=[c for c in d["corners"] if c is not self.corner(d)]))
+        self.assert_error("no corner for point " + self.POINT)
+
+    def test_corner_diagnostics_are_rejected(self):
+        self.edit_json("ac", lambda d: self.corner(d).update(diagnostics=[{"code": "nonconvergence"}]))
+        self.assert_error("is not a clean pass")
+
+    def test_non_finite_raw_value_is_rejected(self):
+        self.edit_json("ac", lambda d: self.set_value(d, "gbw_hz", None))
+        self.assert_error("missing or non-finite raw value")
+
+    def test_engine_disagreement_is_rejected(self):
+        self.edit_json("op", lambda d: d["environment"].update(engine_version="45"))
+        self.assert_error("disagree on the engine")
+
+    def test_ngspice_must_match_the_pdk_pin(self):
+        def to45(d):
+            d["environment"]["engine_version"] = "45"
+            d["environment"]["remote"]["worker_environment"]["simulator"]["version_banner"] = "ngspice-45"
+        self.edit_json("ac", to45)
+        self.edit_json("op", to45)
+        self.assert_error("sim/pdk.json pins")
+
+    def test_wrong_model_deck_is_rejected(self):
+        self.edit_json("ac", lambda d: d["environment"].update(models_lib_sha256="0" * 64))
+        self.assert_error("model deck")
+
+    def test_simulated_dut_must_be_the_selected_snapshot(self):
+        snap = self.fx.root / self.fx.selection["records"][self.RECORD]["netlist_snapshot"]
+        snap.write_text(snap.read_text(encoding="utf-8") + "* touched\n", encoding="utf-8")
+        self.assert_error("is not the selected netlist snapshot")
+
+    # --- the bench itself ---------------------------------------------------
+
+    def test_inn_must_be_ac_grounded(self):
+        self.edit_text("bench_body", lambda t: t.replace("Cinn_acgnd inn vss 1", "* removed"))
+        errors = self.assert_error("element Cinn_acgnd")
+        self.assertTrue(any("simulated bench body is not the pinned" in e for e in errors), errors)
+
+    def test_load_must_be_one_the_record_states(self):
+        self.edit_text("bench_body", lambda t: t.replace("Cload out vss 2e-12", "Cload out vss 5e-12"))
+        self.assert_error("is not a CL the record's own prose states")
+
+    def test_second_load_is_rejected(self):
+        self.edit_text("bench_body", lambda t: t + "Cload out vss 2e-12\n")
+        self.assert_error("2 Cload elements")
+
+    def test_reference_current_is_checked(self):
+        self.edit_text("bench_body", lambda t: t.replace("Iibias vdd ibias dc 10u", "Iibias vdd ibias dc 20u"))
+        self.assert_error("element Iibias")
+
+    def test_ac_request_must_read_av0_at_one_hertz(self):
+        self.edit_json("ac_request", lambda d: d["analysis"].update(args="dec 20 10 1g"))
+        self.assert_error("Av0 is read at 1 Hz")
+
+    def test_op_measurement_definition_is_checked(self):
+        def tweak(d):
+            for m in d["measurements"]:
+                if m["name"] == "ivdd_total_a":
+                    m["expr"] = "-i(vdd) - 1e-5"
+        self.edit_json("op_request", tweak)
+        self.assert_error("op request: measurement ivdd_total_a")
+
+    # --- operating-point validity (replaces op_pass) ------------------------
+
+    def test_railed_output_is_rejected(self):
+        def rail(d):
+            self.set_value(d, "vout_dc_v", 0.01)
+            self.set_value(d, "op_vout_rail_frac", 0.01 / 1.2)
+            self.set_value(d, "op_vout_offset_frac", abs(0.01 - 0.6) / 1.2)
+        self.edit_json("op", rail)
+        errors = self.assert_error(f"point {self.POINT} fails definition check open_loop_klt_audit")
+        self.assertTrue(any("operating point" in e for e in errors), errors)
+
+    def test_misreported_fraction_is_rejected(self):
+        self.edit_json("op", lambda d: self.set_value(d, "op_vcm_frac", 0.55))
+        self.assert_error("op_vcm_frac")
+
+    # --- the stated stand-in for the internal-node check --------------------
+
+    def test_continuity_record_op_failure_is_carried(self):
+        self.fx.set_cell("open-loop-ac-floating-inn", self.POINT, "op_pass", "0")
+        self.assert_error("dc_continuity record open-loop-ac-floating-inn", "op_pass")
+
+    def test_continuity_requires_dc_agreement(self):
+        self.fx.set_cell("open-loop-ac-floating-inn", self.POINT, "vout_dc_v", "0.5")
+        self.assert_error("differs from the dc_continuity record")
 
 
 class SlewRawAudit(unittest.TestCase):

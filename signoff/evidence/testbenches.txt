@@ -27,10 +27,10 @@
 # Ratified rows only. "Area" is [TBD-12], not ratified, claims no measurement,
 # and has no bench (it is a post-layout property).
 
-Open-loop DC gain           | sim/open-loop-ac            | sim/open-loop-ac/run_pvt_sweep.sh            | sim/open-loop-ac/records/20260910-221601-22feaba.csv
-GBW (CL = 2 pF)             | sim/open-loop-ac            | sim/open-loop-ac/run_pvt_sweep.sh            | sim/open-loop-ac/records/20260910-221601-22feaba.csv
-Phase margin                | sim/open-loop-ac            | sim/open-loop-ac/run_pvt_sweep.sh            | sim/open-loop-ac/records/20260910-221601-22feaba.csv
-Quiescent power             | sim/open-loop-ac            | sim/open-loop-ac/run_pvt_sweep.sh            | sim/open-loop-ac/records/20260910-221601-22feaba.csv
+Open-loop DC gain           | sim/open-loop-ac            | sim/open-loop-ac/run_klt_record.sh          | sim/open-loop-ac/records/20261015-103057-895d555.csv
+GBW (CL = 2 pF)             | sim/open-loop-ac            | sim/open-loop-ac/run_klt_record.sh          | sim/open-loop-ac/records/20261015-103057-895d555.csv
+Phase margin                | sim/open-loop-ac            | sim/open-loop-ac/run_klt_record.sh          | sim/open-loop-ac/records/20261015-103057-895d555.csv
+Quiescent power             | sim/open-loop-ac            | sim/open-loop-ac/run_klt_record.sh          | sim/open-loop-ac/records/20261015-103057-895d555.csv
 Slew rate (CL = 2 pF)       | sim/slew-rate               | sim/slew-rate/run_slew_sweep.sh              | sim/slew-rate/records/20260918-210216-90844d2.csv
 Input-referred noise        | sim/input-noise             | sim/input-noise/run_noise_sweep.sh           | sim/input-noise/records/20260918-203850-90844d2.csv
 Input offset (systematic)   | sim/input-offset            | sim/input-offset/run_offset_sweep.sh         | sim/input-offset/records/20260918-203858-90844d2.csv
