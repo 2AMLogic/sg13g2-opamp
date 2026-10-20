@@ -55,7 +55,7 @@ for this block's current distance from a sim-validated design.
 [`signoff/`](signoff/README.md) holds the `klt signoff --manifest` block
 manifest and the committed per-item T1 verdict it produces — 7 of 11 items
 `met` in the current record, with the remaining 4 `unmet` (item 8's
-characterization report is cited but grades four ratified rows FAIL against
+characterization report is cited but grades three ratified rows FAIL against
 their literal bounds — a spec question routed to the keys in
 [#101](https://github.com/2AMLogic/sg13g2-opamp/issues/101)). That
 record — not this paragraph, and not a hand-maintained checkbox list — is
