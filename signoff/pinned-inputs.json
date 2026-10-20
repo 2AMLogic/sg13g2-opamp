@@ -63,7 +63,7 @@
             "sim/input-noise/klt/tb_noise.body.spice",
             "sim/input-offset/klt/tb_offset.body.spice"
         ],
-        "8": "signoff/characterization/reports/20261012-003507-e721143.json",
+        "8": "signoff/characterization/reports/20261020-052800-9a4a35d.json",
         "9": "signoff/evidence/testbenches.txt",
         "10": "signoff/evidence/hygiene.txt",
         "11": [

@@ -94,7 +94,7 @@ remains the honest graded result rather than a placeholder. For item 7 a
 two legs are not electrically comparable (see "Item 7" below). Item 8 is cited
 but renders `unmet` with reason `check_failed`. Its envelope truthfully
 carries `status: "fail"`, because the characterization report it wraps grades
-four ratified rows FAIL (see below and
+three ratified rows FAIL (see below and
 [#101](https://github.com/2AMLogic/sg13g2-opamp/issues/101)).
 
 **Why a `drc` envelope is a legitimate citation for item 2, and not

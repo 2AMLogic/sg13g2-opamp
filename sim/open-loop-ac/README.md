@@ -121,7 +121,10 @@ see below).
 export PDK_ROOT=/path/to/ihp-open-pdk   # parent dir containing ihp-sg13g2/
 export PDK=ihp-sg13g2
 sim/tools/build-osdi.sh                 # one-time; idempotent (--check to verify only)
+# harness (the superseded floating-inn bench):
 sim/open-loop-ac/run_pvt_sweep.sh
+# corrected inn-AC-grounded record, via `klt sim` on the batch fleet:
+sim/open-loop-ac/run_klt_record.sh
 ```
 
 Requires `ngspice` on `PATH` (developed and run against `ngspice-46`) plus

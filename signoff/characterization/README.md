@@ -60,12 +60,15 @@ and choosing one is a spec decision, not this report's. Each row shows its raw
 margin, and also its worst value rounded to the bound's written decimals. The
 rounded value is **informational only and never gates a verdict**.
 
-With the committed evidence that makes the report **FAIL**. Four rows (DC gain
->= 37.8 dB, integrated noise <= 108.9 µVrms, systematic offset <= 21.9 mV,
-swing span >= 0.571 V) miss the literal bound by 0.0188 dB, 0.049 µVrms,
-0.027 mV and 0.042 mV. Their raw worst cases (37.7812 dB, 108.949 µVrms,
-21.927 mV, 0.570958 V) come from the very records DR-0002 cites, and they only
-round onto the bounds DR-0002 wrote. The report lists them under
+With the committed evidence that makes the report **FAIL**. Three rows
+(integrated noise <= 108.9 µVrms, systematic offset <= 21.9 mV, swing span
+>= 0.571 V) miss the literal bound by 0.049 µVrms, 0.027 mV and 0.042 mV.
+Their raw worst cases (108.949 µVrms, 21.927 mV, 0.570958 V) come from the very
+records DR-0002 cites, and they only round onto the bounds DR-0002 wrote.
+(DC gain was a fourth, at 37.7812 dB, until the selection moved to the
+corrected inn-AC-grounded open-loop record, issue #241, whose worst case is
+38.2293 dB. The earlier reports that graded the superseded record are kept
+unedited; see "Corrected open-loop record" below.) The report lists them under
 `overall.fail_only_beyond_written_decimals`. Restating those bounds, or
 ratifying a comparison convention, is for the keys in a decision record:
 [#101](https://github.com/2AMLogic/sg13g2-opamp/issues/101). Until then, FAIL
@@ -254,3 +257,38 @@ A legacy `applies` record that states no CL is disclosed as `UNVERIFIED`
 (matches the spec only) rather than given invented provenance; records are not
 rewritten, and future finalized records should state `CL = <value> <unit>`.
 Other condition prose (`conditions`) is labelled descriptive and unverified.
+
+## Corrected open-loop record (issue #101)
+
+`open-loop-ac` selects `sim/open-loop-ac/records/20261015-103057-895d555`
+(`inn` AC-grounded, issue #241), which supersedes the floating-`inn` record
+`20260910-221601-22feaba`. The old record stays selected, hash-pinned, as
+`open-loop-ac-floating-inn`: it is the Av0 join the CMRR mismatch summary was
+measured against, so the CMRR result keeps its real provenance and is **not**
+presented as recomputed against the corrected Av0 (the same dependency holds
+for any other result that joined the old Av0; new numbers need separately
+authorized new evidence).
+
+The new CSV has no `op_pass` / `gm_status` columns and names `iq_a` where the
+old one named `ivdd_total_a`. Nothing was deleted to make it fit: the record
+selects `klt_raw` (six sha256-pinned files: the AC and OP `klt sim` envelopes,
+the `klt pex --measure-command` measurement document, both requests and the
+bench body) and runs definition check `open_loop_klt_audit`
+(`KLT_AUDIT_RULE` in the generated report). Column mapping:
+
+| CSV column | recomputed from |
+|---|---|
+| `av0_db` | AC envelope `av0_db` (`find vdb(out) at=1`) |
+| `gbw_hz` | AC envelope `gbw_hz` (`when vdb(out)=0`) |
+| `pm_deg` | `180 + degrees(phase_at_ugf_rad)` |
+| `iq_a` | OP envelope `ivdd_total_a` (`-i(vdd)`), which **includes** the bench's 10 µA `Iibias` reference |
+
+Operating-point sanity (Vcm = VDD/2, |Vout - VDD/2| <= 0.15 VDD, Vout within
+0.02 VDD of neither rail) is recomputed from the raw OP values. The legacy
+check on the internal nodes `vd1`/`vd2`/`vtail` and the gain-margin status are
+not re-measured by the corrected bench; the audit joins the superseded
+record's `op_pass` as disclosed evidence (the AC ground element does not change
+the DC operating point, confirmed by Vout and total VDD current agreeing to
+10 µV and 10 nA), and says so in the report caveats. The envelopes ran on the
+batch fleet, whose worker could not read the PDK release stamp, so the record's
+PDK provenance stays legacy/unverified.

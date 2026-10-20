@@ -90,6 +90,27 @@
   },
   "records": {
     "open-loop-ac": {
+      "csv": "sim/open-loop-ac/records/20261015-103057-895d555.csv",
+      "csv_sha256": "sha256:7b3c46a75dfe14a56346cdf68b0704de1d8574748ed6f4e8bcff7424455e80a2",
+      "md": "sim/open-loop-ac/records/20261015-103057-895d555.md",
+      "md_sha256": "sha256:8d2bea599154aefaa4ba738f678e83e787a48e198869e922cee42a847f6e90f7",
+      "netlist_snapshot": "sim/open-loop-ac/netlist-snapshots/20261015-103057-895d555/opamp_core.spice",
+      "grid": "pvt45",
+      "valid_when": [],
+      "definition_checks": ["open_loop_klt_audit"],
+      "klt_raw": {
+        "dc_continuity": "open-loop-ac-floating-inn",
+        "files": {
+          "ac": {"path": "sim/open-loop-ac/corners/20261015-103057-895d555/ac.envelope.json", "sha256": "sha256:0770c33c1bac757943c566fa534c11ebd52d914ad2d6c693059396573b8f5976"},
+          "op": {"path": "sim/open-loop-ac/corners/20261015-103057-895d555/op.envelope.json", "sha256": "sha256:dcd84724d0eb05fe968a9034de825ccb383bc2590ddae38414560659bc921f54"},
+          "measurement": {"path": "sim/open-loop-ac/corners/20261015-103057-895d555/measurement.json", "sha256": "sha256:3dccb66f210449657b39afa7ef08619424bf44b9fb4485889c8fe0c65572d575"},
+          "ac_request": {"path": "sim/open-loop-ac/corners/20261015-103057-895d555/openloop_ac.request.json", "sha256": "sha256:8501000dd93cc8560b728b1fbb2dec7392e6bd084314370fa540d32d57793943"},
+          "op_request": {"path": "sim/open-loop-ac/corners/20261015-103057-895d555/openloop_op.request.json", "sha256": "sha256:c8f181220061976bc78841d5aefa73c34f8593c4892beec147a1edac1bce8fdb"},
+          "bench_body": {"path": "sim/open-loop-ac/corners/20261015-103057-895d555/tb_openloop_ac.body.spice", "sha256": "sha256:d0fad9c3687603cd69c8c76243be70e32e9e02d1c0728c1b8592f386c3ce9598"}
+        }
+      }
+    },
+    "open-loop-ac-floating-inn": {
       "csv": "sim/open-loop-ac/records/20260910-221601-22feaba.csv",
       "csv_sha256": "sha256:dd71064b760d418ecd0250441370dae46e8ea0ff10771af2dd4ac8f241777d0b",
       "md": "sim/open-loop-ac/records/20260910-221601-22feaba.md",
@@ -259,7 +280,7 @@
       "netlist_snapshot": "sim/cmrr-mismatch/netlist-snapshots/20260921-172304-65f5fb4/opamp_core.spice",
       "grid": "pvt45",
       "mc_samples": {
-        "av0_join": "open-loop-ac",
+        "av0_join": "open-loop-ac-floating-inn",
         "acceptance": {"op_rail_frac": "0.02", "op_mid_frac": "0.15", "plateau_tol_db": "0.05"},
         "files": {
           "mos_tt_-40C_1.08V": {"path": "sim/cmrr-mismatch/corners/20260921-172304-65f5fb4/mos_tt_-40C_1.08V_mc_samples.txt", "sha256": "sha256:3e0a353a81dbf4977ee867c07a39d84a49bf0a81b2eb10268da31796accd3b24"},
@@ -841,16 +862,13 @@
       "inventory_label": "Quiescent power",
       "spec_check": {"row_prefix": "| Quiescent power |", "text": "Ratified bound Iq ≤ 119.7 uA worst-case"},
       "record": "open-loop-ac",
-      "column": "ivdd_total_a",
+      "column": "iq_a",
       "unit": "µA",
       "scale": "1e6",
       "extremum": "max",
       "bound": {"op": "<=", "value": "119.7"},
       "load_condition": {"cl": "2 pF", "applicability": "dc_ignored", "note": "no resistive load"},
-      "conditions": "total VDD current at the open-loop bench's DC operating point, INCLUDING the external 10 µA ibias reference",
-      "context": [
-        {"label": "signal-path-only current (excl. ibias), worst", "column": "ivdd_signal_path_a", "extremum": "max", "unit": "µA", "scale": "1e6"}
-      ]
+      "conditions": "total VDD current (-i(vdd)) at the open-loop bench's DC operating point, INCLUDING the external 10 µA ibias reference (the bench's Iibias element, checked in the pinned bench body); the corrected record carries no separate signal-path-only column"
     },
     {
       "id": "offset_mc_3sigma",
@@ -956,6 +974,10 @@
     "The CMRR row is ratified on its mismatch-inclusive figure [DR-4], whose definition (Av0 minus the +3σ point of the drawn-Acm distribution, mean + 3σ in the LINEAR domain, N = 300 + process corners) is part of the number. This report reads that per-point figure from the record and re-derives it from the record's own linear mean and σ (definition check cmrr_linear_3sigma); it never aggregates in the dB domain. The superseded systematic floor is shown as context only.",
     "Output swing is unloaded (CL = 2 pF, no resistive load): an upper bound. PSRR+ is ratified at the DC shelf and is strongly frequency-dependent.",
     "Every measured row comes from nominal-device deterministic benches except the two Monte Carlo records (offset, CMRR); no other row carries a statistical basis.",
-    "Bound precision is an open spec question, not settled by this report: four DR-0002 bounds (DC gain >= 37.8 dB, integrated noise <= 108.9 µVrms, systematic offset <= 21.9 mV, swing span >= 0.571 V) are stricter than the raw worst case of the very records DR-0002 cites, which only round onto them (37.7812 dB, 108.949 µVrms, 21.927 mV, 0.570958 V). This report compares literally, so those rows FAIL. Whether to restate the bounds or ratify a comparison convention is for the keys in a decision record: 2AMLogic/sg13g2-opamp#101."
+    "Bound precision is an open spec question, not settled by this report: three DR-0002 bounds (integrated noise <= 108.9 µVrms, systematic offset <= 21.9 mV, swing span >= 0.571 V) are stricter than the raw worst case of the very records DR-0002 cites, which only round onto them (108.949 µVrms, 21.927 mV, 0.570958 V). This report compares literally, so those rows FAIL. Whether to restate the bounds or ratify a comparison convention is for the keys in a decision record: 2AMLogic/sg13g2-opamp#101.",
+    "The four open-loop rows (DC gain, GBW, phase margin, Iq) read the corrected inn-AC-grounded record open-loop-ac (issue #241), which supersedes the inn-floating record open-loop-ac-floating-inn; the earlier DC-gain literal FAIL (37.7812 dB) was a reading of the superseded record and is preserved in the earlier reports, unedited. The corrected record's Iq column iq_a is the OP envelope's total VDD current, including the 10 µA ibias reference, and its Av0, GBW and PM are read from the AC envelope (PM = 180 + degrees(phase at the 0 dB crossing)).",
+    "The corrected open-loop record is validated from its pinned klt-sim envelopes (definition check open_loop_klt_audit), not from the legacy op_pass / gm_status columns it does not carry. The legacy internal-node saturation proxy (vd1, vd2, vtail) and the gain-margin status are NOT re-measured by the corrected bench: the report relies on the DC operating point being unchanged by the AC ground element and joins the superseded record's op_pass as stated, disclosed evidence for that, confirmed by Vout and total VDD current agreeing with it to 10 µV and 10 nA. Fresh internal-node evidence would need a separately authorized run.",
+    "The CMRR mismatch record joined its Av0 from the superseded inn-floating open-loop record, and its summary still states those Av0 values; this report keeps that join on open-loop-ac-floating-inn (selected, hash-pinned) rather than silently re-stamping the CMRR result as recomputed against the corrected Av0. The CMRR and PSRR figures are therefore not claimed to reflect the corrected open-loop record; that needs separately authorized new evidence.",
+    "The corrected open-loop envelopes ran on the batch fleet, whose worker could not read the PDK release stamp (pdk_stamp_comparison not_comparable): the model deck is identified by its sha256 and the engine by its version, but run-time PDK release identity is not verified for this record (PDK provenance stays legacy/unverified)."
   ]
 }
