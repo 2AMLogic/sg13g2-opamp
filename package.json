@@ -4,9 +4,9 @@
   "private": true,
   "scripts": {
     "worktree:return": "./.loom/scripts/worktree-return.sh",
-    "check:ci": "echo 'No CI checks configured. Customize this script for your project.' && exit 0",
-    "check:all": "echo 'No checks configured. Customize this script for your project.' && exit 0",
-    "test": "echo 'No tests configured. Customize this script for your project.' && exit 0",
+    "check:ci": "pnpm test && python3 signoff/check_signoff.py && python3 signoff/check_inventories.py && python3 signoff/sync_integrator.py --check && python3 -I signoff/check_integrator_contract.py",
+    "check:all": "pnpm check:ci",
+    "test": "bash sim/tools/run-offline-tests.sh sim signoff",
     "lint": "echo 'No linter configured. Customize this script for your project.' && exit 0"
   }
 }
