@@ -11,6 +11,9 @@ bsim4v5.out
 # (append-only record trail), so they escape the *.log rule.
 !sim/*/corners/**/*.log
 sim/build/
+# staging dir for sim/tools/store_evidence.py (raw run outputs on their way to the
+# artifact store; bytes never go in git, only manifests/ does)
+sim/.evidence-scratch/
 # per-record advisory flock files (issue #204); ownership state, not evidence
 sim/*/.record-locks/
 design/build/

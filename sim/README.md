@@ -8,6 +8,11 @@ edited or deleted after it lands. This follows the same per-experiment shape
 (`README.md` / `testbench/` / `corners/` / `netlist-snapshots/` / `records/`)
 `sg13g2-bandgap/sim/<experiment>/` established on this same PDK.
 
+> **New runs: bytes out of git.** Raw output of runs recorded from now on goes
+> to the fleet artifact store; commit only the manifest.
+> See [`../manifests/README.md`](../manifests/README.md)
+> (`sim/tools/store_evidence.py`). Evidence already under `sim/` is unchanged.
+
 ## Append-only enforcement and superseding a mistaken record
 
 CI enforces the rule above rather than trusting it:

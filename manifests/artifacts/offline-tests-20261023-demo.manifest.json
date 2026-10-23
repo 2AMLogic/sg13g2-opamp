@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "entries": [
+    {
+      "sha256": "25b903081c213ba53f3f62e79e54a785d03dcb396d7574537c86f3f549d8092e",
+      "size": 2072,
+      "kind": "evidence",
+      "producer": {
+        "tool": "klt",
+        "version": "0.7.1.dev2517+g6bb7cf233677",
+        "loom.repo": "2AMLogic/sg13g2-opamp",
+        "commit": "ce670dc6c1c87ceaae24c08b0505fe50ec2b0c3c"
+      },
+      "uri": "artifact:evidence/2AMLogic__sg13g2-opamp/25/25b903081c213ba53f3f62e79e54a785d03dcb396d7574537c86f3f549d8092e",
+      "name": "offline-tests/20261023-demo/offline-scripts-tests.log"
+    }
+  ]
+}
