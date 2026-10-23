@@ -21,6 +21,8 @@ design/build/
 flow/build/
 # local klt install, created by the setup script
 .venv/
+# pnpm install state (node_modules/.pnpm-workspace-state-v1.json etc.)
+node_modules/
 # >>> loom-managed (do not edit) >>>
 # Loom runtime state (don't commit these)
 .loom-in-use
