@@ -145,6 +145,20 @@ jobs:
           set -euo pipefail
           bash sim/tools/run-offline-tests.sh signoff
 
+      - name: Artifact manifests and their tests (offline)
+        # New runs keep evidence bytes in the fleet artifact store and commit
+        # only a manifest (manifests/README.md). The checker validates the
+        # manifest schema, requires artifact: URIs, rejects any storage
+        # location (s3://, arn:aws:) and fails if a stored object's bytes are
+        # also tracked in git. The checker's tests run here via the shared
+        # runner; the fail-closed writer's tests (sim/tools/store_evidence.py,
+        # stubbed klt) are picked up by the sim/ step above. Stdlib only; no
+        # klt, broker or network.
+        run: |
+          set -euo pipefail
+          bash sim/tools/run-offline-tests.sh scripts
+          python3 -I scripts/check_artifact_manifests.py
+
       - name: Install klt at the pinned revision
         # Pinned, not floating: the T1 item skeleton is parsed out of
         # klayout-tools' own docs/design-evidence-tiers.md at run time, so a
