@@ -595,15 +595,11 @@ validators (`check_signoff.py`, `check_inventories.py`,
 Local equivalent (stdlib + bash, no klt/PDK/simulator), from the repo root:
 
 ```bash
-set -euo pipefail
-list="$(mktemp)"
-find signoff -type f -name 'test_*.py' -printf '%h\n' | sort -u > "$list"
-[ -s "$list" ] || { echo "no signoff/ test dirs found" >&2; exit 1; }
-while IFS= read -r d; do
-  echo "== unittest: $d"
-  python3 -m unittest discover -s "$d" -p 'test_*.py' -v
-done < "$list"
+bash sim/tools/run-offline-tests.sh signoff
 ```
+
+The same runner serves the `sim/` step (`bash sim/tools/run-offline-tests.sh sim`)
+and `pnpm test`.
 
 ## LVS reference freshness
 

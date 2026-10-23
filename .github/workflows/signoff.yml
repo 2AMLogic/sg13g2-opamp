@@ -73,14 +73,6 @@ jobs:
           fi
           python3 sim/tools/check_append_only_evidence.py --base "${base}" --head HEAD
 
-      - name: Append-only gate negative controls (offline)
-        run: python3 -m unittest discover -s sim/tools -p 'test_check_append_only_evidence.py' -v
-
-      - name: Shared klt envelope gate negative controls (offline)
-        # sim/tools/klt_envelope.py: the validation core every
-        # sim/*/klt/compare.py imports. Stdlib only; no ngspice, PDK or klt.
-        run: python3 -m unittest discover -s sim/tools -p 'test_klt_envelope.py' -v
-
       - name: Offline checks (manifest, pins, record consistency)
         # Includes `signoff/characterization/generate.py --check`: the T1
         # item 8 report is re-derived from the committed sim/ records it
@@ -115,27 +107,16 @@ jobs:
         # Every sim/ directory holding a test_*.py is run on its own
         # (`unittest discover -s <dir>`): bench dirs have hyphens and are not
         # packages, so one top-level discover from sim/ cannot import them.
-        # New bench tests are picked up with no workflow edit. Currently:
-        # input-cmr, post-layout, slew-rate/klt. Then the grid-guard refusal
+        # New bench tests are picked up with no workflow edit (this includes
+        # sim/tools). Then the grid-guard refusal
         # controls and the offline ICMR evidence checker. Deliberately NOT
         # run: sim/post-layout/check_bounds.py (needs a pex report argument
         # produced by a layout/PEX run, so it is not an offline checker; its
         # logic is covered by test_post_layout.py). No klt, ngspice or PDK.
-        # Fail-closed enumeration: find|sort runs to a temp file first under
-        # pipefail (a find failure aborts before any test runs; a process
-        # substitution would swallow it), and an empty selection fails.
+        # Discovery is the shared fail-closed runner sim/tools/run-offline-tests.sh.
         run: |
           set -euo pipefail
-          list="$(mktemp)"
-          find sim -name 'test_*.py' -printf '%h\n' | sort -u > "${list}"
-          [ -s "${list}" ] || { echo "no sim/ test dirs found" >&2; exit 1; }
-          n=0
-          while IFS= read -r d; do
-            echo "== unittest: ${d}"
-            python3 -m unittest discover -s "${d}" -p 'test_*.py' -v
-            n=$((n + 1))
-          done < "${list}"
-          [ "${n}" -gt 0 ] || { echo "no sim/ test dirs run" >&2; exit 1; }
+          bash sim/tools/run-offline-tests.sh sim
           echo "== grid-guard refusal controls"
           bash sim/tools/test-grid-guard.sh
           echo "== ICMR evidence checker"
@@ -157,22 +138,12 @@ jobs:
         # cannot import it. Covers the root (check_signoff, check_inventories,
         # check_integrator_contract, regenerate fixtures), characterization/
         # and yield-inputs/; a new module or nested directory is picked up
-        # with no workflow edit. Fail-closed: enumeration runs to a temp file
-        # first (a find failure aborts under pipefail/errexit), and an empty
-        # selection fails. Stdlib + bash only; no klt, PDK or simulator.
+        # with no workflow edit. Fail-closed via the shared runner
+        # sim/tools/run-offline-tests.sh. Stdlib + bash only; no klt, PDK or
+        # simulator.
         run: |
           set -euo pipefail
-          list="$(mktemp)"
-          find signoff -type f -name 'test_*.py' -printf '%h\n' | sort -u > "${list}"
-          [ -s "${list}" ] || { echo "no signoff/ test dirs found" >&2; exit 1; }
-          n=0
-          while IFS= read -r d; do
-            echo "== unittest: ${d}"
-            python3 -m unittest discover -s "${d}" -p 'test_*.py' -v
-            n=$((n + 1))
-          done < "${list}"
-          [ "${n}" -gt 0 ] || { echo "no signoff/ test dirs run" >&2; exit 1; }
-          echo "== ${n} signoff test dir(s) passed"
+          bash sim/tools/run-offline-tests.sh signoff
 
       - name: Install klt at the pinned revision
         # Pinned, not floating: the T1 item skeleton is parsed out of
