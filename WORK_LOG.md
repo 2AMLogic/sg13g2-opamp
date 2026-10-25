@@ -2,6 +2,24 @@
 
 <!-- Maintained by the Loom Guide role. Newest entries first. -->
 
+### 2026-10-25
+
+- **PR #301**: docs: request EE and market key review of DR-0011
+
+### 2026-10-23
+
+- **PR #299**: chore: untrack pnpm workspace state and ignore node_modules
+- **Issue #298** (closed): chore: untrack node_modules/.pnpm-workspace-state-v1.json and ignore node_modules/
+- **PR #297**: feat: store new run output as artifact-store manifests instead of bytes in git
+- **Issue #296** (closed): Adopt the common artifact store for sim evidence (manifests in git, bytes via klt artifact)
+- **PR #295**: ci: share one fail-closed offline test runner and wire it into pnpm test
+- **Issue #294** (closed): Replace exit-0 package.json test stubs and duplicated CI test enumeration with one offline test runner
+
+### 2026-10-20
+
+- **PR #293**: docs: request fresh two-key ratification of the unchanged DR-0002 requirements
+- **PR #292**: characterization: grade the four open-loop rows from the corrected AC record behind a raw-envelope audit
+
 ### 2026-10-19
 
 - **PR #289**: docs: propose yield requirements for offset-random and mismatch-CMRR rows (DR-0010)
