@@ -1,16 +1,19 @@
 # 0011: Fresh ratification request for the unchanged DR-0002 requirements (issue #101)
 
-- **Status**: `submitted for fresh ratification` — **preparation only**. This
-  record supplies **neither** the EE key nor the market key, ratifies **no**
-  number, and changes **no** limit, comparison rule, rounding convention,
-  grade, `spec/target-spec.md` row, `spec/integrator.json` value or `sim/` /
-  `signoff/` record. It is a request that the independent two-key mechanism
-  of [DR-0002](0002-target-spec-ratification.md) review the *unchanged*
-  DR-0002 requirements now, because the original approval trail on PR #27
-  could not be located (see below). Until real `RATIFY-KEY: ee` and
-  `RATIFY-KEY: market` verdicts from non-author reviewers are posted on the
-  PR that carries this record, the provenance gate stays **open** and the
-  limits remain only the conservative working limits.
+- **Status**: `submitted for ratification` — this record's requirements
+  (the unchanged DR-0002 table plus DR-0004's mismatch-inclusive CMRR bound,
+  with the three disclosed FAILs) are ratified when, and only when, the PR
+  that carries this status line has been ratified by **both keys** of the
+  two-key mechanism ([2AMLogic/2am#372](https://github.com/2AMLogic/2am/issues/372)):
+  an EE key (`RATIFY-KEY: ee`) and a market key (`RATIFY-KEY: market`), each
+  posted as a PR review verdict, **neither key held by this PR's author or
+  the design's author**. The merge commit of that PR is then the ratification
+  record. This record supplies neither key, changes **no** limit, comparison
+  rule, rounding convention, grade, `spec/target-spec.md` row,
+  `spec/integrator.json` value or `sim/` / `signoff/` record. Until both
+  keys are present and approving, the PR must not be merged and the limits
+  remain only the conservative working limits. (Previous status:
+  `submitted for fresh ratification`, preparation only, PR #293.)
 - **Date**: 2026-10-20
 - **Decided by**: operator direction (attended fleet-decide 2026-10-19,
   option 1: prepare a focused documentation-only fresh-ratification PR,
@@ -142,13 +145,12 @@ Through the existing ratification protocol (`ratification/ee-key/` and
 
 ## Decision
 
-None. This record takes no decision on any number. It is complete as
-preparation once merged, and its merge is **not** the ratification event.
-The ratification event is a pair of real, non-author, approving key verdicts
-on this PR (or on a successor the keys name). Status and provenance
-citations elsewhere should say "fresh-ratification requested" until those
-verdicts exist, and must not mark the PR #27 gap closed on the strength of
-this record alone.
+None. This record takes no decision on any number. The ratification event
+is a pair of real, non-author, approving key verdicts on the PR that carries
+the `submitted for ratification` status above (or on a successor the keys
+name); the operator then ratifies. Until those verdicts exist, status and
+provenance citations elsewhere must say "ratification pending" and must not
+mark the PR #27 gap closed.
 
 ## Out of scope
 
