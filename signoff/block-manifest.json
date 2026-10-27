@@ -63,6 +63,14 @@
         "rows": [
           "offset_systematic"
         ]
+      },
+      {
+        "file": "sim/cmrr-psrr/klt/records/20261027-011449-f8ef0ba.direct.sim.json",
+        "kind": "sim",
+        "content_hash": "sha256:c397df20adccd6f1f9b6eb65818a175cecdac0ae234b2b49a75ec07e529b477c",
+        "rows": [
+          "psrr"
+        ]
       }
     ],
     "8": {
@@ -114,8 +122,7 @@
         "id": "offset_systematic"
       },
       {
-        "id": "psrr",
-        "gap": "no single klt sim form: PSRR is a two-envelope join (supply-gain envelope + open-loop Av0) graded offline; owner #99"
+        "id": "psrr"
       },
       {
         "id": "swing_headroom_vdd",

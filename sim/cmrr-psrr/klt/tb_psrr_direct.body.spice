@@ -1,0 +1,57 @@
+* sg13g2-opamp -- direct PSRR bench as a `klt sim` circuit body (issue #307)
+*
+* PSRR (DC shelf) = Av0 - Avs0 in dB, as ONE measurement of ONE request.
+* tb_psrr.body.spice carries the supply excitation only and open-loop-ac
+* carries the differential one, so PSRR was a two-envelope offline join. One
+* AC solve cannot carry two excitations on ONE circuit, but it can carry them
+* on TWO independent copies of it: the copies share no node except the
+* quiet reference nodes, so the solve is exactly the two separate solves.
+*
+*   instance A (xa): differential excitation. Vinp has `ac 1`, Vdd is quiet,
+*                    so vdb(outa) = Av0(f), as in the open-loop-ac bench.
+*   instance B (xb): supply excitation. The DC supply is the swept `vdd`
+*                    source; a series source Vsrip (dc 0, ac 1) lifts the
+*                    copy's rail to vddb, so vdb(outb) = Avs(f), as in
+*                    tb_psrr.body.spice. The input stays AC-quiet.
+*
+* PSRR = vdb(outa) - vdb(outb); the request's `expr` reads it at the first
+* AC point (10 mHz, the DC shelf).
+*
+* Per-corner sweep. klt applies `alter vdd=<V>` and `alter vinp=<V/2>`. Vdd
+* feeds instance A directly and instance B through the dc-0 series source, so
+* both rails sit at the swept VDD. Instance B's input is the quiet divider
+* R1/R2 from vdd, which is VDD/2 at every corner exactly as `vinp` is, so both
+* copies see the same Vcm and the same DC operating point (checked against
+* the two committed single-excitation envelopes).
+*
+* Per-copy circuit, element for element as the single-excitation benches:
+* Lbreak = 1e18 H inn-out (DC loop break), Cinn_acgnd = 1 F inn-vss (inn AC
+* ground), CL = 2 pF [DR-1], 10 uA external ibias sunk from the copy's own
+* rail with zero ac value, Vss = ground.
+*
+* No solver option is set (DR-0005: ngspice default tolerance).
+
+.subckt opamp_dut vdd vss inn inp out ibias
+.include ../../../design/netlist/opamp_core.spice
+.ends opamp_dut
+
+.options tnom=27
+
+Vdd vdd 0 dc 1.2
+Vss vss 0 dc 0
+Vsrip vddb vdd dc 0 ac 1
+
+Xa vdd vss inna inpa outa ibiasa opamp_dut
+Iibiasa vdd ibiasa dc 10u
+Vinp inpa 0 dc 0.6 ac 1
+Lbreaka inna outa 1e18
+Cinna_acgnd inna vss 1
+Cloada outa vss 2e-12
+
+Xb vddb vss innb inpb outb ibiasb opamp_dut
+Iibiasb vddb ibiasb dc 10u
+R1 vdd inpb 1k
+R2 inpb vss 1k
+Lbreakb innb outb 1e18
+Cinnb_acgnd innb vss 1
+Cloadb outb vss 2e-12
