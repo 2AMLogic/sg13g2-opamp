@@ -232,12 +232,36 @@ DECK_MIN_UM: dict[str, float] = {
     "topmetal2.enclosing.topvia2.1": 0.50,  # TV2.d
     "topmetal2.width.1": 2.00,  # TM2.a
     "topmetal2.space.1": 2.00,  # TM2.b
+    "nwell.width.1": 0.62,  # NW.a
+    "nwell.space.1": 0.62,  # NW.b
+    "nwell.enclosing.pactiv.1": 0.31,  # NW.c
+    "nwell.enclosing.pactiv.hv.1": 0.62,  # NW.c1
+    "nwell.enclosing.pactiv.dig.1": 0.31,  # NW.c1.dig
+    "nwell.space.nactiv.1": 0.31,  # NW.d
+    "nwell.space.nactiv.hv.1": 0.62,  # NW.d1
+    "nwell.space.nactiv.dig.1": 0.31,  # NW.d1.dig
+    "nwell.enclosing.nactiv.1": 0.24,  # NW.e
+    "nwell.enclosing.nactiv.hv.1": 0.62,  # NW.e1
+    "nwell.enclosing.nactiv.dig.1": 0.24,  # NW.e1.dig
+    "nwell.space.pactiv.1": 0.24,  # NW.f
+    "nwell.space.pactiv.hv.1": 0.62,  # NW.f1
+    "nwell.space.pactiv.dig.1": 0.24,  # NW.f1.digibnd
+    "psd.width.1": 0.31,  # pSD.a
+    "psd.space.1": 0.31,  # pSD.b
+    "metal5.enclosing.mim.1": 0.60,  # MIM.c
+    "mim.enclosing.topvia1.1": 0.36,  # MIM.d
+}
+
+#: Area rules (um^2). The deck reports these through ``limits.area_min_um2``
+#: with no ``value_um``, so they cannot live in :data:`DECK_MIN_UM`.
+DECK_MIN_AREA_UM2: dict[str, float] = {
+    "psd.area.1": 0.25,  # pSD.k
 }
 
 #: Deck content hash :data:`DECK_MIN_UM` was transcribed from, so a drift
 #: report can name both sides. From ``klt deck hash --deck sg13g2``.
 DECK_CONTENT_HASH = (
-    "sha256:894326a4e37fb24fef2f7ffc6ae1da55a0e262b0f0bc1c09adc4862909278fda"
+    "sha256:1c95db40596afc5412e216009bcf0b775d1d74895b32738447eccbc76336dd15"
 )
 
 
@@ -265,10 +289,16 @@ def verify_deck_minima(klt: str = "klt") -> dict[str, object]:
             f"could not run `{klt} deck rules --deck sg13g2`: {exc}"
         ) from exc
     report = json.loads(raw)
-    installed = {r["id"]: r["value_um"] for r in report["rules"]}
+    installed = {}
+    for r in report["rules"]:
+        if r["value_um"] is None and r["id"] in DECK_MIN_AREA_UM2:
+            installed[r["id"]] = r["limits"]["area_min_um2"]
+        else:
+            installed[r["id"]] = r["value_um"]
+    transcribed = {**DECK_MIN_UM, **DECK_MIN_AREA_UM2}
 
     drift: list[str] = []
-    for rule_id, value in sorted(DECK_MIN_UM.items()):
+    for rule_id, value in sorted(transcribed.items()):
         if rule_id not in installed:
             drift.append(
                 f"{rule_id}: transcribed {value} um, absent from installed deck"
@@ -278,10 +308,10 @@ def verify_deck_minima(klt: str = "klt") -> dict[str, object]:
                 f"{rule_id}: transcribed {value} um, installed deck says "
                 f"{installed[rule_id]} um"
             )
-    for rule_id in sorted(set(installed) - set(DECK_MIN_UM)):
+    for rule_id in sorted(set(installed) - set(transcribed)):
         drift.append(
             f"{rule_id}: installed deck enforces {installed[rule_id]} um, "
-            "not transcribed in DECK_MIN_UM"
+            "not transcribed in DECK_MIN_UM/DECK_MIN_AREA_UM2"
         )
     if drift:
         raise AssertionError(
