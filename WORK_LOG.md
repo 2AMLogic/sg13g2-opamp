@@ -4,6 +4,7 @@
 
 ### 2026-10-27
 
+- **PR #313**: chore: pin signoff grading to klt 0.8.0 and assert the version in CI
 - **PR #308**: sim: PSRR as one klt sim measurement via two DUT copies, cited in item 5
 - **Issue #307** (closed): T1 item 5 (corner verification): make the ratified PSRR row a citable klt sim envelope instead of a declared gap
 
