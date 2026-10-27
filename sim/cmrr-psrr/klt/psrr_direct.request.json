@@ -1,0 +1,149 @@
+{
+  "_comment": [
+    "sim/cmrr-psrr PSRR as ONE `klt sim` measurement (issue #307): psrr_db = Av0 - Avs0 in dB, graded against the ratified bound by the tool itself.",
+    "Circuit: tb_psrr_direct.body.spice -- two independent copies of the DUT in one deck. Copy A (Vinp ac 1, Vdd quiet) gives Av0; copy B (series source Vsrip ac 1 on its rail, input AC-quiet) gives Avs. They share only quiet reference nodes, so one AC solve is exactly the two single-excitation solves psrr.request.json and the open-loop request run separately.",
+    "Grid: cornerMOSlv.lib mos_tt/ss/ff/sf/fs [DR-1] x {-40, 27, 125} C x VDD {1.08, 1.20, 1.32} V = 45 corners, identical to psrr.request.json. vinp sweeps WITH vdd by index (Vcm = VDD/2); copy B's input is a VDD/2 divider off the quiet vdd node.",
+    "Each process corner is a bundle carrying the fixed cornerCAP.lib cap_typ section (the Miller cap is a cap_cmim MIM device), as in psrr.request.json.",
+    "Analysis: ac dec 20 10m 1g. The DC shelf is the first AC point (10 mHz), below the ~1.5 Hz supply zero, as in the harness.",
+    "Ratified row: PSRR+ (DC shelf) >= 1.87 dB worst-case [DR-2] (spec/target-spec.md section 2). It is the `limits.min` of psrr_db, a derived expr measurement: (vdb(outa) - vdb(outb))[0].",
+    "av0_db and avs0_db are the two operands read separately, ungraded, so compare_direct.py can check each against the committed single-excitation envelopes.",
+    "psrr_plateau_delta_db is the direct form of the join's flat-shelf guard: |PSRR(0.1 Hz) - PSRR(10 mHz)| <= 0.05 dB (dec-20 grid: index 20 is 0.1 Hz). A miss is a result, not hidden.",
+    "Solver tolerance: ngspice default, no .options reltol/abstol/vntol (DR-0005).",
+    "ngspice_init raises the printed digits only (measureprec for .meas, numdgt for expr); it changes no solver setting.",
+    "keep_artifacts is false so the committed envelope carries no host-absolute artifact paths.",
+    "remote.hosts 5: the 45-unit job's serial bound exceeds the fleet's whole-job ceiling, so klt shards it into five jobs (one per process corner)."
+  ],
+  "netlist": "tb_psrr_direct.body.spice",
+  "netlist_source": "schematic",
+  "engine": "ngspice",
+  "backend": "batch",
+  "models": {
+    "pdk": "ihp-sg13g2",
+    "lib": "libs.tech/ngspice/models/cornerMOSlv.lib"
+  },
+  "corners": {
+    "process": [
+      {
+        "name": "mos_tt",
+        "sections": [
+          "mos_tt",
+          {
+            "lib": "libs.tech/ngspice/models/cornerCAP.lib",
+            "section": "cap_typ"
+          }
+        ]
+      },
+      {
+        "name": "mos_ss",
+        "sections": [
+          "mos_ss",
+          {
+            "lib": "libs.tech/ngspice/models/cornerCAP.lib",
+            "section": "cap_typ"
+          }
+        ]
+      },
+      {
+        "name": "mos_ff",
+        "sections": [
+          "mos_ff",
+          {
+            "lib": "libs.tech/ngspice/models/cornerCAP.lib",
+            "section": "cap_typ"
+          }
+        ]
+      },
+      {
+        "name": "mos_sf",
+        "sections": [
+          "mos_sf",
+          {
+            "lib": "libs.tech/ngspice/models/cornerCAP.lib",
+            "section": "cap_typ"
+          }
+        ]
+      },
+      {
+        "name": "mos_fs",
+        "sections": [
+          "mos_fs",
+          {
+            "lib": "libs.tech/ngspice/models/cornerCAP.lib",
+            "section": "cap_typ"
+          }
+        ]
+      }
+    ],
+    "supply_v": {
+      "vdd": [
+        1.08,
+        1.2,
+        1.32
+      ],
+      "vinp": [
+        0.54,
+        0.6,
+        0.66
+      ]
+    },
+    "temperature_c": [
+      -40,
+      27,
+      125
+    ]
+  },
+  "analysis": {
+    "kind": "ac",
+    "args": "dec 20 10m 1g"
+  },
+  "measurements": [
+    {
+      "name": "av0_db",
+      "spice": ".meas ac av0_db find vdb(outa) at=0.01",
+      "unit": "dB"
+    },
+    {
+      "name": "avs0_db",
+      "spice": ".meas ac avs0_db find vdb(outb) at=0.01",
+      "unit": "dB"
+    },
+    {
+      "name": "psrr_db",
+      "expr": "(vdb(outa) - vdb(outb))[0]",
+      "unit": "dB",
+      "limits": {
+        "min": 1.87
+      }
+    },
+    {
+      "name": "psrr_plateau_delta_db",
+      "expr": "abs((vdb(outa) - vdb(outb))[20] - psrr_db)",
+      "unit": "dB",
+      "limits": {
+        "max": 0.05
+      }
+    }
+  ],
+  "options": {
+    "timeout_s": 300,
+    "keep_artifacts": false,
+    "osdi_preload": [
+      "$PDK_ROOT/ihp-sg13g2/libs.tech/ngspice/osdi/psp103.osdi",
+      "$PDK_ROOT/ihp-sg13g2/libs.tech/ngspice/osdi/psp103_nqs.osdi",
+      "$PDK_ROOT/ihp-sg13g2/libs.tech/ngspice/osdi/mosvar.osdi",
+      "$PDK_ROOT/ihp-sg13g2/libs.tech/ngspice/osdi/r3_cmc.osdi"
+    ],
+    "stage_model_inputs": true,
+    "fail_on_diagnostic": [
+      "singular_matrix",
+      "nonconvergence"
+    ],
+    "ngspice_init": [
+      "set measureprec=12",
+      "set numdgt=12"
+    ]
+  },
+  "remote": {
+    "hosts": 5
+  }
+}

@@ -305,6 +305,8 @@ ratified bound is applied by `compare.py`, not graded by the tool. The CMRR benc
 | `klt/tb_psrr.body.spice` | the template's circuit as a body: exactly one DUT `.include`, no `.control`; `Vdd` carries `ac 1`, `Vinp` carries none |
 | `klt/run.sh` | sources `sim/preflight.sh` (which sources `sim/env.sh`); submits to the batch backend (`PSRR_KLT_MODE=shard`, the default, or `single`); writes the envelope **unmodified** to `klt/records/<UTC>-<sha>.sim.json` only after `compare.py validate` passes (45 unique points, no errored/inconclusive corner, `coverage.nothing_checked` false, nothing skipped); in shard mode also keeps the raw per-shard requests, bodies and reports in `<id>.shards/` |
 | `klt/shard.py`, `klt/test_shard.py` | the per-process shard bridge for the klt 0.5.0 fleet runner, and its validation-gated merge; tests with negative controls (below) |
+| `klt/psrr_direct.request.json`, `klt/tb_psrr_direct.body.spice`, `klt/run_direct.sh` | the direct single-measurement PSRR request, its two-copy body and runner (below) |
+| `klt/compare_direct.py`, `klt/test_compare_direct.py` | cross-check of the direct envelope against the join record; tests with negative controls |
 | `klt/compare.py`, `klt/test_compare.py` | grid join and tolerance report; offline stdlib-only; tests with negative controls |
 
 ### Which encoding: Avs in the tool, Av0 joined offline
@@ -387,6 +389,37 @@ fleet jobs are `klt-sim-8b0cf80b0eea` (`mos_tt`), `klt-sim-a5c104a8e55f`
 `ami-0e40e3245f1923ac8` (ngspice 46). When the runner image is bumped, use
 `PSRR_KLT_MODE=single` with a client whose `klt --version` equals the
 runner's.
+
+### Direct PSRR: one measurement, two DUT copies (issue #307)
+
+The join above grades the bound offline. `klt/psrr_direct.request.json` +
+`klt/tb_psrr_direct.body.spice` make PSRR a single `klt sim` measurement:
+`psrr_db = (vdb(outa) - vdb(outb))[0]` with `limits.min` = the ratified 1.87 dB.
+One AC solve cannot carry both excitations on *one* circuit, but it can on two
+independent copies that share only quiet reference nodes: copy A has `Vinp ac 1`
+and a quiet rail (so `vdb(outa)` is Av0); copy B's rail is lifted by a series
+source `Vsrip` (dc 0, `ac 1`) and its input is a VDD/2 divider off the quiet
+`vdd` node (so `vdb(outb)` is Avs). The DUT netlist is wrapped in a `.subckt`
+around its single `.include`. The 45-point grid, `ac dec 20 10m 1g` and default
+solver tolerance (DR-0005) are those of `psrr.request.json`; `av0_db` and
+`avs0_db` are reported ungraded, and `psrr_plateau_delta_db` (|PSRR(0.1 Hz) −
+PSRR(10 mHz)| ≤ 0.05 dB) is the direct form of the join's flat-shelf guard.
+
+Run on the fleet through `klt/run_direct.sh` (client and runner klt 0.7.0;
+`KLT="uvx --from klayout-tools==0.7.0 klt"`, because the 0.8 client is refused by
+the 0.7.0 runner with `batch_runner_version_mismatch`; `remote.hosts: 5` because
+the serial bound of one 45-unit job exceeds the fleet's 3600 s job ceiling).
+Envelope: `klt/records/20261027-011449-f8ef0ba.direct.sim.json`; 45 of 45 corners
+pass, worst PSRR 26.9011 dB at `mos_fs`/125 °C/1.08 V, worst plateau delta
+8.7e-13 dB.
+
+**Cross-check against the join** (`compare_direct.py`, tolerance 0.02 dB on
+`psrr_db`, `av0_db` and `avs0_db`, the same argument as the other comparisons
+here; tests `klt/test_compare_direct.py`): all 45 points within tolerance, largest
+|direct − join| 3.09e-7 dB (`mos_fs`/125 °C/1.20 V), no bound-verdict
+disagreement; `klt/records/20261027-011449-f8ef0ba.direct.compare.json`. Before
+the fleet run a one-corner local probe (ngspice-46, `mos_fs`/125 °C/1.08 V)
+gave 26.9010753 dB against the join's 26.9010754.
 
 ### Av0 from the open-loop envelope: measured join check (issue #99)
 
