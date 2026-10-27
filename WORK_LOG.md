@@ -2,6 +2,11 @@
 
 <!-- Maintained by the Loom Guide role. Newest entries first. -->
 
+### 2026-10-27
+
+- **PR #308**: sim: PSRR as one klt sim measurement via two DUT copies, cited in item 5
+- **Issue #307** (closed): T1 item 5 (corner verification): make the ratified PSRR row a citable klt sim envelope instead of a declared gap
+
 ### 2026-10-25
 
 - **PR #301**: docs: request EE and market key review of DR-0011
