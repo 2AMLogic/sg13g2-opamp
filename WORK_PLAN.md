@@ -29,6 +29,7 @@ Judge-approved PRs under a hold (`loom:blocked` or `loom:operator`) — only a h
 
 Human-approved issues ready for implementation (`loom:issue`).
 
+- **#3**: Track the gap to T1 sim-validated / bronze (klayout-tools design-evidence tiers)
 - **#86**: signoff: first `klt pex` post-layout run on opamp_core.gds (T1 item 7)
 - **#300**: Open the ratification PRs for DR-0011 (#101) and then DR-0010 (#108), with both key reviews
 
@@ -36,8 +37,8 @@ Human-approved issues ready for implementation (`loom:issue`).
 
 Issues currently being built (`loom:building`).
 
-- **#3**: Track the gap to T1 sim-validated / bronze (klayout-tools design-evidence tiers)
 - **#101**: Prepare a four-row design-margin plan while preserving literal limits and raw FAILs
+- **#307**: T1 item 5 (corner verification): make the ratified PSRR row a citable klt sim envelope instead of a declared gap
 
 ## PRs Awaiting Review
 
@@ -61,6 +62,7 @@ Issues carrying `loom:curated`.
 - **#108**: spec: ratify per-draw limits and target_yield for the statistical rows (offset random half, CMRR) -- needs a decision record *(curated)*
 - **#237**: design: reconcile schematic device representation with drawn fingering before citing post-layout (T1 item 7) *(curated)*
 - **#300**: Open the ratification PRs for DR-0011 (#101) and then DR-0010 (#108), with both key reviews *(curated)*
+- **#307**: T1 item 5 (corner verification): make the ratified PSRR row a citable klt sim envelope instead of a declared gap *(curated)*
 
 ## Proposed (Architect / Hermit)
 
@@ -77,11 +79,11 @@ _None._
 | Operator merge-risk holds | 1 |
 | Very important | 1 |
 | Important | 5 |
-| Ready (`loom:issue`) | 2 |
+| Ready (`loom:issue`) | 3 |
 | In Progress (`loom:building`) | 2 |
 | PRs awaiting review | 1 |
 | Approved PRs awaiting merge | 1 |
-| Curated | 6 |
+| Curated | 7 |
 | Architect / Hermit proposals | 1 |
 | Active epics | 0 |
 <!-- guide:plan-body:end -->
