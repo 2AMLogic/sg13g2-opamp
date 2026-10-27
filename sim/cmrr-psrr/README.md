@@ -530,7 +530,8 @@ the body-level `pre_osdi`/`.lib` and the inlined DUT change no number.
 locally on a shared dispatch host (`PSRR_KLT_BACKEND=local` is refused in shard
 mode). Before submitting, `sim/preflight.sh` and `sim/tools/build-osdi.sh
 --check` must pass. Shard mode needs a client that has the batch backend and
-that the runner accepts (`KLT="uvx --from klayout-tools==0.6.0 klt"`); single
-mode needs a client whose `klt --version` equals the runner's. Tests:
+that the runner accepts (the fleet runner now carries klt 0.8.0, so
+`KLT="uvx --from klayout-tools==0.8.0 klt"`); single mode needs a client whose
+`klt --version` matches the runner's major.minor. Tests:
 
     python3 -m unittest discover -s sim/cmrr-psrr/klt -p 'test_*.py'
