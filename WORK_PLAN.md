@@ -38,7 +38,6 @@ Human-approved issues ready for implementation (`loom:issue`).
 Issues currently being built (`loom:building`).
 
 - **#101**: Prepare a four-row design-margin plan while preserving literal limits and raw FAILs
-- **#307**: T1 item 5 (corner verification): make the ratified PSRR row a citable klt sim envelope instead of a declared gap
 
 ## PRs Awaiting Review
 
@@ -62,7 +61,6 @@ Issues carrying `loom:curated`.
 - **#108**: spec: ratify per-draw limits and target_yield for the statistical rows (offset random half, CMRR) -- needs a decision record *(curated)*
 - **#237**: design: reconcile schematic device representation with drawn fingering before citing post-layout (T1 item 7) *(curated)*
 - **#300**: Open the ratification PRs for DR-0011 (#101) and then DR-0010 (#108), with both key reviews *(curated)*
-- **#307**: T1 item 5 (corner verification): make the ratified PSRR row a citable klt sim envelope instead of a declared gap *(curated)*
 
 ## Proposed (Architect / Hermit)
 
@@ -80,10 +78,10 @@ _None._
 | Very important | 1 |
 | Important | 5 |
 | Ready (`loom:issue`) | 3 |
-| In Progress (`loom:building`) | 2 |
+| In Progress (`loom:building`) | 1 |
 | PRs awaiting review | 1 |
 | Approved PRs awaiting merge | 1 |
-| Curated | 7 |
+| Curated | 6 |
 | Architect / Hermit proposals | 1 |
 | Active epics | 0 |
 <!-- guide:plan-body:end -->
