@@ -340,7 +340,8 @@ bound (≥ 1.87 dB, DC shelf) **offline**. Consequences, stated plainly:
 
 ### The shard bridge (why the committed envelope was not one request)
 
-The fleet runner image still pins klt 0.5.0 (2AMLogic/2am#2193). On it,
+When the bridge was built, the fleet runner image pinned klt 0.5.0
+(2AMLogic/2am#2193, since closed). On that runner,
 `psrr.request.json` cannot run as one request: the `{"lib","section"}` object
 form of the per-process bundle (the fixed `cornerCAP.lib cap_typ` section),
 `options.osdi_preload`/`stage_model_inputs`, and `ngspice_init` are not
