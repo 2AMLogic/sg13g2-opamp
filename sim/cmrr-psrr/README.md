@@ -344,11 +344,11 @@ The fleet runner image still pins klt 0.5.0 (2AMLogic/2am#2193). On it,
 `psrr.request.json` cannot run as one request: the `{"lib","section"}` object
 form of the per-process bundle (the fixed `cornerCAP.lib cap_typ` section),
 `options.osdi_preload`/`stage_model_inputs`, and `ngspice_init` are not
-carried (the runner drops or rejects them), a 0.7.0 client is refused
-(`batch_runner_version_mismatch`, exit 87), and a 0.5.0 client has no `batch`
-backend. The proven route (sg13g2-bandgap `sim/harness/README.md`) is the
-client `klayout-tools==0.6.0` (`KLT="uvx --from klayout-tools==0.6.0 klt"`; it
-submits, and the runner accepts it) with one request per process corner.
+carried (the runner drops or rejects them) and a 0.5.0 client has no `batch`
+backend. The fleet runner now runs klt 0.8.0 and gates on major.minor only, so
+the current client is `klayout-tools==0.8.0`
+(`KLT="uvx --from klayout-tools==0.8.0 klt"`; `runner_compatibility: match`,
+klayout-tools#4109) with one request per process corner.
 `klt/shard.py gen` derives the five requests from the master request:
 
 | Master request | Each shard (`mos_xx`, 9 corners) |
@@ -406,9 +406,9 @@ solver tolerance (DR-0005) are those of `psrr.request.json`; `av0_db` and
 PSRR(10 mHz)| ≤ 0.05 dB) is the direct form of the join's flat-shelf guard.
 
 Run on the fleet through `klt/run_direct.sh` (client and runner klt 0.7.0;
-`KLT="uvx --from klayout-tools==0.7.0 klt"`, because the 0.8 client is refused by
-the 0.7.0 runner with `batch_runner_version_mismatch`; `remote.hosts: 5` because
-the serial bound of one 45-unit job exceeds the fleet's 3600 s job ceiling).
+`KLT="uvx --from klayout-tools==0.7.0 klt"`, because the 0.8 client was refused by
+the 0.7.0 runner with `batch_runner_version_mismatch` at that time, since moved to
+0.8.0; `remote.hosts: 5` because the serial bound of one 45-unit job exceeds the fleet's 3600 s job ceiling).
 Envelope: `klt/records/20261027-011449-f8ef0ba.direct.sim.json`; 45 of 45 corners
 pass, worst PSRR 26.9011 dB at `mos_fs`/125 °C/1.08 V, worst plateau delta
 8.7e-13 dB.
