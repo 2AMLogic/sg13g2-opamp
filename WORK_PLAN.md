@@ -39,14 +39,12 @@ Human-approved issues ready for implementation (`loom:issue`).
 Issues currently being built (`loom:building`).
 
 - **#101**: Prepare a four-row design-margin plan while preserving literal limits and raw FAILs
-- **#317**: docs: sim/cmrr-psrr/README.md:343 still says the fleet runner pins klt 0.5.0
 
 ## PRs Awaiting Review
 
 PRs waiting on Judge (`loom:review-requested`).
 
 - **#302**: docs: request EE and market key review of DR-0010
-- **#318**: docs: make cmrr-psrr shard-bridge klt 0.5.0 pin statement historical
 
 ## Approved (Awaiting Merge)
 
@@ -66,7 +64,6 @@ Issues carrying `loom:curated`.
 - **#300**: Open the ratification PRs for DR-0011 (#101) and then DR-0010 (#108), with both key reviews *(curated)*
 - **#311**: Bump klayout-tools pin 0.6.0, 44cc42323184 → 0.8.0 *(curated)*
 - **#312**: Move layout/klt-pin.txt to klt 0.8.0: re-transcribe DECK_MIN_UM and regenerate layout evidence *(curated)*
-- **#317**: docs: sim/cmrr-psrr/README.md:343 still says the fleet runner pins klt 0.5.0 *(curated)*
 
 ## Proposed (Architect / Hermit)
 
@@ -84,10 +81,10 @@ _None._
 | Very important | 1 |
 | Important | 5 |
 | Ready (`loom:issue`) | 4 |
-| In Progress (`loom:building`) | 2 |
-| PRs awaiting review | 2 |
+| In Progress (`loom:building`) | 1 |
+| PRs awaiting review | 1 |
 | Approved PRs awaiting merge | 1 |
-| Curated | 9 |
+| Curated | 8 |
 | Architect / Hermit proposals | 1 |
 | Active epics | 0 |
 <!-- guide:plan-body:end -->
