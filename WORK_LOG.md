@@ -4,6 +4,8 @@
 
 ### 2026-10-28
 
+- **PR #318**: docs: make cmrr-psrr shard-bridge klt 0.5.0 pin statement historical
+- **Issue #317** (closed): docs: sim/cmrr-psrr/README.md:343 still says the fleet runner pins klt 0.5.0
 - **PR #316**: docs: point cmrr-psrr shard-mode client at klayout-tools 0.8.0
 
 ### 2026-10-27
