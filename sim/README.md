@@ -73,7 +73,7 @@ ngspice build and the configured `source`/`release_tag`/`variant`. Three code
 paths mint one today: `open-loop-ac/run_pvt_sweep.sh`, the native
 `input-noise/run_noise_sweep.sh` (issue #214) and the shared
 `klt sim` wrapper lifecycle (`tools/klt_run_common.sh`, used by the
-`output-swing`, `input-noise`, `cmrr-psrr` and `slew-rate` `klt/run.sh`).
+`output-swing`, `input-noise`, `cmrr-psrr`, `slew-rate` and `input-cmr` `klt/run.sh`).
 
 **Guarantee (issue #209).** The identity is captured into private scratch
 *before the first solver launches* (`sg13g2_env_identity_begin`,

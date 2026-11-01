@@ -1,0 +1,73 @@
+* sg13g2-opamp -- input common-mode range (ICMR) bench as a `klt sim` circuit body (issue #325)
+*
+* The DUT circuit of ../testbench/tb_cmr.spice.tmpl (flat include of
+* design/netlist/opamp_core.spice, both inputs tied through a 0 V source so
+* Vid = 0 exactly, 10 uA external ibias, CL = 2 pF) re-expressed for `klt sim`:
+* no .control/.end; klt adds the process .lib cards, .temp, `alter vdd=<V>`,
+* pre_osdi and the ONE analysis the request declares (`dc Vcsw ...`).
+*
+* WHAT THE HARNESS DOES WITH SEPARATE RUNS, THIS DECK DOES IN THE SAME SWEEP.
+* The harness runs replica probes (tb_cmr_mech.spice.tmpl) as separate
+* simulations at bias points it measured in an earlier pass. A klt request has
+* one analysis with literal arguments, so it cannot re-aim a later run at a
+* measured value. Both replicas are therefore built into this deck and driven
+* by the SAME swept source, so the single DC sweep produces every curve:
+*
+*  1. Tail-device replica (M5 geometry). Diode-connected replica Mbias carries
+*     the same 10 uA and fixes Vgs5 exactly as the DUT's Mbias does; the
+*     replica tail device's drain is driven by B-source `Bd5` = v(csw), so
+*     over the sweep its Vds IS the swept value (0 .. 1.32 V) and
+*     -i(Bd5) is its Id5(Vds) curve. The request reads the saturation knee
+*     (first Vds whose incremental slope fell to 10% of the maximum) off it.
+*
+*  2. Pair-device replica (M1/M2 geometry). Source follows the DUT's own v(tail)
+*     (so the body bias is the real one at EVERY sweep sample), drain held at
+*     source + 0.6 V capped at VDD - 0.02 V (the harness probe's drain rule), and a servo drives the
+*     gate until the replica's Id equals the gm/ID constant-current value
+*     100 nA * W/L; the servo output v(vthp) is then Vth(CC) at that sample's
+*     body bias. Because Vth is evaluated at the body bias of the sample under
+*     test, the harness's bounded fixed-point loop (re-probe at the bound's
+*     tail bias until the crossing stops moving) is not needed: the crossing
+*     of v(d1) - Vcm + Vth(v(tail)) through zero IS the converged fixed point.
+*
+* Exactly one .include, by a path relative to this file.
+
+.include ../../../design/netlist/opamp_core.spice
+
+.options tnom=27
+
+Vdd vdd 0 dc 1.2
+Vss vss 0 dc 0
+Iibias vdd ibias dc 10u
+Vcsw inp 0 dc 0.6
+* Vcm: the centre bias VDD/2, unused by the sweep. It carries the request's supply_v.vcm axis
+* (swept with vdd by index, so Vcm = VDD/2 at every corner) so the envelope records the
+* centre bias and the shared envelope gate can check it, as the sibling benches' do.
+Vcm cm 0 dc 0.6
+Vin inn inp dc 0
+Cload out vss 2e-12
+
+* --- tail-device replica (M5 geometry) ---------------------------------
+Irbias 0 rbx dc 10u
+XMbiasr rbx rbx 0 0 sg13_lv_nmos w=2.2u l=0.52u ng=1 m=1
+Bd5 p5 0 v = v(inp)
+XM5r p5 rbx 0 0 sg13_lv_nmos w=2.2u l=0.52u ng=1 m=1
+
+* --- pair-device replica (M1/M2 geometry), constant-current servo -------
+* Source follows the DUT's tail; drain = source + 0.6 V capped at VDD - 0.02 V;
+* Vsn is a 0 V series sense source (Id = i(Vsn)). The servo node vthp is driven
+* by a current K*(Icc - Id) into Rsv = 1 ohm, so at the root Id = Icc to within
+* ~1e-4 relative (0.06 mV in Vth against K = 1e9; K = 1e9 makes ngspice ~50x slower per sweep point); Icc = 100 nA * W/L = 100 nA * 3.2/0.13. The gate is clamped to
+* Vgs in [0, 1] V so the servo has the single physical root (without the clamp a
+* second, unphysical root exists at large negative Vgs).
+Bps psn 0 v = v(tail)
+Bpd pdn0 0 v = min(v(tail) + 0.6, v(vdd) - 0.02)
+Vsn pdn0 pdn 0
+Bgp gpv 0 v = v(tail) + min(max(v(vthp), 0), 1)
+XMpairr pdn gpv psn 0 sg13_lv_nmos w=3.2u l=0.13u ng=1 m=1
+Rsv vthp 0 1
+Bsv 0 vthp i = 1e8 * (2.4615384615e-6 - i(Vsn))
+* Start the servo at its physical root (Vth 0.3-0.53 V over the grid; 0.45 V is mid-range). Without this the first sweep point
+* (Vcm = 0) needs source stepping, and the dynamic/true gmin-stepping failures it logs
+* first are classed by klt as `nonconvergence` (this request fails on that diagnostic).
+.nodeset v(vthp)=0.45
