@@ -14,6 +14,12 @@
   keys are present and approving, the PR must not be merged and the limits
   remain only the conservative working limits. (Previous status:
   `submitted for fresh ratification`, preparation only, PR #293.)
+  **Revision 2** (operator send-back after the two-key review of head
+  `44d9e7ec`, round 20261031-r5): the three rows whose own records fail their
+  working limit (noise, systematic offset, tracking span) are no longer
+  submitted as bounds, only as measured values with status; the PSRR+ row
+  cites the current record; and the record states what the block is for at
+  these numbers. Both keys re-run on the revised head.
 - **Date**: 2026-10-20
 - **Decided by**: operator direction (attended fleet-decide 2026-10-19,
   option 1: prepare a focused documentation-only fresh-ratification PR,
@@ -47,8 +53,9 @@ requirements.
 
 ## What is submitted for review (unchanged)
 
-The requirements are DR-0002's table, verbatim, plus DR-0004's
-mismatch-inclusive CMRR bound. Nothing is added, relaxed or re-rounded.
+The requirements are DR-0002's table plus DR-0004's mismatch-inclusive CMRR
+bound, **minus the three rows listed under "Rows not submitted as bounds"
+below**. No submitted number is added, relaxed or re-rounded.
 
 | Row | Requirement (unchanged) | Source |
 |---|---|---|
@@ -56,11 +63,9 @@ mismatch-inclusive CMRR bound. Nothing is added, relaxed or re-rounded.
 | GBW (CL = 2 pF) | >= 4.74 MHz worst case | DR-0002 |
 | Phase margin | >= 60 deg | DR-0002 |
 | Slew rate (CL = 2 pF) | >= 7.51 V/us worst edge | DR-0002 |
-| Input-referred noise, 100 Hz - 1 MHz | <= 108.9 uVrms | DR-0002 |
-| Input offset, systematic | <= 21.9 mV | DR-0002 |
 | CMRR, mismatch-inclusive (+3 sigma of Acm, linear) | >= 26.68 dB | DR-0004 |
-| PSRR+ (DC shelf) | >= 1.87 dB | DR-0002 |
-| Output swing, CL = 2 pF, unloaded | headroom >= 251 mV (VDD), >= 141 mV (VSS); tracking span >= 0.571 V | DR-0002 |
+| PSRR+ (DC shelf) | >= 1.87 dB (floor only; evidence is the current record, see below) | DR-0002 |
+| Output swing, CL = 2 pF, unloaded | headroom >= 251 mV (VDD), >= 141 mV (VSS) (tracking span: not submitted, see below) | DR-0002 |
 | Quiescent power | <= 119.7 uA total VDD current | DR-0002 |
 | Supply / temperature | 1.2 V +/-10 %, -40...+125 C | DR-0002 |
 
@@ -68,9 +73,65 @@ The reviewers should also see the operating conditions, loads and the
 45-point `mos_tt/ss/ff/sf/fs` x `{-40, 27, 125} C` x `{1.08, 1.2, 1.32} V`
 grid exactly as DR-0002 states them.
 
+## Rows not submitted as bounds (measured value and status only)
+
+The EE key found that the DR-0002 noise, offset and span limits are the
+4-significant-figure display rounding of the very extremum that fails them,
+with no derivation independent of the measurement. This record therefore
+does **not** ask either key to ratify a bound for these rows. They are
+presented as measured values with their status; they stay unratified
+working limits (`[P]`) until the DR-0009 design-margin path
+([`design/margin-plan.md`](../../design/margin-plan.md)) or a separate
+restated-bound record reviewed on its own selects a bound with margin. This
+record picks no margin amount, tolerance or rounding convention and relaxes
+nothing: the DR-0002 working limits and the literal comparison rule are
+untouched.
+
+| Row | Measured worst case | Status |
+|---|---|---|
+| Input-referred noise, 100 Hz - 1 MHz | 108.949 uVrms (`mos_fs_125C_1.08V`) | FAIL against the 108.9 uVrms working limit; no bound submitted |
+| Input offset, systematic | 21.9273527 mV (`mos_fs_125C_1.08V`) | FAIL against the 21.9 mV working limit; no bound submitted |
+| Output swing, tracking span | 0.570957773 V (`mos_ss_125C_1.08V`) | FAIL against the 0.571 V working limit; no bound submitted |
+
+The per-rail headroom rows (251 mV / 141 mV) pass on the same record and stay
+submitted as written.
+
+## PSRR+ evidence: current record
+
+The PSRR+ record previously cited,
+`sim/cmrr-psrr/records/20260921-151815-707b34c`, is **superseded for the
+PSRR measurement itself** (not merely stale in its Av0 join): it measured
+with `inn` AC-floating, which produced the "~1.5 Hz supply-path zero" and
+the ~1.30 dB worst in-band figure (issue #241). The current record is
+`sim/cmrr-psrr/klt/records/20261015-103521-0f41068.*`, joined to
+`sim/open-loop-ac/records/20261015-103057-895d555`: PSRR+ (DC shelf) is
+**26.90 dB worst** (`mos_fs_125C_1.08V`) to 36.33 dB best, all 45 corners
+above 1.87 dB, with the zero gone. This record submits only the >= 1.87 dB
+floor, evidenced by the current record; the zero and in-band-degradation
+text of DR-0002 / `spec/target-spec.md` is **withdrawn from what is
+submitted** as a bench artifact. Re-pointing `selection.json` (still on
+707b34c) and correcting the `spec/target-spec.md` context strings is a
+separate change through `spec/` (gap 6).
+
+## What the block is for at these numbers
+
+The market key (head `44d9e7ec`) found the CMRR (26.68 dB), PSRR+ floor and
+other rows uncompetitive against catalog parts (e.g. LMV321 / NCS2001 /
+TLV9001 CMRR minima of 50-63 dB) and escalated. This record does not claim
+catalog competitiveness. The block is an **open-source canary and
+cross-foundry comparison vehicle**: a two-stage Miller op-amp whose purpose is
+to exercise the open SG13G2 flow and `klt` end to end and to give the
+sg13g2 / gf180 / sky130 twin a like-for-like result set, with every number
+derived from this PDK's models. It is a low-power (<= 119.7 uA), 1.2 V core,
+2 pF-load embedded-style amplifier, not a precision or general catalog
+part, and its CMRR, PSRR+, noise, offset and swing figures should be read
+that way. Whether to accept the gaps as a canary, declare a non-precision
+class, or restate bounds is the operator tradeoff the market key asked for;
+this record does not pre-empt it.
+
 ## Disclosed failures (raw values against the literal limits)
 
-Current evidence is the newest characterization report,
+These are the three rows above, kept for the audit trail. Current evidence is the newest characterization report,
 `signoff/characterization/reports/20261020-052800-9a4a35d.{md,json}` (PR
 #292), which grades raw values against the literal bounds with no rounding
 or tolerance. As recorded there:
@@ -96,7 +157,8 @@ re-selection also moves the GBW, phase-margin and quiescent-current readings
 (now 8.06239 MHz, 61.9872 deg, 119.655 uA), all of which still clear their
 unchanged bounds. This is a change of evidence, not of requirement.
 
-The three remaining FAILs stay FAIL. No display-rounding convention is
+The three remaining FAILs stay FAIL and, per the section above, are not
+submitted as bounds. No display-rounding convention is
 proposed here; the raw worst cases round onto the bounds, but that is not a
 pass under the literal comparison rule, and choosing a convention would be a
 spec change that needs its own review.
@@ -122,7 +184,12 @@ These are stated so the reviewers do not mistake this request for closure:
 5. **Design margin.** The three FAIL rows have no design fix. The
    coordinated plan is [`design/margin-plan.md`](../../design/margin-plan.md);
    it selects no circuit change.
-6. **No new simulation.** Everything above is offline reading of committed
+6. **PSRR selection and stale context.** `signoff/characterization/selection.json`
+   still pins the superseded PSRR record, and `spec/target-spec.md` context
+   strings (Av0 envelope, GBW envelope, 76.4 deg phase margin, the 1.5 Hz
+   zero) predate the corrected bench. Not edited here (spec changes go
+   through `spec/` with their own record).
+7. **No new simulation.** Everything above is offline reading of committed
    records. No bench was re-run for this request.
 
 ## What the reviewers are asked to do
@@ -130,9 +197,9 @@ These are stated so the reviewers do not mistake this request for closure:
 Through the existing ratification protocol (`ratification/ee-key/` and
 `ratification/market-key/`), on this PR:
 
-- The **EE key** assesses whether the unchanged requirements are supported
-  by the cited evidence, including the corrected open-loop record, and the
-  disclosed FAILs.
+- The **EE key** assesses whether the submitted requirements are supported
+  by the cited evidence, including the corrected open-loop record and the
+  current PSRR record, and the measured-value-only rows.
 - The **market key** assesses whether the unchanged requirements are
   competitive; per DR-0002 and #372, any bound weaker than a previously
   ratified one is found competitive or escalated.
