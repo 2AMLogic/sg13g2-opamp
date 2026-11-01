@@ -2,6 +2,11 @@
 
 <!-- Maintained by the Loom Guide role. Newest entries first. -->
 
+### 2026-11-01
+
+- **PR #323**: sim: 45-point output-swing klt envelope on the batch fleet with harness comparison
+- **Issue #100** (closed): sim: express the output-swing bench as a klt sim request (T1 item 5 coverage, follow-up to #85)
+
 ### 2026-10-28
 
 - **PR #318**: docs: make cmrr-psrr shard-bridge klt 0.5.0 pin statement historical
