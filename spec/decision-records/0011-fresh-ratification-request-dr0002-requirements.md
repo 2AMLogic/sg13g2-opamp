@@ -2,7 +2,9 @@
 
 - **Status**: `submitted for ratification` — this record's requirements
   (the unchanged DR-0002 table plus DR-0004's mismatch-inclusive CMRR bound,
-  with the three disclosed FAILs) are ratified when, and only when, the PR
+  minus the three rows listed under "Rows not submitted as bounds", which
+  are measured values with status only and are **not** ratified) are
+  ratified when, and only when, the PR
   that carries this status line has been ratified by **both keys** of the
   two-key mechanism ([2AMLogic/2am#372](https://github.com/2AMLogic/2am/issues/372)):
   an EE key (`RATIFY-KEY: ee`) and a market key (`RATIFY-KEY: market`), each
