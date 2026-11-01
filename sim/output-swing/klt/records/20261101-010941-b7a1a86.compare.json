@@ -1,0 +1,3377 @@
+{
+  "schema": "sg13g2-opamp/output-swing/klt-compare/1",
+  "points_compared": 45,
+  "point_set": [
+    "mos_tt_-40C_1.08V",
+    "mos_tt_-40C_1.20V",
+    "mos_tt_-40C_1.32V",
+    "mos_tt_27C_1.08V",
+    "mos_tt_27C_1.20V",
+    "mos_tt_27C_1.32V",
+    "mos_tt_125C_1.08V",
+    "mos_tt_125C_1.20V",
+    "mos_tt_125C_1.32V",
+    "mos_ss_-40C_1.08V",
+    "mos_ss_-40C_1.20V",
+    "mos_ss_-40C_1.32V",
+    "mos_ss_27C_1.08V",
+    "mos_ss_27C_1.20V",
+    "mos_ss_27C_1.32V",
+    "mos_ss_125C_1.08V",
+    "mos_ss_125C_1.20V",
+    "mos_ss_125C_1.32V",
+    "mos_ff_-40C_1.08V",
+    "mos_ff_-40C_1.20V",
+    "mos_ff_-40C_1.32V",
+    "mos_ff_27C_1.08V",
+    "mos_ff_27C_1.20V",
+    "mos_ff_27C_1.32V",
+    "mos_ff_125C_1.08V",
+    "mos_ff_125C_1.20V",
+    "mos_ff_125C_1.32V",
+    "mos_sf_-40C_1.08V",
+    "mos_sf_-40C_1.20V",
+    "mos_sf_-40C_1.32V",
+    "mos_sf_27C_1.08V",
+    "mos_sf_27C_1.20V",
+    "mos_sf_27C_1.32V",
+    "mos_sf_125C_1.08V",
+    "mos_sf_125C_1.20V",
+    "mos_sf_125C_1.32V",
+    "mos_fs_-40C_1.08V",
+    "mos_fs_-40C_1.20V",
+    "mos_fs_-40C_1.32V",
+    "mos_fs_27C_1.08V",
+    "mos_fs_27C_1.20V",
+    "mos_fs_27C_1.32V",
+    "mos_fs_125C_1.08V",
+    "mos_fs_125C_1.20V",
+    "mos_fs_125C_1.32V"
+  ],
+  "tolerance_basis": {
+    "vid_step_v": 1e-05,
+    "rel_cross_host": 0.001,
+    "abs_floor_v": 1e-06,
+    "boundaries": {
+      "vmax_track_v": 1,
+      "vmin_track_v": 1,
+      "headroom_hi_v": 1,
+      "headroom_lo_v": 1,
+      "swing_span_v": 2
+    }
+  },
+  "out_of_tolerance": [],
+  "bound_verdict_disagreements": [],
+  "unexplained_bound_verdict_disagreements": 0,
+  "row": {
+    "ratified_limits": {
+      "headroom_hi_v": {
+        "min": 0.251
+      },
+      "headroom_lo_v": {
+        "min": 0.141
+      },
+      "swing_span_v": {
+        "min": 0.571
+      }
+    },
+    "tool": {
+      "headroom_hi_v": {
+        "status": "pass",
+        "limits": {
+          "min": 0.251
+        },
+        "worst_case": {
+          "corner_id": "mos_fs/vcm=0.540_vdd=1.080V/-40C",
+          "value": 0.2511871433466,
+          "margin": 0.00018714334659997167
+        }
+      },
+      "headroom_lo_v": {
+        "status": "pass",
+        "limits": {
+          "min": 0.141
+        },
+        "worst_case": {
+          "corner_id": "mos_ff/vcm=0.540_vdd=1.080V/-40C",
+          "value": 0.1413949073131,
+          "margin": 0.00039490731310001803
+        }
+      },
+      "swing_span_v": {
+        "status": "fail",
+        "limits": {
+          "min": 0.571
+        },
+        "worst_case": {
+          "corner_id": "mos_ss/vcm=0.540_vdd=1.080V/125C",
+          "value": 0.5709604019764,
+          "margin": -3.959802359998488e-05
+        }
+      }
+    }
+  },
+  "points": [
+    {
+      "point_id": "mos_tt_-40C_1.08V",
+      "process": "mos_tt",
+      "temperature_c": -40,
+      "vdd_v": 1.08,
+      "harness_peak_gain_v_v": 149.4068,
+      "metrics": {
+        "vmax_track_v": {
+          "harness": 0.827233003,
+          "tool": 0.8267222293585,
+          "delta": -0.0005107736414999842,
+          "tolerance": 0.002322301003,
+          "within": true,
+          "unit": "V"
+        },
+        "vmin_track_v": {
+          "harness": 0.142816402,
+          "tool": 0.1430451257195,
+          "delta": 0.00022872371950000137,
+          "tolerance": 0.001637884402,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_hi_v": {
+          "harness": 0.252766997,
+          "tool": 0.2532777706415,
+          "delta": 0.0005107736414999842,
+          "tolerance": 0.001747834997,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_lo_v": {
+          "harness": 0.142816402,
+          "tool": 0.1430451257195,
+          "delta": 0.00022872371950000137,
+          "tolerance": 0.001637884402,
+          "within": true,
+          "unit": "V"
+        },
+        "swing_span_v": {
+          "harness": 0.684416601,
+          "tool": 0.683677103639,
+          "delta": -0.0007394973609999855,
+          "tolerance": 0.0036735526010000003,
+          "within": true,
+          "unit": "V"
+        }
+      },
+      "rows": {
+        "headroom_hi_v": {
+          "bound_min": 0.251,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "headroom_lo_v": {
+          "bound_min": 0.141,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "swing_span_v": {
+          "bound_min": 0.571,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        }
+      }
+    },
+    {
+      "point_id": "mos_tt_-40C_1.20V",
+      "process": "mos_tt",
+      "temperature_c": -40,
+      "vdd_v": 1.2,
+      "harness_peak_gain_v_v": 172.1131,
+      "metrics": {
+        "vmax_track_v": {
+          "harness": 0.938114882,
+          "tool": 0.938073230034,
+          "delta": -4.1651966000033624e-05,
+          "tolerance": 0.0026602458820000003,
+          "within": true,
+          "unit": "V"
+        },
+        "vmin_track_v": {
+          "harness": 0.148060311,
+          "tool": 0.1480096954637,
+          "delta": -5.061553630000826e-05,
+          "tolerance": 0.001870191311,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_hi_v": {
+          "harness": 0.261885118,
+          "tool": 0.261926769966,
+          "delta": 4.1651966000033624e-05,
+          "tolerance": 0.0019840161180000003,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_lo_v": {
+          "harness": 0.148060311,
+          "tool": 0.1480096954637,
+          "delta": -5.061553630000826e-05,
+          "tolerance": 0.001870191311,
+          "within": true,
+          "unit": "V"
+        },
+        "swing_span_v": {
+          "harness": 0.790054571,
+          "tool": 0.7900635345704,
+          "delta": 8.963570400033483e-06,
+          "tolerance": 0.004233316571000001,
+          "within": true,
+          "unit": "V"
+        }
+      },
+      "rows": {
+        "headroom_hi_v": {
+          "bound_min": 0.251,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "headroom_lo_v": {
+          "bound_min": 0.141,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "swing_span_v": {
+          "bound_min": 0.571,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        }
+      }
+    },
+    {
+      "point_id": "mos_tt_-40C_1.32V",
+      "process": "mos_tt",
+      "temperature_c": -40,
+      "vdd_v": 1.32,
+      "harness_peak_gain_v_v": 196.1338,
+      "metrics": {
+        "vmax_track_v": {
+          "harness": 1.04993289,
+          "tool": 1.049728860931,
+          "delta": -0.00020402906899996687,
+          "tolerance": 0.003012270890000001,
+          "within": true,
+          "unit": "V"
+        },
+        "vmin_track_v": {
+          "harness": 0.153105348,
+          "tool": 0.1528902853266,
+          "delta": -0.00021506267339999052,
+          "tolerance": 0.0021154433480000006,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_hi_v": {
+          "harness": 0.27006711,
+          "tool": 0.2702711390686,
+          "delta": 0.00020402906860000902,
+          "tolerance": 0.0022324051100000007,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_lo_v": {
+          "harness": 0.153105348,
+          "tool": 0.1528902853266,
+          "delta": -0.00021506267339999052,
+          "tolerance": 0.0021154433480000006,
+          "within": true,
+          "unit": "V"
+        },
+        "swing_span_v": {
+          "harness": 0.896827542,
+          "tool": 0.8968385756047,
+          "delta": 1.1033604700005917e-05,
+          "tolerance": 0.004820503542000001,
+          "within": true,
+          "unit": "V"
+        }
+      },
+      "rows": {
+        "headroom_hi_v": {
+          "bound_min": 0.251,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "headroom_lo_v": {
+          "bound_min": 0.141,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "swing_span_v": {
+          "bound_min": 0.571,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        }
+      }
+    },
+    {
+      "point_id": "mos_tt_27C_1.08V",
+      "process": "mos_tt",
+      "temperature_c": 27,
+      "vdd_v": 1.08,
+      "harness_peak_gain_v_v": 121.59,
+      "metrics": {
+        "vmax_track_v": {
+          "harness": 0.807836868,
+          "tool": 0.8075652561725,
+          "delta": -0.0002716118275000179,
+          "tolerance": 0.0020247368680000005,
+          "within": true,
+          "unit": "V"
+        },
+        "vmin_track_v": {
+          "harness": 0.167106358,
+          "tool": 0.1668299232532,
+          "delta": -0.0002764347468000028,
+          "tolerance": 0.0013840063580000002,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_hi_v": {
+          "harness": 0.272163132,
+          "tool": 0.2724347438275,
+          "delta": 0.0002716118275000179,
+          "tolerance": 0.0014890631320000002,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_lo_v": {
+          "harness": 0.167106358,
+          "tool": 0.1668299232532,
+          "delta": -0.0002764347468000028,
+          "tolerance": 0.0013840063580000002,
+          "within": true,
+          "unit": "V"
+        },
+        "swing_span_v": {
+          "harness": 0.64073051,
+          "tool": 0.6407353329193,
+          "delta": 4.822919299929396e-06,
+          "tolerance": 0.0030735305100000007,
+          "within": true,
+          "unit": "V"
+        }
+      },
+      "rows": {
+        "headroom_hi_v": {
+          "bound_min": 0.251,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "headroom_lo_v": {
+          "bound_min": 0.141,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "swing_span_v": {
+          "bound_min": 0.571,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        }
+      }
+    },
+    {
+      "point_id": "mos_tt_27C_1.20V",
+      "process": "mos_tt",
+      "temperature_c": 27,
+      "vdd_v": 1.2,
+      "harness_peak_gain_v_v": 140.8559,
+      "metrics": {
+        "vmax_track_v": {
+          "harness": 0.91881399,
+          "tool": 0.918529249102,
+          "delta": -0.00028474089800001323,
+          "tolerance": 0.00232837299,
+          "within": true,
+          "unit": "V"
+        },
+        "vmin_track_v": {
+          "harness": 0.173082167,
+          "tool": 0.1727920472244,
+          "delta": -0.00029011977560000624,
+          "tolerance": 0.0015826411669999998,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_hi_v": {
+          "harness": 0.28118601,
+          "tool": 0.281470750898,
+          "delta": 0.00028474089800001323,
+          "tolerance": 0.00169074501,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_lo_v": {
+          "harness": 0.173082167,
+          "tool": 0.1727920472244,
+          "delta": -0.00029011977560000624,
+          "tolerance": 0.0015826411669999998,
+          "within": true,
+          "unit": "V"
+        },
+        "swing_span_v": {
+          "harness": 0.745731823,
+          "tool": 0.7457372018776,
+          "delta": 5.378877599993004e-06,
+          "tolerance": 0.003563849823,
+          "within": true,
+          "unit": "V"
+        }
+      },
+      "rows": {
+        "headroom_hi_v": {
+          "bound_min": 0.251,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "headroom_lo_v": {
+          "bound_min": 0.141,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "swing_span_v": {
+          "bound_min": 0.571,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        }
+      }
+    },
+    {
+      "point_id": "mos_tt_27C_1.32V",
+      "process": "mos_tt",
+      "temperature_c": 27,
+      "vdd_v": 1.32,
+      "harness_peak_gain_v_v": 161.6588,
+      "metrics": {
+        "vmax_track_v": {
+          "harness": 1.02987976,
+          "tool": 1.030292805758,
+          "delta": 0.0004130457580000524,
+          "tolerance": 0.00264746776,
+          "within": true,
+          "unit": "V"
+        },
+        "vmin_track_v": {
+          "harness": 0.178631946,
+          "tool": 0.1782304694276,
+          "delta": -0.00040147657240000023,
+          "tolerance": 0.001796219946,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_hi_v": {
+          "harness": 0.29012024,
+          "tool": 0.2897071942422,
+          "delta": -0.0004130457577999902,
+          "tolerance": 0.00190770824,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_lo_v": {
+          "harness": 0.178631946,
+          "tool": 0.1782304694276,
+          "delta": -0.00040147657240000023,
+          "tolerance": 0.001796219946,
+          "within": true,
+          "unit": "V"
+        },
+        "swing_span_v": {
+          "harness": 0.851247814,
+          "tool": 0.8520623363302,
+          "delta": 0.0008145223301999627,
+          "tolerance": 0.004085423814000001,
+          "within": true,
+          "unit": "V"
+        }
+      },
+      "rows": {
+        "headroom_hi_v": {
+          "bound_min": 0.251,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "headroom_lo_v": {
+          "bound_min": 0.141,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "swing_span_v": {
+          "bound_min": 0.571,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        }
+      }
+    },
+    {
+      "point_id": "mos_tt_125C_1.08V",
+      "process": "mos_tt",
+      "temperature_c": 125,
+      "vdd_v": 1.08,
+      "harness_peak_gain_v_v": 92.7266,
+      "metrics": {
+        "vmax_track_v": {
+          "harness": 0.7789372,
+          "tool": 0.77918804022,
+          "delta": 0.0002508402199999926,
+          "tolerance": 0.0017072032,
+          "within": true,
+          "unit": "V"
+        },
+        "vmin_track_v": {
+          "harness": 0.205337164,
+          "tool": 0.2051220526836,
+          "delta": -0.0002151113163999796,
+          "tolerance": 0.001133603164,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_hi_v": {
+          "harness": 0.3010628,
+          "tool": 0.30081195978,
+          "delta": -0.0002508402199999926,
+          "tolerance": 0.0012293288,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_lo_v": {
+          "harness": 0.205337164,
+          "tool": 0.2051220526836,
+          "delta": -0.0002151113163999796,
+          "tolerance": 0.001133603164,
+          "within": true,
+          "unit": "V"
+        },
+        "swing_span_v": {
+          "harness": 0.573600036,
+          "tool": 0.5740659875364,
+          "delta": 0.0004659515364000555,
+          "tolerance": 0.0024291320360000004,
+          "within": true,
+          "unit": "V"
+        }
+      },
+      "rows": {
+        "headroom_hi_v": {
+          "bound_min": 0.251,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "headroom_lo_v": {
+          "bound_min": 0.141,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "swing_span_v": {
+          "bound_min": 0.571,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        }
+      }
+    },
+    {
+      "point_id": "mos_tt_125C_1.20V",
+      "process": "mos_tt",
+      "temperature_c": 125,
+      "vdd_v": 1.2,
+      "harness_peak_gain_v_v": 110.9993,
+      "metrics": {
+        "vmax_track_v": {
+          "harness": 0.891496257,
+          "tool": 0.891541337061,
+          "delta": 4.5080061000013494e-05,
+          "tolerance": 0.0020024892570000004,
+          "within": true,
+          "unit": "V"
+        },
+        "vmin_track_v": {
+          "harness": 0.214250729,
+          "tool": 0.2142928958747,
+          "delta": 4.2166874699989254e-05,
+          "tolerance": 0.001325243729,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_hi_v": {
+          "harness": 0.308503743,
+          "tool": 0.308458662939,
+          "delta": -4.5080061000013494e-05,
+          "tolerance": 0.001419496743,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_lo_v": {
+          "harness": 0.214250729,
+          "tool": 0.2142928958747,
+          "delta": 4.2166874699989254e-05,
+          "tolerance": 0.001325243729,
+          "within": true,
+          "unit": "V"
+        },
+        "swing_span_v": {
+          "harness": 0.677245528,
+          "tool": 0.6772484411863,
+          "delta": 2.9131862999687286e-06,
+          "tolerance": 0.0028982315280000003,
+          "within": true,
+          "unit": "V"
+        }
+      },
+      "rows": {
+        "headroom_hi_v": {
+          "bound_min": 0.251,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "headroom_lo_v": {
+          "bound_min": 0.141,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "swing_span_v": {
+          "bound_min": 0.571,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        }
+      }
+    },
+    {
+      "point_id": "mos_tt_125C_1.32V",
+      "process": "mos_tt",
+      "temperature_c": 125,
+      "vdd_v": 1.32,
+      "harness_peak_gain_v_v": 129.2447,
+      "metrics": {
+        "vmax_track_v": {
+          "harness": 1.00296085,
+          "tool": 1.002725320996,
+          "delta": -0.0002355290039999236,
+          "tolerance": 0.0022964078500000004,
+          "within": true,
+          "unit": "V"
+        },
+        "vmin_track_v": {
+          "harness": 0.221751717,
+          "tool": 0.221512812533,
+          "delta": -0.00023890446699997847,
+          "tolerance": 0.0015151987169999999,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_hi_v": {
+          "harness": 0.31703915,
+          "tool": 0.3172746790043,
+          "delta": 0.0002355290043000169,
+          "tolerance": 0.00161048615,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_lo_v": {
+          "harness": 0.221751717,
+          "tool": 0.221512812533,
+          "delta": -0.00023890446699997847,
+          "tolerance": 0.0015151987169999999,
+          "within": true,
+          "unit": "V"
+        },
+        "swing_span_v": {
+          "harness": 0.781209133,
+          "tool": 0.7812125084627,
+          "delta": 3.3754627000170956e-06,
+          "tolerance": 0.003367103133,
+          "within": true,
+          "unit": "V"
+        }
+      },
+      "rows": {
+        "headroom_hi_v": {
+          "bound_min": 0.251,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "headroom_lo_v": {
+          "bound_min": 0.141,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "swing_span_v": {
+          "bound_min": 0.571,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        }
+      }
+    },
+    {
+      "point_id": "mos_ss_-40C_1.08V",
+      "process": "mos_ss",
+      "temperature_c": -40,
+      "vdd_v": 1.08,
+      "harness_peak_gain_v_v": 167.2286,
+      "metrics": {
+        "vmax_track_v": {
+          "harness": 0.826989164,
+          "tool": 0.8273143292928,
+          "delta": 0.0003251652928000226,
+          "tolerance": 0.002500275164,
+          "within": true,
+          "unit": "V"
+        },
+        "vmin_track_v": {
+          "harness": 0.144058297,
+          "tool": 0.1443734403845,
+          "delta": 0.0003151433845000051,
+          "tolerance": 0.001817344297,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_hi_v": {
+          "harness": 0.253010836,
+          "tool": 0.2526856707072,
+          "delta": -0.0003251652928000226,
+          "tolerance": 0.001926296836,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_lo_v": {
+          "harness": 0.144058297,
+          "tool": 0.1443734403845,
+          "delta": 0.0003151433845000051,
+          "tolerance": 0.001817344297,
+          "within": true,
+          "unit": "V"
+        },
+        "swing_span_v": {
+          "harness": 0.682930867,
+          "tool": 0.6829408889082,
+          "delta": 1.0021908199986385e-05,
+          "tolerance": 0.004028502867,
+          "within": true,
+          "unit": "V"
+        }
+      },
+      "rows": {
+        "headroom_hi_v": {
+          "bound_min": 0.251,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "headroom_lo_v": {
+          "bound_min": 0.141,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "swing_span_v": {
+          "bound_min": 0.571,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        }
+      }
+    },
+    {
+      "point_id": "mos_ss_-40C_1.20V",
+      "process": "mos_ss",
+      "temperature_c": -40,
+      "vdd_v": 1.2,
+      "harness_peak_gain_v_v": 195.2028,
+      "metrics": {
+        "vmax_track_v": {
+          "harness": 0.938718519,
+          "tool": 0.938385562793,
+          "delta": -0.0003329562070000236,
+          "tolerance": 0.0028917465190000003,
+          "within": true,
+          "unit": "V"
+        },
+        "vmin_track_v": {
+          "harness": 0.149757119,
+          "tool": 0.1494113509792,
+          "delta": -0.0003457680207999969,
+          "tolerance": 0.002102785119,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_hi_v": {
+          "harness": 0.261281481,
+          "tool": 0.261614437207,
+          "delta": 0.0003329562070000236,
+          "tolerance": 0.0022143094810000005,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_lo_v": {
+          "harness": 0.149757119,
+          "tool": 0.1494113509792,
+          "delta": -0.0003457680207999969,
+          "tolerance": 0.002102785119,
+          "within": true,
+          "unit": "V"
+        },
+        "swing_span_v": {
+          "harness": 0.7889614,
+          "tool": 0.7889742118138,
+          "delta": 1.2811813799973315e-05,
+          "tolerance": 0.004694017400000001,
+          "within": true,
+          "unit": "V"
+        }
+      },
+      "rows": {
+        "headroom_hi_v": {
+          "bound_min": 0.251,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "headroom_lo_v": {
+          "bound_min": 0.141,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "swing_span_v": {
+          "bound_min": 0.571,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        }
+      }
+    },
+    {
+      "point_id": "mos_ss_-40C_1.32V",
+      "process": "mos_ss",
+      "temperature_c": -40,
+      "vdd_v": 1.32,
+      "harness_peak_gain_v_v": 223.3423,
+      "metrics": {
+        "vmax_track_v": {
+          "harness": 1.05031387,
+          "tool": 1.050625509163,
+          "delta": 0.00031163916299981054,
+          "tolerance": 0.0032847368700000003,
+          "within": true,
+          "unit": "V"
+        },
+        "vmin_track_v": {
+          "harness": 0.154671695,
+          "tool": 0.1549716593548,
+          "delta": 0.0002999643548000086,
+          "tolerance": 0.0023890946950000003,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_hi_v": {
+          "harness": 0.26968613,
+          "tool": 0.2693744908372,
+          "delta": -0.0003116391628000259,
+          "tolerance": 0.0025041091300000004,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_lo_v": {
+          "harness": 0.154671695,
+          "tool": 0.1549716593548,
+          "delta": 0.0002999643548000086,
+          "tolerance": 0.0023890946950000003,
+          "within": true,
+          "unit": "V"
+        },
+        "swing_span_v": {
+          "harness": 0.895642175,
+          "tool": 0.8956538498081,
+          "delta": 1.1674808100048395e-05,
+          "tolerance": 0.005363488175,
+          "within": true,
+          "unit": "V"
+        }
+      },
+      "rows": {
+        "headroom_hi_v": {
+          "bound_min": 0.251,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "headroom_lo_v": {
+          "bound_min": 0.141,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "swing_span_v": {
+          "bound_min": 0.571,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        }
+      }
+    },
+    {
+      "point_id": "mos_ss_27C_1.08V",
+      "process": "mos_ss",
+      "temperature_c": 27,
+      "vdd_v": 1.08,
+      "harness_peak_gain_v_v": 132.7406,
+      "metrics": {
+        "vmax_track_v": {
+          "harness": 0.806475256,
+          "tool": 0.8068654877334,
+          "delta": 0.00039023173340002604,
+          "tolerance": 0.002134881256,
+          "within": true,
+          "unit": "V"
+        },
+        "vmin_track_v": {
+          "harness": 0.168339339,
+          "tool": 0.1680608220067,
+          "delta": -0.00027851699330000423,
+          "tolerance": 0.001496745339,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_hi_v": {
+          "harness": 0.273524744,
+          "tool": 0.2731345122666,
+          "delta": -0.0003902317333999705,
+          "tolerance": 0.001601930744,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_lo_v": {
+          "harness": 0.168339339,
+          "tool": 0.1680608220067,
+          "delta": -0.00027851699330000423,
+          "tolerance": 0.001496745339,
+          "within": true,
+          "unit": "V"
+        },
+        "swing_span_v": {
+          "harness": 0.638135917,
+          "tool": 0.6388046657267,
+          "delta": 0.0006687487266999748,
+          "tolerance": 0.0032939479170000004,
+          "within": true,
+          "unit": "V"
+        }
+      },
+      "rows": {
+        "headroom_hi_v": {
+          "bound_min": 0.251,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "headroom_lo_v": {
+          "bound_min": 0.141,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "swing_span_v": {
+          "bound_min": 0.571,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        }
+      }
+    },
+    {
+      "point_id": "mos_ss_27C_1.20V",
+      "process": "mos_ss",
+      "temperature_c": 27,
+      "vdd_v": 1.2,
+      "harness_peak_gain_v_v": 155.3952,
+      "metrics": {
+        "vmax_track_v": {
+          "harness": 0.917835896,
+          "tool": 0.9177014886782,
+          "delta": -0.00013440732180003412,
+          "tolerance": 0.002472787896,
+          "within": true,
+          "unit": "V"
+        },
+        "vmin_track_v": {
+          "harness": 0.173961401,
+          "tool": 0.1738209038773,
+          "delta": -0.0001404971226999785,
+          "tolerance": 0.0017289134009999998,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_hi_v": {
+          "harness": 0.282164104,
+          "tool": 0.2822985113218,
+          "delta": 0.0001344073217999786,
+          "tolerance": 0.001837116104,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_lo_v": {
+          "harness": 0.173961401,
+          "tool": 0.1738209038773,
+          "delta": -0.0001404971226999785,
+          "tolerance": 0.0017289134009999998,
+          "within": true,
+          "unit": "V"
+        },
+        "swing_span_v": {
+          "harness": 0.743874495,
+          "tool": 0.7438805848008,
+          "delta": 6.089800799968792e-06,
+          "tolerance": 0.003852778495,
+          "within": true,
+          "unit": "V"
+        }
+      },
+      "rows": {
+        "headroom_hi_v": {
+          "bound_min": 0.251,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "headroom_lo_v": {
+          "bound_min": 0.141,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "swing_span_v": {
+          "bound_min": 0.571,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        }
+      }
+    },
+    {
+      "point_id": "mos_ss_27C_1.32V",
+      "process": "mos_ss",
+      "temperature_c": 27,
+      "vdd_v": 1.32,
+      "harness_peak_gain_v_v": 178.529,
+      "metrics": {
+        "vmax_track_v": {
+          "harness": 1.02903242,
+          "tool": 1.029524064352,
+          "delta": 0.000491644351999998,
+          "tolerance": 0.0028153224200000004,
+          "within": true,
+          "unit": "V"
+        },
+        "vmin_track_v": {
+          "harness": 0.180208901,
+          "tool": 0.1798004868378,
+          "delta": -0.00040841416219999926,
+          "tolerance": 0.0019664989010000004,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_hi_v": {
+          "harness": 0.29096758,
+          "tool": 0.2904759356475,
+          "delta": -0.000491644352499987,
+          "tolerance": 0.00207725758,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_lo_v": {
+          "harness": 0.180208901,
+          "tool": 0.1798004868378,
+          "delta": -0.00040841416219999926,
+          "tolerance": 0.0019664989010000004,
+          "within": true,
+          "unit": "V"
+        },
+        "swing_span_v": {
+          "harness": 0.848823519,
+          "tool": 0.8497235775147,
+          "delta": 0.0009000585146999862,
+          "tolerance": 0.004420403519,
+          "within": true,
+          "unit": "V"
+        }
+      },
+      "rows": {
+        "headroom_hi_v": {
+          "bound_min": 0.251,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "headroom_lo_v": {
+          "bound_min": 0.141,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "swing_span_v": {
+          "bound_min": 0.571,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        }
+      }
+    },
+    {
+      "point_id": "mos_ss_125C_1.08V",
+      "process": "mos_ss",
+      "temperature_c": 125,
+      "vdd_v": 1.08,
+      "harness_peak_gain_v_v": 98.9067,
+      "metrics": {
+        "vmax_track_v": {
+          "harness": 0.776986349,
+          "tool": 0.7771306907653,
+          "delta": 0.00014434176529998233,
+          "tolerance": 0.001767053349,
+          "within": true,
+          "unit": "V"
+        },
+        "vmin_track_v": {
+          "harness": 0.206028576,
+          "tool": 0.2061702887889,
+          "delta": 0.00014171278890001693,
+          "tolerance": 0.001196095576,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_hi_v": {
+          "harness": 0.303013651,
+          "tool": 0.3028693092347,
+          "delta": -0.00014434176529998233,
+          "tolerance": 0.001293080651,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_lo_v": {
+          "harness": 0.206028576,
+          "tool": 0.2061702887889,
+          "delta": 0.00014171278890001693,
+          "tolerance": 0.001196095576,
+          "within": true,
+          "unit": "V"
+        },
+        "swing_span_v": {
+          "harness": 0.570957773,
+          "tool": 0.5709604019764,
+          "delta": 2.6289764000209104e-06,
+          "tolerance": 0.0025500917730000004,
+          "within": true,
+          "unit": "V"
+        }
+      },
+      "rows": {
+        "headroom_hi_v": {
+          "bound_min": 0.251,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "headroom_lo_v": {
+          "bound_min": 0.141,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "swing_span_v": {
+          "bound_min": 0.571,
+          "tool_verdict": "fail",
+          "harness_verdict": "fail",
+          "agree": true,
+          "harness_within_tolerance_of_bound": true
+        }
+      }
+    },
+    {
+      "point_id": "mos_ss_125C_1.20V",
+      "process": "mos_ss",
+      "temperature_c": 125,
+      "vdd_v": 1.2,
+      "harness_peak_gain_v_v": 118.8733,
+      "metrics": {
+        "vmax_track_v": {
+          "harness": 0.889388686,
+          "tool": 0.8895189297341,
+          "delta": 0.00013024373409997736,
+          "tolerance": 0.0020791216860000005,
+          "within": true,
+          "unit": "V"
+        },
+        "vmin_track_v": {
+          "harness": 0.215014902,
+          "tool": 0.2151417983321,
+          "delta": 0.00012689633210000162,
+          "tolerance": 0.0014047479020000001,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_hi_v": {
+          "harness": 0.310611314,
+          "tool": 0.3104810702659,
+          "delta": -0.00013024373410003287,
+          "tolerance": 0.001500344314,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_lo_v": {
+          "harness": 0.215014902,
+          "tool": 0.2151417983321,
+          "delta": 0.00012689633210000162,
+          "tolerance": 0.0014047479020000001,
+          "within": true,
+          "unit": "V"
+        },
+        "swing_span_v": {
+          "harness": 0.674373784,
+          "tool": 0.674377131402,
+          "delta": 3.34740199992023e-06,
+          "tolerance": 0.0030528397840000007,
+          "within": true,
+          "unit": "V"
+        }
+      },
+      "rows": {
+        "headroom_hi_v": {
+          "bound_min": 0.251,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "headroom_lo_v": {
+          "bound_min": 0.141,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "swing_span_v": {
+          "bound_min": 0.571,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        }
+      }
+    },
+    {
+      "point_id": "mos_ss_125C_1.32V",
+      "process": "mos_ss",
+      "temperature_c": 125,
+      "vdd_v": 1.32,
+      "harness_peak_gain_v_v": 138.2018,
+      "metrics": {
+        "vmax_track_v": {
+          "harness": 1.0009402,
+          "tool": 1.000518472404,
+          "delta": -0.000421727596000121,
+          "tolerance": 0.0023839582000000003,
+          "within": true,
+          "unit": "V"
+        },
+        "vmin_track_v": {
+          "harness": 0.223073866,
+          "tool": 0.2226474247027,
+          "delta": -0.00042644129730001756,
+          "tolerance": 0.001606091866,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_hi_v": {
+          "harness": 0.3190598,
+          "tool": 0.3194815275959,
+          "delta": 0.0004217275958999789,
+          "tolerance": 0.0017020778,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_lo_v": {
+          "harness": 0.223073866,
+          "tool": 0.2226474247027,
+          "delta": -0.00042644129730001756,
+          "tolerance": 0.001606091866,
+          "within": true,
+          "unit": "V"
+        },
+        "swing_span_v": {
+          "harness": 0.777866334,
+          "tool": 0.7778710477014,
+          "delta": 4.713701399983172e-06,
+          "tolerance": 0.003542902334,
+          "within": true,
+          "unit": "V"
+        }
+      },
+      "rows": {
+        "headroom_hi_v": {
+          "bound_min": 0.251,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "headroom_lo_v": {
+          "bound_min": 0.141,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "swing_span_v": {
+          "bound_min": 0.571,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        }
+      }
+    },
+    {
+      "point_id": "mos_ff_-40C_1.08V",
+      "process": "mos_ff",
+      "temperature_c": -40,
+      "vdd_v": 1.08,
+      "harness_peak_gain_v_v": 149.0624,
+      "metrics": {
+        "vmax_track_v": {
+          "harness": 0.828451945,
+          "tool": 0.8286880958663,
+          "delta": 0.00023615086630002224,
+          "tolerance": 0.002320075945,
+          "within": true,
+          "unit": "V"
+        },
+        "vmin_track_v": {
+          "harness": 0.141167273,
+          "tool": 0.1413949073131,
+          "delta": 0.0002276343130999947,
+          "tolerance": 0.001632791273,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_hi_v": {
+          "harness": 0.251548055,
+          "tool": 0.2513119041337,
+          "delta": -0.00023615086629996673,
+          "tolerance": 0.0017431720549999999,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_lo_v": {
+          "harness": 0.141167273,
+          "tool": 0.1413949073131,
+          "delta": 0.0002276343130999947,
+          "tolerance": 0.001632791273,
+          "within": true,
+          "unit": "V"
+        },
+        "swing_span_v": {
+          "harness": 0.687284672,
+          "tool": 0.6872931885532,
+          "delta": 8.516553199999777e-06,
+          "tolerance": 0.0036695326720000004,
+          "within": true,
+          "unit": "V"
+        }
+      },
+      "rows": {
+        "headroom_hi_v": {
+          "bound_min": 0.251,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": true
+        },
+        "headroom_lo_v": {
+          "bound_min": 0.141,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": true
+        },
+        "swing_span_v": {
+          "bound_min": 0.571,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        }
+      }
+    },
+    {
+      "point_id": "mos_ff_-40C_1.20V",
+      "process": "mos_ff",
+      "temperature_c": -40,
+      "vdd_v": 1.2,
+      "harness_peak_gain_v_v": 169.7686,
+      "metrics": {
+        "vmax_track_v": {
+          "harness": 0.939680341,
+          "tool": 0.9398969300347,
+          "delta": 0.0002165890347000099,
+          "tolerance": 0.0026383663410000004,
+          "within": true,
+          "unit": "V"
+        },
+        "vmin_track_v": {
+          "harness": 0.145818601,
+          "tool": 0.1460256410954,
+          "delta": 0.0002070400954000129,
+          "tolerance": 0.001844504601,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_hi_v": {
+          "harness": 0.260319659,
+          "tool": 0.2601030699653,
+          "delta": -0.00021658903469995439,
+          "tolerance": 0.001959005659,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_lo_v": {
+          "harness": 0.145818601,
+          "tool": 0.1460256410954,
+          "delta": 0.0002070400954000129,
+          "tolerance": 0.001844504601,
+          "within": true,
+          "unit": "V"
+        },
+        "swing_span_v": {
+          "harness": 0.79386174,
+          "tool": 0.7938712889393,
+          "delta": 9.548939300052517e-06,
+          "tolerance": 0.00419023374,
+          "within": true,
+          "unit": "V"
+        }
+      },
+      "rows": {
+        "headroom_hi_v": {
+          "bound_min": 0.251,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "headroom_lo_v": {
+          "bound_min": 0.141,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "swing_span_v": {
+          "bound_min": 0.571,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        }
+      }
+    },
+    {
+      "point_id": "mos_ff_-40C_1.32V",
+      "process": "mos_ff",
+      "temperature_c": -40,
+      "vdd_v": 1.32,
+      "harness_peak_gain_v_v": 193.1734,
+      "metrics": {
+        "vmax_track_v": {
+          "harness": 1.05116497,
+          "tool": 1.051640884002,
+          "delta": 0.00047591400199986644,
+          "tolerance": 0.00298389897,
+          "within": true,
+          "unit": "V"
+        },
+        "vmin_track_v": {
+          "harness": 0.151073158,
+          "tool": 0.1505740370209,
+          "delta": -0.0004991209791000151,
+          "tolerance": 0.0020838071580000003,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_hi_v": {
+          "harness": 0.26883503,
+          "tool": 0.2683591159977,
+          "delta": -0.0004759140022999597,
+          "tolerance": 0.0022015690300000003,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_lo_v": {
+          "harness": 0.151073158,
+          "tool": 0.1505740370209,
+          "delta": -0.0004991209791000151,
+          "tolerance": 0.0020838071580000003,
+          "within": true,
+          "unit": "V"
+        },
+        "swing_span_v": {
+          "harness": 0.900091812,
+          "tool": 0.9010668469815,
+          "delta": 0.0009750349814999781,
+          "tolerance": 0.004764559812,
+          "within": true,
+          "unit": "V"
+        }
+      },
+      "rows": {
+        "headroom_hi_v": {
+          "bound_min": 0.251,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "headroom_lo_v": {
+          "bound_min": 0.141,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "swing_span_v": {
+          "bound_min": 0.571,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        }
+      }
+    },
+    {
+      "point_id": "mos_ff_27C_1.08V",
+      "process": "mos_ff",
+      "temperature_c": 27,
+      "vdd_v": 1.08,
+      "harness_peak_gain_v_v": 122.7478,
+      "metrics": {
+        "vmax_track_v": {
+          "harness": 0.809926816,
+          "tool": 0.8100716021378,
+          "delta": 0.0001447861378000015,
+          "tolerance": 0.0020384048160000004,
+          "within": true,
+          "unit": "V"
+        },
+        "vmin_track_v": {
+          "harness": 0.165630609,
+          "tool": 0.165771109902,
+          "delta": 0.00014050090199999032,
+          "tolerance": 0.0013941086090000002,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_hi_v": {
+          "harness": 0.270073184,
+          "tool": 0.2699283978622,
+          "delta": -0.0001447861378000015,
+          "tolerance": 0.0014985511840000002,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_lo_v": {
+          "harness": 0.165630609,
+          "tool": 0.165771109902,
+          "delta": 0.00014050090199999032,
+          "tolerance": 0.0013941086090000002,
+          "within": true,
+          "unit": "V"
+        },
+        "swing_span_v": {
+          "harness": 0.644296207,
+          "tool": 0.6443004922358,
+          "delta": 4.285235799983411e-06,
+          "tolerance": 0.0031002522070000004,
+          "within": true,
+          "unit": "V"
+        }
+      },
+      "rows": {
+        "headroom_hi_v": {
+          "bound_min": 0.251,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "headroom_lo_v": {
+          "bound_min": 0.141,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "swing_span_v": {
+          "bound_min": 0.571,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        }
+      }
+    },
+    {
+      "point_id": "mos_ff_27C_1.20V",
+      "process": "mos_ff",
+      "temperature_c": 27,
+      "vdd_v": 1.2,
+      "harness_peak_gain_v_v": 141.2728,
+      "metrics": {
+        "vmax_track_v": {
+          "harness": 0.921359303,
+          "tool": 0.9214243146255,
+          "delta": 6.501162549998885e-05,
+          "tolerance": 0.002335087303,
+          "within": true,
+          "unit": "V"
+        },
+        "vmin_track_v": {
+          "harness": 0.171041486,
+          "tool": 0.171100883477,
+          "delta": 5.9397477000011634e-05,
+          "tolerance": 0.001584769486,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_hi_v": {
+          "harness": 0.278640697,
+          "tool": 0.2785756853745,
+          "delta": -6.501162549998885e-05,
+          "tolerance": 0.001692368697,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_lo_v": {
+          "harness": 0.171041486,
+          "tool": 0.171100883477,
+          "delta": 5.9397477000011634e-05,
+          "tolerance": 0.001584769486,
+          "within": true,
+          "unit": "V"
+        },
+        "swing_span_v": {
+          "harness": 0.750317817,
+          "tool": 0.7503234311484,
+          "delta": 5.6141484000571396e-06,
+          "tolerance": 0.0035767738170000003,
+          "within": true,
+          "unit": "V"
+        }
+      },
+      "rows": {
+        "headroom_hi_v": {
+          "bound_min": 0.251,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "headroom_lo_v": {
+          "bound_min": 0.141,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "swing_span_v": {
+          "bound_min": 0.571,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        }
+      }
+    },
+    {
+      "point_id": "mos_ff_27C_1.32V",
+      "process": "mos_ff",
+      "temperature_c": 27,
+      "vdd_v": 1.32,
+      "harness_peak_gain_v_v": 161.9864,
+      "metrics": {
+        "vmax_track_v": {
+          "harness": 1.03230187,
+          "tool": 1.032511487393,
+          "delta": 0.00020961739299996118,
+          "tolerance": 0.0026531658700000003,
+          "within": true,
+          "unit": "V"
+        },
+        "vmin_track_v": {
+          "harness": 0.177377763,
+          "tool": 0.176770411925,
+          "delta": -0.0006073510749999844,
+          "tolerance": 0.001798241763,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_hi_v": {
+          "harness": 0.28769813,
+          "tool": 0.287488512607,
+          "delta": -0.0002096173930000167,
+          "tolerance": 0.00190856213,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_lo_v": {
+          "harness": 0.177377763,
+          "tool": 0.176770411925,
+          "delta": -0.0006073510749999844,
+          "tolerance": 0.001798241763,
+          "within": true,
+          "unit": "V"
+        },
+        "swing_span_v": {
+          "harness": 0.854924107,
+          "tool": 0.8557410754679,
+          "delta": 0.0008169684679000255,
+          "tolerance": 0.004095652107,
+          "within": true,
+          "unit": "V"
+        }
+      },
+      "rows": {
+        "headroom_hi_v": {
+          "bound_min": 0.251,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "headroom_lo_v": {
+          "bound_min": 0.141,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "swing_span_v": {
+          "bound_min": 0.571,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        }
+      }
+    },
+    {
+      "point_id": "mos_ff_125C_1.08V",
+      "process": "mos_ff",
+      "temperature_c": 125,
+      "vdd_v": 1.08,
+      "harness_peak_gain_v_v": 95.3058,
+      "metrics": {
+        "vmax_track_v": {
+          "harness": 0.782845933,
+          "tool": 0.7828695162726,
+          "delta": 2.3583272599991822e-05,
+          "tolerance": 0.001736903933,
+          "within": true,
+          "unit": "V"
+        },
+        "vmin_track_v": {
+          "harness": 0.204549841,
+          "tool": 0.2045710899049,
+          "delta": 2.1248904899989762e-05,
+          "tolerance": 0.001158607841,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_hi_v": {
+          "harness": 0.297154067,
+          "tool": 0.2971304837274,
+          "delta": -2.3583272600047334e-05,
+          "tolerance": 0.0012512120670000002,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_lo_v": {
+          "harness": 0.204549841,
+          "tool": 0.2045710899049,
+          "delta": 2.1248904899989762e-05,
+          "tolerance": 0.001158607841,
+          "within": true,
+          "unit": "V"
+        },
+        "swing_span_v": {
+          "harness": 0.578296092,
+          "tool": 0.5782984263677,
+          "delta": 2.3343677000298158e-06,
+          "tolerance": 0.0024854120920000003,
+          "within": true,
+          "unit": "V"
+        }
+      },
+      "rows": {
+        "headroom_hi_v": {
+          "bound_min": 0.251,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "headroom_lo_v": {
+          "bound_min": 0.141,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "swing_span_v": {
+          "bound_min": 0.571,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        }
+      }
+    },
+    {
+      "point_id": "mos_ff_125C_1.20V",
+      "process": "mos_ff",
+      "temperature_c": 125,
+      "vdd_v": 1.2,
+      "harness_peak_gain_v_v": 113.3535,
+      "metrics": {
+        "vmax_track_v": {
+          "harness": 0.895104189,
+          "tool": 0.8947130432758,
+          "delta": -0.0003911457241999594,
+          "tolerance": 0.0020296391890000003,
+          "within": true,
+          "unit": "V"
+        },
+        "vmin_track_v": {
+          "harness": 0.213037795,
+          "tool": 0.213209996577,
+          "delta": 0.00017220157699998628,
+          "tolerance": 0.0013475727949999999,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_hi_v": {
+          "harness": 0.304895811,
+          "tool": 0.3052869567242,
+          "delta": 0.0003911457241999594,
+          "tolerance": 0.0014394308109999998,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_lo_v": {
+          "harness": 0.213037795,
+          "tool": 0.213209996577,
+          "delta": 0.00017220157699998628,
+          "tolerance": 0.0013475727949999999,
+          "within": true,
+          "unit": "V"
+        },
+        "swing_span_v": {
+          "harness": 0.682066394,
+          "tool": 0.6815030466988,
+          "delta": -0.0005633473012000012,
+          "tolerance": 0.002950136394,
+          "within": true,
+          "unit": "V"
+        }
+      },
+      "rows": {
+        "headroom_hi_v": {
+          "bound_min": 0.251,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "headroom_lo_v": {
+          "bound_min": 0.141,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "swing_span_v": {
+          "bound_min": 0.571,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        }
+      }
+    },
+    {
+      "point_id": "mos_ff_125C_1.32V",
+      "process": "mos_ff",
+      "temperature_c": 125,
+      "vdd_v": 1.32,
+      "harness_peak_gain_v_v": 131.8314,
+      "metrics": {
+        "vmax_track_v": {
+          "harness": 1.00600227,
+          "tool": 1.006275997886,
+          "delta": 0.000273727886000108,
+          "tolerance": 0.0023253162700000002,
+          "within": true,
+          "unit": "V"
+        },
+        "vmin_track_v": {
+          "harness": 0.220771964,
+          "tool": 0.2210415214679,
+          "delta": 0.0002695574679000001,
+          "tolerance": 0.0015400859640000001,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_hi_v": {
+          "harness": 0.31399773,
+          "tool": 0.313724002114,
+          "delta": -0.000273727885999997,
+          "tolerance": 0.00163331173,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_lo_v": {
+          "harness": 0.220771964,
+          "tool": 0.2210415214679,
+          "delta": 0.0002695574679000001,
+          "tolerance": 0.0015400859640000001,
+          "within": true,
+          "unit": "V"
+        },
+        "swing_span_v": {
+          "harness": 0.785230306,
+          "tool": 0.7852344764181,
+          "delta": 4.170418099969098e-06,
+          "tolerance": 0.0034228583060000005,
+          "within": true,
+          "unit": "V"
+        }
+      },
+      "rows": {
+        "headroom_hi_v": {
+          "bound_min": 0.251,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "headroom_lo_v": {
+          "bound_min": 0.141,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "swing_span_v": {
+          "bound_min": 0.571,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        }
+      }
+    },
+    {
+      "point_id": "mos_sf_-40C_1.08V",
+      "process": "mos_sf",
+      "temperature_c": -40,
+      "vdd_v": 1.08,
+      "harness_peak_gain_v_v": 165.7559,
+      "metrics": {
+        "vmax_track_v": {
+          "harness": 0.826536451,
+          "tool": 0.8261105607728,
+          "delta": -0.0004258902271999654,
+          "tolerance": 0.002485095451,
+          "within": true,
+          "unit": "V"
+        },
+        "vmin_track_v": {
+          "harness": 0.14313933,
+          "tool": 0.14353249487,
+          "delta": 0.0003931648699999901,
+          "tolerance": 0.00180169833,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_hi_v": {
+          "harness": 0.253463549,
+          "tool": 0.2538894392272,
+          "delta": 0.0004258902271999654,
+          "tolerance": 0.001912022549,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_lo_v": {
+          "harness": 0.14313933,
+          "tool": 0.14353249487,
+          "delta": 0.0003931648699999901,
+          "tolerance": 0.00180169833,
+          "within": true,
+          "unit": "V"
+        },
+        "swing_span_v": {
+          "harness": 0.683397121,
+          "tool": 0.6825780659029,
+          "delta": -0.0008190550971000077,
+          "tolerance": 0.003999515121,
+          "within": true,
+          "unit": "V"
+        }
+      },
+      "rows": {
+        "headroom_hi_v": {
+          "bound_min": 0.251,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "headroom_lo_v": {
+          "bound_min": 0.141,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "swing_span_v": {
+          "bound_min": 0.571,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        }
+      }
+    },
+    {
+      "point_id": "mos_sf_-40C_1.20V",
+      "process": "mos_sf",
+      "temperature_c": -40,
+      "vdd_v": 1.2,
+      "harness_peak_gain_v_v": 192.6085,
+      "metrics": {
+        "vmax_track_v": {
+          "harness": 0.937327623,
+          "tool": 0.93778300223,
+          "delta": 0.0004553792299999415,
+          "tolerance": 0.0028644126230000003,
+          "within": true,
+          "unit": "V"
+        },
+        "vmin_track_v": {
+          "harness": 0.147973051,
+          "tool": 0.1484178441735,
+          "delta": 0.0004447931735000188,
+          "tolerance": 0.002075058051,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_hi_v": {
+          "harness": 0.262672377,
+          "tool": 0.26221699777,
+          "delta": -0.000455379229999997,
+          "tolerance": 0.0021897573770000003,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_lo_v": {
+          "harness": 0.147973051,
+          "tool": 0.1484178441735,
+          "delta": 0.0004447931735000188,
+          "tolerance": 0.002075058051,
+          "within": true,
+          "unit": "V"
+        },
+        "swing_span_v": {
+          "harness": 0.789354572,
+          "tool": 0.7893651580565,
+          "delta": 1.058605649995048e-05,
+          "tolerance": 0.004642524572000001,
+          "within": true,
+          "unit": "V"
+        }
+      },
+      "rows": {
+        "headroom_hi_v": {
+          "bound_min": 0.251,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "headroom_lo_v": {
+          "bound_min": 0.141,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "swing_span_v": {
+          "bound_min": 0.571,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        }
+      }
+    },
+    {
+      "point_id": "mos_sf_-40C_1.32V",
+      "process": "mos_sf",
+      "temperature_c": -40,
+      "vdd_v": 1.32,
+      "harness_peak_gain_v_v": 220.1891,
+      "metrics": {
+        "vmax_track_v": {
+          "harness": 1.04888873,
+          "tool": 1.048991891785,
+          "delta": 0.0001031617850000277,
+          "tolerance": 0.0032517797300000003,
+          "within": true,
+          "unit": "V"
+        },
+        "vmin_track_v": {
+          "harness": 0.153217719,
+          "tool": 0.1533073108545,
+          "delta": 8.959185449999851e-05,
+          "tolerance": 0.002356108719,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_hi_v": {
+          "harness": 0.27111127,
+          "tool": 0.271008108215,
+          "delta": -0.0001031617850000277,
+          "tolerance": 0.00247400227,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_lo_v": {
+          "harness": 0.153217719,
+          "tool": 0.1533073108545,
+          "delta": 8.959185449999851e-05,
+          "tolerance": 0.002356108719,
+          "within": true,
+          "unit": "V"
+        },
+        "swing_span_v": {
+          "harness": 0.895671011,
+          "tool": 0.8956845809304,
+          "delta": 1.3569930400025854e-05,
+          "tolerance": 0.0053004530110000005,
+          "within": true,
+          "unit": "V"
+        }
+      },
+      "rows": {
+        "headroom_hi_v": {
+          "bound_min": 0.251,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "headroom_lo_v": {
+          "bound_min": 0.141,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "swing_span_v": {
+          "bound_min": 0.571,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        }
+      }
+    },
+    {
+      "point_id": "mos_sf_27C_1.08V",
+      "process": "mos_sf",
+      "temperature_c": 27,
+      "vdd_v": 1.08,
+      "harness_peak_gain_v_v": 135.5601,
+      "metrics": {
+        "vmax_track_v": {
+          "harness": 0.807640072,
+          "tool": 0.807904146199,
+          "delta": 0.0002640741989999862,
+          "tolerance": 0.0021642410720000005,
+          "within": true,
+          "unit": "V"
+        },
+        "vmin_track_v": {
+          "harness": 0.167043274,
+          "tool": 0.1673009455039,
+          "delta": 0.0002576715039000199,
+          "tolerance": 0.001523644274,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_hi_v": {
+          "harness": 0.272359928,
+          "tool": 0.272095853801,
+          "delta": -0.0002640741989999862,
+          "tolerance": 0.001628960928,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_lo_v": {
+          "harness": 0.167043274,
+          "tool": 0.1673009455039,
+          "delta": 0.0002576715039000199,
+          "tolerance": 0.001523644274,
+          "within": true,
+          "unit": "V"
+        },
+        "swing_span_v": {
+          "harness": 0.640596798,
+          "tool": 0.6406032006952,
+          "delta": 6.402695200025121e-06,
+          "tolerance": 0.0033527987980000004,
+          "within": true,
+          "unit": "V"
+        }
+      },
+      "rows": {
+        "headroom_hi_v": {
+          "bound_min": 0.251,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "headroom_lo_v": {
+          "bound_min": 0.141,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "swing_span_v": {
+          "bound_min": 0.571,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        }
+      }
+    },
+    {
+      "point_id": "mos_sf_27C_1.20V",
+      "process": "mos_sf",
+      "temperature_c": 27,
+      "vdd_v": 1.2,
+      "harness_peak_gain_v_v": 157.8013,
+      "metrics": {
+        "vmax_track_v": {
+          "harness": 0.918763597,
+          "tool": 0.9186252746769,
+          "delta": -0.00013832232309995973,
+          "tolerance": 0.002497776597,
+          "within": true,
+          "unit": "V"
+        },
+        "vmin_track_v": {
+          "harness": 0.172893464,
+          "tool": 0.172749035509,
+          "delta": -0.00014442849099999266,
+          "tolerance": 0.001751906464,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_hi_v": {
+          "harness": 0.281236403,
+          "tool": 0.2813747253231,
+          "delta": 0.00013832232309995973,
+          "tolerance": 0.001860249403,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_lo_v": {
+          "harness": 0.172893464,
+          "tool": 0.172749035509,
+          "delta": -0.00014442849099999266,
+          "tolerance": 0.001751906464,
+          "within": true,
+          "unit": "V"
+        },
+        "swing_span_v": {
+          "harness": 0.745870133,
+          "tool": 0.7458762391679,
+          "delta": 6.106167899977422e-06,
+          "tolerance": 0.0039028961330000002,
+          "within": true,
+          "unit": "V"
+        }
+      },
+      "rows": {
+        "headroom_hi_v": {
+          "bound_min": 0.251,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "headroom_lo_v": {
+          "bound_min": 0.141,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "swing_span_v": {
+          "bound_min": 0.571,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        }
+      }
+    },
+    {
+      "point_id": "mos_sf_27C_1.32V",
+      "process": "mos_sf",
+      "temperature_c": 27,
+      "vdd_v": 1.32,
+      "harness_peak_gain_v_v": 181.6167,
+      "metrics": {
+        "vmax_track_v": {
+          "harness": 1.03030975,
+          "tool": 1.03071336377,
+          "delta": 0.00040361376999986653,
+          "tolerance": 0.0028474767500000003,
+          "within": true,
+          "unit": "V"
+        },
+        "vmin_track_v": {
+          "harness": 0.179362773,
+          "tool": 0.1788508005986,
+          "delta": -0.000511972401399996,
+          "tolerance": 0.0019965297730000003,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_hi_v": {
+          "harness": 0.28969025,
+          "tool": 0.2892866362305,
+          "delta": -0.0004036137694999886,
+          "tolerance": 0.0021068572500000005,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_lo_v": {
+          "harness": 0.179362773,
+          "tool": 0.1788508005986,
+          "delta": -0.000511972401399996,
+          "tolerance": 0.0019965297730000003,
+          "within": true,
+          "unit": "V"
+        },
+        "swing_span_v": {
+          "harness": 0.850946977,
+          "tool": 0.8518625631709,
+          "delta": 0.0009155861709000401,
+          "tolerance": 0.004484280977000001,
+          "within": true,
+          "unit": "V"
+        }
+      },
+      "rows": {
+        "headroom_hi_v": {
+          "bound_min": 0.251,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "headroom_lo_v": {
+          "bound_min": 0.141,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "swing_span_v": {
+          "bound_min": 0.571,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        }
+      }
+    },
+    {
+      "point_id": "mos_sf_125C_1.08V",
+      "process": "mos_sf",
+      "temperature_c": 125,
+      "vdd_v": 1.08,
+      "harness_peak_gain_v_v": 106.3684,
+      "metrics": {
+        "vmax_track_v": {
+          "harness": 0.782015545,
+          "tool": 0.781905151598,
+          "delta": -0.00011039340200003078,
+          "tolerance": 0.001846699545,
+          "within": true,
+          "unit": "V"
+        },
+        "vmin_track_v": {
+          "harness": 0.206837796,
+          "tool": 0.2072563975835,
+          "delta": 0.00041860158350001675,
+          "tolerance": 0.001271521796,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_hi_v": {
+          "harness": 0.297984455,
+          "tool": 0.298094848402,
+          "delta": 0.00011039340200003078,
+          "tolerance": 0.001362668455,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_lo_v": {
+          "harness": 0.206837796,
+          "tool": 0.2072563975835,
+          "delta": 0.00041860158350001675,
+          "tolerance": 0.001271521796,
+          "within": true,
+          "unit": "V"
+        },
+        "swing_span_v": {
+          "harness": 0.575177749,
+          "tool": 0.5746487540144,
+          "delta": -0.0005289949855999954,
+          "tolerance": 0.0027035457490000004,
+          "within": true,
+          "unit": "V"
+        }
+      },
+      "rows": {
+        "headroom_hi_v": {
+          "bound_min": 0.251,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "headroom_lo_v": {
+          "bound_min": 0.141,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "swing_span_v": {
+          "bound_min": 0.571,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        }
+      }
+    },
+    {
+      "point_id": "mos_sf_125C_1.20V",
+      "process": "mos_sf",
+      "temperature_c": 125,
+      "vdd_v": 1.2,
+      "harness_peak_gain_v_v": 125.2421,
+      "metrics": {
+        "vmax_track_v": {
+          "harness": 0.892865514,
+          "tool": 0.8930273541979,
+          "delta": 0.00016184019789999837,
+          "tolerance": 0.0021462865140000004,
+          "within": true,
+          "unit": "V"
+        },
+        "vmin_track_v": {
+          "harness": 0.214542962,
+          "tool": 0.214700520647,
+          "delta": 0.00015755864699998345,
+          "tolerance": 0.001467963962,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_hi_v": {
+          "harness": 0.307134486,
+          "tool": 0.3069726458021,
+          "delta": -0.00016184019789999837,
+          "tolerance": 0.001560555486,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_lo_v": {
+          "harness": 0.214542962,
+          "tool": 0.214700520647,
+          "delta": 0.00015755864699998345,
+          "tolerance": 0.001467963962,
+          "within": true,
+          "unit": "V"
+        },
+        "swing_span_v": {
+          "harness": 0.678322552,
+          "tool": 0.6783268335508,
+          "delta": 4.28155080001158e-06,
+          "tolerance": 0.003184164552,
+          "within": true,
+          "unit": "V"
+        }
+      },
+      "rows": {
+        "headroom_hi_v": {
+          "bound_min": 0.251,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "headroom_lo_v": {
+          "bound_min": 0.141,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "swing_span_v": {
+          "bound_min": 0.571,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        }
+      }
+    },
+    {
+      "point_id": "mos_sf_125C_1.32V",
+      "process": "mos_sf",
+      "temperature_c": 125,
+      "vdd_v": 1.32,
+      "harness_peak_gain_v_v": 145.485,
+      "metrics": {
+        "vmax_track_v": {
+          "harness": 1.00444559,
+          "tool": 1.004329911071,
+          "delta": -0.00011567892899999599,
+          "tolerance": 0.0024602955900000006,
+          "within": true,
+          "unit": "V"
+        },
+        "vmin_track_v": {
+          "harness": 0.222671844,
+          "tool": 0.2225509946878,
+          "delta": -0.00012084931219999429,
+          "tolerance": 0.001678521844,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_hi_v": {
+          "harness": 0.31555441,
+          "tool": 0.3156700889287,
+          "delta": 0.00011567892870001373,
+          "tolerance": 0.0017714044100000002,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_lo_v": {
+          "harness": 0.222671844,
+          "tool": 0.2225509946878,
+          "delta": -0.00012084931219999429,
+          "tolerance": 0.001678521844,
+          "within": true,
+          "unit": "V"
+        },
+        "swing_span_v": {
+          "harness": 0.781773746,
+          "tool": 0.7817789163836,
+          "delta": 5.170383599928385e-06,
+          "tolerance": 0.0036924737460000004,
+          "within": true,
+          "unit": "V"
+        }
+      },
+      "rows": {
+        "headroom_hi_v": {
+          "bound_min": 0.251,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "headroom_lo_v": {
+          "bound_min": 0.141,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "swing_span_v": {
+          "bound_min": 0.571,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        }
+      }
+    },
+    {
+      "point_id": "mos_fs_-40C_1.08V",
+      "process": "mos_fs",
+      "temperature_c": -40,
+      "vdd_v": 1.08,
+      "harness_peak_gain_v_v": 143.3895,
+      "metrics": {
+        "vmax_track_v": {
+          "harness": 0.828508872,
+          "tool": 0.8288128566534,
+          "delta": 0.00030398465339998015,
+          "tolerance": 0.002263403872,
+          "within": true,
+          "unit": "V"
+        },
+        "vmin_track_v": {
+          "harness": 0.142523569,
+          "tool": 0.1428207841492,
+          "delta": 0.000297215149200003,
+          "tolerance": 0.001577418569,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_hi_v": {
+          "harness": 0.251491128,
+          "tool": 0.2511871433466,
+          "delta": -0.00030398465340003566,
+          "tolerance": 0.0016863861280000001,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_lo_v": {
+          "harness": 0.142523569,
+          "tool": 0.1428207841492,
+          "delta": 0.000297215149200003,
+          "tolerance": 0.001577418569,
+          "within": true,
+          "unit": "V"
+        },
+        "swing_span_v": {
+          "harness": 0.685985303,
+          "tool": 0.6859920725042,
+          "delta": 6.769504199977128e-06,
+          "tolerance": 0.0035547753030000006,
+          "within": true,
+          "unit": "V"
+        }
+      },
+      "rows": {
+        "headroom_hi_v": {
+          "bound_min": 0.251,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": true
+        },
+        "headroom_lo_v": {
+          "bound_min": 0.141,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": true
+        },
+        "swing_span_v": {
+          "bound_min": 0.571,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        }
+      }
+    },
+    {
+      "point_id": "mos_fs_-40C_1.20V",
+      "process": "mos_fs",
+      "temperature_c": -40,
+      "vdd_v": 1.2,
+      "harness_peak_gain_v_v": 163.4196,
+      "metrics": {
+        "vmax_track_v": {
+          "harness": 0.939991798,
+          "tool": 0.9403219189901,
+          "delta": 0.0003301209900999913,
+          "tolerance": 0.0025751877980000003,
+          "within": true,
+          "unit": "V"
+        },
+        "vmin_track_v": {
+          "harness": 0.147797142,
+          "tool": 0.1473023132916,
+          "delta": -0.0004948287083999803,
+          "tolerance": 0.001782993142,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_hi_v": {
+          "harness": 0.260008202,
+          "tool": 0.2596780810099,
+          "delta": -0.0003301209901000468,
+          "tolerance": 0.001895204202,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_lo_v": {
+          "harness": 0.147797142,
+          "tool": 0.1473023132916,
+          "delta": -0.0004948287083999803,
+          "tolerance": 0.001782993142,
+          "within": true,
+          "unit": "V"
+        },
+        "swing_span_v": {
+          "harness": 0.792194656,
+          "tool": 0.7930196056984,
+          "delta": 0.0008249496983999682,
+          "tolerance": 0.004061586656000001,
+          "within": true,
+          "unit": "V"
+        }
+      },
+      "rows": {
+        "headroom_hi_v": {
+          "bound_min": 0.251,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "headroom_lo_v": {
+          "bound_min": 0.141,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "swing_span_v": {
+          "bound_min": 0.571,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        }
+      }
+    },
+    {
+      "point_id": "mos_fs_-40C_1.32V",
+      "process": "mos_fs",
+      "temperature_c": -40,
+      "vdd_v": 1.32,
+      "harness_peak_gain_v_v": 185.0516,
+      "metrics": {
+        "vmax_track_v": {
+          "harness": 1.05135556,
+          "tool": 1.051470933187,
+          "delta": 0.00011537318700005628,
+          "tolerance": 0.0029028715600000004,
+          "within": true,
+          "unit": "V"
+        },
+        "vmin_track_v": {
+          "harness": 0.152834617,
+          "tool": 0.1520151219857,
+          "delta": -0.000819495014300009,
+          "tolerance": 0.0020043506170000004,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_hi_v": {
+          "harness": 0.26864444,
+          "tool": 0.2685290668127,
+          "delta": -0.00011537318729998303,
+          "tolerance": 0.0021201604400000003,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_lo_v": {
+          "harness": 0.152834617,
+          "tool": 0.1520151219857,
+          "delta": -0.000819495014300009,
+          "tolerance": 0.0020043506170000004,
+          "within": true,
+          "unit": "V"
+        },
+        "swing_span_v": {
+          "harness": 0.898520943,
+          "tool": 0.8994558112016,
+          "delta": 0.0009348682016000476,
+          "tolerance": 0.004600552943000001,
+          "within": true,
+          "unit": "V"
+        }
+      },
+      "rows": {
+        "headroom_hi_v": {
+          "bound_min": 0.251,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "headroom_lo_v": {
+          "bound_min": 0.141,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "swing_span_v": {
+          "bound_min": 0.571,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        }
+      }
+    },
+    {
+      "point_id": "mos_fs_27C_1.08V",
+      "process": "mos_fs",
+      "temperature_c": 27,
+      "vdd_v": 1.08,
+      "harness_peak_gain_v_v": 113.454,
+      "metrics": {
+        "vmax_track_v": {
+          "harness": 0.806178448,
+          "tool": 0.8065878527353,
+          "delta": 0.00040940473529993415,
+          "tolerance": 0.001941718448,
+          "within": true,
+          "unit": "V"
+        },
+        "vmin_track_v": {
+          "harness": 0.165377459,
+          "tool": 0.1657829993944,
+          "delta": 0.0004055403943999947,
+          "tolerance": 0.001300917459,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_hi_v": {
+          "harness": 0.273821552,
+          "tool": 0.2734121472647,
+          "delta": -0.0004094047353000452,
+          "tolerance": 0.001409361552,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_lo_v": {
+          "harness": 0.165377459,
+          "tool": 0.1657829993944,
+          "delta": 0.0004055403943999947,
+          "tolerance": 0.001300917459,
+          "within": true,
+          "unit": "V"
+        },
+        "swing_span_v": {
+          "harness": 0.640800989,
+          "tool": 0.6408048533409,
+          "delta": 3.864340899939478e-06,
+          "tolerance": 0.002910880989,
+          "within": true,
+          "unit": "V"
+        }
+      },
+      "rows": {
+        "headroom_hi_v": {
+          "bound_min": 0.251,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "headroom_lo_v": {
+          "bound_min": 0.141,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "swing_span_v": {
+          "bound_min": 0.571,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        }
+      }
+    },
+    {
+      "point_id": "mos_fs_27C_1.20V",
+      "process": "mos_fs",
+      "temperature_c": 27,
+      "vdd_v": 1.2,
+      "harness_peak_gain_v_v": 132.485,
+      "metrics": {
+        "vmax_track_v": {
+          "harness": 0.919539147,
+          "tool": 0.9192714734685,
+          "delta": -0.00026767353149992346,
+          "tolerance": 0.0022453891470000003,
+          "within": true,
+          "unit": "V"
+        },
+        "vmin_track_v": {
+          "harness": 0.172649487,
+          "tool": 0.1723764928275,
+          "delta": -0.00027299417249998514,
+          "tolerance": 0.0014984994870000001,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_hi_v": {
+          "harness": 0.280460853,
+          "tool": 0.2807285265315,
+          "delta": 0.00026767353149997897,
+          "tolerance": 0.0016063108530000002,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_lo_v": {
+          "harness": 0.172649487,
+          "tool": 0.1723764928275,
+          "delta": -0.00027299417249998514,
+          "tolerance": 0.0014984994870000001,
+          "within": true,
+          "unit": "V"
+        },
+        "swing_span_v": {
+          "harness": 0.74688966,
+          "tool": 0.746894980641,
+          "delta": 5.3206410000061766e-06,
+          "tolerance": 0.0033975896600000007,
+          "within": true,
+          "unit": "V"
+        }
+      },
+      "rows": {
+        "headroom_hi_v": {
+          "bound_min": 0.251,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "headroom_lo_v": {
+          "bound_min": 0.141,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "swing_span_v": {
+          "bound_min": 0.571,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        }
+      }
+    },
+    {
+      "point_id": "mos_fs_27C_1.32V",
+      "process": "mos_fs",
+      "temperature_c": 27,
+      "vdd_v": 1.32,
+      "harness_peak_gain_v_v": 151.4539,
+      "metrics": {
+        "vmax_track_v": {
+          "harness": 1.03062212,
+          "tool": 1.030751664697,
+          "delta": 0.0001295446969999947,
+          "tolerance": 0.0025461611200000003,
+          "within": true,
+          "unit": "V"
+        },
+        "vmin_track_v": {
+          "harness": 0.17796977,
+          "tool": 0.1780928705145,
+          "delta": 0.00012310051450001303,
+          "tolerance": 0.00169350877,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_hi_v": {
+          "harness": 0.28937788,
+          "tool": 0.2892483353027,
+          "delta": -0.00012954469729997697,
+          "tolerance": 0.00180491688,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_lo_v": {
+          "harness": 0.17796977,
+          "tool": 0.1780928705145,
+          "delta": 0.00012310051450001303,
+          "tolerance": 0.00169350877,
+          "within": true,
+          "unit": "V"
+        },
+        "swing_span_v": {
+          "harness": 0.85265235,
+          "tool": 0.8526587941828,
+          "delta": 6.444182800047216e-06,
+          "tolerance": 0.0038827303500000004,
+          "within": true,
+          "unit": "V"
+        }
+      },
+      "rows": {
+        "headroom_hi_v": {
+          "bound_min": 0.251,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "headroom_lo_v": {
+          "bound_min": 0.141,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "swing_span_v": {
+          "bound_min": 0.571,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        }
+      }
+    },
+    {
+      "point_id": "mos_fs_125C_1.08V",
+      "process": "mos_fs",
+      "temperature_c": 125,
+      "vdd_v": 1.08,
+      "harness_peak_gain_v_v": 79.6854,
+      "metrics": {
+        "vmax_track_v": {
+          "harness": 0.772224158,
+          "tool": 0.7723277147239,
+          "delta": 0.00010355672390005566,
+          "tolerance": 0.001570078158,
+          "within": true,
+          "unit": "V"
+        },
+        "vmin_track_v": {
+          "harness": 0.200138,
+          "tool": 0.2002397519176,
+          "delta": 0.00010175191759997926,
+          "tolerance": 0.000997992,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_hi_v": {
+          "harness": 0.307775842,
+          "tool": 0.3076722852761,
+          "delta": -0.00010355672390000015,
+          "tolerance": 0.001105629842,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_lo_v": {
+          "harness": 0.200138,
+          "tool": 0.2002397519176,
+          "delta": 0.00010175191759997926,
+          "tolerance": 0.000997992,
+          "within": true,
+          "unit": "V"
+        },
+        "swing_span_v": {
+          "harness": 0.572086158,
+          "tool": 0.5720879628063,
+          "delta": 1.8048063000764003e-06,
+          "tolerance": 0.0021667941580000003,
+          "within": true,
+          "unit": "V"
+        }
+      },
+      "rows": {
+        "headroom_hi_v": {
+          "bound_min": 0.251,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "headroom_lo_v": {
+          "bound_min": 0.141,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "swing_span_v": {
+          "bound_min": 0.571,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": true
+        }
+      }
+    },
+    {
+      "point_id": "mos_fs_125C_1.20V",
+      "process": "mos_fs",
+      "temperature_c": 125,
+      "vdd_v": 1.2,
+      "harness_peak_gain_v_v": 101.6389,
+      "metrics": {
+        "vmax_track_v": {
+          "harness": 0.889680449,
+          "tool": 0.8894633185905,
+          "delta": -0.0002171304094999993,
+          "tolerance": 0.0019070694490000001,
+          "within": true,
+          "unit": "V"
+        },
+        "vmin_track_v": {
+          "harness": 0.212326742,
+          "tool": 0.2126152667793,
+          "delta": 0.00028852477929999787,
+          "tolerance": 0.001229715742,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_hi_v": {
+          "harness": 0.310319551,
+          "tool": 0.3105366814095,
+          "delta": 0.0002171304094999993,
+          "tolerance": 0.0013277085510000001,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_lo_v": {
+          "harness": 0.212326742,
+          "tool": 0.2126152667793,
+          "delta": 0.00028852477929999787,
+          "tolerance": 0.001229715742,
+          "within": true,
+          "unit": "V"
+        },
+        "swing_span_v": {
+          "harness": 0.677353707,
+          "tool": 0.6768480518112,
+          "delta": -0.0005056551887999694,
+          "tolerance": 0.0027111317070000005,
+          "within": true,
+          "unit": "V"
+        }
+      },
+      "rows": {
+        "headroom_hi_v": {
+          "bound_min": 0.251,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "headroom_lo_v": {
+          "bound_min": 0.141,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "swing_span_v": {
+          "bound_min": 0.571,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        }
+      }
+    },
+    {
+      "point_id": "mos_fs_125C_1.32V",
+      "process": "mos_fs",
+      "temperature_c": 125,
+      "vdd_v": 1.32,
+      "harness_peak_gain_v_v": 119.6093,
+      "metrics": {
+        "vmax_track_v": {
+          "harness": 1.00210032,
+          "tool": 1.001695277963,
+          "delta": -0.0004050420370000918,
+          "tolerance": 0.0021991933200000004,
+          "within": true,
+          "unit": "V"
+        },
+        "vmin_track_v": {
+          "harness": 0.220964829,
+          "tool": 0.2211547036623,
+          "delta": 0.00018987466229999916,
+          "tolerance": 0.001418057829,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_hi_v": {
+          "harness": 0.31789968,
+          "tool": 0.3183047220367,
+          "delta": 0.0004050420366999985,
+          "tolerance": 0.00151499268,
+          "within": true,
+          "unit": "V"
+        },
+        "headroom_lo_v": {
+          "harness": 0.220964829,
+          "tool": 0.2211547036623,
+          "delta": 0.00018987466229999916,
+          "tolerance": 0.001418057829,
+          "within": true,
+          "unit": "V"
+        },
+        "swing_span_v": {
+          "harness": 0.781135491,
+          "tool": 0.780540574301,
+          "delta": -0.0005949166990000254,
+          "tolerance": 0.003174321491,
+          "within": true,
+          "unit": "V"
+        }
+      },
+      "rows": {
+        "headroom_hi_v": {
+          "bound_min": 0.251,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "headroom_lo_v": {
+          "bound_min": 0.141,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        },
+        "swing_span_v": {
+          "bound_min": 0.571,
+          "tool_verdict": "pass",
+          "harness_verdict": "pass",
+          "agree": true,
+          "harness_within_tolerance_of_bound": false
+        }
+      }
+    }
+  ],
+  "status": "agree",
+  "inputs": {
+    "envelope": {
+      "path": "sim/output-swing/klt/records/20261101-010941-b7a1a86.sim.json",
+      "sha256": "04bf0f9813e4a264fe85a9c4df21b7889ba1d2ee5b037825e66c16f80963e386"
+    },
+    "harness_csv": {
+      "path": "sim/output-swing/records/20260921-151759-707b34c.csv",
+      "sha256": "d84349f59b65c83576e75a8a8b26123f14c79737f6aadd6680f6fdb0addee172"
+    }
+  },
+  "provenance": {
+    "record_id": "20261101-010941-b7a1a86",
+    "repo_git_sha": "b7a1a86",
+    "klt_client_version": "klt 0.8.0",
+    "host_ngspice": "ngspice-46",
+    "command": "uvx --from klayout-tools==0.8.0 klt sim swing.request.json --backend batch --format json",
+    "request_sha256": "a8865f182dffe9096c54a548567cb14cfeb081e9a5bcd5b17531e7fe6dd0e6e5",
+    "remote": "{\"provider\": \"aws-batch-fleet\", \"job_id\": \"klt-sim-567c2d463d1a\", \"region\": \"us-east-1\", \"instance_id\": \"i-080e0d6d60659ba1d\", \"instance_type\": \"c7i.4xlarge\", \"availability_zone\": \"us-east-1b\", \"ami_id\": \"ami-0fa5ef830209100bd\", \"lifecycle\": \"spot\", \"spot\": true, \"state\": \"failed\", \"exit_code\": \"3\", \"concurrency\": \"1\", \"physical_cores\": \"8\", \"elapsed_seconds\": 1429, \"client_submitted_at\": null, \"client_launched_at\": null, \"client_status_terminal_at\": \"2026-11-01T01:15:51.791560Z\", \"client_collected_at\": \"2026-11-01T01:15:52.557493Z\", \"runner_klt_version\": \"0.8.0\", \"client_klt_version\": \"0.8.0\", \"runner_compatibility\": \"match\", \"runner_request_features\": {\"required\": [\"measurements[].expr\", \"corners.process[].sections[]\", \"options.ngspice_init\", \"options.osdi_preload\", \"options.stage_model_inputs\"], \"missing\": [], \"status\": \"supported\"}, \"worker_environment\": {\"capture\": \"ok\", \"simulator\": {\"requested_binary\": \"ngspice\", \"binary_source\": \"PATH\", \"selected_path\": \"/usr/local/bin/ngspice\", \"version_banner\": \"******\\n** ngspice-46 : Circuit level simulation program\\n** Compiled with KLU Direct Linear Solver\\n** The U. C. Berkeley CAD Group\\n** Copyright 1985-1994, Regents of the University of California.\\n** Copyright 2001-2025, The ngspice team.\\n** Please get your ngspice manual from https://ngspice.sourceforge.io/docs.html\\n** Please file your bug-reports at http://ngspice.sourceforge.net/bugrep.html\\n** Creation Date: Thu Oct  1 23:51:59 UTC 2026\\n******\\n\", \"version_probe\": \"ok\"}, \"pdk\": {\"variant\": \"ihp-sg13g2\", \"root\": \"/opt/pdk\", \"stamp_scheme\": null, \"stamp_sha256\": null, \"stamp_text\": null, \"models_staged\": true, \"stamp_scope\": \"image\"}, \"cpu_model\": \"Intel(R) Xeon(R) Platinum 8488C\", \"omp_num_threads\": null, \"image_manifest\": null, \"model_inputs\": [{\"name\": \"cornerMOSlv.lib\", \"sha256\": \"07f15f24b990ab9eff8e1000457ad180a5199b48fc17217ac3572bdcdfbf5f72\"}, {\"name\": \"cornerCAP.lib\", \"sha256\": \"b4f1beef8a6723b1bea9866bfe96730d0e01660232a39ab3dd9c256df4116109\"}, {\"name\": \"sg13g2_moslv_mod.lib\", \"sha256\": \"0aa1a5630a7c8fb8ae896c57c475954ff5885c4831311f8cd9c9e64d6cbb8332\"}, {\"name\": \"sg13g2_moslv_mismatch.lib\", \"sha256\": \"2d3251e2d42eadb0f8af152a4915fdc60a68bceb95a2d17a52f90cfb34b7e63e\"}, {\"name\": \"sg13g2_moslv_mod_mismatch.lib\", \"sha256\": \"28f681005831113ad5377f1b867d8869b78f329a7f52aa821ff56aa1e648b68b\"}, {\"name\": \"sg13g2_moslv_stat.lib\", \"sha256\": \"7f4cf8df714e327348ba3975a2630e9d7dd7ae1a7a88817df4890e82745f0f52\"}, {\"name\": \"capacitors_mod.lib\", \"sha256\": \"94b569e695fd8a223a5a49a5b5a6b0d8a62408820bf0c2ed9dbcb0a8ab7d957e\"}, {\"name\": \"capacitors_mod_mismatch.lib\", \"sha256\": \"8ebc8369966951cfec0e91d603685f1975fbf9ceff2eef493a25357ce9ae5492\"}, {\"name\": \"capacitors_stat.lib\", \"sha256\": \"68d2ef41174bcfae5997b355c4fd3dbe4f2b8ec4be30ff79d474052b3be1715a\"}, {\"name\": \"sg13g2_moslv_parm.lib\", \"sha256\": \"cbf10b8453a18bb70b8ad0d6e40faa0937338e699b5460947a94900db6c92a6e\"}], \"diagnostics\": [\"pdk stamp unreadable: FileNotFoundError\"], \"pdk_stamp_comparison\": {\"basis\": \"staged_model_inputs\", \"status\": \"match\"}, \"engine_build_comparison\": {\"status\": \"mismatch\", \"warning\": \"the worker's ngspice --version banner differs from the local binary's; build options (e.g. FFT linkage) may differ, so results derived from them can differ from a local run\"}}, \"runner_model_inputs\": [{\"name\": \"cornerMOSlv.lib\", \"sha256\": \"07f15f24b990ab9eff8e1000457ad180a5199b48fc17217ac3572bdcdfbf5f72\"}, {\"name\": \"cornerCAP.lib\", \"sha256\": \"b4f1beef8a6723b1bea9866bfe96730d0e01660232a39ab3dd9c256df4116109\"}, {\"name\": \"sg13g2_moslv_mod.lib\", \"sha256\": \"0aa1a5630a7c8fb8ae896c57c475954ff5885c4831311f8cd9c9e64d6cbb8332\"}, {\"name\": \"sg13g2_moslv_mismatch.lib\", \"sha256\": \"2d3251e2d42eadb0f8af152a4915fdc60a68bceb95a2d17a52f90cfb34b7e63e\"}, {\"name\": \"sg13g2_moslv_mod_mismatch.lib\", \"sha256\": \"28f681005831113ad5377f1b867d8869b78f329a7f52aa821ff56aa1e648b68b\"}, {\"name\": \"sg13g2_moslv_stat.lib\", \"sha256\": \"7f4cf8df714e327348ba3975a2630e9d7dd7ae1a7a88817df4890e82745f0f52\"}, {\"name\": \"capacitors_mod.lib\", \"sha256\": \"94b569e695fd8a223a5a49a5b5a6b0d8a62408820bf0c2ed9dbcb0a8ab7d957e\"}, {\"name\": \"capacitors_mod_mismatch.lib\", \"sha256\": \"8ebc8369966951cfec0e91d603685f1975fbf9ceff2eef493a25357ce9ae5492\"}, {\"name\": \"capacitors_stat.lib\", \"sha256\": \"68d2ef41174bcfae5997b355c4fd3dbe4f2b8ec4be30ff79d474052b3be1715a\"}, {\"name\": \"sg13g2_moslv_parm.lib\", \"sha256\": \"cbf10b8453a18bb70b8ad0d6e40faa0937338e699b5460947a94900db6c92a6e\"}]}",
+    "pdk": "ihp-sg13g2 0.3.0"
+  }
+}

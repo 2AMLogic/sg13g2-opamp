@@ -1,0 +1,3118 @@
+{
+  "schema_version": 3,
+  "netlist": {
+    "path": "sim/cmrr-psrr/klt/tb_psrr_direct.body.spice",
+    "scope": "repo"
+  },
+  "status": "pass",
+  "corner_count": 45,
+  "passed": 45,
+  "failed": 0,
+  "errored": 0,
+  "inconclusive": 0,
+  "diagnostic_counts": {
+    "by_code": {},
+    "by_severity": {},
+    "corners_with_diagnostics": 0
+  },
+  "metrics": {
+    "sim__corner__count": 45,
+    "sim__corner__passed_count": 45,
+    "sim__corner__failed_count": 0,
+    "sim__corner__errored_count": 0,
+    "sim__corner__inconclusive_count": 0
+  },
+  "environment": {
+    "engine": "ngspice",
+    "engine_version": "46",
+    "ngspice_binary": "/usr/bin/ngspice",
+    "models_lib": {
+      "path": null,
+      "scope": "external"
+    },
+    "models_lib_sha256": "03d505847c880d233b341be115a1e5460edf4d8e9b3e8a7df791a52fa4455d67",
+    "netlist_sha256": "c397df20adccd6f1f9b6eb65818a175cecdac0ae234b2b49a75ec07e529b477c",
+    "netlist_closure": [
+      {
+        "path": "sim/cmrr-psrr/klt/tb_psrr_direct.body.spice",
+        "scope": "repo",
+        "sha256": "c397df20adccd6f1f9b6eb65818a175cecdac0ae234b2b49a75ec07e529b477c"
+      },
+      {
+        "path": "design/netlist/opamp_core.spice",
+        "scope": "repo",
+        "sha256": "4cddebec6a043f682bb74a463ac3e72112f33ad341d19575a0606f276e18db37"
+      }
+    ],
+    "netlist_source": "schematic",
+    "osdi_preload": [
+      {
+        "name": "psp103.osdi",
+        "path": null,
+        "scope": "external",
+        "sha256": "2e4299c4683997e26469410dc1ab36b02ced924b1ac0972d6c4eae360e1fc796"
+      },
+      {
+        "name": "psp103_nqs.osdi",
+        "path": null,
+        "scope": "external",
+        "sha256": "839b164483205601c09032951f6c41d3580f15e506dc40a7202950d3afbdfc7d"
+      },
+      {
+        "name": "mosvar.osdi",
+        "path": null,
+        "scope": "external",
+        "sha256": "25e64a374ab523dbfeb7ffed75dcb8b086ee10f06120a9074bd68b92d7b0fb41"
+      },
+      {
+        "name": "r3_cmc.osdi",
+        "path": null,
+        "scope": "external",
+        "sha256": "4fead17bc2e9cbfe3df6f106e9dbd6f2cdcd48c002af9c56c2ca0b0712fce350"
+      }
+    ],
+    "corner_section_libs": [
+      {
+        "name": "cornerCAP.lib",
+        "path": null,
+        "scope": "external",
+        "sha256": "4fc4a0f17ca2aef66ca38c2d2e7cead3307b69508d304ed073129565ec1c3e56"
+      }
+    ],
+    "staged_model_inputs": [
+      {
+        "name": "cornerMOSlv.lib",
+        "field": "models.lib",
+        "kind": "library",
+        "sha256": "07f15f24b990ab9eff8e1000457ad180a5199b48fc17217ac3572bdcdfbf5f72",
+        "rewritten": true
+      },
+      {
+        "name": "cornerCAP.lib",
+        "field": "corners.process[0].sections[1].lib",
+        "kind": "library",
+        "sha256": "b4f1beef8a6723b1bea9866bfe96730d0e01660232a39ab3dd9c256df4116109",
+        "rewritten": true
+      },
+      {
+        "name": "psp103.osdi",
+        "field": "options.osdi_preload[0]",
+        "kind": "osdi",
+        "sha256": "2e4299c4683997e26469410dc1ab36b02ced924b1ac0972d6c4eae360e1fc796",
+        "rewritten": false
+      },
+      {
+        "name": "psp103_nqs.osdi",
+        "field": "options.osdi_preload[1]",
+        "kind": "osdi",
+        "sha256": "839b164483205601c09032951f6c41d3580f15e506dc40a7202950d3afbdfc7d",
+        "rewritten": false
+      },
+      {
+        "name": "mosvar.osdi",
+        "field": "options.osdi_preload[2]",
+        "kind": "osdi",
+        "sha256": "25e64a374ab523dbfeb7ffed75dcb8b086ee10f06120a9074bd68b92d7b0fb41",
+        "rewritten": false
+      },
+      {
+        "name": "r3_cmc.osdi",
+        "field": "options.osdi_preload[3]",
+        "kind": "osdi",
+        "sha256": "4fead17bc2e9cbfe3df6f106e9dbd6f2cdcd48c002af9c56c2ca0b0712fce350",
+        "rewritten": false
+      },
+      {
+        "name": "sg13g2_moslv_mod.lib",
+        "field": "models.lib",
+        "kind": "dependency",
+        "sha256": "0aa1a5630a7c8fb8ae896c57c475954ff5885c4831311f8cd9c9e64d6cbb8332",
+        "rewritten": true
+      },
+      {
+        "name": "sg13g2_moslv_mismatch.lib",
+        "field": "models.lib",
+        "kind": "dependency",
+        "sha256": "2d3251e2d42eadb0f8af152a4915fdc60a68bceb95a2d17a52f90cfb34b7e63e",
+        "rewritten": false
+      },
+      {
+        "name": "sg13g2_moslv_mod_mismatch.lib",
+        "field": "models.lib",
+        "kind": "dependency",
+        "sha256": "28f681005831113ad5377f1b867d8869b78f329a7f52aa821ff56aa1e648b68b",
+        "rewritten": true
+      },
+      {
+        "name": "sg13g2_moslv_stat.lib",
+        "field": "models.lib",
+        "kind": "dependency",
+        "sha256": "7f4cf8df714e327348ba3975a2630e9d7dd7ae1a7a88817df4890e82745f0f52",
+        "rewritten": false
+      },
+      {
+        "name": "capacitors_mod.lib",
+        "field": "corners.process[0].sections[1].lib",
+        "kind": "dependency",
+        "sha256": "94b569e695fd8a223a5a49a5b5a6b0d8a62408820bf0c2ed9dbcb0a8ab7d957e",
+        "rewritten": false
+      },
+      {
+        "name": "capacitors_mod_mismatch.lib",
+        "field": "corners.process[0].sections[1].lib",
+        "kind": "dependency",
+        "sha256": "8ebc8369966951cfec0e91d603685f1975fbf9ceff2eef493a25357ce9ae5492",
+        "rewritten": false
+      },
+      {
+        "name": "capacitors_stat.lib",
+        "field": "corners.process[0].sections[1].lib",
+        "kind": "dependency",
+        "sha256": "68d2ef41174bcfae5997b355c4fd3dbe4f2b8ec4be30ff79d474052b3be1715a",
+        "rewritten": false
+      },
+      {
+        "name": "sg13g2_moslv_parm.lib",
+        "field": "models.lib",
+        "kind": "dependency",
+        "sha256": "cbf10b8453a18bb70b8ad0d6e40faa0937338e699b5460947a94900db6c92a6e",
+        "rewritten": false
+      }
+    ],
+    "remote": {
+      "fleet": [
+        {
+          "provider": "aws-batch-fleet",
+          "job_id": "klt-sim-d4f3dc6f7756",
+          "bucket": "2am-batch-jobs-221082181346",
+          "region": "us-east-1",
+          "instance_id": "i-0d24094a34ed385a6",
+          "instance_type": "c7i.8xlarge",
+          "availability_zone": "us-east-1a",
+          "ami_id": "ami-0dda7bd225256d63c",
+          "lifecycle": "spot",
+          "spot": true,
+          "state": "done",
+          "exit_code": "0",
+          "concurrency": "2",
+          "physical_cores": "16",
+          "elapsed_seconds": 8,
+          "runner_klt_version": "0.7.0",
+          "client_klt_version": "0.7.0",
+          "runner_compatibility": "match"
+        },
+        {
+          "provider": "aws-batch-fleet",
+          "job_id": "klt-sim-2402f505fedc",
+          "bucket": "2am-batch-jobs-221082181346",
+          "region": "us-east-1",
+          "instance_id": "i-09272cefdb4645207",
+          "instance_type": "c7i.8xlarge",
+          "availability_zone": "us-east-1a",
+          "ami_id": "ami-0dda7bd225256d63c",
+          "lifecycle": "spot",
+          "spot": true,
+          "state": "done",
+          "exit_code": "0",
+          "concurrency": "2",
+          "physical_cores": "16",
+          "elapsed_seconds": 10,
+          "runner_klt_version": "0.7.0",
+          "client_klt_version": "0.7.0",
+          "runner_compatibility": "match"
+        },
+        {
+          "provider": "aws-batch-fleet",
+          "job_id": "klt-sim-0e37781a90c1",
+          "bucket": "2am-batch-jobs-221082181346",
+          "region": "us-east-1",
+          "instance_id": "i-0e5a22bcbb71b8e13",
+          "instance_type": "c7i.8xlarge",
+          "availability_zone": "us-east-1a",
+          "ami_id": "ami-0dda7bd225256d63c",
+          "lifecycle": "spot",
+          "spot": true,
+          "state": "done",
+          "exit_code": "0",
+          "concurrency": "2",
+          "physical_cores": "16",
+          "elapsed_seconds": 9,
+          "runner_klt_version": "0.7.0",
+          "client_klt_version": "0.7.0",
+          "runner_compatibility": "match"
+        },
+        {
+          "provider": "aws-batch-fleet",
+          "job_id": "klt-sim-5c2c0dbd7ce9",
+          "bucket": "2am-batch-jobs-221082181346",
+          "region": "us-east-1",
+          "instance_id": "i-0c3b18927b6648988",
+          "instance_type": "c7i.8xlarge",
+          "availability_zone": "us-east-1a",
+          "ami_id": "ami-0dda7bd225256d63c",
+          "lifecycle": "spot",
+          "spot": true,
+          "state": "done",
+          "exit_code": "0",
+          "concurrency": "2",
+          "physical_cores": "16",
+          "elapsed_seconds": 9,
+          "runner_klt_version": "0.7.0",
+          "client_klt_version": "0.7.0",
+          "runner_compatibility": "match"
+        },
+        {
+          "provider": "aws-batch-fleet",
+          "job_id": "klt-sim-476a90bb056f",
+          "bucket": "2am-batch-jobs-221082181346",
+          "region": "us-east-1",
+          "instance_id": "i-0eb6c620701a51ec2",
+          "instance_type": "c7i.8xlarge",
+          "availability_zone": "us-east-1a",
+          "ami_id": "ami-0dda7bd225256d63c",
+          "lifecycle": "spot",
+          "spot": true,
+          "state": "done",
+          "exit_code": "0",
+          "concurrency": "2",
+          "physical_cores": "16",
+          "elapsed_seconds": 9,
+          "runner_klt_version": "0.7.0",
+          "client_klt_version": "0.7.0",
+          "runner_compatibility": "match"
+        }
+      ]
+    }
+  },
+  "coverage": {
+    "corners_simulated": 45,
+    "measurements_declared": 4,
+    "measurements_with_limits": 2,
+    "unrecognized_limit_keys": [],
+    "schema_version": 1,
+    "known": true,
+    "checked": [
+      "limit:[0,\"mos_tt/vdd=1.080_vinp=0.540V/-40C\",\"psrr_db\",\"min\"]",
+      "limit:[0,\"mos_tt/vdd=1.080_vinp=0.540V/-40C\",\"psrr_plateau_delta_db\",\"max\"]",
+      "limit:[1,\"mos_tt/vdd=1.080_vinp=0.540V/27C\",\"psrr_db\",\"min\"]",
+      "limit:[1,\"mos_tt/vdd=1.080_vinp=0.540V/27C\",\"psrr_plateau_delta_db\",\"max\"]",
+      "limit:[10,\"mos_ss/vdd=1.080_vinp=0.540V/27C\",\"psrr_db\",\"min\"]",
+      "limit:[10,\"mos_ss/vdd=1.080_vinp=0.540V/27C\",\"psrr_plateau_delta_db\",\"max\"]",
+      "limit:[11,\"mos_ss/vdd=1.080_vinp=0.540V/125C\",\"psrr_db\",\"min\"]",
+      "limit:[11,\"mos_ss/vdd=1.080_vinp=0.540V/125C\",\"psrr_plateau_delta_db\",\"max\"]",
+      "limit:[12,\"mos_ss/vdd=1.200_vinp=0.600V/-40C\",\"psrr_db\",\"min\"]",
+      "limit:[12,\"mos_ss/vdd=1.200_vinp=0.600V/-40C\",\"psrr_plateau_delta_db\",\"max\"]",
+      "limit:[13,\"mos_ss/vdd=1.200_vinp=0.600V/27C\",\"psrr_db\",\"min\"]",
+      "limit:[13,\"mos_ss/vdd=1.200_vinp=0.600V/27C\",\"psrr_plateau_delta_db\",\"max\"]",
+      "limit:[14,\"mos_ss/vdd=1.200_vinp=0.600V/125C\",\"psrr_db\",\"min\"]",
+      "limit:[14,\"mos_ss/vdd=1.200_vinp=0.600V/125C\",\"psrr_plateau_delta_db\",\"max\"]",
+      "limit:[15,\"mos_ss/vdd=1.320_vinp=0.660V/-40C\",\"psrr_db\",\"min\"]",
+      "limit:[15,\"mos_ss/vdd=1.320_vinp=0.660V/-40C\",\"psrr_plateau_delta_db\",\"max\"]",
+      "limit:[16,\"mos_ss/vdd=1.320_vinp=0.660V/27C\",\"psrr_db\",\"min\"]",
+      "limit:[16,\"mos_ss/vdd=1.320_vinp=0.660V/27C\",\"psrr_plateau_delta_db\",\"max\"]",
+      "limit:[17,\"mos_ss/vdd=1.320_vinp=0.660V/125C\",\"psrr_db\",\"min\"]",
+      "limit:[17,\"mos_ss/vdd=1.320_vinp=0.660V/125C\",\"psrr_plateau_delta_db\",\"max\"]",
+      "limit:[18,\"mos_ff/vdd=1.080_vinp=0.540V/-40C\",\"psrr_db\",\"min\"]",
+      "limit:[18,\"mos_ff/vdd=1.080_vinp=0.540V/-40C\",\"psrr_plateau_delta_db\",\"max\"]",
+      "limit:[19,\"mos_ff/vdd=1.080_vinp=0.540V/27C\",\"psrr_db\",\"min\"]",
+      "limit:[19,\"mos_ff/vdd=1.080_vinp=0.540V/27C\",\"psrr_plateau_delta_db\",\"max\"]",
+      "limit:[2,\"mos_tt/vdd=1.080_vinp=0.540V/125C\",\"psrr_db\",\"min\"]",
+      "limit:[2,\"mos_tt/vdd=1.080_vinp=0.540V/125C\",\"psrr_plateau_delta_db\",\"max\"]",
+      "limit:[20,\"mos_ff/vdd=1.080_vinp=0.540V/125C\",\"psrr_db\",\"min\"]",
+      "limit:[20,\"mos_ff/vdd=1.080_vinp=0.540V/125C\",\"psrr_plateau_delta_db\",\"max\"]",
+      "limit:[21,\"mos_ff/vdd=1.200_vinp=0.600V/-40C\",\"psrr_db\",\"min\"]",
+      "limit:[21,\"mos_ff/vdd=1.200_vinp=0.600V/-40C\",\"psrr_plateau_delta_db\",\"max\"]",
+      "limit:[22,\"mos_ff/vdd=1.200_vinp=0.600V/27C\",\"psrr_db\",\"min\"]",
+      "limit:[22,\"mos_ff/vdd=1.200_vinp=0.600V/27C\",\"psrr_plateau_delta_db\",\"max\"]",
+      "limit:[23,\"mos_ff/vdd=1.200_vinp=0.600V/125C\",\"psrr_db\",\"min\"]",
+      "limit:[23,\"mos_ff/vdd=1.200_vinp=0.600V/125C\",\"psrr_plateau_delta_db\",\"max\"]",
+      "limit:[24,\"mos_ff/vdd=1.320_vinp=0.660V/-40C\",\"psrr_db\",\"min\"]",
+      "limit:[24,\"mos_ff/vdd=1.320_vinp=0.660V/-40C\",\"psrr_plateau_delta_db\",\"max\"]",
+      "limit:[25,\"mos_ff/vdd=1.320_vinp=0.660V/27C\",\"psrr_db\",\"min\"]",
+      "limit:[25,\"mos_ff/vdd=1.320_vinp=0.660V/27C\",\"psrr_plateau_delta_db\",\"max\"]",
+      "limit:[26,\"mos_ff/vdd=1.320_vinp=0.660V/125C\",\"psrr_db\",\"min\"]",
+      "limit:[26,\"mos_ff/vdd=1.320_vinp=0.660V/125C\",\"psrr_plateau_delta_db\",\"max\"]",
+      "limit:[27,\"mos_sf/vdd=1.080_vinp=0.540V/-40C\",\"psrr_db\",\"min\"]",
+      "limit:[27,\"mos_sf/vdd=1.080_vinp=0.540V/-40C\",\"psrr_plateau_delta_db\",\"max\"]",
+      "limit:[28,\"mos_sf/vdd=1.080_vinp=0.540V/27C\",\"psrr_db\",\"min\"]",
+      "limit:[28,\"mos_sf/vdd=1.080_vinp=0.540V/27C\",\"psrr_plateau_delta_db\",\"max\"]",
+      "limit:[29,\"mos_sf/vdd=1.080_vinp=0.540V/125C\",\"psrr_db\",\"min\"]",
+      "limit:[29,\"mos_sf/vdd=1.080_vinp=0.540V/125C\",\"psrr_plateau_delta_db\",\"max\"]",
+      "limit:[3,\"mos_tt/vdd=1.200_vinp=0.600V/-40C\",\"psrr_db\",\"min\"]",
+      "limit:[3,\"mos_tt/vdd=1.200_vinp=0.600V/-40C\",\"psrr_plateau_delta_db\",\"max\"]",
+      "limit:[30,\"mos_sf/vdd=1.200_vinp=0.600V/-40C\",\"psrr_db\",\"min\"]",
+      "limit:[30,\"mos_sf/vdd=1.200_vinp=0.600V/-40C\",\"psrr_plateau_delta_db\",\"max\"]",
+      "limit:[31,\"mos_sf/vdd=1.200_vinp=0.600V/27C\",\"psrr_db\",\"min\"]",
+      "limit:[31,\"mos_sf/vdd=1.200_vinp=0.600V/27C\",\"psrr_plateau_delta_db\",\"max\"]",
+      "limit:[32,\"mos_sf/vdd=1.200_vinp=0.600V/125C\",\"psrr_db\",\"min\"]",
+      "limit:[32,\"mos_sf/vdd=1.200_vinp=0.600V/125C\",\"psrr_plateau_delta_db\",\"max\"]",
+      "limit:[33,\"mos_sf/vdd=1.320_vinp=0.660V/-40C\",\"psrr_db\",\"min\"]",
+      "limit:[33,\"mos_sf/vdd=1.320_vinp=0.660V/-40C\",\"psrr_plateau_delta_db\",\"max\"]",
+      "limit:[34,\"mos_sf/vdd=1.320_vinp=0.660V/27C\",\"psrr_db\",\"min\"]",
+      "limit:[34,\"mos_sf/vdd=1.320_vinp=0.660V/27C\",\"psrr_plateau_delta_db\",\"max\"]",
+      "limit:[35,\"mos_sf/vdd=1.320_vinp=0.660V/125C\",\"psrr_db\",\"min\"]",
+      "limit:[35,\"mos_sf/vdd=1.320_vinp=0.660V/125C\",\"psrr_plateau_delta_db\",\"max\"]",
+      "limit:[36,\"mos_fs/vdd=1.080_vinp=0.540V/-40C\",\"psrr_db\",\"min\"]",
+      "limit:[36,\"mos_fs/vdd=1.080_vinp=0.540V/-40C\",\"psrr_plateau_delta_db\",\"max\"]",
+      "limit:[37,\"mos_fs/vdd=1.080_vinp=0.540V/27C\",\"psrr_db\",\"min\"]",
+      "limit:[37,\"mos_fs/vdd=1.080_vinp=0.540V/27C\",\"psrr_plateau_delta_db\",\"max\"]",
+      "limit:[38,\"mos_fs/vdd=1.080_vinp=0.540V/125C\",\"psrr_db\",\"min\"]",
+      "limit:[38,\"mos_fs/vdd=1.080_vinp=0.540V/125C\",\"psrr_plateau_delta_db\",\"max\"]",
+      "limit:[39,\"mos_fs/vdd=1.200_vinp=0.600V/-40C\",\"psrr_db\",\"min\"]",
+      "limit:[39,\"mos_fs/vdd=1.200_vinp=0.600V/-40C\",\"psrr_plateau_delta_db\",\"max\"]",
+      "limit:[4,\"mos_tt/vdd=1.200_vinp=0.600V/27C\",\"psrr_db\",\"min\"]",
+      "limit:[4,\"mos_tt/vdd=1.200_vinp=0.600V/27C\",\"psrr_plateau_delta_db\",\"max\"]",
+      "limit:[40,\"mos_fs/vdd=1.200_vinp=0.600V/27C\",\"psrr_db\",\"min\"]",
+      "limit:[40,\"mos_fs/vdd=1.200_vinp=0.600V/27C\",\"psrr_plateau_delta_db\",\"max\"]",
+      "limit:[41,\"mos_fs/vdd=1.200_vinp=0.600V/125C\",\"psrr_db\",\"min\"]",
+      "limit:[41,\"mos_fs/vdd=1.200_vinp=0.600V/125C\",\"psrr_plateau_delta_db\",\"max\"]",
+      "limit:[42,\"mos_fs/vdd=1.320_vinp=0.660V/-40C\",\"psrr_db\",\"min\"]",
+      "limit:[42,\"mos_fs/vdd=1.320_vinp=0.660V/-40C\",\"psrr_plateau_delta_db\",\"max\"]",
+      "limit:[43,\"mos_fs/vdd=1.320_vinp=0.660V/27C\",\"psrr_db\",\"min\"]",
+      "limit:[43,\"mos_fs/vdd=1.320_vinp=0.660V/27C\",\"psrr_plateau_delta_db\",\"max\"]",
+      "limit:[44,\"mos_fs/vdd=1.320_vinp=0.660V/125C\",\"psrr_db\",\"min\"]",
+      "limit:[44,\"mos_fs/vdd=1.320_vinp=0.660V/125C\",\"psrr_plateau_delta_db\",\"max\"]",
+      "limit:[5,\"mos_tt/vdd=1.200_vinp=0.600V/125C\",\"psrr_db\",\"min\"]",
+      "limit:[5,\"mos_tt/vdd=1.200_vinp=0.600V/125C\",\"psrr_plateau_delta_db\",\"max\"]",
+      "limit:[6,\"mos_tt/vdd=1.320_vinp=0.660V/-40C\",\"psrr_db\",\"min\"]",
+      "limit:[6,\"mos_tt/vdd=1.320_vinp=0.660V/-40C\",\"psrr_plateau_delta_db\",\"max\"]",
+      "limit:[7,\"mos_tt/vdd=1.320_vinp=0.660V/27C\",\"psrr_db\",\"min\"]",
+      "limit:[7,\"mos_tt/vdd=1.320_vinp=0.660V/27C\",\"psrr_plateau_delta_db\",\"max\"]",
+      "limit:[8,\"mos_tt/vdd=1.320_vinp=0.660V/125C\",\"psrr_db\",\"min\"]",
+      "limit:[8,\"mos_tt/vdd=1.320_vinp=0.660V/125C\",\"psrr_plateau_delta_db\",\"max\"]",
+      "limit:[9,\"mos_ss/vdd=1.080_vinp=0.540V/-40C\",\"psrr_db\",\"min\"]",
+      "limit:[9,\"mos_ss/vdd=1.080_vinp=0.540V/-40C\",\"psrr_plateau_delta_db\",\"max\"]",
+      "measurement:[0,\"mos_tt/vdd=1.080_vinp=0.540V/-40C\",\"av0_db\"]/observation",
+      "measurement:[0,\"mos_tt/vdd=1.080_vinp=0.540V/-40C\",\"avs0_db\"]/observation",
+      "measurement:[1,\"mos_tt/vdd=1.080_vinp=0.540V/27C\",\"av0_db\"]/observation",
+      "measurement:[1,\"mos_tt/vdd=1.080_vinp=0.540V/27C\",\"avs0_db\"]/observation",
+      "measurement:[10,\"mos_ss/vdd=1.080_vinp=0.540V/27C\",\"av0_db\"]/observation",
+      "measurement:[10,\"mos_ss/vdd=1.080_vinp=0.540V/27C\",\"avs0_db\"]/observation",
+      "measurement:[11,\"mos_ss/vdd=1.080_vinp=0.540V/125C\",\"av0_db\"]/observation",
+      "measurement:[11,\"mos_ss/vdd=1.080_vinp=0.540V/125C\",\"avs0_db\"]/observation",
+      "measurement:[12,\"mos_ss/vdd=1.200_vinp=0.600V/-40C\",\"av0_db\"]/observation",
+      "measurement:[12,\"mos_ss/vdd=1.200_vinp=0.600V/-40C\",\"avs0_db\"]/observation",
+      "measurement:[13,\"mos_ss/vdd=1.200_vinp=0.600V/27C\",\"av0_db\"]/observation",
+      "measurement:[13,\"mos_ss/vdd=1.200_vinp=0.600V/27C\",\"avs0_db\"]/observation",
+      "measurement:[14,\"mos_ss/vdd=1.200_vinp=0.600V/125C\",\"av0_db\"]/observation",
+      "measurement:[14,\"mos_ss/vdd=1.200_vinp=0.600V/125C\",\"avs0_db\"]/observation",
+      "measurement:[15,\"mos_ss/vdd=1.320_vinp=0.660V/-40C\",\"av0_db\"]/observation",
+      "measurement:[15,\"mos_ss/vdd=1.320_vinp=0.660V/-40C\",\"avs0_db\"]/observation",
+      "measurement:[16,\"mos_ss/vdd=1.320_vinp=0.660V/27C\",\"av0_db\"]/observation",
+      "measurement:[16,\"mos_ss/vdd=1.320_vinp=0.660V/27C\",\"avs0_db\"]/observation",
+      "measurement:[17,\"mos_ss/vdd=1.320_vinp=0.660V/125C\",\"av0_db\"]/observation",
+      "measurement:[17,\"mos_ss/vdd=1.320_vinp=0.660V/125C\",\"avs0_db\"]/observation",
+      "measurement:[18,\"mos_ff/vdd=1.080_vinp=0.540V/-40C\",\"av0_db\"]/observation",
+      "measurement:[18,\"mos_ff/vdd=1.080_vinp=0.540V/-40C\",\"avs0_db\"]/observation",
+      "measurement:[19,\"mos_ff/vdd=1.080_vinp=0.540V/27C\",\"av0_db\"]/observation",
+      "measurement:[19,\"mos_ff/vdd=1.080_vinp=0.540V/27C\",\"avs0_db\"]/observation",
+      "measurement:[2,\"mos_tt/vdd=1.080_vinp=0.540V/125C\",\"av0_db\"]/observation",
+      "measurement:[2,\"mos_tt/vdd=1.080_vinp=0.540V/125C\",\"avs0_db\"]/observation",
+      "measurement:[20,\"mos_ff/vdd=1.080_vinp=0.540V/125C\",\"av0_db\"]/observation",
+      "measurement:[20,\"mos_ff/vdd=1.080_vinp=0.540V/125C\",\"avs0_db\"]/observation",
+      "measurement:[21,\"mos_ff/vdd=1.200_vinp=0.600V/-40C\",\"av0_db\"]/observation",
+      "measurement:[21,\"mos_ff/vdd=1.200_vinp=0.600V/-40C\",\"avs0_db\"]/observation",
+      "measurement:[22,\"mos_ff/vdd=1.200_vinp=0.600V/27C\",\"av0_db\"]/observation",
+      "measurement:[22,\"mos_ff/vdd=1.200_vinp=0.600V/27C\",\"avs0_db\"]/observation",
+      "measurement:[23,\"mos_ff/vdd=1.200_vinp=0.600V/125C\",\"av0_db\"]/observation",
+      "measurement:[23,\"mos_ff/vdd=1.200_vinp=0.600V/125C\",\"avs0_db\"]/observation",
+      "measurement:[24,\"mos_ff/vdd=1.320_vinp=0.660V/-40C\",\"av0_db\"]/observation",
+      "measurement:[24,\"mos_ff/vdd=1.320_vinp=0.660V/-40C\",\"avs0_db\"]/observation",
+      "measurement:[25,\"mos_ff/vdd=1.320_vinp=0.660V/27C\",\"av0_db\"]/observation",
+      "measurement:[25,\"mos_ff/vdd=1.320_vinp=0.660V/27C\",\"avs0_db\"]/observation",
+      "measurement:[26,\"mos_ff/vdd=1.320_vinp=0.660V/125C\",\"av0_db\"]/observation",
+      "measurement:[26,\"mos_ff/vdd=1.320_vinp=0.660V/125C\",\"avs0_db\"]/observation",
+      "measurement:[27,\"mos_sf/vdd=1.080_vinp=0.540V/-40C\",\"av0_db\"]/observation",
+      "measurement:[27,\"mos_sf/vdd=1.080_vinp=0.540V/-40C\",\"avs0_db\"]/observation",
+      "measurement:[28,\"mos_sf/vdd=1.080_vinp=0.540V/27C\",\"av0_db\"]/observation",
+      "measurement:[28,\"mos_sf/vdd=1.080_vinp=0.540V/27C\",\"avs0_db\"]/observation",
+      "measurement:[29,\"mos_sf/vdd=1.080_vinp=0.540V/125C\",\"av0_db\"]/observation",
+      "measurement:[29,\"mos_sf/vdd=1.080_vinp=0.540V/125C\",\"avs0_db\"]/observation",
+      "measurement:[3,\"mos_tt/vdd=1.200_vinp=0.600V/-40C\",\"av0_db\"]/observation",
+      "measurement:[3,\"mos_tt/vdd=1.200_vinp=0.600V/-40C\",\"avs0_db\"]/observation",
+      "measurement:[30,\"mos_sf/vdd=1.200_vinp=0.600V/-40C\",\"av0_db\"]/observation",
+      "measurement:[30,\"mos_sf/vdd=1.200_vinp=0.600V/-40C\",\"avs0_db\"]/observation",
+      "measurement:[31,\"mos_sf/vdd=1.200_vinp=0.600V/27C\",\"av0_db\"]/observation",
+      "measurement:[31,\"mos_sf/vdd=1.200_vinp=0.600V/27C\",\"avs0_db\"]/observation",
+      "measurement:[32,\"mos_sf/vdd=1.200_vinp=0.600V/125C\",\"av0_db\"]/observation",
+      "measurement:[32,\"mos_sf/vdd=1.200_vinp=0.600V/125C\",\"avs0_db\"]/observation",
+      "measurement:[33,\"mos_sf/vdd=1.320_vinp=0.660V/-40C\",\"av0_db\"]/observation",
+      "measurement:[33,\"mos_sf/vdd=1.320_vinp=0.660V/-40C\",\"avs0_db\"]/observation",
+      "measurement:[34,\"mos_sf/vdd=1.320_vinp=0.660V/27C\",\"av0_db\"]/observation",
+      "measurement:[34,\"mos_sf/vdd=1.320_vinp=0.660V/27C\",\"avs0_db\"]/observation",
+      "measurement:[35,\"mos_sf/vdd=1.320_vinp=0.660V/125C\",\"av0_db\"]/observation",
+      "measurement:[35,\"mos_sf/vdd=1.320_vinp=0.660V/125C\",\"avs0_db\"]/observation",
+      "measurement:[36,\"mos_fs/vdd=1.080_vinp=0.540V/-40C\",\"av0_db\"]/observation",
+      "measurement:[36,\"mos_fs/vdd=1.080_vinp=0.540V/-40C\",\"avs0_db\"]/observation",
+      "measurement:[37,\"mos_fs/vdd=1.080_vinp=0.540V/27C\",\"av0_db\"]/observation",
+      "measurement:[37,\"mos_fs/vdd=1.080_vinp=0.540V/27C\",\"avs0_db\"]/observation",
+      "measurement:[38,\"mos_fs/vdd=1.080_vinp=0.540V/125C\",\"av0_db\"]/observation",
+      "measurement:[38,\"mos_fs/vdd=1.080_vinp=0.540V/125C\",\"avs0_db\"]/observation",
+      "measurement:[39,\"mos_fs/vdd=1.200_vinp=0.600V/-40C\",\"av0_db\"]/observation",
+      "measurement:[39,\"mos_fs/vdd=1.200_vinp=0.600V/-40C\",\"avs0_db\"]/observation",
+      "measurement:[4,\"mos_tt/vdd=1.200_vinp=0.600V/27C\",\"av0_db\"]/observation",
+      "measurement:[4,\"mos_tt/vdd=1.200_vinp=0.600V/27C\",\"avs0_db\"]/observation",
+      "measurement:[40,\"mos_fs/vdd=1.200_vinp=0.600V/27C\",\"av0_db\"]/observation",
+      "measurement:[40,\"mos_fs/vdd=1.200_vinp=0.600V/27C\",\"avs0_db\"]/observation",
+      "measurement:[41,\"mos_fs/vdd=1.200_vinp=0.600V/125C\",\"av0_db\"]/observation",
+      "measurement:[41,\"mos_fs/vdd=1.200_vinp=0.600V/125C\",\"avs0_db\"]/observation",
+      "measurement:[42,\"mos_fs/vdd=1.320_vinp=0.660V/-40C\",\"av0_db\"]/observation",
+      "measurement:[42,\"mos_fs/vdd=1.320_vinp=0.660V/-40C\",\"avs0_db\"]/observation",
+      "measurement:[43,\"mos_fs/vdd=1.320_vinp=0.660V/27C\",\"av0_db\"]/observation",
+      "measurement:[43,\"mos_fs/vdd=1.320_vinp=0.660V/27C\",\"avs0_db\"]/observation",
+      "measurement:[44,\"mos_fs/vdd=1.320_vinp=0.660V/125C\",\"av0_db\"]/observation",
+      "measurement:[44,\"mos_fs/vdd=1.320_vinp=0.660V/125C\",\"avs0_db\"]/observation",
+      "measurement:[5,\"mos_tt/vdd=1.200_vinp=0.600V/125C\",\"av0_db\"]/observation",
+      "measurement:[5,\"mos_tt/vdd=1.200_vinp=0.600V/125C\",\"avs0_db\"]/observation",
+      "measurement:[6,\"mos_tt/vdd=1.320_vinp=0.660V/-40C\",\"av0_db\"]/observation",
+      "measurement:[6,\"mos_tt/vdd=1.320_vinp=0.660V/-40C\",\"avs0_db\"]/observation",
+      "measurement:[7,\"mos_tt/vdd=1.320_vinp=0.660V/27C\",\"av0_db\"]/observation",
+      "measurement:[7,\"mos_tt/vdd=1.320_vinp=0.660V/27C\",\"avs0_db\"]/observation",
+      "measurement:[8,\"mos_tt/vdd=1.320_vinp=0.660V/125C\",\"av0_db\"]/observation",
+      "measurement:[8,\"mos_tt/vdd=1.320_vinp=0.660V/125C\",\"avs0_db\"]/observation",
+      "measurement:[9,\"mos_ss/vdd=1.080_vinp=0.540V/-40C\",\"av0_db\"]/observation",
+      "measurement:[9,\"mos_ss/vdd=1.080_vinp=0.540V/-40C\",\"avs0_db\"]/observation"
+    ],
+    "skipped": [],
+    "inapplicable": [
+      {
+        "id": "measurement:[0,\"mos_tt/vdd=1.080_vinp=0.540V/-40C\",\"av0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[0,\"mos_tt/vdd=1.080_vinp=0.540V/-40C\",\"avs0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[1,\"mos_tt/vdd=1.080_vinp=0.540V/27C\",\"av0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[1,\"mos_tt/vdd=1.080_vinp=0.540V/27C\",\"avs0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[10,\"mos_ss/vdd=1.080_vinp=0.540V/27C\",\"av0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[10,\"mos_ss/vdd=1.080_vinp=0.540V/27C\",\"avs0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[11,\"mos_ss/vdd=1.080_vinp=0.540V/125C\",\"av0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[11,\"mos_ss/vdd=1.080_vinp=0.540V/125C\",\"avs0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[12,\"mos_ss/vdd=1.200_vinp=0.600V/-40C\",\"av0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[12,\"mos_ss/vdd=1.200_vinp=0.600V/-40C\",\"avs0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[13,\"mos_ss/vdd=1.200_vinp=0.600V/27C\",\"av0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[13,\"mos_ss/vdd=1.200_vinp=0.600V/27C\",\"avs0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[14,\"mos_ss/vdd=1.200_vinp=0.600V/125C\",\"av0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[14,\"mos_ss/vdd=1.200_vinp=0.600V/125C\",\"avs0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[15,\"mos_ss/vdd=1.320_vinp=0.660V/-40C\",\"av0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[15,\"mos_ss/vdd=1.320_vinp=0.660V/-40C\",\"avs0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[16,\"mos_ss/vdd=1.320_vinp=0.660V/27C\",\"av0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[16,\"mos_ss/vdd=1.320_vinp=0.660V/27C\",\"avs0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[17,\"mos_ss/vdd=1.320_vinp=0.660V/125C\",\"av0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[17,\"mos_ss/vdd=1.320_vinp=0.660V/125C\",\"avs0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[18,\"mos_ff/vdd=1.080_vinp=0.540V/-40C\",\"av0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[18,\"mos_ff/vdd=1.080_vinp=0.540V/-40C\",\"avs0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[19,\"mos_ff/vdd=1.080_vinp=0.540V/27C\",\"av0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[19,\"mos_ff/vdd=1.080_vinp=0.540V/27C\",\"avs0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[2,\"mos_tt/vdd=1.080_vinp=0.540V/125C\",\"av0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[2,\"mos_tt/vdd=1.080_vinp=0.540V/125C\",\"avs0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[20,\"mos_ff/vdd=1.080_vinp=0.540V/125C\",\"av0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[20,\"mos_ff/vdd=1.080_vinp=0.540V/125C\",\"avs0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[21,\"mos_ff/vdd=1.200_vinp=0.600V/-40C\",\"av0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[21,\"mos_ff/vdd=1.200_vinp=0.600V/-40C\",\"avs0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[22,\"mos_ff/vdd=1.200_vinp=0.600V/27C\",\"av0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[22,\"mos_ff/vdd=1.200_vinp=0.600V/27C\",\"avs0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[23,\"mos_ff/vdd=1.200_vinp=0.600V/125C\",\"av0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[23,\"mos_ff/vdd=1.200_vinp=0.600V/125C\",\"avs0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[24,\"mos_ff/vdd=1.320_vinp=0.660V/-40C\",\"av0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[24,\"mos_ff/vdd=1.320_vinp=0.660V/-40C\",\"avs0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[25,\"mos_ff/vdd=1.320_vinp=0.660V/27C\",\"av0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[25,\"mos_ff/vdd=1.320_vinp=0.660V/27C\",\"avs0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[26,\"mos_ff/vdd=1.320_vinp=0.660V/125C\",\"av0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[26,\"mos_ff/vdd=1.320_vinp=0.660V/125C\",\"avs0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[27,\"mos_sf/vdd=1.080_vinp=0.540V/-40C\",\"av0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[27,\"mos_sf/vdd=1.080_vinp=0.540V/-40C\",\"avs0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[28,\"mos_sf/vdd=1.080_vinp=0.540V/27C\",\"av0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[28,\"mos_sf/vdd=1.080_vinp=0.540V/27C\",\"avs0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[29,\"mos_sf/vdd=1.080_vinp=0.540V/125C\",\"av0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[29,\"mos_sf/vdd=1.080_vinp=0.540V/125C\",\"avs0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[3,\"mos_tt/vdd=1.200_vinp=0.600V/-40C\",\"av0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[3,\"mos_tt/vdd=1.200_vinp=0.600V/-40C\",\"avs0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[30,\"mos_sf/vdd=1.200_vinp=0.600V/-40C\",\"av0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[30,\"mos_sf/vdd=1.200_vinp=0.600V/-40C\",\"avs0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[31,\"mos_sf/vdd=1.200_vinp=0.600V/27C\",\"av0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[31,\"mos_sf/vdd=1.200_vinp=0.600V/27C\",\"avs0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[32,\"mos_sf/vdd=1.200_vinp=0.600V/125C\",\"av0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[32,\"mos_sf/vdd=1.200_vinp=0.600V/125C\",\"avs0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[33,\"mos_sf/vdd=1.320_vinp=0.660V/-40C\",\"av0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[33,\"mos_sf/vdd=1.320_vinp=0.660V/-40C\",\"avs0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[34,\"mos_sf/vdd=1.320_vinp=0.660V/27C\",\"av0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[34,\"mos_sf/vdd=1.320_vinp=0.660V/27C\",\"avs0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[35,\"mos_sf/vdd=1.320_vinp=0.660V/125C\",\"av0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[35,\"mos_sf/vdd=1.320_vinp=0.660V/125C\",\"avs0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[36,\"mos_fs/vdd=1.080_vinp=0.540V/-40C\",\"av0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[36,\"mos_fs/vdd=1.080_vinp=0.540V/-40C\",\"avs0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[37,\"mos_fs/vdd=1.080_vinp=0.540V/27C\",\"av0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[37,\"mos_fs/vdd=1.080_vinp=0.540V/27C\",\"avs0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[38,\"mos_fs/vdd=1.080_vinp=0.540V/125C\",\"av0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[38,\"mos_fs/vdd=1.080_vinp=0.540V/125C\",\"avs0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[39,\"mos_fs/vdd=1.200_vinp=0.600V/-40C\",\"av0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[39,\"mos_fs/vdd=1.200_vinp=0.600V/-40C\",\"avs0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[4,\"mos_tt/vdd=1.200_vinp=0.600V/27C\",\"av0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[4,\"mos_tt/vdd=1.200_vinp=0.600V/27C\",\"avs0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[40,\"mos_fs/vdd=1.200_vinp=0.600V/27C\",\"av0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[40,\"mos_fs/vdd=1.200_vinp=0.600V/27C\",\"avs0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[41,\"mos_fs/vdd=1.200_vinp=0.600V/125C\",\"av0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[41,\"mos_fs/vdd=1.200_vinp=0.600V/125C\",\"avs0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[42,\"mos_fs/vdd=1.320_vinp=0.660V/-40C\",\"av0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[42,\"mos_fs/vdd=1.320_vinp=0.660V/-40C\",\"avs0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[43,\"mos_fs/vdd=1.320_vinp=0.660V/27C\",\"av0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[43,\"mos_fs/vdd=1.320_vinp=0.660V/27C\",\"avs0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[44,\"mos_fs/vdd=1.320_vinp=0.660V/125C\",\"av0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[44,\"mos_fs/vdd=1.320_vinp=0.660V/125C\",\"avs0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[5,\"mos_tt/vdd=1.200_vinp=0.600V/125C\",\"av0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[5,\"mos_tt/vdd=1.200_vinp=0.600V/125C\",\"avs0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[6,\"mos_tt/vdd=1.320_vinp=0.660V/-40C\",\"av0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[6,\"mos_tt/vdd=1.320_vinp=0.660V/-40C\",\"avs0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[7,\"mos_tt/vdd=1.320_vinp=0.660V/27C\",\"av0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[7,\"mos_tt/vdd=1.320_vinp=0.660V/27C\",\"avs0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[8,\"mos_tt/vdd=1.320_vinp=0.660V/125C\",\"av0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[8,\"mos_tt/vdd=1.320_vinp=0.660V/125C\",\"avs0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[9,\"mos_ss/vdd=1.080_vinp=0.540V/-40C\",\"av0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[9,\"mos_ss/vdd=1.080_vinp=0.540V/-40C\",\"avs0_db\"]/limits",
+        "reason": "characterization_without_limits"
+      }
+    ],
+    "unknown": [],
+    "nothing_checked": false,
+    "nothing_checked_reasons": []
+  },
+  "provenance": {
+    "klt_version": "0.7.0",
+    "klayout_version": "0.30.12",
+    "pdk": {
+      "name": "ihp-sg13g2",
+      "source": "PDK_ROOT environment variable",
+      "version": null
+    },
+    "deck": {
+      "name": "cornerMOSlv.lib",
+      "content_hash": "sha256:03d505847c880d233b341be115a1e5460edf4d8e9b3e8a7df791a52fa4455d67",
+      "released": false
+    },
+    "input": {
+      "content_hash": "sha256:c397df20adccd6f1f9b6eb65818a175cecdac0ae234b2b49a75ec07e529b477c",
+      "role": "netlist"
+    }
+  },
+  "measurements": [
+    {
+      "name": "av0_db",
+      "unit": "dB",
+      "limits": null,
+      "status": "pass",
+      "worst_case": {
+        "corner_id": "mos_tt/vdd=1.080_vinp=0.540V/-40C",
+        "value": 43.49304457662,
+        "margin": null
+      }
+    },
+    {
+      "name": "avs0_db",
+      "unit": "dB",
+      "limits": null,
+      "status": "pass",
+      "worst_case": {
+        "corner_id": "mos_tt/vdd=1.080_vinp=0.540V/-40C",
+        "value": 10.3013293795,
+        "margin": null
+      }
+    },
+    {
+      "name": "psrr_db",
+      "unit": "dB",
+      "limits": {
+        "min": 1.87
+      },
+      "status": "pass",
+      "worst_case": {
+        "corner_id": "mos_fs/vdd=1.080_vinp=0.540V/125C",
+        "value": 26.9010753234,
+        "margin": 25.0310753234
+      }
+    },
+    {
+      "name": "psrr_plateau_delta_db",
+      "unit": "dB",
+      "limits": {
+        "max": 0.05
+      },
+      "status": "pass",
+      "worst_case": {
+        "corner_id": "mos_ss/vdd=1.080_vinp=0.540V/-40C",
+        "value": 8.668621376273e-13,
+        "margin": 0.04999999999913314
+      }
+    }
+  ],
+  "corners": [
+    {
+      "corner_id": "mos_tt/vdd=1.080_vinp=0.540V/-40C",
+      "process": "mos_tt",
+      "supply_v": {
+        "vdd": 1.08,
+        "vinp": 0.54
+      },
+      "temperature_c": -40,
+      "status": "pass",
+      "runtime_s": 2.135,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 43.49304457662,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "avs0_db",
+          "value": 10.3013293795,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "psrr_db",
+          "value": 33.19171519712,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 31.321715197119996
+        },
+        {
+          "name": "psrr_plateau_delta_db",
+          "value": 6.039613253961e-13,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 0.04999999999939604
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_tt/vdd=1.080_vinp=0.540V/27C",
+      "process": "mos_tt",
+      "supply_v": {
+        "vdd": 1.08,
+        "vinp": 0.54
+      },
+      "temperature_c": 27,
+      "status": "pass",
+      "runtime_s": 2.129,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 41.7121146039,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "avs0_db",
+          "value": 10.07120253228,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "psrr_db",
+          "value": 31.64091207163,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 29.77091207163
+        },
+        {
+          "name": "psrr_plateau_delta_db",
+          "value": 4.689582056017e-13,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 0.049999999999531045
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_tt/vdd=1.080_vinp=0.540V/125C",
+      "process": "mos_tt",
+      "supply_v": {
+        "vdd": 1.08,
+        "vinp": 0.54
+      },
+      "temperature_c": 125,
+      "status": "pass",
+      "runtime_s": 2.131,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 39.42293726728,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "avs0_db",
+          "value": 10.34458689022,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "psrr_db",
+          "value": 29.07835037706,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 27.20835037706
+        },
+        {
+          "name": "psrr_plateau_delta_db",
+          "value": 3.126388037344e-13,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 0.049999999999687364
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_tt/vdd=1.200_vinp=0.600V/-40C",
+      "process": "mos_tt",
+      "supply_v": {
+        "vdd": 1.2,
+        "vinp": 0.6
+      },
+      "temperature_c": -40,
+      "status": "pass",
+      "runtime_s": 2.133,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 44.5905005855,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "avs0_db",
+          "value": 9.899712255953,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "psrr_db",
+          "value": 34.69078832955,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 32.820788329550005
+        },
+        {
+          "name": "psrr_plateau_delta_db",
+          "value": 7.034373084025e-13,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 0.049999999999296565
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_tt/vdd=1.200_vinp=0.600V/27C",
+      "process": "mos_tt",
+      "supply_v": {
+        "vdd": 1.2,
+        "vinp": 0.6
+      },
+      "temperature_c": 27,
+      "status": "pass",
+      "runtime_s": 2.08,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 42.87273094824,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "avs0_db",
+          "value": 10.07401581439,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "psrr_db",
+          "value": 32.79871513385,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 30.92871513385
+        },
+        {
+          "name": "psrr_plateau_delta_db",
+          "value": 4.973799150321e-13,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 0.04999999999950262
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_tt/vdd=1.200_vinp=0.600V/125C",
+      "process": "mos_tt",
+      "supply_v": {
+        "vdd": 1.2,
+        "vinp": 0.6
+      },
+      "temperature_c": 125,
+      "status": "pass",
+      "runtime_s": 0.277,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 40.85511659894,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "avs0_db",
+          "value": 10.13955800808,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "psrr_db",
+          "value": 30.71555859086,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 28.845558590859998
+        },
+        {
+          "name": "psrr_plateau_delta_db",
+          "value": 4.192202140985e-13,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 0.04999999999958078
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_tt/vdd=1.320_vinp=0.660V/-40C",
+      "process": "mos_tt",
+      "supply_v": {
+        "vdd": 1.32,
+        "vinp": 0.66
+      },
+      "temperature_c": -40,
+      "status": "pass",
+      "runtime_s": 2.125,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 45.65279840654,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "avs0_db",
+          "value": 10.3201584502,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "psrr_db",
+          "value": 35.33263995634,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 33.462639956340006
+        },
+        {
+          "name": "psrr_plateau_delta_db",
+          "value": 6.963318810449e-13,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 0.04999999999930367
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_tt/vdd=1.320_vinp=0.660V/27C",
+      "process": "mos_tt",
+      "supply_v": {
+        "vdd": 1.32,
+        "vinp": 0.66
+      },
+      "temperature_c": 27,
+      "status": "pass",
+      "runtime_s": 1.572,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 43.99699180726,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "avs0_db",
+          "value": 10.52682926978,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "psrr_db",
+          "value": 33.47016253748,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 31.60016253748
+        },
+        {
+          "name": "psrr_plateau_delta_db",
+          "value": 5.542233338929e-13,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 0.04999999999944578
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_tt/vdd=1.320_vinp=0.660V/125C",
+      "process": "mos_tt",
+      "supply_v": {
+        "vdd": 1.32,
+        "vinp": 0.66
+      },
+      "temperature_c": 125,
+      "status": "pass",
+      "runtime_s": 2.081,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 42.09495567256,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "avs0_db",
+          "value": 10.46820032474,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "psrr_db",
+          "value": 31.62675534782,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 29.75675534782
+        },
+        {
+          "name": "psrr_plateau_delta_db",
+          "value": 4.654054919229e-13,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 0.0499999999995346
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_ss/vdd=1.080_vinp=0.540V/-40C",
+      "process": "mos_ss",
+      "supply_v": {
+        "vdd": 1.08,
+        "vinp": 0.54
+      },
+      "temperature_c": -40,
+      "status": "pass",
+      "runtime_s": 3.64,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 44.54311266029,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "avs0_db",
+          "value": 12.44834120337,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "psrr_db",
+          "value": 32.09477145692,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 30.22477145692
+        },
+        {
+          "name": "psrr_plateau_delta_db",
+          "value": 8.668621376273e-13,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 0.04999999999913314
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_ss/vdd=1.080_vinp=0.540V/27C",
+      "process": "mos_ss",
+      "supply_v": {
+        "vdd": 1.08,
+        "vinp": 0.54
+      },
+      "temperature_c": 27,
+      "status": "pass",
+      "runtime_s": 3.639,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 42.55065497677,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "avs0_db",
+          "value": 11.72107240402,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "psrr_db",
+          "value": 30.82958257275,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 28.959582572749998
+        },
+        {
+          "name": "psrr_plateau_delta_db",
+          "value": 5.293543381413e-13,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 0.04999999999947065
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_ss/vdd=1.080_vinp=0.540V/125C",
+      "process": "mos_ss",
+      "supply_v": {
+        "vdd": 1.08,
+        "vinp": 0.54
+      },
+      "temperature_c": 125,
+      "status": "pass",
+      "runtime_s": 2.885,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 40.04173187141,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "avs0_db",
+          "value": 11.28454859247,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "psrr_db",
+          "value": 28.75718327894,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 26.88718327894
+        },
+        {
+          "name": "psrr_plateau_delta_db",
+          "value": 3.304023721284e-13,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 0.0499999999996696
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_ss/vdd=1.200_vinp=0.600V/-40C",
+      "process": "mos_ss",
+      "supply_v": {
+        "vdd": 1.2,
+        "vinp": 0.6
+      },
+      "temperature_c": -40,
+      "status": "pass",
+      "runtime_s": 3.639,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 45.72304849276,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "avs0_db",
+          "value": 10.85320050077,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "psrr_db",
+          "value": 34.86984799199,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 32.99984799199
+        },
+        {
+          "name": "psrr_plateau_delta_db",
+          "value": 7.389644451905e-13,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 0.04999999999926104
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_ss/vdd=1.200_vinp=0.600V/27C",
+      "process": "mos_ss",
+      "supply_v": {
+        "vdd": 1.2,
+        "vinp": 0.6
+      },
+      "temperature_c": 27,
+      "status": "pass",
+      "runtime_s": 3.587,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 43.75185306616,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "avs0_db",
+          "value": 10.76882327769,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "psrr_db",
+          "value": 32.98302978846,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 31.11302978846
+        },
+        {
+          "name": "psrr_plateau_delta_db",
+          "value": 5.186961971049e-13,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 0.04999999999948131
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_ss/vdd=1.200_vinp=0.600V/125C",
+      "process": "mos_ss",
+      "supply_v": {
+        "vdd": 1.2,
+        "vinp": 0.6
+      },
+      "temperature_c": 125,
+      "status": "pass",
+      "runtime_s": 2.562,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 41.46636592697,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "avs0_db",
+          "value": 10.60602319609,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "psrr_db",
+          "value": 30.86034273088,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 28.99034273088
+        },
+        {
+          "name": "psrr_plateau_delta_db",
+          "value": 4.334310688137e-13,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 0.04999999999956657
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_ss/vdd=1.320_vinp=0.660V/-40C",
+      "process": "mos_ss",
+      "supply_v": {
+        "vdd": 1.32,
+        "vinp": 0.66
+      },
+      "temperature_c": -40,
+      "status": "pass",
+      "runtime_s": 3.634,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 46.778403612,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "avs0_db",
+          "value": 10.56947635995,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "psrr_db",
+          "value": 36.20892725206,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 34.33892725206
+        },
+        {
+          "name": "psrr_plateau_delta_db",
+          "value": 8.597567102697e-13,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 0.049999999999140246
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_ss/vdd=1.320_vinp=0.660V/27C",
+      "process": "mos_ss",
+      "supply_v": {
+        "vdd": 1.32,
+        "vinp": 0.66
+      },
+      "temperature_c": 27,
+      "status": "pass",
+      "runtime_s": 3.635,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 44.85819348707,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "avs0_db",
+          "value": 10.82584870477,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "psrr_db",
+          "value": 34.03234478231,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 32.16234478231
+        },
+        {
+          "name": "psrr_plateau_delta_db",
+          "value": 6.110667527537e-13,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 0.049999999999388936
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_ss/vdd=1.320_vinp=0.660V/125C",
+      "process": "mos_ss",
+      "supply_v": {
+        "vdd": 1.32,
+        "vinp": 0.66
+      },
+      "temperature_c": 125,
+      "status": "pass",
+      "runtime_s": 1.929,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 42.67998727838,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "avs0_db",
+          "value": 10.77242071598,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "psrr_db",
+          "value": 31.90756656241,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 30.03756656241
+        },
+        {
+          "name": "psrr_plateau_delta_db",
+          "value": 4.760636329593e-13,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 0.04999999999952394
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_ff/vdd=1.080_vinp=0.540V/-40C",
+      "process": "mos_ff",
+      "supply_v": {
+        "vdd": 1.08,
+        "vinp": 0.54
+      },
+      "temperature_c": -40,
+      "status": "pass",
+      "runtime_s": 2.27,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 43.4114548683,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "avs0_db",
+          "value": 8.749098186728,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "psrr_db",
+          "value": 34.66235668157,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 32.792356681570006
+        },
+        {
+          "name": "psrr_plateau_delta_db",
+          "value": 6.181721801113e-13,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 0.04999999999938183
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_ff/vdd=1.080_vinp=0.540V/27C",
+      "process": "mos_ff",
+      "supply_v": {
+        "vdd": 1.08,
+        "vinp": 0.54
+      },
+      "temperature_c": 27,
+      "status": "pass",
+      "runtime_s": 2.168,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 41.75216213206,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "avs0_db",
+          "value": 9.051407367261,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "psrr_db",
+          "value": 32.7007547648,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 30.8307547648
+        },
+        {
+          "name": "psrr_plateau_delta_db",
+          "value": 4.902744876745e-13,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 0.04999999999950973
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_ff/vdd=1.080_vinp=0.540V/125C",
+      "process": "mos_ff",
+      "supply_v": {
+        "vdd": 1.08,
+        "vinp": 0.54
+      },
+      "temperature_c": 125,
+      "status": "pass",
+      "runtime_s": 2.269,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 39.62574381413,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "avs0_db",
+          "value": 9.705418837192,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "psrr_db",
+          "value": 29.92032497694,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 28.05032497694
+        },
+        {
+          "name": "psrr_plateau_delta_db",
+          "value": 3.339550858072e-13,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 0.04999999999966605
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_ff/vdd=1.200_vinp=0.600V/-40C",
+      "process": "mos_ff",
+      "supply_v": {
+        "vdd": 1.2,
+        "vinp": 0.6
+      },
+      "temperature_c": -40,
+      "status": "pass",
+      "runtime_s": 2.21,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 44.46493156088,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "avs0_db",
+          "value": 9.292985529138,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "psrr_db",
+          "value": 35.17194603174,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 33.30194603174
+        },
+        {
+          "name": "psrr_plateau_delta_db",
+          "value": 6.963318810449e-13,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 0.04999999999930367
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_ff/vdd=1.200_vinp=0.600V/27C",
+      "process": "mos_ff",
+      "supply_v": {
+        "vdd": 1.2,
+        "vinp": 0.6
+      },
+      "temperature_c": 27,
+      "status": "pass",
+      "runtime_s": 1.918,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 42.89246936467,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "avs0_db",
+          "value": 9.572438181095,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "psrr_db",
+          "value": 33.32003118357,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 31.45003118357
+        },
+        {
+          "name": "psrr_plateau_delta_db",
+          "value": 5.115907697473e-13,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 0.04999999999948841
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_ff/vdd=1.200_vinp=0.600V/125C",
+      "process": "mos_ff",
+      "supply_v": {
+        "vdd": 1.2,
+        "vinp": 0.6
+      },
+      "temperature_c": 125,
+      "status": "pass",
+      "runtime_s": 2.217,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 41.02785068963,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "avs0_db",
+          "value": 9.736840298662,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "psrr_db",
+          "value": 31.29101039097,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 29.42101039097
+        },
+        {
+          "name": "psrr_plateau_delta_db",
+          "value": 4.121147867409e-13,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 0.04999999999958789
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_ff/vdd=1.320_vinp=0.660V/-40C",
+      "process": "mos_ff",
+      "supply_v": {
+        "vdd": 1.32,
+        "vinp": 0.66
+      },
+      "temperature_c": -40,
+      "status": "pass",
+      "runtime_s": 2.269,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 45.52083311788,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "avs0_db",
+          "value": 9.832743589911,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "psrr_db",
+          "value": 35.68808952797,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 33.81808952797
+        },
+        {
+          "name": "psrr_plateau_delta_db",
+          "value": 6.536993168993e-13,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 0.0499999999993463
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_ff/vdd=1.320_vinp=0.660V/27C",
+      "process": "mos_ff",
+      "supply_v": {
+        "vdd": 1.32,
+        "vinp": 0.66
+      },
+      "temperature_c": 27,
+      "status": "pass",
+      "runtime_s": 1.865,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 44.01281765081,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "avs0_db",
+          "value": 10.09225122256,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "psrr_db",
+          "value": 33.92056642825,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 32.05056642825
+        },
+        {
+          "name": "psrr_plateau_delta_db",
+          "value": 5.329070518201e-13,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 0.049999999999467096
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_ff/vdd=1.320_vinp=0.660V/125C",
+      "process": "mos_ff",
+      "supply_v": {
+        "vdd": 1.32,
+        "vinp": 0.66
+      },
+      "temperature_c": 125,
+      "status": "pass",
+      "runtime_s": 2.268,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 42.26143460358,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "avs0_db",
+          "value": 10.09854749188,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "psrr_db",
+          "value": 32.1628871117,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 30.2928871117
+        },
+        {
+          "name": "psrr_plateau_delta_db",
+          "value": 4.760636329593e-13,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 0.04999999999952394
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_sf/vdd=1.080_vinp=0.540V/-40C",
+      "process": "mos_sf",
+      "supply_v": {
+        "vdd": 1.08,
+        "vinp": 0.54
+      },
+      "temperature_c": -40,
+      "status": "pass",
+      "runtime_s": 2.262,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 44.43946381761,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "avs0_db",
+          "value": 11.2677126207,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "psrr_db",
+          "value": 33.17175119692,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 31.301751196919998
+        },
+        {
+          "name": "psrr_plateau_delta_db",
+          "value": 7.176481631177e-13,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 0.049999999999282355
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_sf/vdd=1.080_vinp=0.540V/27C",
+      "process": "mos_sf",
+      "supply_v": {
+        "vdd": 1.08,
+        "vinp": 0.54
+      },
+      "temperature_c": 27,
+      "status": "pass",
+      "runtime_s": 1.806,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 42.68399465743,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "avs0_db",
+          "value": 10.79231947975,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "psrr_db",
+          "value": 31.89167517768,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 30.02167517768
+        },
+        {
+          "name": "psrr_plateau_delta_db",
+          "value": 5.080380560685e-13,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 0.049999999999491965
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_sf/vdd=1.080_vinp=0.540V/125C",
+      "process": "mos_sf",
+      "supply_v": {
+        "vdd": 1.08,
+        "vinp": 0.54
+      },
+      "temperature_c": 125,
+      "status": "pass",
+      "runtime_s": 2.363,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 40.58811585383,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "avs0_db",
+          "value": 10.36071698496,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "psrr_db",
+          "value": 30.22739886886,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 28.35739886886
+        },
+        {
+          "name": "psrr_plateau_delta_db",
+          "value": 4.050093593833e-13,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 0.04999999999959499
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_sf/vdd=1.200_vinp=0.600V/-40C",
+      "process": "mos_sf",
+      "supply_v": {
+        "vdd": 1.2,
+        "vinp": 0.6
+      },
+      "temperature_c": -40,
+      "status": "pass",
+      "runtime_s": 2.457,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 45.59007136983,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "avs0_db",
+          "value": 10.224527155,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "psrr_db",
+          "value": 35.36554421483,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 33.495544214830005
+        },
+        {
+          "name": "psrr_plateau_delta_db",
+          "value": 7.247535904753e-13,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 0.04999999999927525
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_sf/vdd=1.200_vinp=0.600V/27C",
+      "process": "mos_sf",
+      "supply_v": {
+        "vdd": 1.2,
+        "vinp": 0.6
+      },
+      "temperature_c": 27,
+      "status": "pass",
+      "runtime_s": 2.457,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 43.87406022395,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "avs0_db",
+          "value": 10.35935164351,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "psrr_db",
+          "value": 33.51470858045,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 31.644708580449997
+        },
+        {
+          "name": "psrr_plateau_delta_db",
+          "value": 5.826450433233e-13,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 0.04999999999941736
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_sf/vdd=1.200_vinp=0.600V/125C",
+      "process": "mos_sf",
+      "supply_v": {
+        "vdd": 1.2,
+        "vinp": 0.6
+      },
+      "temperature_c": 125,
+      "status": "pass",
+      "runtime_s": 2.403,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 41.90008146665,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "avs0_db",
+          "value": 10.2621711974,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "psrr_db",
+          "value": 31.63791026925,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 29.76791026925
+        },
+        {
+          "name": "psrr_plateau_delta_db",
+          "value": 4.654054919229e-13,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 0.0499999999995346
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_sf/vdd=1.320_vinp=0.660V/-40C",
+      "process": "mos_sf",
+      "supply_v": {
+        "vdd": 1.32,
+        "vinp": 0.66
+      },
+      "temperature_c": -40,
+      "status": "pass",
+      "runtime_s": 2.456,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 46.66605988525,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "avs0_db",
+          "value": 10.33828943381,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "psrr_db",
+          "value": 36.32777045145,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 34.45777045145
+        },
+        {
+          "name": "psrr_plateau_delta_db",
+          "value": 8.455458555545e-13,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 0.04999999999915446
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_sf/vdd=1.320_vinp=0.660V/27C",
+      "process": "mos_sf",
+      "supply_v": {
+        "vdd": 1.32,
+        "vinp": 0.66
+      },
+      "temperature_c": 27,
+      "status": "pass",
+      "runtime_s": 2.454,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 45.01477681002,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "avs0_db",
+          "value": 10.59097053906,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "psrr_db",
+          "value": 34.42380627096,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 32.55380627096
+        },
+        {
+          "name": "psrr_plateau_delta_db",
+          "value": 6.821210263297e-13,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 0.04999999999931788
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_sf/vdd=1.320_vinp=0.660V/125C",
+      "process": "mos_sf",
+      "supply_v": {
+        "vdd": 1.32,
+        "vinp": 0.66
+      },
+      "temperature_c": 125,
+      "status": "pass",
+      "runtime_s": 2.402,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 43.12258409123,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "avs0_db",
+          "value": 10.52126769019,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "psrr_db",
+          "value": 32.60131640104,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 30.73131640104
+        },
+        {
+          "name": "psrr_plateau_delta_db",
+          "value": 5.258016244625e-13,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 0.0499999999994742
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_fs/vdd=1.080_vinp=0.540V/-40C",
+      "process": "mos_fs",
+      "supply_v": {
+        "vdd": 1.08,
+        "vinp": 0.54
+      },
+      "temperature_c": -40,
+      "status": "pass",
+      "runtime_s": 2.942,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 43.09826553592,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "avs0_db",
+          "value": 9.145536503239,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "psrr_db",
+          "value": 33.95272903268,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 32.08272903268
+        },
+        {
+          "name": "psrr_plateau_delta_db",
+          "value": 6.252776074689e-13,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 0.049999999999374725
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_fs/vdd=1.080_vinp=0.540V/27C",
+      "process": "mos_fs",
+      "supply_v": {
+        "vdd": 1.08,
+        "vinp": 0.54
+      },
+      "temperature_c": 27,
+      "status": "pass",
+      "runtime_s": 2.942,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 41.12963778264,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "avs0_db",
+          "value": 9.559710975414,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "psrr_db",
+          "value": 31.56992680723,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 29.69992680723
+        },
+        {
+          "name": "psrr_plateau_delta_db",
+          "value": 3.836930773105e-13,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 0.04999999999961631
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_fs/vdd=1.080_vinp=0.540V/125C",
+      "process": "mos_fs",
+      "supply_v": {
+        "vdd": 1.08,
+        "vinp": 0.54
+      },
+      "temperature_c": 125,
+      "status": "pass",
+      "runtime_s": 2.942,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 38.22934570773,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "avs0_db",
+          "value": 11.32827038433,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "psrr_db",
+          "value": 26.9010753234,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 25.0310753234
+        },
+        {
+          "name": "psrr_plateau_delta_db",
+          "value": 1.847411112976e-13,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 0.04999999999981526
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_fs/vdd=1.200_vinp=0.600V/-40C",
+      "process": "mos_fs",
+      "supply_v": {
+        "vdd": 1.2,
+        "vinp": 0.6
+      },
+      "temperature_c": -40,
+      "status": "pass",
+      "runtime_s": 2.936,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 44.11971891888,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "avs0_db",
+          "value": 9.379532070626,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "psrr_db",
+          "value": 34.74018684825,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 32.87018684825
+        },
+        {
+          "name": "psrr_plateau_delta_db",
+          "value": 6.039613253961e-13,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 0.04999999999939604
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_fs/vdd=1.200_vinp=0.600V/27C",
+      "process": "mos_fs",
+      "supply_v": {
+        "vdd": 1.2,
+        "vinp": 0.6
+      },
+      "temperature_c": 27,
+      "status": "pass",
+      "runtime_s": 2.935,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 42.33164948619,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "avs0_db",
+          "value": 9.651556051881,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "psrr_db",
+          "value": 32.68009343431,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 30.81009343431
+        },
+        {
+          "name": "psrr_plateau_delta_db",
+          "value": 4.973799150321e-13,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 0.04999999999950262
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_fs/vdd=1.200_vinp=0.600V/125C",
+      "process": "mos_fs",
+      "supply_v": {
+        "vdd": 1.2,
+        "vinp": 0.6
+      },
+      "temperature_c": 125,
+      "status": "pass",
+      "runtime_s": 2.776,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 40.12023035085,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "avs0_db",
+          "value": 10.16043396116,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "psrr_db",
+          "value": 29.9597963897,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 28.0897963897
+        },
+        {
+          "name": "psrr_plateau_delta_db",
+          "value": 3.268496584496e-13,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 0.04999999999967315
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_fs/vdd=1.320_vinp=0.660V/-40C",
+      "process": "mos_fs",
+      "supply_v": {
+        "vdd": 1.32,
+        "vinp": 0.66
+      },
+      "temperature_c": -40,
+      "status": "pass",
+      "runtime_s": 2.892,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 45.13282085125,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "avs0_db",
+          "value": 10.05609780374,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "psrr_db",
+          "value": 35.07672304751,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 33.20672304751
+        },
+        {
+          "name": "psrr_plateau_delta_db",
+          "value": 6.821210263297e-13,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 0.04999999999931788
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_fs/vdd=1.320_vinp=0.660V/27C",
+      "process": "mos_fs",
+      "supply_v": {
+        "vdd": 1.32,
+        "vinp": 0.66
+      },
+      "temperature_c": 27,
+      "status": "pass",
+      "runtime_s": 2.739,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 43.41884738376,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "avs0_db",
+          "value": 10.27600476117,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "psrr_db",
+          "value": 33.14284262259,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 31.27284262259
+        },
+        {
+          "name": "psrr_plateau_delta_db",
+          "value": 4.831690603169e-13,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 0.049999999999516834
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_fs/vdd=1.320_vinp=0.660V/125C",
+      "process": "mos_fs",
+      "supply_v": {
+        "vdd": 1.32,
+        "vinp": 0.66
+      },
+      "temperature_c": 125,
+      "status": "pass",
+      "runtime_s": 2.832,
+      "measurements": [
+        {
+          "name": "av0_db",
+          "value": 41.42476317614,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "avs0_db",
+          "value": 10.33911826224,
+          "unit": "dB",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "psrr_db",
+          "value": 31.0856449139,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 29.2156449139
+        },
+        {
+          "name": "psrr_plateau_delta_db",
+          "value": 3.730349362741e-13,
+          "unit": "dB",
+          "status": "pass",
+          "margin": 0.04999999999962697
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    }
+  ]
+}

@@ -1,0 +1,1593 @@
+{
+  "points_compared": 45,
+  "tolerances": {
+    "psrr_db": {
+      "abs": 0.02,
+      "rel": 0.0,
+      "unit": "dB"
+    },
+    "av0_db": {
+      "abs": 0.02,
+      "rel": 0.0,
+      "unit": "dB"
+    },
+    "avs0_db": {
+      "abs": 0.02,
+      "rel": 0.0,
+      "unit": "dB"
+    }
+  },
+  "out_of_tolerance": [],
+  "bound_verdict_disagreements": [],
+  "row": {
+    "bound": {
+      "min": 1.87,
+      "unit": "dB"
+    },
+    "direct_worst": {
+      "point": "mos_fs_125C_1.08V",
+      "value": 26.9010753234,
+      "verdict": "pass"
+    },
+    "join_worst": {
+      "point": "mos_fs_125C_1.08V",
+      "value": 26.9010753681,
+      "verdict": "pass"
+    },
+    "max_abs_psrr_delta_db": 3.090399971483748e-07,
+    "max_abs_psrr_delta_point": "mos_fs_125C_1.20V",
+    "plateau_delta_worst_db": 8.668621376273e-13,
+    "verdict_source": "klt sim limits.min on the derived psrr_db measurement"
+  },
+  "points": [
+    {
+      "point_id": "mos_tt_-40C_1.08V",
+      "process": "mos_tt",
+      "temperature_c": -40,
+      "vdd_v": 1.08,
+      "metrics": {
+        "psrr_db": {
+          "join": 33.19171523138,
+          "direct": 33.19171519712,
+          "delta": -3.426000461104195e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "av0_db": {
+          "join": 43.49304457716,
+          "direct": 43.49304457662,
+          "delta": -5.399982683229609e-10,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "avs0_db": {
+          "join": 10.30132934578,
+          "direct": 10.3013293795,
+          "delta": 3.372000101364847e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        }
+      },
+      "direct_pass": true,
+      "join_pass": true
+    },
+    {
+      "point_id": "mos_tt_-40C_1.20V",
+      "process": "mos_tt",
+      "temperature_c": -40,
+      "vdd_v": 1.2,
+      "metrics": {
+        "psrr_db": {
+          "join": 34.690788335463,
+          "direct": 34.69078832955,
+          "delta": -5.912994538448402e-09,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "av0_db": {
+          "join": 44.59050058032,
+          "direct": 44.5905005855,
+          "delta": 5.18000575766564e-09,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "avs0_db": {
+          "join": 9.899712244857,
+          "direct": 9.899712255953,
+          "delta": 1.1096000562815789e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        }
+      },
+      "direct_pass": true,
+      "join_pass": true
+    },
+    {
+      "point_id": "mos_tt_-40C_1.32V",
+      "process": "mos_tt",
+      "temperature_c": -40,
+      "vdd_v": 1.32,
+      "metrics": {
+        "psrr_db": {
+          "join": 35.33263996599,
+          "direct": 35.33263995634,
+          "delta": -9.649994581195642e-09,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "av0_db": {
+          "join": 45.65279840599,
+          "direct": 45.65279840654,
+          "delta": 5.500027100424631e-10,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "avs0_db": {
+          "join": 10.32015844,
+          "direct": 10.3201584502,
+          "delta": 1.0199999067594945e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        }
+      },
+      "direct_pass": true,
+      "join_pass": true
+    },
+    {
+      "point_id": "mos_tt_27C_1.08V",
+      "process": "mos_tt",
+      "temperature_c": 27,
+      "vdd_v": 1.08,
+      "metrics": {
+        "psrr_db": {
+          "join": 31.640912104589997,
+          "direct": 31.64091207163,
+          "delta": -3.295999562169527e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "av0_db": {
+          "join": 41.71211460366,
+          "direct": 41.7121146039,
+          "delta": 2.4000001985768904e-10,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "avs0_db": {
+          "join": 10.07120249907,
+          "direct": 10.07120253228,
+          "delta": 3.320999830691562e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        }
+      },
+      "direct_pass": true,
+      "join_pass": true
+    },
+    {
+      "point_id": "mos_tt_27C_1.20V",
+      "process": "mos_tt",
+      "temperature_c": 27,
+      "vdd_v": 1.2,
+      "metrics": {
+        "psrr_db": {
+          "join": 32.79871513858,
+          "direct": 32.79871513385,
+          "delta": -4.729997726826696e-09,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "av0_db": {
+          "join": 42.87273094762,
+          "direct": 42.87273094824,
+          "delta": 6.199982749421906e-10,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "avs0_db": {
+          "join": 10.07401580904,
+          "direct": 10.07401581439,
+          "delta": 5.349999554482565e-09,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        }
+      },
+      "direct_pass": true,
+      "join_pass": true
+    },
+    {
+      "point_id": "mos_tt_27C_1.32V",
+      "process": "mos_tt",
+      "temperature_c": 27,
+      "vdd_v": 1.32,
+      "metrics": {
+        "psrr_db": {
+          "join": 33.47016257506,
+          "direct": 33.47016253748,
+          "delta": -3.75800013330263e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "av0_db": {
+          "join": 43.99699181373,
+          "direct": 43.99699180726,
+          "delta": -6.469996094438102e-09,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "avs0_db": {
+          "join": 10.52682923867,
+          "direct": 10.52682926978,
+          "delta": 3.110999990951768e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        }
+      },
+      "direct_pass": true,
+      "join_pass": true
+    },
+    {
+      "point_id": "mos_tt_125C_1.08V",
+      "process": "mos_tt",
+      "temperature_c": 125,
+      "vdd_v": 1.08,
+      "metrics": {
+        "psrr_db": {
+          "join": 29.078350412279995,
+          "direct": 29.07835037706,
+          "delta": -3.521999403233167e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "av0_db": {
+          "join": 39.42293726718,
+          "direct": 39.42293726728,
+          "delta": 1.000017846308765e-10,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "avs0_db": {
+          "join": 10.3445868549,
+          "direct": 10.34458689022,
+          "delta": 3.5320001146033064e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        }
+      },
+      "direct_pass": true,
+      "join_pass": true
+    },
+    {
+      "point_id": "mos_tt_125C_1.20V",
+      "process": "mos_tt",
+      "temperature_c": 125,
+      "vdd_v": 1.2,
+      "metrics": {
+        "psrr_db": {
+          "join": 30.7155586236,
+          "direct": 30.71555859086,
+          "delta": -3.274000093256291e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "av0_db": {
+          "join": 40.8551165987,
+          "direct": 40.85511659894,
+          "delta": 2.4000001985768904e-10,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "avs0_db": {
+          "join": 10.1395579751,
+          "direct": 10.13955800808,
+          "delta": 3.297999917606376e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        }
+      },
+      "direct_pass": true,
+      "join_pass": true
+    },
+    {
+      "point_id": "mos_tt_125C_1.32V",
+      "process": "mos_tt",
+      "temperature_c": 125,
+      "vdd_v": 1.32,
+      "metrics": {
+        "psrr_db": {
+          "join": 31.626755376940004,
+          "direct": 31.62675534782,
+          "delta": -2.9120002409399603e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "av0_db": {
+          "join": 42.09495567249,
+          "direct": 42.09495567256,
+          "delta": 6.999556489972747e-11,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "avs0_db": {
+          "join": 10.46820029555,
+          "direct": 10.46820032474,
+          "delta": 2.918999975065617e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        }
+      },
+      "direct_pass": true,
+      "join_pass": true
+    },
+    {
+      "point_id": "mos_ss_-40C_1.08V",
+      "process": "mos_ss",
+      "temperature_c": -40,
+      "vdd_v": 1.08,
+      "metrics": {
+        "psrr_db": {
+          "join": 32.09477146891,
+          "direct": 32.09477145692,
+          "delta": -1.198999655116495e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "av0_db": {
+          "join": 44.54311265863,
+          "direct": 44.54311266029,
+          "delta": 1.6599983609921765e-09,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "avs0_db": {
+          "join": 12.44834118972,
+          "direct": 12.44834120337,
+          "delta": 1.3649998464870805e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        }
+      },
+      "direct_pass": true,
+      "join_pass": true
+    },
+    {
+      "point_id": "mos_ss_-40C_1.20V",
+      "process": "mos_ss",
+      "temperature_c": -40,
+      "vdd_v": 1.2,
+      "metrics": {
+        "psrr_db": {
+          "join": 34.86984800113,
+          "direct": 34.86984799199,
+          "delta": -9.14000253260383e-09,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "av0_db": {
+          "join": 45.72304849019,
+          "direct": 45.72304849276,
+          "delta": 2.5699975481074944e-09,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "avs0_db": {
+          "join": 10.85320048906,
+          "direct": 10.85320050077,
+          "delta": 1.1710000080711325e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        }
+      },
+      "direct_pass": true,
+      "join_pass": true
+    },
+    {
+      "point_id": "mos_ss_-40C_1.32V",
+      "process": "mos_ss",
+      "temperature_c": -40,
+      "vdd_v": 1.32,
+      "metrics": {
+        "psrr_db": {
+          "join": 36.20892727114,
+          "direct": 36.20892725206,
+          "delta": -1.90799980259726e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "av0_db": {
+          "join": 46.77840361089,
+          "direct": 46.778403612,
+          "delta": 1.1099956509497133e-09,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "avs0_db": {
+          "join": 10.56947633975,
+          "direct": 10.56947635995,
+          "delta": 2.0199999894998655e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        }
+      },
+      "direct_pass": true,
+      "join_pass": true
+    },
+    {
+      "point_id": "mos_ss_27C_1.08V",
+      "process": "mos_ss",
+      "temperature_c": 27,
+      "vdd_v": 1.08,
+      "metrics": {
+        "psrr_db": {
+          "join": 30.829582579940002,
+          "direct": 30.82958257275,
+          "delta": -7.1900032594385266e-09,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "av0_db": {
+          "join": 42.55065497556,
+          "direct": 42.55065497677,
+          "delta": 1.2099974355805898e-09,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "avs0_db": {
+          "join": 11.72107239562,
+          "direct": 11.72107240402,
+          "delta": 8.399998918662277e-09,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        }
+      },
+      "direct_pass": true,
+      "join_pass": true
+    },
+    {
+      "point_id": "mos_ss_27C_1.20V",
+      "process": "mos_ss",
+      "temperature_c": 27,
+      "vdd_v": 1.2,
+      "metrics": {
+        "psrr_db": {
+          "join": 32.98302980202,
+          "direct": 32.98302978846,
+          "delta": -1.3559997569245752e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "av0_db": {
+          "join": 43.75185306771,
+          "direct": 43.75185306616,
+          "delta": -1.5499992400691553e-09,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "avs0_db": {
+          "join": 10.76882326569,
+          "direct": 10.76882327769,
+          "delta": 1.2000000992884452e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        }
+      },
+      "direct_pass": true,
+      "join_pass": true
+    },
+    {
+      "point_id": "mos_ss_27C_1.32V",
+      "process": "mos_ss",
+      "temperature_c": 27,
+      "vdd_v": 1.32,
+      "metrics": {
+        "psrr_db": {
+          "join": 34.032344822400006,
+          "direct": 34.03234478231,
+          "delta": -4.009000775795357e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "av0_db": {
+          "join": 44.85819349188,
+          "direct": 44.85819348707,
+          "delta": -4.810004838873283e-09,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "avs0_db": {
+          "join": 10.82584866948,
+          "direct": 10.82584870477,
+          "delta": 3.5290000255372433e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        }
+      },
+      "direct_pass": true,
+      "join_pass": true
+    },
+    {
+      "point_id": "mos_ss_125C_1.08V",
+      "process": "mos_ss",
+      "temperature_c": 125,
+      "vdd_v": 1.08,
+      "metrics": {
+        "psrr_db": {
+          "join": 28.757183289939995,
+          "direct": 28.75718327894,
+          "delta": -1.0999993804716723e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "av0_db": {
+          "join": 40.04173187305,
+          "direct": 40.04173187141,
+          "delta": -1.6399965829805296e-09,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "avs0_db": {
+          "join": 11.28454858311,
+          "direct": 11.28454859247,
+          "delta": 9.359998998093033e-09,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        }
+      },
+      "direct_pass": true,
+      "join_pass": true
+    },
+    {
+      "point_id": "mos_ss_125C_1.20V",
+      "process": "mos_ss",
+      "temperature_c": 125,
+      "vdd_v": 1.2,
+      "metrics": {
+        "psrr_db": {
+          "join": 30.860342738869996,
+          "direct": 30.86034273088,
+          "delta": -7.989996220203466e-09,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "av0_db": {
+          "join": 41.46636592767,
+          "direct": 41.46636592697,
+          "delta": -6.999982815614203e-10,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "avs0_db": {
+          "join": 10.6060231888,
+          "direct": 10.60602319609,
+          "delta": 7.289999714998885e-09,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        }
+      },
+      "direct_pass": true,
+      "join_pass": true
+    },
+    {
+      "point_id": "mos_ss_125C_1.32V",
+      "process": "mos_ss",
+      "temperature_c": 125,
+      "vdd_v": 1.32,
+      "metrics": {
+        "psrr_db": {
+          "join": 31.907566542820003,
+          "direct": 31.90756656241,
+          "delta": 1.958999717999177e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "av0_db": {
+          "join": 42.67998727206,
+          "direct": 42.67998727838,
+          "delta": 6.319993417491787e-09,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "avs0_db": {
+          "join": 10.77242072924,
+          "direct": 10.77242071598,
+          "delta": -1.326000109713732e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        }
+      },
+      "direct_pass": true,
+      "join_pass": true
+    },
+    {
+      "point_id": "mos_ff_-40C_1.08V",
+      "process": "mos_ff",
+      "temperature_c": -40,
+      "vdd_v": 1.08,
+      "metrics": {
+        "psrr_db": {
+          "join": 34.662356749927,
+          "direct": 34.66235668157,
+          "delta": -6.835699650764582e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "av0_db": {
+          "join": 43.4114548632,
+          "direct": 43.4114548683,
+          "delta": 5.099998645619053e-09,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "avs0_db": {
+          "join": 8.749098113273,
+          "direct": 8.749098186728,
+          "delta": 7.345500030453422e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        }
+      },
+      "direct_pass": true,
+      "join_pass": true
+    },
+    {
+      "point_id": "mos_ff_-40C_1.20V",
+      "process": "mos_ff",
+      "temperature_c": -40,
+      "vdd_v": 1.2,
+      "metrics": {
+        "psrr_db": {
+          "join": 35.171946108652996,
+          "direct": 35.17194603174,
+          "delta": -7.691299686030106e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "av0_db": {
+          "join": 44.46493156213,
+          "direct": 44.46493156088,
+          "delta": -1.2500009916038834e-09,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "avs0_db": {
+          "join": 9.292985453477,
+          "direct": 9.292985529138,
+          "delta": 7.566100101996653e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        }
+      },
+      "direct_pass": true,
+      "join_pass": true
+    },
+    {
+      "point_id": "mos_ff_-40C_1.32V",
+      "process": "mos_ff",
+      "temperature_c": -40,
+      "vdd_v": 1.32,
+      "metrics": {
+        "psrr_db": {
+          "join": 35.688089615892004,
+          "direct": 35.68808952797,
+          "delta": -8.79220038996209e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "av0_db": {
+          "join": 45.52083311748,
+          "direct": 45.52083311788,
+          "delta": 4.000000330961484e-10,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "avs0_db": {
+          "join": 9.832743501588,
+          "direct": 9.832743589911,
+          "delta": 8.832300046890396e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        }
+      },
+      "direct_pass": true,
+      "join_pass": true
+    },
+    {
+      "point_id": "mos_ff_27C_1.08V",
+      "process": "mos_ff",
+      "temperature_c": 27,
+      "vdd_v": 1.08,
+      "metrics": {
+        "psrr_db": {
+          "join": 32.700754849424,
+          "direct": 32.7007547648,
+          "delta": -8.462399847530833e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "av0_db": {
+          "join": 41.75216213168,
+          "direct": 41.75216213206,
+          "delta": 3.799982550845016e-10,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "avs0_db": {
+          "join": 9.051407282256,
+          "direct": 9.051407367261,
+          "delta": 8.500500037200709e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        }
+      },
+      "direct_pass": true,
+      "join_pass": true
+    },
+    {
+      "point_id": "mos_ff_27C_1.20V",
+      "process": "mos_ff",
+      "temperature_c": 27,
+      "vdd_v": 1.2,
+      "metrics": {
+        "psrr_db": {
+          "join": 33.32003125027,
+          "direct": 33.32003118357,
+          "delta": -6.669999663699855e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "av0_db": {
+          "join": 42.89246936348,
+          "direct": 42.89246936467,
+          "delta": 1.1900027629963006e-09,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "avs0_db": {
+          "join": 9.57243811321,
+          "direct": 9.572438181095,
+          "delta": 6.788500073184878e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        }
+      },
+      "direct_pass": true,
+      "join_pass": true
+    },
+    {
+      "point_id": "mos_ff_27C_1.32V",
+      "process": "mos_ff",
+      "temperature_c": 27,
+      "vdd_v": 1.32,
+      "metrics": {
+        "psrr_db": {
+          "join": 33.920566517510004,
+          "direct": 33.92056642825,
+          "delta": -8.926000560904868e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "av0_db": {
+          "join": 44.012817648,
+          "direct": 44.01281765081,
+          "delta": 2.8099975679651834e-09,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "avs0_db": {
+          "join": 10.09225113049,
+          "direct": 10.09225122256,
+          "delta": 9.206999962430018e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        }
+      },
+      "direct_pass": true,
+      "join_pass": true
+    },
+    {
+      "point_id": "mos_ff_125C_1.08V",
+      "process": "mos_ff",
+      "temperature_c": 125,
+      "vdd_v": 1.08,
+      "metrics": {
+        "psrr_db": {
+          "join": 29.920325073912,
+          "direct": 29.92032497694,
+          "delta": -9.697199843117232e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "av0_db": {
+          "join": 39.62574381412,
+          "direct": 39.62574381413,
+          "delta": 9.99733629214461e-12,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "avs0_db": {
+          "join": 9.705418740208,
+          "direct": 9.705418837192,
+          "delta": 9.698399949797931e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        }
+      },
+      "direct_pass": true,
+      "join_pass": true
+    },
+    {
+      "point_id": "mos_ff_125C_1.20V",
+      "process": "mos_ff",
+      "temperature_c": 125,
+      "vdd_v": 1.2,
+      "metrics": {
+        "psrr_db": {
+          "join": 31.291010480060997,
+          "direct": 31.29101039097,
+          "delta": -8.909099591392078e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "av0_db": {
+          "join": 41.02785068972,
+          "direct": 41.02785068963,
+          "delta": -8.999734291137429e-11,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "avs0_db": {
+          "join": 9.736840209659,
+          "direct": 9.736840298662,
+          "delta": 8.900300052516741e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        }
+      },
+      "direct_pass": true,
+      "join_pass": true
+    },
+    {
+      "point_id": "mos_ff_125C_1.32V",
+      "process": "mos_ff",
+      "temperature_c": 125,
+      "vdd_v": 1.32,
+      "metrics": {
+        "psrr_db": {
+          "join": 32.16288720039,
+          "direct": 32.1628871117,
+          "delta": -8.869000112099457e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "av0_db": {
+          "join": 42.26143460363,
+          "direct": 42.26143460358,
+          "delta": -5.000089231543825e-11,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "avs0_db": {
+          "join": 10.09854740324,
+          "direct": 10.09854749188,
+          "delta": 8.864000022867913e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        }
+      },
+      "direct_pass": true,
+      "join_pass": true
+    },
+    {
+      "point_id": "mos_sf_-40C_1.08V",
+      "process": "mos_sf",
+      "temperature_c": -40,
+      "vdd_v": 1.08,
+      "metrics": {
+        "psrr_db": {
+          "join": 33.171751211,
+          "direct": 33.17175119692,
+          "delta": -1.4080001164984424e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "av0_db": {
+          "join": 44.43946381663,
+          "direct": 44.43946381761,
+          "delta": 9.799947520150454e-10,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "avs0_db": {
+          "join": 11.26771260563,
+          "direct": 11.2677126207,
+          "delta": 1.5069998582362132e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        }
+      },
+      "direct_pass": true,
+      "join_pass": true
+    },
+    {
+      "point_id": "mos_sf_-40C_1.20V",
+      "process": "mos_sf",
+      "temperature_c": -40,
+      "vdd_v": 1.2,
+      "metrics": {
+        "psrr_db": {
+          "join": 35.365544237600005,
+          "direct": 35.36554421483,
+          "delta": -2.2770002772176667e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "av0_db": {
+          "join": 45.59007136918,
+          "direct": 45.59007136983,
+          "delta": 6.49997389245982e-10,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "avs0_db": {
+          "join": 10.22452713158,
+          "direct": 10.224527155,
+          "delta": 2.342000016142265e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        }
+      },
+      "direct_pass": true,
+      "join_pass": true
+    },
+    {
+      "point_id": "mos_sf_-40C_1.32V",
+      "process": "mos_sf",
+      "temperature_c": -40,
+      "vdd_v": 1.32,
+      "metrics": {
+        "psrr_db": {
+          "join": 36.327770472359994,
+          "direct": 36.32777045145,
+          "delta": -2.090999373649538e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "av0_db": {
+          "join": 46.66605988465,
+          "direct": 46.66605988525,
+          "delta": 6.000036023579014e-10,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "avs0_db": {
+          "join": 10.33828941229,
+          "direct": 10.33828943381,
+          "delta": 2.1520000004215945e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        }
+      },
+      "direct_pass": true,
+      "join_pass": true
+    },
+    {
+      "point_id": "mos_sf_27C_1.08V",
+      "process": "mos_sf",
+      "temperature_c": 27,
+      "vdd_v": 1.08,
+      "metrics": {
+        "psrr_db": {
+          "join": 31.891675192390004,
+          "direct": 31.89167517768,
+          "delta": -1.4710003881646116e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "av0_db": {
+          "join": 42.68399465672,
+          "direct": 42.68399465743,
+          "delta": 7.099956178535649e-10,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "avs0_db": {
+          "join": 10.79231946433,
+          "direct": 10.79231947975,
+          "delta": 1.542000127585652e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        }
+      },
+      "direct_pass": true,
+      "join_pass": true
+    },
+    {
+      "point_id": "mos_sf_27C_1.20V",
+      "process": "mos_sf",
+      "temperature_c": 27,
+      "vdd_v": 1.2,
+      "metrics": {
+        "psrr_db": {
+          "join": 33.514708598000006,
+          "direct": 33.51470858045,
+          "delta": -1.755000766934245e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "av0_db": {
+          "join": 43.87406022958,
+          "direct": 43.87406022395,
+          "delta": -5.629999577649869e-09,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "avs0_db": {
+          "join": 10.35935163158,
+          "direct": 10.35935164351,
+          "delta": 1.1930000098914206e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        }
+      },
+      "direct_pass": true,
+      "join_pass": true
+    },
+    {
+      "point_id": "mos_sf_27C_1.32V",
+      "process": "mos_sf",
+      "temperature_c": 27,
+      "vdd_v": 1.32,
+      "metrics": {
+        "psrr_db": {
+          "join": 34.42380628179,
+          "direct": 34.42380627096,
+          "delta": -1.0830000007899798e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "av0_db": {
+          "join": 45.01477680849,
+          "direct": 45.01477681002,
+          "delta": 1.5300045674848661e-09,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "avs0_db": {
+          "join": 10.5909705267,
+          "direct": 10.59097053906,
+          "delta": 1.2360001022670986e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        }
+      },
+      "direct_pass": true,
+      "join_pass": true
+    },
+    {
+      "point_id": "mos_sf_125C_1.08V",
+      "process": "mos_sf",
+      "temperature_c": 125,
+      "vdd_v": 1.08,
+      "metrics": {
+        "psrr_db": {
+          "join": 30.227398887299998,
+          "direct": 30.22739886886,
+          "delta": -1.8439997973018762e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "av0_db": {
+          "join": 40.58811585497,
+          "direct": 40.58811585383,
+          "delta": -1.1400018706808623e-09,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "avs0_db": {
+          "join": 10.36071696767,
+          "direct": 10.36071698496,
+          "delta": 1.7290000542402595e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        }
+      },
+      "direct_pass": true,
+      "join_pass": true
+    },
+    {
+      "point_id": "mos_sf_125C_1.20V",
+      "process": "mos_sf",
+      "temperature_c": 125,
+      "vdd_v": 1.2,
+      "metrics": {
+        "psrr_db": {
+          "join": 31.637910291860003,
+          "direct": 31.63791026925,
+          "delta": -2.2610002758938208e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "av0_db": {
+          "join": 41.90008146846,
+          "direct": 41.90008146665,
+          "delta": -1.8100010379384912e-09,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "avs0_db": {
+          "join": 10.2621711766,
+          "direct": 10.2621711974,
+          "delta": 2.0799999944642877e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        }
+      },
+      "direct_pass": true,
+      "join_pass": true
+    },
+    {
+      "point_id": "mos_sf_125C_1.32V",
+      "process": "mos_sf",
+      "temperature_c": 125,
+      "vdd_v": 1.32,
+      "metrics": {
+        "psrr_db": {
+          "join": 32.60131641164,
+          "direct": 32.60131640104,
+          "delta": -1.0599997324334254e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "av0_db": {
+          "join": 43.12258408887,
+          "direct": 43.12258409123,
+          "delta": 2.3600037479809544e-09,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "avs0_db": {
+          "join": 10.52126767723,
+          "direct": 10.52126769019,
+          "delta": 1.2959999295958369e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        }
+      },
+      "direct_pass": true,
+      "join_pass": true
+    },
+    {
+      "point_id": "mos_fs_-40C_1.08V",
+      "process": "mos_fs",
+      "temperature_c": -40,
+      "vdd_v": 1.08,
+      "metrics": {
+        "psrr_db": {
+          "join": 33.952729102984996,
+          "direct": 33.95272903268,
+          "delta": -7.030499915572364e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "av0_db": {
+          "join": 43.09826553542,
+          "direct": 43.09826553592,
+          "delta": 5.000018177270249e-10,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "avs0_db": {
+          "join": 9.145536432435,
+          "direct": 9.145536503239,
+          "delta": 7.080400088455008e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        }
+      },
+      "direct_pass": true,
+      "join_pass": true
+    },
+    {
+      "point_id": "mos_fs_-40C_1.20V",
+      "process": "mos_fs",
+      "temperature_c": -40,
+      "vdd_v": 1.2,
+      "metrics": {
+        "psrr_db": {
+          "join": 34.740186909856,
+          "direct": 34.74018684825,
+          "delta": -6.160600207749667e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "av0_db": {
+          "join": 44.11971891634,
+          "direct": 44.11971891888,
+          "delta": 2.539998433803703e-09,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "avs0_db": {
+          "join": 9.379532006484,
+          "direct": 9.379532070626,
+          "delta": 6.414200015569804e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        }
+      },
+      "direct_pass": true,
+      "join_pass": true
+    },
+    {
+      "point_id": "mos_fs_-40C_1.32V",
+      "process": "mos_fs",
+      "temperature_c": -40,
+      "vdd_v": 1.32,
+      "metrics": {
+        "psrr_db": {
+          "join": 35.07672310983,
+          "direct": 35.07672304751,
+          "delta": -6.231999805095256e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "av0_db": {
+          "join": 45.13282085236,
+          "direct": 45.13282085125,
+          "delta": -1.1099956509497133e-09,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "avs0_db": {
+          "join": 10.05609774253,
+          "direct": 10.05609780374,
+          "delta": 6.121000062364601e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        }
+      },
+      "direct_pass": true,
+      "join_pass": true
+    },
+    {
+      "point_id": "mos_fs_27C_1.08V",
+      "process": "mos_fs",
+      "temperature_c": 27,
+      "vdd_v": 1.08,
+      "metrics": {
+        "psrr_db": {
+          "join": 31.569926851332,
+          "direct": 31.56992680723,
+          "delta": -4.410199849758101e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "av0_db": {
+          "join": 41.12963778173,
+          "direct": 41.12963778264,
+          "delta": 9.100062925426755e-10,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "avs0_db": {
+          "join": 9.559710930398,
+          "direct": 9.559710975414,
+          "delta": 4.5015999816655494e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        }
+      },
+      "direct_pass": true,
+      "join_pass": true
+    },
+    {
+      "point_id": "mos_fs_27C_1.20V",
+      "process": "mos_fs",
+      "temperature_c": 27,
+      "vdd_v": 1.2,
+      "metrics": {
+        "psrr_db": {
+          "join": 32.680093467329,
+          "direct": 32.68009343431,
+          "delta": -3.301899909047279e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "av0_db": {
+          "join": 42.33164948391,
+          "direct": 42.33164948619,
+          "delta": 2.2800037413617247e-09,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "avs0_db": {
+          "join": 9.651556016581,
+          "direct": 9.651556051881,
+          "delta": 3.529999936802142e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        }
+      },
+      "direct_pass": true,
+      "join_pass": true
+    },
+    {
+      "point_id": "mos_fs_27C_1.32V",
+      "process": "mos_fs",
+      "temperature_c": 27,
+      "vdd_v": 1.32,
+      "metrics": {
+        "psrr_db": {
+          "join": 33.14284265683,
+          "direct": 33.14284262259,
+          "delta": -3.4239995727602945e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "av0_db": {
+          "join": 43.41884738292,
+          "direct": 43.41884738376,
+          "delta": 8.400036222155904e-10,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "avs0_db": {
+          "join": 10.27600472609,
+          "direct": 10.27600476117,
+          "delta": 3.5080001126175375e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        }
+      },
+      "direct_pass": true,
+      "join_pass": true
+    },
+    {
+      "point_id": "mos_fs_125C_1.08V",
+      "process": "mos_fs",
+      "temperature_c": 125,
+      "vdd_v": 1.08,
+      "metrics": {
+        "psrr_db": {
+          "join": 26.9010753681,
+          "direct": 26.9010753234,
+          "delta": -4.4699998369424065e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "av0_db": {
+          "join": 38.22934570799,
+          "direct": 38.22934570773,
+          "delta": -2.6000179786933586e-10,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "avs0_db": {
+          "join": 11.32827033989,
+          "direct": 11.32827038433,
+          "delta": 4.444000012426841e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        }
+      },
+      "direct_pass": true,
+      "join_pass": true
+    },
+    {
+      "point_id": "mos_fs_125C_1.20V",
+      "process": "mos_fs",
+      "temperature_c": 125,
+      "vdd_v": 1.2,
+      "metrics": {
+        "psrr_db": {
+          "join": 29.959796698739996,
+          "direct": 29.9597963897,
+          "delta": -3.090399971483748e-07,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "av0_db": {
+          "join": 40.12023037882,
+          "direct": 40.12023035085,
+          "delta": -2.796999609699924e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "avs0_db": {
+          "join": 10.16043368008,
+          "direct": 10.16043396116,
+          "delta": 2.8108000016402457e-07,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        }
+      },
+      "direct_pass": true,
+      "join_pass": true
+    },
+    {
+      "point_id": "mos_fs_125C_1.32V",
+      "process": "mos_fs",
+      "temperature_c": 125,
+      "vdd_v": 1.32,
+      "metrics": {
+        "psrr_db": {
+          "join": 31.08564499069,
+          "direct": 31.0856449139,
+          "delta": -7.678999836002731e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "av0_db": {
+          "join": 41.4247631761,
+          "direct": 41.42476317614,
+          "delta": 3.999645059593604e-11,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        },
+        "avs0_db": {
+          "join": 10.33911818541,
+          "direct": 10.33911826224,
+          "delta": 7.683000013969377e-08,
+          "tolerance": 0.02,
+          "unit": "dB",
+          "within": true
+        }
+      },
+      "direct_pass": true,
+      "join_pass": true
+    }
+  ],
+  "status": "agree",
+  "inputs": {
+    "envelope": {
+      "path": "sim/cmrr-psrr/klt/records/20261027-011449-f8ef0ba.direct.sim.json",
+      "sha256": "325b32a574e4c43e212b176a25a56910e60ca2c7b9827165f57e80e7f6ad33d7"
+    },
+    "join_record": {
+      "path": "sim/cmrr-psrr/klt/records/20261016-171154-ff5ee9a.compare.json",
+      "sha256": "792e5a06c634f81c91e945da4edd9b86b57a7bab6c69295b2ce19bded386e02f"
+    }
+  },
+  "provenance": {
+    "record_id": "20261027-011449-f8ef0ba",
+    "repo_git_sha": "f8ef0ba",
+    "klt_client_version": "klt 0.7.0",
+    "host_ngspice": "n/a (simulated on the batch fleet)",
+    "submit_mode": "single",
+    "pdk": "ihp-sg13g2 0.3.0"
+  }
+}

@@ -58,6 +58,9 @@
 #                                             sidecar (default 1). Only for a
 #                                             bench whose run.sh does not
 #                                             source sim/preflight.sh.
+#   KLT_COMPARE_PY=compare_direct.py       -> optional, the comparator script in
+#                                             the bench dir that validate and
+#                                             compare call (default compare.py)
 #   klt_compare_and_finish <compare args>...
 #                                          -> compare; exit 0 / 5
 #
@@ -105,6 +108,7 @@ KLT_PROVENANCE_EXTRA=()
 KLT_RECORD_EXTS=()
 KLT_COMPARE_ENVELOPE_ARGS=()
 KLT_IDENTITY=1
+KLT_COMPARE_PY="${KLT_COMPARE_PY:-compare.py}"
 
 # Publication primitive: sg13g2_publish_noclobber lives in
 # sim/record-paths.sh -- the offline-sourceable split of sim/preflight.sh
@@ -194,7 +198,7 @@ klt_run_request() {
 klt_validate_envelope() {
   local out="$1"
   shift
-  if [[ "${incomplete}" -eq 0 ]] && ! python3 "${SCRIPT_DIR}/compare.py" validate "${out}" "$@"; then
+  if [[ "${incomplete}" -eq 0 ]] && ! python3 "${SCRIPT_DIR}/${KLT_COMPARE_PY}" validate "${out}" "$@"; then
     echo "run.sh: envelope failed validation -- nothing written to records/." >&2
     incomplete=1
   fi
@@ -229,7 +233,7 @@ klt_compare_and_finish() {
   local cmp_rc=0
   local env_args=("${KLT_COMPARE_ENVELOPE_ARGS[@]}")
   [[ "${#env_args[@]}" -gt 0 ]] || env_args=(--envelope "${rel}/records/${rec}.sim.json")
-  python3 "${rel}/compare.py" compare "$@" \
+  python3 "${rel}/${KLT_COMPARE_PY}" compare "$@" \
     "${env_args[@]}" \
     --json-out "${SCRATCH}/${rec}.compare.json" \
     --provenance "record_id=${RECORD_ID}" \

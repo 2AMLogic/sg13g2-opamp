@@ -20,5 +20,11 @@
 # Bumping this pin is a deliberate act: bump the rev, re-run --check
 # locally, and if the bytes move, refresh the committed GDS, DRC report,
 # signoff pins and the revision table together in the same change.
+#
+# Held at the v0.6.0 tag commit while signoff/klt-pin.txt moved to v0.8.0
+# (#311): under 0.8.0 the curated sg13g2 deck changed (content hash
+# 894326a4... -> 1c95db40...), so `generate.py --check` stops at
+# sg13g2_layers.verify_deck_minima -- DECK_MIN_UM must be re-transcribed and
+# the committed DRC/LVS/ERC evidence regenerated, a change of its own.
 # One non-comment line: a full 40-hex git sha.
 c622e8addb362491664d44ba4d717f354ca88bbd

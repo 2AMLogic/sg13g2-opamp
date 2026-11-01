@@ -305,6 +305,8 @@ ratified bound is applied by `compare.py`, not graded by the tool. The CMRR benc
 | `klt/tb_psrr.body.spice` | the template's circuit as a body: exactly one DUT `.include`, no `.control`; `Vdd` carries `ac 1`, `Vinp` carries none |
 | `klt/run.sh` | sources `sim/preflight.sh` (which sources `sim/env.sh`); submits to the batch backend (`PSRR_KLT_MODE=shard`, the default, or `single`); writes the envelope **unmodified** to `klt/records/<UTC>-<sha>.sim.json` only after `compare.py validate` passes (45 unique points, no errored/inconclusive corner, `coverage.nothing_checked` false, nothing skipped); in shard mode also keeps the raw per-shard requests, bodies and reports in `<id>.shards/` |
 | `klt/shard.py`, `klt/test_shard.py` | the per-process shard bridge for the klt 0.5.0 fleet runner, and its validation-gated merge; tests with negative controls (below) |
+| `klt/psrr_direct.request.json`, `klt/tb_psrr_direct.body.spice`, `klt/run_direct.sh` | the direct single-measurement PSRR request, its two-copy body and runner (below) |
+| `klt/compare_direct.py`, `klt/test_compare_direct.py` | cross-check of the direct envelope against the join record; tests with negative controls |
 | `klt/compare.py`, `klt/test_compare.py` | grid join and tolerance report; offline stdlib-only; tests with negative controls |
 
 ### Which encoding: Avs in the tool, Av0 joined offline
@@ -338,15 +340,16 @@ bound (≥ 1.87 dB, DC shelf) **offline**. Consequences, stated plainly:
 
 ### The shard bridge (why the committed envelope was not one request)
 
-The fleet runner image still pins klt 0.5.0 (2AMLogic/2am#2193). On it,
+When the bridge was built, the fleet runner image pinned klt 0.5.0
+(2AMLogic/2am#2193, since closed). On that runner,
 `psrr.request.json` cannot run as one request: the `{"lib","section"}` object
 form of the per-process bundle (the fixed `cornerCAP.lib cap_typ` section),
 `options.osdi_preload`/`stage_model_inputs`, and `ngspice_init` are not
-carried (the runner drops or rejects them), a 0.7.0 client is refused
-(`batch_runner_version_mismatch`, exit 87), and a 0.5.0 client has no `batch`
-backend. The proven route (sg13g2-bandgap `sim/harness/README.md`) is the
-client `klayout-tools==0.6.0` (`KLT="uvx --from klayout-tools==0.6.0 klt"`; it
-submits, and the runner accepts it) with one request per process corner.
+carried (the runner drops or rejects them) and a 0.5.0 client has no `batch`
+backend. The fleet runner now runs klt 0.8.0 and gates on major.minor only, so
+the current client is `klayout-tools==0.8.0`
+(`KLT="uvx --from klayout-tools==0.8.0 klt"`; `runner_compatibility: match`,
+klayout-tools#4109) with one request per process corner.
 `klt/shard.py gen` derives the five requests from the master request:
 
 | Master request | Each shard (`mos_xx`, 9 corners) |
@@ -387,6 +390,37 @@ fleet jobs are `klt-sim-8b0cf80b0eea` (`mos_tt`), `klt-sim-a5c104a8e55f`
 `ami-0e40e3245f1923ac8` (ngspice 46). When the runner image is bumped, use
 `PSRR_KLT_MODE=single` with a client whose `klt --version` equals the
 runner's.
+
+### Direct PSRR: one measurement, two DUT copies (issue #307)
+
+The join above grades the bound offline. `klt/psrr_direct.request.json` +
+`klt/tb_psrr_direct.body.spice` make PSRR a single `klt sim` measurement:
+`psrr_db = (vdb(outa) - vdb(outb))[0]` with `limits.min` = the ratified 1.87 dB.
+One AC solve cannot carry both excitations on *one* circuit, but it can on two
+independent copies that share only quiet reference nodes: copy A has `Vinp ac 1`
+and a quiet rail (so `vdb(outa)` is Av0); copy B's rail is lifted by a series
+source `Vsrip` (dc 0, `ac 1`) and its input is a VDD/2 divider off the quiet
+`vdd` node (so `vdb(outb)` is Avs). The DUT netlist is wrapped in a `.subckt`
+around its single `.include`. The 45-point grid, `ac dec 20 10m 1g` and default
+solver tolerance (DR-0005) are those of `psrr.request.json`; `av0_db` and
+`avs0_db` are reported ungraded, and `psrr_plateau_delta_db` (|PSRR(0.1 Hz) −
+PSRR(10 mHz)| ≤ 0.05 dB) is the direct form of the join's flat-shelf guard.
+
+Run on the fleet through `klt/run_direct.sh` (client and runner klt 0.7.0;
+`KLT="uvx --from klayout-tools==0.7.0 klt"`, because the 0.8 client was refused by
+the 0.7.0 runner with `batch_runner_version_mismatch` at that time, since moved to
+0.8.0; `remote.hosts: 5` because the serial bound of one 45-unit job exceeds the fleet's 3600 s job ceiling).
+Envelope: `klt/records/20261027-011449-f8ef0ba.direct.sim.json`; 45 of 45 corners
+pass, worst PSRR 26.9011 dB at `mos_fs`/125 °C/1.08 V, worst plateau delta
+8.7e-13 dB.
+
+**Cross-check against the join** (`compare_direct.py`, tolerance 0.02 dB on
+`psrr_db`, `av0_db` and `avs0_db`, the same argument as the other comparisons
+here; tests `klt/test_compare_direct.py`): all 45 points within tolerance, largest
+|direct − join| 3.09e-7 dB (`mos_fs`/125 °C/1.20 V), no bound-verdict
+disagreement; `klt/records/20261027-011449-f8ef0ba.direct.compare.json`. Before
+the fleet run a one-corner local probe (ngspice-46, `mos_fs`/125 °C/1.08 V)
+gave 26.9010753 dB against the join's 26.9010754.
 
 ### Av0 from the open-loop envelope: measured join check (issue #99)
 
@@ -497,7 +531,8 @@ the body-level `pre_osdi`/`.lib` and the inlined DUT change no number.
 locally on a shared dispatch host (`PSRR_KLT_BACKEND=local` is refused in shard
 mode). Before submitting, `sim/preflight.sh` and `sim/tools/build-osdi.sh
 --check` must pass. Shard mode needs a client that has the batch backend and
-that the runner accepts (`KLT="uvx --from klayout-tools==0.6.0 klt"`); single
-mode needs a client whose `klt --version` equals the runner's. Tests:
+that the runner accepts (the fleet runner now carries klt 0.8.0, so
+`KLT="uvx --from klayout-tools==0.8.0 klt"`); single mode needs a client whose
+`klt --version` matches the runner's major.minor. Tests:
 
     python3 -m unittest discover -s sim/cmrr-psrr/klt -p 'test_*.py'

@@ -2,6 +2,42 @@
 
 <!-- Maintained by the Loom Guide role. Newest entries first. -->
 
+### 2026-11-01
+
+- **PR #323**: sim: 45-point output-swing klt envelope on the batch fleet with harness comparison
+- **Issue #100** (closed): sim: express the output-swing bench as a klt sim request (T1 item 5 coverage, follow-up to #85)
+
+### 2026-10-28
+
+- **PR #318**: docs: make cmrr-psrr shard-bridge klt 0.5.0 pin statement historical
+- **Issue #317** (closed): docs: sim/cmrr-psrr/README.md:343 still says the fleet runner pins klt 0.5.0
+- **PR #316**: docs: point cmrr-psrr shard-mode client at klayout-tools 0.8.0
+
+### 2026-10-27
+
+- **PR #315**: docs: point cmrr-psrr forward-looking klt client instructions at 0.8.0
+- **PR #313**: chore: pin signoff grading to klt 0.8.0 and assert the version in CI
+- **PR #308**: sim: PSRR as one klt sim measurement via two DUT copies, cited in item 5
+- **Issue #307** (closed): T1 item 5 (corner verification): make the ratified PSRR row a citable klt sim envelope instead of a declared gap
+
+### 2026-10-25
+
+- **PR #301**: docs: request EE and market key review of DR-0011
+
+### 2026-10-23
+
+- **PR #299**: chore: untrack pnpm workspace state and ignore node_modules
+- **Issue #298** (closed): chore: untrack node_modules/.pnpm-workspace-state-v1.json and ignore node_modules/
+- **PR #297**: feat: store new run output as artifact-store manifests instead of bytes in git
+- **Issue #296** (closed): Adopt the common artifact store for sim evidence (manifests in git, bytes via klt artifact)
+- **PR #295**: ci: share one fail-closed offline test runner and wire it into pnpm test
+- **Issue #294** (closed): Replace exit-0 package.json test stubs and duplicated CI test enumeration with one offline test runner
+
+### 2026-10-20
+
+- **PR #293**: docs: request fresh two-key ratification of the unchanged DR-0002 requirements
+- **PR #292**: characterization: grade the four open-loop rows from the corrected AC record behind a raw-envelope audit
+
 ### 2026-10-19
 
 - **PR #289**: docs: propose yield requirements for offset-random and mismatch-CMRR rows (DR-0010)

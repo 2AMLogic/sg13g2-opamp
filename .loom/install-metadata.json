@@ -1,6 +1,6 @@
 {
-  "loom_version": "0.19.1221",
-  "loom_commit": "8e94295a4b4316c7c856064233037cf1dd681d4a",
+  "loom_version": "0.19.1246",
+  "loom_commit": "c31136eb1f7e2ae8b50b30d212304be50e3d1601",
   "install_date": "2026-09-05",
   "loom_source_remote": "https://github.com/rjwalters/loom.git",
   "installed_files": [
@@ -370,7 +370,6 @@
     ".loom/scripts/tests/test-install-reinstall-safety.sh",
     ".loom/scripts/tests/test-install-source-guard.sh",
     ".loom/scripts/tests/test-install-stash-scope.sh",
-    ".loom/scripts/tests/test-install-sync-labels.sh",
     ".loom/scripts/tests/test-judge-fallback-cap.sh",
     ".loom/scripts/tests/test-label-preflight.sh",
     ".loom/scripts/tests/test-live-state-sandbox.sh",
@@ -471,7 +470,6 @@
     ".loom/scripts/version-check-gate.sh",
     ".loom/scripts/warn-operator-gated.sh",
     ".loom/scripts/warn-out-of-set-deps.sh",
-    ".loom/scripts/worktree-return.sh",
     ".loom/scripts/worktree.sh",
     ".loom/credentials.md.example",
     ".loom/hooks/tests/test-guard-forge-egress.sh",
@@ -720,8 +718,14 @@
     ".loom/scripts/tests/test-worktree-stale-local-branch-reuse.sh",
     ".claude/commands/loom/champion-merge-risk-shadow.md",
     ".loom/hooks/guard-background-subagents.sh",
-    ".loom/hooks/tests/test-guard-background-subagents.sh"
+    ".loom/hooks/tests/test-guard-background-subagents.sh",
+    ".loom/scripts/tests/test-champion-merge-risk-self-release.sh",
+    ".loom/scripts/tests/test-guide-park-record-precedence.sh",
+    ".claude/commands/loom/sweep-run-hygiene.md",
+    ".loom/docs/release-glibc-floor.md",
+    ".loom/scripts/tests/lib/daemon-update-fixtures.sh",
+    ".loom/scripts/tests/test-skip-labels.sh"
   ],
-  "last_resync": "2026-10-24",
+  "last_resync": "2026-11-01",
   "requires_daemon": "0.19.1146"
 }

@@ -171,7 +171,9 @@ jobs:
           echo "klayout-tools @ ${pin}"
           python3 -m pip install --upgrade pip
           python3 -m pip install "klayout-tools @ git+https://github.com/2AMLogic/klayout-tools@${pin}"
-          klt version || true
+          ver="$(klt --version)"
+          echo "${ver}"
+          test "${ver}" = "klt 0.8.0" || { echo "::error::expected 'klt 0.8.0', got '${ver}'"; exit 1; }
 
       - name: Proposed area measurement verifies and its tests pass (offline)
         # TBD-12 draft evidence (DR-0007, proposed -- not ratified). Needs only
@@ -294,7 +296,7 @@ jobs:
         run: |
           set -euo pipefail
           echo "layout klt pin: $(grep -v '^[[:space:]]*#' layout/klt-pin.txt | grep -v '^[[:space:]]*$' | head -1)"
-          echo "klt: $(klt version)"
+          echo "klt: $(klt --version)"
           echo "builder python: $(python3 --version 2>&1)"
           echo "builder klayout: $(python3 -m pip show klayout | sed -n 's/^Version: //p')"
           echo "klt-env klayout: $("${RUNNER_TEMP}/klt-layout-venv/bin/pip" show klayout | sed -n 's/^Version: //p')"

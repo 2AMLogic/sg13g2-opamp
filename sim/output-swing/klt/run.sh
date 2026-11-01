@@ -18,7 +18,10 @@
 #
 #   records/<id>.nominal.compare.json
 #
-# This is NOT the 45-point envelope and is not evidence for T1 item 5
+# `run.sh grid` instead submits swing.request.json (45 points) on the BATCH
+# backend and writes records/<id>.sim.json / .compare.json.
+#
+# (Nominal mode) This is NOT the 45-point envelope and is not evidence for T1 item 5
 # (signoff/README.md); that work is deferred (README.md "Prototype vs accepted
 # evidence"). This runner never declares or submits the 45-point grid, and it
 # refuses to run any backend but local: a grid does not run on a shared
@@ -54,18 +57,44 @@ klt_check_client
 HARNESS_ID="20260921-151759-707b34c"
 HARNESS_CSV="sim/output-swing/records/${HARNESS_ID}.csv"
 
-klt_begin_record swing .nominal
+MODE="${1:-nominal}"
+case "${MODE}" in
+  nominal|grid) ;;
+  *) echo "usage: run.sh [nominal|grid]   (default nominal; grid = 45 points on the batch backend)" >&2; exit 3 ;;
+esac
 
-req="${SCRIPT_DIR}/swing.nominal.request.json"
-out="${SCRATCH}/swing.nominal.sim.json"
-# Always --backend local: one operating point (see header).
-klt_run_request "${req}" "${out}" "${SCRATCH}/swing.nominal.stderr" --backend local
-klt_validate_envelope "${out}" --points nominal
+if [[ "${MODE}" == nominal ]]; then
+  klt_begin_record swing .nominal
+  req="${SCRIPT_DIR}/swing.nominal.request.json"
+  out="${SCRATCH}/swing.nominal.sim.json"
+  # --backend local: one operating point (see header).
+  klt_run_request "${req}" "${out}" "${SCRATCH}/swing.nominal.stderr" --backend local
+  klt_validate_envelope "${out}" --points nominal
+  klt_require_complete
+  klt_write_envelope "${out}"
+  KLT_OK_NOTE="within tolerance"
+  KLT_PROVENANCE_EXTRA=(
+    "command=${KLT_CMD[*]} sim swing.nominal.request.json --backend local --format json"
+    "request_sha256=$(sha256sum "${req}" | cut -d' ' -f1)")
+  klt_compare_and_finish --points nominal --harness-csv "${HARNESS_CSV}"
+  exit 0
+fi
+
+# Grid: 45 points, batch backend only. A failed submit is reported, never
+# retried locally (shared dispatch host).
+klt_begin_record swing
+req="${SCRIPT_DIR}/swing.request.json"
+out="${SCRATCH}/swing.sim.json"
+# SWING_KLT_ATTACH=<job id> re-attaches to an already-submitted batch job
+# (e.g. after the client was interrupted) instead of submitting a new grid.
+ATTACH_ARGS=()
+[[ -n "${SWING_KLT_ATTACH:-}" ]] && ATTACH_ARGS=(--attach "${SWING_KLT_ATTACH}")
+klt_run_request "${req}" "${out}" "${SCRATCH}/swing.stderr" --backend batch "${ATTACH_ARGS[@]}"
+klt_validate_envelope "${out}" --points grid
 klt_require_complete
 klt_write_envelope "${out}"
-
-KLT_OK_NOTE="within tolerance"
 KLT_PROVENANCE_EXTRA=(
-  "command=${KLT_CMD[*]} sim swing.nominal.request.json --backend local --format json"
-  "request_sha256=$(sha256sum "${req}" | cut -d' ' -f1)")
-klt_compare_and_finish --points nominal --harness-csv "${HARNESS_CSV}"
+  "command=${KLT_CMD[*]} sim swing.request.json --backend batch --format json"
+  "request_sha256=$(sha256sum "${req}" | cut -d' ' -f1)"
+  "remote=$(python3 -c 'import json,sys; print(json.dumps(json.load(open(sys.argv[1])).get("environment",{}).get("remote")))' "${out}")")
+klt_compare_and_finish --points grid --harness-csv "${HARNESS_CSV}"

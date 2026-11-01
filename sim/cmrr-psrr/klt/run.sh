@@ -36,9 +36,9 @@
 # PSRR_KLT_MODE selects how the grid is submitted. `shard` (default): five
 # per-process requests built by shard.py, each one fleet job, merged by
 # shard.py's validation-gated merge -- the bridge for the fleet runner image
-# that still pins klt 0.5.0 (2AMLogic/2am#2193). Use
-# KLT="uvx --from klayout-tools==0.6.0 klt" (0.5.0 has no batch backend; 0.7.0
-# is refused by the runner). `single`: the one 45-point psrr.request.json,
+# that still pinned klt 0.5.0 (2AMLogic/2am#2193). The runner now carries
+# klt 0.8.0, so use KLT="uvx --from klayout-tools==0.8.0 klt" (0.5.0 has no
+# batch backend). `single`: the one 45-point psrr.request.json,
 # for a runner image new enough to carry it.
 #
 # Exit status: 0 records written; 3 preflight failed (PDK/OSDI/ngspice/klt
@@ -90,10 +90,10 @@ case "${MODE}" in
     klt_run_request "${SCRIPT_DIR}/psrr.request.json" "${out}" "${SCRATCH}/psrr.stderr" "${BACKEND_ARGS[@]}"
     ;;
   shard)
-    # Five per-process requests (shard.py), because the fleet runner image pins
-    # klt 0.5.0. Each is one fleet job; the submitting client must carry the
-    # batch backend and be accepted by the runner (PyPI klayout-tools==0.6.0:
-    # KLT="uvx --from klayout-tools==0.6.0 klt"). Never local: the shards ARE
+    # Five per-process requests (shard.py), the bridge written for a fleet runner
+    # image that pinned klt 0.5.0. Each is one fleet job; the submitting client
+    # must carry the batch backend and be accepted by the runner (the runner
+    # now carries 0.8.0: KLT="uvx --from klayout-tools==0.8.0 klt"). Never local: the shards ARE
     # the grid.
     if [[ "${PSRR_KLT_BACKEND:-batch}" != "batch" ]]; then
       echo "run.sh: shard mode submits to the batch fleet only; PSRR_KLT_BACKEND=${PSRR_KLT_BACKEND} refused." >&2
