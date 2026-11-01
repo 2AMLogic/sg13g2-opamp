@@ -299,7 +299,7 @@ measurement now shows to be mixed.
   swing criterion"; quoting these figures without it is not a testable
   claim.
 
-## The `klt sim` path (issue #100): one-point prototype, not evidence
+## The `klt sim` path (issue #100): prototype and 45-point envelope
 
 T1 item 5 ("full corner verification vs a ratified spec") accepts only a `klt
 sim` envelope (`signoff/README.md`, "Item 5 envelope coverage, per ratified
@@ -380,11 +380,51 @@ tested.
 Run the tests (offline, no simulator):
 `python3 -m unittest discover -s sim/output-swing/klt -p 'test_*.py'`.
 
-### Prototype vs accepted evidence, and deferred work
+### The 45-point envelope (grid result)
 
-Not done here, and not claimed:
+`klt/run.sh grid` submits `klt/swing.request.json` (the nominal request with the
+ratified grid: `mos_tt/ss/ff/sf/fs` + `cornerCAP.lib cap_typ` x -40/27/125 C x
+VDD 1.08/1.20/1.32 V, `vcm` swept with `vdd`; same body, fixed `Vid` window,
+measurements and limits) on the batch backend only. Committed, unmodified:
 
-- **The 45-point envelope** (the full grid on the batch fleet), the per-point harness comparison with every out-of-tolerance or verdict-disagreement point explained, and the `signoff/README.md` coverage-table row. The table row stays "no" until an envelope exists; the manifest does not cite item 5 until all ten ratified rows have envelopes. The literal span miss at `mos_ss / 125 °C / 1.08 V` stays a FAIL (precision decision: #101).
-- **Fixed sweep window.** The request cannot centre its fine window on a measured crossing (`analysis.args` is literal). The harness record's crossings span 11.4–21.9 mV, so a fixed `Vid` window of −10…+40 mV keeps every one of them at least 18 mV from both edges; the grid request should keep that window and the edge-guard limits (`lo_idx ≥ 1`, `hi_idx ≤ 4998`) will reject any point where it is wrong. Tracked upstream: 2AMLogic/klayout-tools#3055 (also covers naming ungraded vector intermediates; the expressions here repeat the slope vector instead). `<`/`>` are I/O redirection in `expr`, hence `lt`/`gt` (2AMLogic/klayout-tools#2940).
-- **Estimator checks on synthetic curves** (absent crossing, weak peak, disconnected qualifying regions, window-edge truncation) exercised through ngspice rather than only through the comparator; the prototype shows the expressions on one real curve.
-- **Fleet prerequisites.** The batch runner image pin (2AMLogic/2am#2193) and the `batch` backend were not touched: nothing was submitted, and `run.sh` forces `--backend local`.
+- `klt/records/20261101-010941-b7a1a86.sim.json`: fleet job `klt-sim-567c2d463d1a` (us-east-1, spot c7i.4xlarge, ngspice-46), client and runner klt 0.8.0 (`runner_compatibility: match`), repo sha `b7a1a86`. 45 unique points, 44 pass, **1 fail**, 0 errored/inconclusive, `coverage.nothing_checked` false, nothing skipped. The run took 1429 s; the slowest corner took 263 s of the 300 s per-corner `timeout_s`, which is thin headroom (see below).
+- `klt/records/20261101-010941-b7a1a86.compare.json`: the per-point join against `records/20260921-151759-707b34c.csv`; status **agree**, 45 of 45 points, every metric within tolerance.
+- `klt/records/20261101-010941-b7a1a86.env.json`: the run-time PDK/model identity sidecar. It describes the **client** PDK install (a private copy in which the OSDI models were built, because the dispatch host's shared PDK has no OSDI build manifest and its preflight refuses); the fleet's own PDK/ngspice identity is in the envelope's `environment`.
+
+Result against the ratified bounds (literal, nothing relaxed):
+
+| Row | Bound | Worst case (binding corner) | Failing points |
+|---|---|---|---|
+| headroom from VDD | >= 251 mV | 251.187 mV at `mos_fs` / -40 C / 1.08 V | 0 |
+| headroom from VSS | >= 141 mV | 141.395 mV at `mos_ff` / -40 C / 1.08 V | 0 |
+| tracking span | >= 0.571 V | 0.570960 V at `mos_ss` / 125 C / 1.08 V | **1** |
+
+The span miss is a recorded FAIL, the same point and value as the harness
+(0.570957773 V); it is not rounded or tolerance-waived (precision decision: #101).
+
+Comparison tolerances, confirmed on the 45 points: the largest |delta| /
+tolerance is 0.41 (`vmin_track_v` and `headroom_lo_v`, `mos_fs` / -40 C / 1.32 V,
+delta -0.82 mV against 2.00 mV), 0.29 for `headroom_hi_v`, 0.22 for
+`vmax_track_v`, 0.20 for `swing_span_v` (`mos_ff` / -40 C / 1.32 V, +0.98 mV
+against 4.76 mV). No point is out of tolerance and no verdict disagrees with
+the harness, so there is nothing to explain individually; the analytic
+allowance stands unwidened. The estimator edge guards hold at every point:
+`lo_idx` is 1859..2714 (guard >= 1) and `hi_idx` is 2342..3544 (guard <= 4998),
+so the fixed window never truncated a tracking region; `gpk_vv` is 79.7..223.3
+V/V and `mono_min_dv_v` is positive everywhere.
+
+Run history: the first client was killed by the dispatch host's tool timeout while waiting
+(`batch_client_interrupted`); the fleet has no cancel and the job completed, so the envelope was
+collected with `SWING_KLT_ATTACH=klt-sim-567c2d463d1a ... run.sh grid` (`--attach`) rather than by
+submitting a second grid.
+
+Client warning worth keeping: klt's conservative serial bound (13620 s) exceeds the
+fleet's 3600 s whole-job ceiling and suggests `request.remote.hosts >= 5`; the job
+finished in 1429 s on one host. A slower host could push the 263 s corner past
+`timeout_s` 300 s; if so, shard with `remote.hosts` or raise the timeout, do not drop points.
+
+### Not done here
+
+- The manifest does not cite item 5 for these rows (`signoff/block-manifest.json` is unchanged): that waits until all ten ratified rows have envelopes (CMRR, statistical, remains a gap).
+- **Fixed sweep window.** The request cannot centre its fine window on a measured crossing (`analysis.args` is literal); the committed envelope shows the -10..+40 mV window never touched an edge guard. Tracked upstream: 2AMLogic/klayout-tools#3055 (since closed; the expression style was not changed). `<`/`>` are I/O redirection in `expr`, hence `lt`/`gt` (2AMLogic/klayout-tools#2940).
+- **Estimator checks on synthetic curves** (absent crossing, weak peak, disconnected qualifying regions, window-edge truncation) through ngspice remain optional hardening; the comparator tests cover the validity side.
