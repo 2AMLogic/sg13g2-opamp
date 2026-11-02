@@ -28,7 +28,7 @@ _None._
 
 Human-approved issues ready for implementation (`loom:issue`).
 
-- **#86**: signoff: first `klt pex` post-layout run on opamp_core.gds (T1 item 7)
+- **#3**: Track the gap to T1 sim-validated / bronze (klayout-tools design-evidence tiers)
 - **#300**: Open the ratification PRs for DR-0011 (#101) and then DR-0010 (#108), with both key reviews
 - **#311**: Bump klayout-tools pin 0.6.0, 44cc42323184 → 0.8.0
 
