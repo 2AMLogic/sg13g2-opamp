@@ -29,7 +29,6 @@ _None._
 Human-approved issues ready for implementation (`loom:issue`).
 
 - **#3**: Track the gap to T1 sim-validated / bronze (klayout-tools design-evidence tiers)
-- **#300**: Open the ratification PRs for DR-0011 (#101) and then DR-0010 (#108), with both key reviews
 - **#311**: Bump klayout-tools pin 0.6.0, 44cc42323184 → 0.8.0
 
 ## In Progress
@@ -77,7 +76,7 @@ _None._
 | Operator merge-risk holds | 0 |
 | Very important | 1 |
 | Important | 4 |
-| Ready (`loom:issue`) | 3 |
+| Ready (`loom:issue`) | 2 |
 | In Progress (`loom:building`) | 1 |
 | PRs awaiting review | 1 |
 | Approved PRs awaiting merge | 1 |
