@@ -28,6 +28,19 @@
   gain and swing rows are **not yet restated**; they need re-derivation or a
   design change and are tracked separately. Both keys must re-review the
   revised head.
+  **Revision 4** (issue #332, offline re-derivation, no simulation; report
+  `signoff/characterization/reports/20261104-190000-1907585.md`): the swing
+  row is restated as a guaranteed output range from the per-point `Vout`
+  columns (1.08 V: 0.2068-0.7722 V; 1.20 V: 0.2150-0.8894 V; 1.32 V:
+  0.2231-1.0009 V; CL = 2 pF, unloaded; definition flagged for the EE key).
+  The CMRR (>= 26.68 dB) and gain (>= 37.8 dB) rows are **still submitted at
+  their unchanged bounds and are not defensible against the carried comps**
+  (50-63 dB and ~83.5-104 dB, all unverified, none fetched). The
+  mismatch-limited hypothesis for CMRR is refuted by the record (3 sigma
+  exceeds the systematic term at 11/45 points; the binding point is
+  mean-dominated), and a resize cannot close a >= 23.3 dB gap in the DR-0001
+  topology. Both rows go to the operator via a decision on #332. Both keys
+  must re-review the revised head.
 - **Date**: 2026-10-20
 - **Decided by**: operator direction (attended fleet-decide 2026-10-19,
   option 1: prepare a focused documentation-only fresh-ratification PR,
