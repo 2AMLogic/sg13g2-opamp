@@ -1122,10 +1122,23 @@ still cannot waive the kept set, and `KEPT_SET_PATTERNS` stays hardcoded (no con
 
 It is eligible only when **all** hold, each read live in this pass:
 
-- the PR title is `chore(loom): resync installed Loom to v<X.Y.Z>`;
+- the PR title is `chore(loom): resync installed Loom to v<X.Y.Z>`, or, for the Repo Skills
+  variant (#13435, operator ruling 2026-11-01), `Bump Repo Skills <from> -> <X.Y.Z>` /
+  `chore(repo-skills): ... v<X.Y.Z>`. The Repo Skills variant runs the same rule against
+  `rjwalters/repo`: install set `.claude/skills/repo/`, `.claude/commands/repo/`,
+  `.agents/skills/repo*`, `.claude/settings.json`, `.gitignore`, `CLAUDE.md`; metadata
+  `.claude/skills/repo/install-metadata.json` `version`; tag `refs/tags/v<X.Y.Z>` in
+  `rjwalters/repo`; kept-set files map through `install.sh`'s copy lines
+  (`.claude/skills/repo/hooks/X` <- `hooks/repo/X`, `.claude/skills/repo/scripts/X` <-
+  `scripts/repo/X`, `.claude/commands/repo/X` <- `commands/repo/X`). A file the installer
+  renders (a `{{PLACEHOLDER}}` substituted on copy) never byte-matches and holds.
+  `.claude/settings.json` has no upstream counterpart, so a bump that changes it holds, which
+  keeps the rjwalters/repo#733 guard-wiring PRs held;
 - every changed file is under `.loom/` or `.claude/`, and none is a merge-gate path
   (`RESYNC_GATE_PATTERNS`: `champion*`, `judge*`, `merge-pr.sh`, `merge_pr*`, `verdict*`,
-  comment-trust files, `config.json`): the gate never waives a change to itself (#12945);
+  comment-trust files, `config.json`): the gate never waives a change to itself (#12945). A file
+  under `.loom/scripts/tests/` (name and previous name both) is not a gate path, since no merge
+  path sources it: it is compared byte-for-byte like any kept-set file (#13486);
 - `.loom/install-metadata.json` at the PR head has `loom_version` equal to `<X.Y.Z>`, and
   `refs/tags/v<X.Y.Z>` exists in `rjwalters/loom`;
 - the files read is complete (count equals `changed_files`) and at least one changed file is a
@@ -1170,24 +1183,42 @@ resync_upstream_path() {
   esac
 }
 
+# repo_skills_upstream_path <installed-path>: the rjwalters/repo source path per install.sh's own
+# copy lines (hooks/repo/ and scripts/repo/ land under .claude/skills/repo/), empty when none.
+repo_skills_upstream_path() {
+  case "$1" in
+    .claude/skills/repo/hooks/*)    printf 'hooks/repo/%s' "${1#.claude/skills/repo/hooks/}" ;;
+    .claude/skills/repo/scripts/*)  printf 'scripts/repo/%s' "${1#.claude/skills/repo/scripts/}" ;;
+    .claude/skills/repo/SKILL.md)   printf 'skills/repo/SKILL.md' ;;
+    .claude/commands/repo/*)        printf 'commands/repo/%s' "${1#.claude/commands/repo/}" ;;
+    *) return 0 ;;
+  esac
+}
+
 # resync_waiver_eval: sets RESYNC_WAIVER_RESULT (ELIGIBLE|NOT ELIGIBLE), RESYNC_WAIVER_TAG,
 # RESYNC_WAIVER_RECORD (one "path: sha" line per kept-set file) and RESYNC_WAIVER_REASON.
 # Reads PR_NUMBER and KEPT_SET_PATTERNS. Every step fails closed.
 resync_waiver_eval() {
-  local title ver tag sha1 sha2 meta_ver changed n file prev pattern is_kept up enc up_sha up_type head_sha status
+  local title ver tag sha1 sha2 meta_ver changed n file prev pattern is_kept is_test up enc up_sha up_type head_sha status
+  local kind=loom upstream=rjwalters/loom meta_path=.loom/install-metadata.json meta_key=loom_version
   RESYNC_WAIVER_RESULT="NOT ELIGIBLE"; RESYNC_WAIVER_TAG=""; RESYNC_WAIVER_RECORD=""; RESYNC_WAIVER_REASON=""
   [ "${#KEPT_SET_PATTERNS[@]}" -gt 0 ] 2>/dev/null || { RESYNC_WAIVER_REASON="kept set not loaded"; return 0; }
   title=$(gh api "repos/{owner}/{repo}/pulls/$PR_NUMBER" --jq '.title' 2>/dev/null) || { RESYNC_WAIVER_REASON="PR unreadable"; return 0; }
   if [[ "$title" =~ ^chore\(loom\):\ resync\ installed\ Loom\ to\ v([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
     ver="${BASH_REMATCH[1]}"; tag="v$ver"
+  elif [[ "$title" =~ ^Bump\ Repo\ Skills\ [^[:space:]]+\ -\>\ ([0-9]+\.[0-9]+\.[0-9]+)$ ||
+         "$title" =~ ^chore\(repo-skills\):\ .*\ v?([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+    # Repo Skills bump (#13435): same rule against the rjwalters/repo tag.
+    ver="${BASH_REMATCH[1]}"; tag="v$ver"; kind=repo-skills; upstream=rjwalters/repo
+    meta_path=.claude/skills/repo/install-metadata.json; meta_key=version
   else
     RESYNC_WAIVER_REASON="not a resync PR"; return 0
   fi
   sha1=$(gh api "repos/{owner}/{repo}/pulls/$PR_NUMBER" --jq '.head.sha' 2>/dev/null) || sha1=""
   [ -n "$sha1" ] || { RESYNC_WAIVER_REASON="head unreadable"; return 0; }
-  meta_ver=$(gh api -H "Accept: application/vnd.github.raw" "repos/{owner}/{repo}/contents/.loom/install-metadata.json?ref=$sha1" 2>/dev/null | jq -r '.loom_version // empty' 2>/dev/null) || meta_ver=""
+  meta_ver=$(gh api -H "Accept: application/vnd.github.raw" "repos/{owner}/{repo}/contents/${meta_path}?ref=$sha1" 2>/dev/null | jq -r --arg k "$meta_key" '.[$k] // empty' 2>/dev/null) || meta_ver=""
   [ "$meta_ver" = "$ver" ] || { RESYNC_WAIVER_REASON="install-metadata names '${meta_ver:-none}', title names $ver"; return 0; }
-  [ "$(gh api "repos/rjwalters/loom/git/ref/tags/$tag" --jq '.ref' 2>/dev/null)" = "refs/tags/$tag" ] \
+  [ "$(gh api "repos/$upstream/git/ref/tags/$tag" --jq '.ref' 2>/dev/null)" = "refs/tags/$tag" ] \
     || { RESYNC_WAIVER_REASON="tag $tag not found upstream"; return 0; }
   standing_auth_fetch_diff || { RESYNC_WAIVER_REASON="files unreadable"; return 0; }
   n=$(gh api "repos/{owner}/{repo}/pulls/$PR_NUMBER" --jq '.changed_files' 2>/dev/null) || n=""
@@ -1196,11 +1227,22 @@ resync_waiver_eval() {
   while IFS=$'\t' read -r file prev head_sha status; do
     [ -z "$file" ] && continue
     # Install set only (#12945): any file outside .loom/ and .claude/ holds the whole PR.
-    case "$file" in .loom/* | .claude/*) ;; *) RESYNC_WAIVER_REASON="$file is outside the install set"; RESYNC_WAIVER_RECORD=""; return 0 ;; esac
-    for pattern in "${RESYNC_GATE_PATTERNS[@]}"; do
-      # shellcheck disable=SC2053
-      if [[ "$file" == $pattern || "$prev" == $pattern ]]; then RESYNC_WAIVER_REASON="$file is a merge-gate path"; RESYNC_WAIVER_RECORD=""; return 0; fi
-    done
+    case "$kind:$file" in
+      loom:.loom/* | loom:.claude/*) ;;
+      repo-skills:.claude/skills/repo/* | repo-skills:.claude/commands/repo/* | repo-skills:.agents/skills/repo* | repo-skills:.claude/settings.json | repo-skills:.gitignore | repo-skills:CLAUDE.md) ;;
+      *) RESYNC_WAIVER_REASON="$file is outside the install set"; RESYNC_WAIVER_RECORD=""; return 0 ;;
+    esac
+    # A test under .loom/scripts/tests/ decides nothing at merge time (#13486): it is compared
+    # byte-for-byte below, not refused as a gate path. Both names must be under tests/, so a
+    # rename from a gate path into tests/ still hits the gate loop.
+    is_test=0
+    case "$file" in .loom/scripts/tests/*) case "$prev" in .loom/scripts/tests/*) is_test=1 ;; esac ;; esac
+    if [ "$is_test" -eq 0 ]; then
+      for pattern in "${RESYNC_GATE_PATTERNS[@]}"; do
+        # shellcheck disable=SC2053
+        if [[ "$file" == $pattern || "$prev" == $pattern ]]; then RESYNC_WAIVER_REASON="$file is a merge-gate path"; RESYNC_WAIVER_RECORD=""; return 0; fi
+      done
+    fi
     is_kept=0
     for pattern in "${KEPT_SET_PATTERNS[@]}"; do
       # shellcheck disable=SC2053
@@ -1208,12 +1250,12 @@ resync_waiver_eval() {
     done
     [ "$is_kept" -eq 1 ] || continue
     case "$status" in added | modified) ;; *) RESYNC_WAIVER_REASON="$file is $status"; RESYNC_WAIVER_RECORD=""; return 0 ;; esac
-    up=$(resync_upstream_path "$file")
+    if [ "$kind" = repo-skills ]; then up=$(repo_skills_upstream_path "$file"); else up=$(resync_upstream_path "$file"); fi
     [ -n "$up" ] || { RESYNC_WAIVER_REASON="$file has no upstream counterpart"; RESYNC_WAIVER_RECORD=""; return 0; }
     enc=$(jq -rn --arg p "$up" '$p | split("/") | map(@uri) | join("/")') || { RESYNC_WAIVER_RECORD=""; return 0; }
-    IFS=$'\t' read -r up_type up_sha < <(gh api "repos/rjwalters/loom/contents/${enc}?ref=$tag" --jq '[.type, .sha] | @tsv' 2>/dev/null)
+    IFS=$'\t' read -r up_type up_sha < <(gh api "repos/$upstream/contents/${enc}?ref=$tag" --jq '[.type, .sha] | @tsv' 2>/dev/null)
     if [ "$up_type" != "file" ] || [ -z "$up_sha" ] || [ "$up_sha" != "$head_sha" ]; then
-      RESYNC_WAIVER_REASON="$file differs from $tag:$up"; RESYNC_WAIVER_RECORD=""; return 0
+      RESYNC_WAIVER_REASON="$file differs from $upstream@$tag:$up"; RESYNC_WAIVER_RECORD=""; return 0
     fi
     RESYNC_WAIVER_RECORD="${RESYNC_WAIVER_RECORD}${file}: ${head_sha}"$'\n'
   done < <(printf '%s' "$DIFF_JSON" | jq -r '.[] | [.filename, (.previous_filename // .filename), (.sha // ""), (.status // "")] | @tsv')
@@ -1496,7 +1538,7 @@ fi
 - **`champion.mergeRisk.selfReleaseConfidence=1.0` never self-releases.** `self_release_clears` returns false for any threshold of 1.0.
 - **Nothing is carried over.** The confidence is formed on this pass against this head SHA; a self-release comment on an earlier head is never read as a release (the sticky precheck does not look for it), so a push after a self-release gets a fresh decision. The comment is an audit record of a decision made in the same pass as the merge, in the same comment as the reversal block, so it creates no new trusted-marker input (`comment-trust.md`).
 - **Not the shadow score.** The confidence is not the #8545 pre-score, which never changes a verdict ([`champion-merge-risk-shadow.md`](champion-merge-risk-shadow.md)).
-- **Telemetry on every decision.** The `park-record decision` calls above (and the `pass` call in the all-green row of the decision rule: `--outcome pass --confidence 1`) export the outcome and confidence as `hold.transition` records (`loom.hold.confidence_pct`), so calibration can be checked against later reverts and operator overrides. Best-effort: a failed call changes nothing. The 7-day revert comparison is tracked in #12952.
+- **Telemetry on every decision.** The `park-record decision` calls above (and the `pass` call in the all-green row of the decision rule: `--outcome pass --confidence 1`) export the outcome and confidence as `hold.transition` records (`loom.hold.confidence_pct`), so calibration can be checked against later reverts and operator overrides. Best-effort: a failed call changes nothing. The 7-day revert comparison is `loom-daemon champion-hold self-release-calibration` (#12952).
 
 **Optional shadow pre-score (#8545).** Only with `TYPESAFE_API_KEY` set, and only *after* your verdict above is final, log a score per [`champion-merge-risk-shadow.md`](champion-merge-risk-shadow.md) — telemetry about this rubric, never an input to it. Unset: skip; nothing changes.
 
@@ -2049,12 +2091,18 @@ version_only_diff() {
 # SUSPECT_LINE= / SUSPECT_SECTION= (kept for the FAIL line and the hold
 # comment); anything else -- patch missing/empty, unparseable hunk, forge error,
 # 2 (a daemon predating the verb), 126/127 (no binary) -- is a hold with no line.
-CRITERION3_SUSPECT_LINE=""; CRITERION3_SUSPECT_SECTION=""
+# The verb addresses `repos/<owner>/<repo>/…` explicitly (#13296): `--repo` from
+# $LOOM_REPO when set, else resolved from the cwd; never `gh`'s placeholder. Its
+# stderr (the held reason, with the forge's HTTP status on a read failure) is kept
+# in $CRITERION3_SUSPECT_ERROR for the hold comment.
+CRITERION3_SUSPECT_LINE=""; CRITERION3_SUSPECT_SECTION=""; CRITERION3_SUSPECT_ERROR=""
 suspect_critical_diff() {
-  local file="$1" number="$2" out rc
+  local file="$1" number="$2" out rc errf
   case "${file##*/}" in Cargo.toml|package.json) ;; *) return 1 ;; esac
-  out=$(loom-daemon forge suspect-critical-diff "$number" "$file" 2>/dev/null); rc=$?
-  if [ "$rc" -eq 0 ] && printf '%s\n' "$out" | grep -qx 'SUSPECT=0'; then return 0; fi
+  errf=$(mktemp); CRITERION3_SUSPECT_ERROR=""
+  out=$(loom-daemon forge suspect-critical-diff "$number" "$file" ${LOOM_REPO:+--repo "$LOOM_REPO"} 2>"$errf"); rc=$?
+  if [ "$rc" -eq 0 ] && printf '%s\n' "$out" | grep -qx 'SUSPECT=0'; then rm -f "$errf"; return 0; fi
+  CRITERION3_SUSPECT_ERROR=$(head -c 600 "$errf" | tr '\n' ' '); rm -f "$errf"
   CRITERION3_SUSPECT_LINE=$(printf '%s\n' "$out" | sed -n 's/^SUSPECT_LINE=//p' | head -1)
   CRITERION3_SUSPECT_SECTION=$(printf '%s\n' "$out" | sed -n 's/^SUSPECT_SECTION=//p' | head -1)
   return 1
@@ -2158,7 +2206,7 @@ generalize this pattern to any other critical file or any other kind of
 "trivial-looking" diff — it is scoped to exactly these 6 filenames and
 exactly a version-string line change.
 
-**Suspect-line carve-out (#12999, operator ruling 2026-10-21)**: a critical-file hit is not a blanket veto on every edit to it. For a `Cargo.toml`-family or `package.json`-family hit that `version_only_diff` did not clear, the check-loop calls `suspect_critical_diff`, which wraps `loom-daemon forge suspect-critical-diff <pr> <file>`. Only a clean exit 0 with `SUSPECT=0` passes. It holds when a changed line is in a dependency, dev/build/target dependency, `[patch.*]`, `[replace]` or `[features]` table, is a `build =` / `links =` / `git =` / `registry =` / `path =` source key (a target table's own `path =` under `[[bin]]`, `[[bench]]`, `[[test]]`, `[[example]]` or `[lib]` is not one), or, in `package.json`, sits under `dependencies` / `devDependencies` / `optionalDependencies` / `peerDependencies` / `overrides` / `resolutions` or is a `preinstall` / `install` / `postinstall` / `prepare` script. A suspect hit emits the FAIL line with the matched line and its section, and passes that line on to the hold comment as `$CRITERION3_SUSPECT_LINE` / `$CRITERION3_SUSPECT_SECTION`. Every other outcome is a hold: no patch, an unparseable hunk, an unreadable head file for a hunk whose section the patch does not show, a forge error, exit 2 from an older daemon, 126/127 for no binary. A `.github/workflows/*` hit passes only on `WF_BLAST=green` (the `merge-risk` criterion's `ci_workflow_blast_eval`); red, none, or an unreadable read holds. `migrations/` and `_migration.py` hits still hold on any change, unless an `additiveMigrations` class (#13102) applies. The carve-out never widens `CRITICAL_PATTERNS` and never judges anything but these two manifest families; `Cargo.lock` and `package-lock.json` keep today's version-only treatment.
+**Suspect-line carve-out (#12999, operator ruling 2026-10-21)**: a critical-file hit is not a blanket veto on every edit to it. For a `Cargo.toml`-family or `package.json`-family hit that `version_only_diff` did not clear, the check-loop calls `suspect_critical_diff`, which wraps `loom-daemon forge suspect-critical-diff <pr> <file>`. Only a clean exit 0 with `SUSPECT=0` passes. It holds when a changed line is in a dependency, dev/build/target dependency, `[patch.*]`, `[replace]` or `[features]` table, is a `build =` / `links =` / `git =` / `registry =` / `path =` source key (a target table's own `path =` under `[[bin]]`, `[[bench]]`, `[[test]]`, `[[example]]` or `[lib]` is not one), or, in `package.json`, sits under `dependencies` / `devDependencies` / `optionalDependencies` / `peerDependencies` / `overrides` / `resolutions` or is a `preinstall` / `install` / `postinstall` / `prepare` script. A suspect hit emits the FAIL line with the matched line and its section, and passes that line on to the hold comment as `$CRITERION3_SUSPECT_LINE` / `$CRITERION3_SUSPECT_SECTION`. The verb takes an explicit `OWNER/REPO` (`--repo`, else resolved from the cwd; it never sends a `{owner}/{repo}` placeholder), and a forge read failure keeps its HTTP status and message in the verb's stderr, which the hold comment shows as `$CRITERION3_SUSPECT_ERROR`. Every other outcome is a hold: no patch, an unparseable hunk, an unreadable head file for a hunk whose section the patch does not show, a forge error, exit 2 from an older daemon, 126/127 for no binary. A `.github/workflows/*` hit passes only on `WF_BLAST=green` (the `merge-risk` criterion's `ci_workflow_blast_eval`); red, none, or an unreadable read holds. `migrations/` and `_migration.py` hits still hold on any change, unless an `additiveMigrations` class (#13102) applies. The carve-out never widens `CRITICAL_PATTERNS` and never judges anything but these two manifest families; `Cargo.lock` and `package-lock.json` keep today's version-only treatment.
 
 **Standing-authorization class (#12528)**: the check-loop runs `standing_auth_eval critical` (defined under the `merge-risk` criterion) before it can emit FAIL. A `champion.standingAuthorizations` class with `"coversCriticalFiles": true` whose `filePatterns` cover **every** changed file, with no changed file in `excludeFilePatterns`, no added/removed line matching `forbiddenDiffPatterns`, no kept-set path, and every `conditions` entry (`judgeApproval`, `greenCi`) holding now, passes this criterion and names the class id. Any one file outside the class, an excluded file, a forbidden diff line, an unreadable diff or a kept-set path restores today's FAIL and the durable hold below. A class without the flag, or no class at all, changes nothing. The check is mechanical, never a judgment call.
 
@@ -2926,7 +2974,7 @@ fi
 # Resync waiver bullet (#13096): only when resync_waiver_eval returned ELIGIBLE in this pass.
 RESYNC_BULLET=""
 if [ "${RESYNC_WAIVER_RESULT:-}" = "ELIGIBLE" ]; then
-  RESYNC_BULLET="- Kept-set hold waived (#13096): resync PR, every kept-set file byte-matches upstream tag \`$RESYNC_WAIVER_TAG\` (blob SHAs):
+  RESYNC_BULLET="- Kept-set hold waived (#13096, #13435): resync / Repo Skills bump PR, every kept-set file byte-matches upstream tag \`$RESYNC_WAIVER_TAG\` (blob SHAs):
 $(printf '%s' "$RESYNC_WAIVER_RECORD" | sed 's/^/  - /')
 <!-- champion:resync-waiver tag=$RESYNC_WAIVER_TAG -->"
 fi
@@ -2989,11 +3037,9 @@ fi
 `merge-pr.sh` names no actor, so a merge without Step 2 looks like a human ran
 it (#4742).
 
-**Timeout invariant (#9096)**: run this block under a **600000 ms** Bash-tool
-timeout, with `LOOM_AUTO_MERGE_TIMEOUT` (420s below) **strictly under** it, so
-`merge-pr.sh` gives up first and its exit 5 re-queues (the 180s gap covers the
-post-wait merge and cleanup). Equal values let the tool win, leaving Step 2's
-"Proceeding with merge..." as the PR's last word. **Edit one number, edit both.**
+**Timeout (#9096)**: run this block under a **120000 ms** Bash-tool timeout.
+`merge-pr.sh` waits on no checks (#12063), so it returns in seconds; a tool
+timeout would leave Step 2's "Proceeding with merge..." as the PR's last word.
 
 ```bash
 PR_NUMBER=$1
@@ -3034,8 +3080,9 @@ esac
 case "$MERGE_RC ${QOUT%%$'\n'*}" in "0 "*) ;; # direct: merge-pr.sh below
   "7 LOOM-MERGE-QUEUE-"QUEUED*|"7 LOOM-MERGE-QUEUE-"DROPPED*|"7 LOOM-MERGE-QUEUE-"HANDED-OFF*|\
   "7 LOOM-MERGE-QUEUE-"MERGED*) echo "$QOUT (rc=$QRC)" ;; # queue protocol working: silent
-  *) QWHY="$(printf '%s' "$QOUT" | head -n2 | tr '\n' ' ')$QWHY (rc=$QRC)" # a stall: surface it, 1 notice/head
-     echo "CHAMPION-MERGE-QUEUE-STALL pr=$PR_NUMBER: $QWHY"; QM="<!-- champion:merge-queue-stall pr=$PR_NUMBER sha=$HEAD_SHA -->"
+  *) QWHY="$(printf '%s' "$QOUT" | head -n2 | tr '\n' ' ')$QWHY (rc=$QRC)" # a stall: surface it, 1 notice/head+reason
+     QH=$(printf '%s' "$QWHY" | cksum | cut -d' ' -f1) # a changed reason on the same head posts a new notice (#13357)
+     echo "CHAMPION-MERGE-QUEUE-STALL pr=$PR_NUMBER: $QWHY"; QM="<!-- champion:merge-queue-stall pr=$PR_NUMBER sha=$HEAD_SHA why=$QH -->"
      gh pr view "$PR_NUMBER" --json comments -q '.comments[].body' 2>/dev/null | grep -qF "$QM" || gh pr comment "$PR_NUMBER" \
        --body "**Champion: merge blocked** by \`forge merge-queue step\`: \`$QWHY\`. Not merged, still approved, retried next pass. \`unrecognized subcommand\`: upgrade \`loom-daemon\`.
 
@@ -3043,9 +3090,8 @@ $QM" >/dev/null ;;
 esac
 fi
 
-# Forge-API merge: --auto merges HERE (#8410), head-SHA precondition (#5579).
-# No re-date: a head whose checks are green is not re-tested because main moved (#12063). 420s < 600000 ms (above).
-[ "$MERGE_RC" -eq 0 ] && { LOOM_AUTO_MERGE_TIMEOUT=420 \
+# Forge-API merge: one call, head-SHA precondition (#5579). No wait, no re-date (#12063): GitHub gates required checks.
+[ "$MERGE_RC" -eq 0 ] && { \
   ./.loom/scripts/merge-pr.sh "$PR_NUMBER" --auto ${EXPECTED_HEAD:+--expected-head "$EXPECTED_HEAD"} || MERGE_RC=$?; }
 
 if [ "$MERGE_RC" -eq 7 ] || [ "$MERGE_RC" -eq 3 ] || [ "$MERGE_RC" -eq 4 ] || [ "$MERGE_RC" -eq 5 ] || [ "$MERGE_RC" -eq 8 ] || [ "$MERGE_RC" -eq 9 ] || [ "$MERGE_RC" -eq 10 ]; then
@@ -4403,9 +4449,9 @@ Never the failure exit **1**; each means "the merge did not happen":
 - **3** — the head moved between the fresh head-SHA read and the merge call.
 - **4** — retired (#12063 slice 1): `merge-pr.sh` no longer re-dates checks, so
   it never emits 4. Still re-queued if seen, for mixed versions mid-roll.
-- **5** — `--auto`'s bounded settle-wait expired; no required check went red.
-  **Do not "fix" a recurring 5 by raising `LOOM_AUTO_MERGE_TIMEOUT`** (pinned
-  under Step 3's own timeout, #9096); re-queuing is cheap.
+- **5** — a required status check is missing or pending on this head (#10688), or
+  the forge refused the merge call over a pending/red one (#12063). Nothing
+  waits; re-queuing is cheap.
 - **7** — `merge-pr.sh` ran: a sequencing hold (`LOOM-SEQUENCED-HOLD`,
   #11330), never a stall. Or Step 3's: `merge-queue step` gave no direct
   verdict, so `merge-pr.sh` never ran (#10256). QUEUED / DROPPED / HANDED-OFF /

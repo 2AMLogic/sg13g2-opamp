@@ -7,7 +7,7 @@ This roadmap is generated from the repository's current GitHub label state.
 
 Judge-approved PRs under a hold (`loom:blocked` or `loom:operator`) — only a human merge decision is missing.
 
-- **#303**: docs: submit DR-0011 for two-key ratification (status flip)
+_None._
 
 ## Very Important
 
@@ -23,13 +23,14 @@ Judge-approved PRs under a hold (`loom:blocked` or `loom:operator`) — only a h
 - **#105**: signoff: express the statistical rows as klt yield evidence for T1 item 6 (offset MC, mismatch CMRR)
 - **#108**: spec: ratify per-draw limits and target_yield for the statistical rows (offset random half, CMRR) -- needs a decision record
 - **#237**: design: reconcile schematic device representation with drawn fingering before citing post-layout (T1 item 7)
+- **#325**: sim: express the input-cmr (ICMR) bench as a klt sim request so the drawn-fingering re-run (#237) can run on the batch fleet
+- **#326**: decision: how do the offset-MC and CMRR-mismatch-MC rows follow the drawn-fingering netlist change (#237)
 
 ## Ready
 
 Human-approved issues ready for implementation (`loom:issue`).
 
-- **#86**: signoff: first `klt pex` post-layout run on opamp_core.gds (T1 item 7)
-- **#300**: Open the ratification PRs for DR-0011 (#101) and then DR-0010 (#108), with both key reviews
+- **#3**: Track the gap to T1 sim-validated / bronze (klayout-tools design-evidence tiers)
 - **#311**: Bump klayout-tools pin 0.6.0, 44cc42323184 → 0.8.0
 
 ## In Progress
@@ -57,7 +58,6 @@ Issues carrying `loom:curated`.
 - **#86**: signoff: first `klt pex` post-layout run on opamp_core.gds (T1 item 7) *(curated)*
 - **#105**: signoff: express the statistical rows as klt yield evidence for T1 item 6 (offset MC, mismatch CMRR) *(curated)*
 - **#108**: spec: ratify per-draw limits and target_yield for the statistical rows (offset random half, CMRR) -- needs a decision record *(curated)*
-- **#237**: design: reconcile schematic device representation with drawn fingering before citing post-layout (T1 item 7) *(curated)*
 - **#300**: Open the ratification PRs for DR-0011 (#101) and then DR-0010 (#108), with both key reviews *(curated)*
 - **#311**: Bump klayout-tools pin 0.6.0, 44cc42323184 → 0.8.0 *(curated)*
 - **#312**: Move layout/klt-pin.txt to klt 0.8.0: re-transcribe DECK_MIN_UM and regenerate layout evidence *(curated)*
@@ -75,14 +75,14 @@ _None._
 
 | Bucket | Count |
 |------|-------|
-| Operator merge-risk holds | 1 |
+| Operator merge-risk holds | 0 |
 | Very important | 1 |
-| Important | 4 |
-| Ready (`loom:issue`) | 3 |
+| Important | 6 |
+| Ready (`loom:issue`) | 2 |
 | In Progress (`loom:building`) | 1 |
 | PRs awaiting review | 1 |
 | Approved PRs awaiting merge | 1 |
-| Curated | 8 |
+| Curated | 7 |
 | Architect / Hermit proposals | 1 |
 | Active epics | 0 |
 <!-- guide:plan-body:end -->
