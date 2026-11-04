@@ -44,12 +44,14 @@ Issues currently being built (`loom:building`).
 PRs waiting on Judge (`loom:review-requested`).
 
 - **#302**: docs: request EE and market key review of DR-0010
+- **#303**: docs: submit DR-0011 for two-key ratification (status flip)
+- **#333**: docs(DR-0011): revision 4 restates swing as output range, discloses CMRR/gain gaps
 
 ## Approved (Awaiting Merge)
 
 PRs that passed review and are queued for Champion auto-merge (`loom:pr`).
 
-- **#303**: docs: submit DR-0011 for two-key ratification (status flip)
+_None._
 
 ## Proposed
 
@@ -80,8 +82,8 @@ _None._
 | Important | 6 |
 | Ready (`loom:issue`) | 2 |
 | In Progress (`loom:building`) | 1 |
-| PRs awaiting review | 1 |
-| Approved PRs awaiting merge | 1 |
+| PRs awaiting review | 3 |
+| Approved PRs awaiting merge | 0 |
 | Curated | 7 |
 | Architect / Hermit proposals | 1 |
 | Active epics | 0 |
