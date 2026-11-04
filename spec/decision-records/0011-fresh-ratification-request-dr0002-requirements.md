@@ -22,6 +22,12 @@
   submitted as bounds, only as measured values with status; the PSRR+ row
   cites the current record; and the record states what the block is for at
   these numbers. Both keys re-run on the revised head.
+  **Revision 3** (operator ruling r5-q75 option 3 on the market-key
+  escalation at head `e14ccdc2`: restate the bounds): the PSRR+ row is
+  restated to >= 26.9 dB and the two documentation fixes land. The CMRR,
+  gain and swing rows are **not yet restated**; they need re-derivation or a
+  design change and are tracked separately. Both keys must re-review the
+  revised head.
 - **Date**: 2026-10-20
 - **Decided by**: operator direction (attended fleet-decide 2026-10-19,
   option 1: prepare a focused documentation-only fresh-ratification PR,
@@ -66,7 +72,7 @@ below**. No submitted number is added, relaxed or re-rounded.
 | Phase margin | >= 60 deg | DR-0002 |
 | Slew rate (CL = 2 pF) | >= 7.51 V/us worst edge | DR-0002 |
 | CMRR, mismatch-inclusive (+3 sigma of Acm, linear) | >= 26.68 dB | DR-0004 |
-| PSRR+ (DC shelf) | >= 1.87 dB (floor only; evidence is the current record, see below) | DR-0002 |
+| PSRR+ (DC shelf) | >= 26.9 dB worst case (restated by operator ruling r5-q75 option 3; supersedes the DR-0002 1.87 dB floor; evidence is the current record, see below) | Operator ruling, revision 3 |
 | Output swing, CL = 2 pF, unloaded | headroom >= 251 mV (VDD), >= 141 mV (VSS) (tracking span: not submitted, see below) | DR-0002 |
 | Quiescent power | <= 119.7 uA total VDD current | DR-0002 |
 | Supply / temperature | 1.2 V +/-10 %, -40...+125 C | DR-0002 |
@@ -108,8 +114,13 @@ the ~1.30 dB worst in-band figure (issue #241). The current record is
 `sim/cmrr-psrr/klt/records/20261015-103521-0f41068.*`, joined to
 `sim/open-loop-ac/records/20261015-103057-895d555`: PSRR+ (DC shelf) is
 **26.90 dB worst** (`mos_fs_125C_1.08V`) to 36.33 dB best, all 45 corners
-above 1.87 dB, with the zero gone. This record submits only the >= 1.87 dB
-floor, evidenced by the current record; the zero and in-band-degradation
+above 1.87 dB, with the zero gone. This record submits the restated >= 26.9 dB
+bound (operator ruling r5-q75 option 3, replacing the 1.87 dB floor). The
+current records `20261015-103521-0f41068` and `20261027-011449-f8ef0ba`
+agree on a raw worst case of 26.9010753 dB at `mos_fs_125C_1.08V`, so the
+bound clears by about 0.001 dB under the literal comparison rule. That is
+essentially no margin; whether to require more is for the EE key.
+The 1.87 dB floor was measured on the superseded record and is withdrawn; the zero and in-band-degradation
 text of DR-0002 / `spec/target-spec.md` is **withdrawn from what is
 submitted** as a bench artifact. Re-pointing `selection.json` (still on
 707b34c) and correcting the `spec/target-spec.md` context strings is a
@@ -179,7 +190,8 @@ These are stated so the reviewers do not mistake this request for closure:
    Any dependency that needs new evidence requires separately authorized
    simulation; none is authorized or run here.
 3. **Offset statistical basis (DR-0002 residual (b)).** The systematic offset
-   limit is submitted; the statistical basis is outstanding and is the
+   limit is not submitted (measured value with status only, see "Rows not
+   submitted as bounds"); the statistical basis is outstanding and is the
    subject of the DR-0010 proposal, which is itself unratified.
 4. **Other DR-0002 residuals**: Area (`[TBD-12]`, needs layout), loaded
    output swing, and the HV stretch row remain un-ratified and out of scope.
