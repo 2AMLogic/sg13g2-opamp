@@ -1,9 +1,12 @@
-# 0011: Fresh ratification request for the unchanged DR-0002 requirements (issue #101)
+# 0011: Fresh ratification request for the DR-0002 requirements, as revised (issue #101)
 
 - **Status**: `submitted for ratification` — this record's requirements
-  (the unchanged DR-0002 table plus DR-0004's mismatch-inclusive CMRR bound,
-  minus the three rows listed under "Rows not submitted as bounds", which
-  are measured values with status only and are **not** ratified) are
+  (the rows of the "What is submitted for review" table only: GBW, phase
+  margin, slew rate, PSRR+ restated to >= 26.9 dB, quiescent power and
+  supply / temperature; every row listed under "Rows not submitted as
+  bounds", including open-loop gain, CMRR, swing headroom, noise, offset and
+  tracking span, is a measured value with status only and is **not**
+  ratified) are
   ratified when, and only when, the PR
   that carries this status line has been ratified by **both keys** of the
   two-key mechanism ([2AMLogic/2am#372](https://github.com/2AMLogic/2am/issues/372)):
@@ -12,9 +15,17 @@
   the design's author**. The merge commit of that PR is then the ratification
   record. This record supplies neither key. It changes **no** limit other
   than the Revision 3 PSRR+ restatement below (>= 26.9 dB, superseding the
-  DR-0002 1.87 dB floor), and changes no comparison rule, rounding
+  DR-0002 1.87 dB floor) and the Revision 4 withdrawal of six rows from
+  submission, and changes no comparison rule, rounding
   convention, grade, `spec/target-spec.md` row, `spec/integrator.json` value
-  or `sim/` / `signoff/` record. Until both
+  or `sim/` / `signoff/` record. **Superseded pending gap 6:** the PSRR+
+  1.87 dB floor still recorded in `spec/target-spec.md` (line 127),
+  `spec/integrator.json` (`psrr_db_worst_min_dc_shelf: 1.87`),
+  `signoff/characterization/selection.json` (pins `707b34c`) and the minted
+  report `20261020-052800-9a4a35d` (1.8709 dB) is **superseded by the
+  >= 26.9 dB bound in this record once ratified**; those files are not edited
+  here and keep grading the withdrawn floor until gap 6 carries them to
+  26.9 dB, repoints `selection.json` to `f8ef0ba` and re-mints. Until both
   keys are present and approving, the PR must not be merged and the limits
   remain only the conservative working limits. (Previous status:
   `submitted for fresh ratification`, preparation only, PR #293.)
@@ -30,6 +41,14 @@
   gain and swing rows are **not yet restated**; they need re-derivation or a
   design change and are tracked separately. Both keys must re-review the
   revised head.
+  **Revision 4** (operator send-back r5-q89 option 2, items A-C): open-loop
+  DC gain (>= 37.8 dB), mismatch-inclusive CMRR (>= 26.68 dB) and the swing
+  headroom rows (>= 251 / >= 141 mV) are moved out of the submitted table
+  into "Rows not submitted as bounds", as Revision 2 did for noise, offset
+  and span; their restatement (#332, #333) is not landed on this branch.
+  The PSRR+ supersession is stated in this Status clause (above), and the
+  remaining "unchanged" wording is corrected. Both keys re-review, because
+  the submitted rows changed.
 - **Date**: 2026-10-20
 - **Decided by**: operator direction (attended fleet-decide 2026-10-19,
   option 1: prepare a focused documentation-only fresh-ratification PR,
@@ -58,24 +77,22 @@ this record does not either.
 
 This record does **not** reconstruct, infer or backdate any approval. It
 does not cite the PR #27 merge, the Judge evaluation or the operator
-direction as a key. It asks for new, real verdicts on the unchanged
-requirements.
+direction as a key. It asks for new, real verdicts on the requirements
+as revised here.
 
-## What is submitted for review (unchanged)
+## What is submitted for review
 
-The requirements are DR-0002's table plus DR-0004's mismatch-inclusive CMRR
-bound, **minus the three rows listed under "Rows not submitted as bounds"
-below**. No submitted number is added, relaxed or re-rounded.
+The requirements are the rows of DR-0002's table below, **minus the six rows
+listed under "Rows not submitted as bounds" below**. The PSRR+ row is
+restated (Revision 3); no other submitted number is added, relaxed or
+re-rounded.
 
-| Row | Requirement (unchanged) | Source |
+| Row | Requirement | Source |
 |---|---|---|
-| Open-loop DC gain | >= 37.8 dB worst case | DR-0002 |
 | GBW (CL = 2 pF) | >= 4.74 MHz worst case | DR-0002 |
 | Phase margin | >= 60 deg | DR-0002 |
 | Slew rate (CL = 2 pF) | >= 7.51 V/us worst edge | DR-0002 |
-| CMRR, mismatch-inclusive (+3 sigma of Acm, linear) | >= 26.68 dB | DR-0004 |
 | PSRR+ (DC shelf) | >= 26.9 dB worst case (restated by operator ruling r5-q75 option 3; supersedes the DR-0002 1.87 dB floor; evidence is the current record, see below) | Operator ruling, revision 3 |
-| Output swing, CL = 2 pF, unloaded | headroom >= 251 mV (VDD), >= 141 mV (VSS) (tracking span: not submitted, see below) | DR-0002 |
 | Quiescent power | <= 119.7 uA total VDD current | DR-0002 |
 | Supply / temperature | 1.2 V +/-10 %, -40...+125 C | DR-0002 |
 
@@ -87,8 +104,11 @@ grid exactly as DR-0002 states them.
 
 The EE key found that the DR-0002 noise, offset and span limits are the
 4-significant-figure display rounding of the very extremum that fails them,
-with no derivation independent of the measurement. This record therefore
-does **not** ask either key to ratify a bound for these rows. They are
+with no derivation independent of the measurement. Revision 4 adds open-loop
+DC gain, mismatch-inclusive CMRR and the swing headroom rows, which the
+operator sent back (r5-q75, r5-q89) pending restatement. This record
+therefore does **not** ask either key to ratify a bound for any of these
+rows. They are
 presented as measured values with their status; they stay unratified
 working limits (`[P]`) until the DR-0009 design-margin path
 ([`design/margin-plan.md`](../../design/margin-plan.md)) or a separate
@@ -99,12 +119,14 @@ untouched.
 
 | Row | Measured worst case | Status |
 |---|---|---|
+| Open-loop DC gain | 38.2293 dB (`mos_fs_125C_1.08V`) | PASS against the 37.8 dB working limit; no bound submitted (restatement pending, #332) |
+| CMRR, mismatch-inclusive (+3 sigma of Acm, linear; DR-0004) | 26.6826 dB (`mos_ss_-40C_1.08V`) | meets the 26.68 dB working limit by 0.0026 dB; no bound submitted (derivation-or-design choice pending, #332) |
+| Output swing, headroom from VDD / VSS | 251.491128 mV / 141.167273 mV (`mos_fs_-40C_1.08V` / `mos_ff_-40C_1.08V`) | PASS against the 251 / 141 mV working limits; no bound submitted (restatement as an output range pending, #333) |
 | Input-referred noise, 100 Hz - 1 MHz | 108.949 uVrms (`mos_fs_125C_1.08V`) | FAIL against the 108.9 uVrms working limit; no bound submitted |
 | Input offset, systematic | 21.9273527 mV (`mos_fs_125C_1.08V`) | FAIL against the 21.9 mV working limit; no bound submitted |
 | Output swing, tracking span | 0.570957773 V (`mos_ss_125C_1.08V`) | FAIL against the 0.571 V working limit; no bound submitted |
 
-The per-rail headroom rows (251 mV / 141 mV) pass on the same record and stay
-submitted as written.
+All of these remain unratified working limits (`[P]`) with no ratified bound.
 
 ## PSRR+ evidence: current record
 
@@ -170,10 +192,10 @@ not move and no rounding was applied; the prior report with the 37.7812 dB
 FAIL remains in `signoff/characterization/reports/` unedited. The same
 re-selection also moves the GBW, phase-margin and quiescent-current readings
 (now 8.06239 MHz, 61.9872 deg, 119.655 uA), all of which still clear their
-unchanged bounds. This is a change of evidence, not of requirement.
+bounds. This is a change of evidence, not of requirement.
 
 The three remaining FAILs stay FAIL and, per the section above, are not
-submitted as bounds. No display-rounding convention is
+submitted as bounds (nor are the PASSing gain, CMRR and headroom rows). No display-rounding convention is
 proposed here; the raw worst cases round onto the bounds, but that is not a
 pass under the literal comparison rule, and choosing a convention would be a
 spec change that needs its own review.
@@ -216,11 +238,11 @@ Through the existing ratification protocol (`ratification/ee-key/` and
 - The **EE key** assesses whether the submitted requirements are supported
   by the cited evidence, including the corrected open-loop record and the
   current PSRR record, and the measured-value-only rows.
-- The **market key** assesses whether the unchanged requirements are
+- The **market key** assesses whether the submitted requirements are
   competitive; per DR-0002 and #372, any bound weaker than a previously
   ratified one is found competitive or escalated.
 - Neither reviewer may be this PR's author or the design's author.
-- If either key concludes that the unchanged requirements or the three
+- If either key concludes that the submitted requirements or the three
   disclosed FAILs need an operator tradeoff (for example a restated bound or
   a rounding convention), it follows the protocol's escalation path to the
   operator. A requirement change is a new proposal reviewed on its own, not
@@ -228,7 +250,9 @@ Through the existing ratification protocol (`ratification/ee-key/` and
 
 ## Decision
 
-None. This record takes no decision on any number. The ratification event
+None. This record decides no number beyond the Revision 3 PSRR+ restatement
+(operator ruling r5-q75 option 3) and the Revision 4 withdrawal of six rows
+from submission (operator send-back r5-q89 option 2). The ratification event
 is a pair of real, non-author, approving key verdicts on the PR that carries
 the `submitted for ratification` status above (or on a successor the keys
 name); the operator then ratifies. Until those verdicts exist, status and
@@ -239,7 +263,8 @@ mark the PR #27 gap closed.
 
 - Supplying either key, or treating the operator direction, the Judge, the
   Champion or the fleet bot as a key.
-- Changing any limit, the comparison rule, rounding, or any grade.
+- Changing any limit other than the PSRR+ restatement above, the comparison
+  rule, rounding, or any grade.
 - Editing or regenerating any historical report, record or FAIL.
 - Any simulation, EDA campaign, spending, provisioning, circuit change,
   merge authority or closure of #101.
