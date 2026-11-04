@@ -10,9 +10,11 @@
   an EE key (`RATIFY-KEY: ee`) and a market key (`RATIFY-KEY: market`), each
   posted as a PR review verdict, **neither key held by this PR's author or
   the design's author**. The merge commit of that PR is then the ratification
-  record. This record supplies neither key, changes **no** limit, comparison
-  rule, rounding convention, grade, `spec/target-spec.md` row,
-  `spec/integrator.json` value or `sim/` / `signoff/` record. Until both
+  record. This record supplies neither key. It changes **no** limit other
+  than the Revision 3 PSRR+ restatement below (>= 26.9 dB, superseding the
+  DR-0002 1.87 dB floor), and changes no comparison rule, rounding
+  convention, grade, `spec/target-spec.md` row, `spec/integrator.json` value
+  or `sim/` / `signoff/` record. Until both
   keys are present and approving, the PR must not be merged and the limits
   remain only the conservative working limits. (Previous status:
   `submitted for fresh ratification`, preparation only, PR #293.)
