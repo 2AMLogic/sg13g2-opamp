@@ -1,7 +1,10 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "engine": "klayout",
-  "layout": "opamp_core.gds",
+  "layout": {
+    "path": "layout/opamp_core/opamp_core.gds",
+    "scope": "repo"
+  },
   "reference": "opamp_core.lvs_reference.spice",
   "top": "opamp_core",
   "reference_top": ".TOP",
@@ -9,12 +12,16 @@
   "options": {
     "combine_devices": false,
     "combine_devices_per_circuit": null,
+    "combine_devices_max_attempts": 5,
     "flatten_layout": false,
     "flatten_reference": false,
     "netgen_setup": null,
     "parameter_tolerance": null,
     "compare_parameters": null,
     "power_connectivity": null,
+    "anchor_top_level_pins": null,
+    "strict_top_level_pin_count": false,
+    "compare_mos_flavour": false,
     "supply_nets": [
       "GND",
       "VCC",
@@ -22,9 +29,11 @@
       "VGND",
       "VPWR",
       "VSS"
-    ]
+    ],
+    "finfet_bulk": null
   },
   "hints_applied": null,
+  "constant_nets_applied": null,
   "status": "match",
   "power_connectivity": {
     "status": "unchecked",
@@ -34,6 +43,7 @@
     "instance_count": 0,
     "expected_nets": null,
     "unchecked_expected_pins": [],
+    "excluded_pins": [],
     "findings": [],
     "finding_count": 0
   },
@@ -45,9 +55,32 @@
     "findings": [],
     "finding_count": 0
   },
-  "mismatch_count": 0,
+  "device_parameter_coverage": [
+    {
+      "class": "cap_cmim",
+      "device_kind": "capacitor",
+      "layout_devices": 1,
+      "reference_devices": 1,
+      "compared": [
+        "C"
+      ],
+      "not_compared": [
+        {
+          "parameter": "A",
+          "reason": "secondary"
+        },
+        {
+          "parameter": "P",
+          "reason": "secondary"
+        }
+      ]
+    }
+  ],
+  "mismatch_count": 1,
   "error_count": 0,
-  "category_counts": {},
+  "category_counts": {
+    "device.geometry_not_compared": 1
+  },
   "category_error_counts": {},
   "counts": {
     "nets": {
@@ -56,9 +89,9 @@
       "matched": 9
     },
     "devices": {
-      "layout": 38,
-      "reference": 38,
-      "matched": 38
+      "layout": 32,
+      "reference": 32,
+      "matched": 32
     },
     "pins": {
       "layout": 6,
@@ -80,26 +113,58 @@
   "environment": {
     "engine": "klayout",
     "engine_version": "0.30.12",
-    "layout_sha256": "07fcb21698709178395cb2f04ba998c3752efb6eff24aace7626d9ffc10e553e",
-    "reference_sha256": "f9eb857cf8dd9593dc9a364ceb702f97dc144e0346c168a6e385e3e6c71aaac8",
+    "netgen_binary": null,
+    "layout_sha256": "ab2d926e1974e4e04f0c0363af5139b64034f544e4fdc192df3dd7a79830aa05",
+    "reference_sha256": "876a5236fc0283bfad36e19b3f08a01faf43c9bce516ceb76e5805e5c0b7d823",
     "extracted_netlist": null
   },
   "provenance": {
-    "klt_version": "0.6.0",
+    "klt_version": "0.9.0",
+    "klt_git_commit": "5dbbad05ff42265c92a6f3d2f20d1bbcd2957d49",
+    "klt_reinstall_spec": "klayout-tools==0.9.0",
     "klayout_version": "0.30.12",
     "pdk": null,
     "deck": {
       "name": "sg13g2",
-      "content_hash": "sha256:894326a4e37fb24fef2f7ffc6ae1da55a0e262b0f0bc1c09adc4862909278fda",
+      "content_hash": "sha256:1c95db40596afc5412e216009bcf0b775d1d74895b32738447eccbc76336dd15",
       "released": true
     },
     "input": {
-      "content_hash": "sha256:07fcb21698709178395cb2f04ba998c3752efb6eff24aace7626d9ffc10e553e",
+      "content_hash": "sha256:ab2d926e1974e4e04f0c0363af5139b64034f544e4fdc192df3dd7a79830aa05",
       "role": "layout"
     },
-    "klayout_version_mismatch": true
+    "klayout_version_mismatch": false
   },
-  "mismatches": [],
+  "mismatches": [
+    {
+      "category": "device.geometry_not_compared",
+      "severity": "warning",
+      "description": "device class 'cap_cmim' is a capacitor class, whose ['A', 'P'] parameter(s) KLayout declares *secondary*: kdb.NetlistComparer compares primary parameters only, so none of them took part in this compare and each is NOT verified -- this capacitor's geometry could differ between the two sides by any amount and this run would still report 'match'. The compared parameter(s) were ['C']. Name them in options.compare_parameters to compare them (see docs/cli/lvs.md, 'device.geometry_not_compared')",
+      "side": "both",
+      "net": null,
+      "device": {
+        "layout": null,
+        "reference": null,
+        "class": "cap_cmim"
+      },
+      "property": null,
+      "details": {
+        "device_kind": "capacitor",
+        "compared_parameters": [
+          "C"
+        ],
+        "not_compared_parameters": [
+          "A",
+          "P"
+        ],
+        "layout_devices": 1,
+        "reference_devices": 1
+      },
+      "circuit": null,
+      "instance": null,
+      "subcircuit": null
+    }
+  ],
   "net_correspondence": [
     {
       "layout": "\\$5",
