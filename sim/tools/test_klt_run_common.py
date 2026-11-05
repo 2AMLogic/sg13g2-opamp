@@ -145,12 +145,29 @@ class Reservation(unittest.TestCase):
                                       stderr=subprocess.PIPE, text=True)
                      for _ in range(6)]
             # Owner blocks on HOLD; every loser must exit before it is freed.
-            deadline = time.time() + 30
-            while time.time() < deadline:
+            t0 = time.monotonic()
+            deadline = t0 + 30
+            while time.monotonic() < deadline:
                 if sum(p.poll() is not None for p in procs) >= 5:
                     break
                 time.sleep(0.02)
-            self.assertEqual(sum(p.poll() is not None for p in procs), 5)
+            exited = sum(p.poll() is not None for p in procs)
+            if exited != 5:
+                # Self-diagnosing failure (#338): say which child is stuck.
+                states = [f"child {i}: " + ("running" if p.poll() is None
+                                            else f"exited rc={p.returncode}")
+                          for i, p in enumerate(procs)]
+                hold.write_text("go")  # free the owner so nothing leaks
+                for p in procs:
+                    if p.poll() is None:
+                        p.kill()
+                diag = []
+                for i, p in enumerate(procs):
+                    out, err = p.communicate(timeout=30)
+                    diag.append(f"child {i} stdout={out!r} stderr={err!r}")
+                self.fail(f"{exited} != 5 children exited after "
+                          f"{time.monotonic() - t0:.1f}s of a 30s deadline; "
+                          + "; ".join(states) + "\n" + "\n".join(diag))
             self.assertEqual(fx.klt_calls(), 0)  # nobody ran klt yet
             hold.write_text("go")
             results = [(p.communicate(timeout=30), p.returncode)
