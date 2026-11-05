@@ -7,7 +7,7 @@ This roadmap is generated from the repository's current GitHub label state.
 
 Judge-approved PRs under a hold (`loom:blocked` or `loom:operator`) — only a human merge decision is missing.
 
-_None._
+- **#303**: docs: submit DR-0011 for two-key ratification (status flip)
 
 ## Very Important
 
@@ -76,7 +76,7 @@ _None._
 
 | Bucket | Count |
 |------|-------|
-| Operator merge-risk holds | 0 |
+| Operator merge-risk holds | 1 |
 | Very important | 1 |
 | Important | 6 |
 | Ready (`loom:issue`) | 2 |
