@@ -8,8 +8,8 @@
 # see layout/README.md's revision table and its "What CI actually enforces"
 # section.
 #
-# Value: the v0.6.0 tag commit. layout/README.md's revision table records
-# `klt 0.6.0` (read back from opamp_core/drc_report.json's own
+# Value: the v0.9.0 tag commit. layout/README.md's revision table records
+# `klt 0.9.0` (read back from opamp_core/drc_report.json's own
 # provenance.klt_version); this file makes the same fact an installable,
 # immutable pin. CI installs exactly this revision into its own environment
 # (separate from the job interpreter, which carries the klayout release
@@ -21,10 +21,5 @@
 # locally, and if the bytes move, refresh the committed GDS, DRC report,
 # signoff pins and the revision table together in the same change.
 #
-# Held at the v0.6.0 tag commit while signoff/klt-pin.txt moved to v0.8.0
-# (#311): under 0.8.0 the curated sg13g2 deck changed (content hash
-# 894326a4... -> 1c95db40...), so `generate.py --check` stops at
-# sg13g2_layers.verify_deck_minima -- DECK_MIN_UM must be re-transcribed and
-# the committed DRC/LVS/ERC evidence regenerated, a change of its own.
 # One non-comment line: a full 40-hex git sha.
-c572046be644e0407f693f2410f3abb799d68a3a
+5dbbad05ff42265c92a6f3d2f20d1bbcd2957d49
