@@ -2,6 +2,11 @@
 
 <!-- Maintained by the Loom Guide role. Newest entries first. -->
 
+### 2026-11-05
+
+- **PR #339**: test: make reservation race wait-loop failure self-diagnosing
+- **Issue #338** (closed): test flake: test_overlapping_starts_give_exactly_one_owner fails on T1 signoff register
+
 ### 2026-11-01
 
 - **PR #323**: sim: 45-point output-swing klt envelope on the batch fleet with harness comparison
