@@ -6,11 +6,20 @@
 
 - **PR #339**: test: make reservation race wait-loop failure self-diagnosing
 - **Issue #338** (closed): test flake: test_overlapping_starts_give_exactly_one_owner fails on T1 signoff register
+- **PR #252**: feat(sim): publish 200-sample full-DUT DC mismatch campaign from fleet
+- **PR #254**: refactor(sim): share one file-SHA-256 helper across sim scripts
+- **Issue #253** (closed): Dedupe the file-SHA-256 helper copied across nine sim scripts
 
 ### 2026-11-01
 
 - **PR #323**: sim: 45-point output-swing klt envelope on the batch fleet with harness comparison
 - **Issue #100** (closed): sim: express the output-swing bench as a klt sim request (T1 item 5 coverage, follow-up to #85)
+- **PR #249**: feat(sim): add matched-DUT variant to the LNA PVT variant campaign
+- **PR #247**: feat(design): add lp_noise matching network to the LNA (nominal-cell, not final)
+
+### 2026-10-29
+
+- **Issue #238** (closed): T1 grading: attest items 1, 9, 10 with klt signoff --attest and re-grade against the current tiers doc
 
 ### 2026-10-28
 
@@ -24,10 +33,16 @@
 - **PR #313**: chore: pin signoff grading to klt 0.8.0 and assert the version in CI
 - **PR #308**: sim: PSRR as one klt sim measurement via two DUT copies, cited in item 5
 - **Issue #307** (closed): T1 item 5 (corner verification): make the ratified PSRR row a citable klt sim envelope instead of a declared gap
+- **Issue #235** (closed): Bump klayout-tools pin 0.7.0 → 0.8.0
 
 ### 2026-10-25
 
 - **PR #301**: docs: request EE and market key review of DR-0011
+
+### 2026-10-24
+
+- **PR #223**: feat: manifest-forward artifact store writer and CI check for new sim evidence
+- **Issue #222** (closed): Adopt the common artifact store for sim evidence (manifests in git, bytes via klt artifact)
 
 ### 2026-10-23
 
@@ -78,6 +93,8 @@
 - **Issue #255** (closed): Remove duplicated index_envelope body in open-loop-ac compare.py (delegate to klt_envelope)
 - **PR #253**: refactor: move open-loop-ac compare.py onto shared klt_envelope helpers
 - **Issue #252** (closed): Consolidate open-loop-ac compare.py onto shared klt_envelope (drop ~65 LOC of duplicated helpers)
+- **PR #218**: feat(signoff): attest T1 item 10 with an audited repo-hygiene inventory
+- **Issue #217** (closed): signoff: attest T1 item 10 (repo hygiene) with a tool-produced klt signoff --attest 10 envelope
 
 ### 2026-10-16
 
@@ -98,10 +115,12 @@
 - **PR #236**: feat(signoff): 45-corner post-layout pex run as uncited evidence; item 7 not met (#86)
 - **PR #235**: sim: real 45-corner input-noise klt envelope + measured comparison (#96)
 - **Issue #96** (closed): sim: express the input-noise bench as a klt sim request (T1 item 5 coverage, follow-up to #85)
+- **PR #183**: signoff: attest T1 item 1 with an audited design-source inventory
 
 ### 2026-10-14
 
 - **Issue #43** (closed): README: embed the fleet burndown chart (one line)
+- **Issue #46** (closed): README: embed the fleet burndown chart (one line)
 
 ### 2026-10-13
 
@@ -156,6 +175,19 @@
 - **Issue #170** (closed): Auditor guard telemetry: gh-api-rawfield-body-literal-at
 - **PR #198**: sim: pin output-swing integrity bounds in the envelope gate
 - **Issue #154** (closed): sim: pin output-swing integrity bounds in the envelope gate
+- **PR #209**: signoff: classify layout/run_native_drc.py in the testbench inventory (#208)
+- **PR #205**: sim: voltage-driven tank probe and completed input-Q/feed-isolation requirements run (#200, #202)
+- **PR #204**: layout: version-checked native PDK DRC runner and provenance checks
+- **PR #199**: sim: joint Le / input-match study on the finite base feed (#198): NO-GO, noise floor binds
+- **Issue #202** (closed): sim: fix tank-probe drive in the #200 requirements study and complete the run
+- **Issue #207** (closed): sim: correct ideal-choke isolation attribution in the requirements reducer
+- **Issue #128** (closed): sim: keep partially failed core-envelope campaigns resumable
+- **Issue #200** (closed): sim: quantify feed-isolation and input-Q requirements after the Le study NO-GO
+- **Issue #185** (closed): layout: add a version-checked native PDK DRC runner and provenance checks
+- **Issue #198** (closed): sim: jointly choose emitter degeneration and input match for the finite base feed
+- **Issue #179** (closed): Auditor guard review: retain destructive reset and cleanup protection
+- **Issue #153** (closed): Auditor guard review: retain shared stash protection
+- **Issue #124** (closed): Auditor guard review: retain main-checkout write confinement
 
 ### 2026-10-10
 
@@ -171,6 +203,48 @@
 - **Issue #174** (closed): cmrr-mismatch: validate raw sample finiteness and unique OP/AC pairs
 - **PR #177**: sim: reserve klt wrapper record destinations before submitting runs
 - **Issue #171** (closed): sim: reserve klt wrapper record destinations before submitting runs
+- **PR #194**: sim: finite resonant base-bias feed vs ideal-choke noise bound (#193)
+- **PR #191**: sim: explicit DC reference on xout for matching verification decks, with measured sensitivity (#190)
+- **PR #188**: sim: nominal-cell matching-network feasibility study with lossy inductors (#186)
+- **PR #175**: test: unit-test sim/tools/reducer_common.py (#172)
+- **PR #171**: sim: full-DUT DC mismatch campaign tooling; fleet run blocked by runner klt skew (#90)
+- **PR #169**: test: unit-test layout/lvs_identity.py sidecar binding (#162)
+- **PR #170**: sim: validate core-envelope wrdata integrity before counting stability violations
+- **PR #167**: docs: spec/README decision-records entry and index (#161)
+- **PR #166**: sim: bind HBT model-validity evidence to the complete DUT device inventory
+- **PR #163**: sim: consolidate duplicated reducer helpers (#160)
+- **PR #157**: sim: offline campaign prep for emitter array and cascode split (#58 milestone A)
+- **PR #151**: docs: disclose missing DC and RF statistical evidence for T1 item 6
+- **PR #147**: ratification: install the two-key reviewer variant (EE key + market key) (#73)
+- **PR #146**: sim: validate and replay DC bias and startup reduction before accepting evidence
+- **PR #142**: docs: correct Stage-1 biasref record id citation (#70)
+- **PR #140**: ci: verify schematic connectivity through headless xschem regeneration
+- **PR #136**: sim: extend 290 K NF measurement across the in-band frequency grid (#134)
+- **PR #135**: sim: validate RF frequency grids before marking campaign points complete
+- **PR #132**: layout: bind LVS verdicts to reference netlists and comparison requests
+- **PR #131**: docs(signoff): refresh evidence status after DR-0003 re-baselining
+- **PR #122**: sim: verify installed PDK identity against release pin in preflight
+- **PR #121**: sim: record expected RF point coverage and validate complete drive pairs
+- **Issue #187** (closed): measurements: use the derived 290 K noise floor in current reachability summaries
+- **Issue #186** (closed): sim: nominal-cell matching-network feasibility study with lossy inductors (unblocks #27 design choice)
+- **Issue #173** (closed): test: unit-test layout/pcell_env.py PDK resolution, PyCell digest, and generate.py grid snapping
+- **Issue #172** (closed): test: unit-test sim/tools/reducer_common.py shared reducer helpers
+- **Issue #165** (closed): sim: validate core-envelope wrdata integrity before counting stability violations
+- **Issue #145** (closed): sim: replay breakdown summaries independently of the simulation runner
+- **Issue #150** (closed): sim: reject invalid RF log measurements before coverage classification
+- **Issue #160** (closed): Consolidate duplicated helpers across sim reducers
+- **Issue #149** (closed): sim: validate and independently replay bias-reference phase reductions
+- **Issue #144** (closed): sim: reject malformed HBT measurement tokens before CSV publication
+- **Issue #117** (closed): sim: validate and replay DC bias and startup reduction before accepting evidence
+- **Issue #70** (closed): docs: biasref-topology README and DR-0003 cite a Stage-1 record id (20260921-154716-f718094) that does not exist
+- **Issue #138** (closed): ci: verify schematic connectivity through headless xschem regeneration
+- **Issue #137** (closed): sim: validate cubic-region IIP3 before reporting accepted intercepts
+- **Issue #133** (closed): sim: validate RF frequency grids before marking campaign points complete
+- **Issue #130** (closed): layout: bind LVS verdicts to reference netlists and comparison requests
+- **Issue #129** (closed): docs: refresh signoff evidence status after DR-0003 re-baselining
+- **Issue #126** (closed): sim: guard core-envelope resume with input identity and immutable publication
+- **Issue #118** (closed): sim: verify installed PDK identity against the release pin before recording results
+- **Issue #116** (closed): sim: record expected RF point coverage and validate complete drive pairs
 
 ### 2026-10-10
 
@@ -244,11 +318,46 @@
 - **Issue #91** (closed): integration: synchronize published GDS availability and graded maturity
 - **Issue #90** (closed): characterization: generate a reproducible per-row report from committed evidence
 - **Issue #89** (closed): Auditor guard review: keep literal body=@path rejection
+- **PR #115**: sim: atomic record-id reservation in sim_record_paths (#113)
+- **PR #111**: test: unit-test layout/lvs_reference.py partition and card-rewrite invariants
+- **PR #110**: ci: add pinned ShellCheck shell-lint job (#105)
+- **PR #107**: test: unit-test parse_core_envelope.py against a trimmed wrdata fixture
+- **PR #99**: sim: validate committed-DUT variant reports and summarize ratified-row coverage
+- **PR #98**: ci: run vendored-model provenance check in signoff workflow
+- **PR #96**: Consolidate duplicated RF helpers in the core-envelope postprocessors
+- **PR #93**: ci: layout-citation scope guard in the signoff drift check (#80)
+- **PR #92**: ci: netlist-freshness gate for lna.sch vs committed netlist (#88)
+- **PR #91**: ci: layout-freshness gate for committed layout evidence
+- **PR #85**: ci: replay the committed core-envelope derivation against retained RF data
+- **PR #74**: sim: preflight klt >= 0.7.0 for the inductor-variant campaign (#72)
+- **PR #71**: docs: add a 'Reproducing the results' index to the top-level README
+- **PR #65**: test: unit tests and CI job for lna-characterization reduction code
+- **Issue #113** (closed): sim: reserve record IDs atomically to prevent same-second evidence collisions
+- **Issue #108** (closed): ci: add a single local runner that mirrors the signoff.yml checks
+- **Issue #109** (closed): test: unit-test layout/lvs_reference.py partition and card-rewrite invariants
+- **Issue #105** (closed): ci: add a shellcheck lint job for the sim runners and check scripts
+- **Issue #104** (closed): test: unit-test parse_core_envelope.py against a trimmed wrdata fixture
+- **Issue #101** (closed): tests: unit-test hbt-characterization/rederive_nf_fixed_t0.py (fixed-T0 NF correction) and run it in CI
+- **Issue #87** (closed): sim: validate committed-DUT variant reports and summarize ratified-row coverage
+- **Issue #94** (closed): Consolidate duplicated RF helpers in the core-envelope postprocessors
+- **Issue #79** (closed): Auditor: refine unresolved-variable confinement guard for temporary LVS diagnostics
+- **Issue #80** (closed): signoff: enforce the partial-layout scope guard before accepting met block rows
+- **Issue #88** (closed): ci: check the committed netlist's device inventory against design/lna.sch, and drop the leaked local sch_path
+- **Issue #86** (closed): ci: layout evidence freshness gate (GDS hash vs provenance, regenerated LVS reference vs committed)
+- **Issue #83** (closed): ci: replay the committed core-envelope derivation against retained RF data
+- **Issue #67** (closed): ci: enforce the sim/ append-only rule mechanically (fail PRs that modify or delete committed records)
+- **Issue #66** (closed): Dedupe PVT corner->section tables repeated across sim run scripts
+- **Issue #63** (closed): layout: bring up the klt layout/DRC/LVS flow on the core + bias island (T1 items 2, 3, 4)
+- **Issue #75** (closed): ci: mechanically check that record ids cited in docs resolve to committed sim/ evidence
+- **Issue #72** (closed): sim: pin and preflight the klt version floor for the inductor-variant campaign (currently prose only)
+- **Issue #69** (closed): docs: add a 'Reproducing the results' index to the top-level README (T1 items 9 and 10)
 
 ### 2026-10-08
 
 - **PR #88**: signoff: bind T1 items 1, 9 and 10 to audited artifacts (klt 3a75c3ae)
 - **Issue #84** (closed): signoff: bind T1 items 1, 9 and 10 to audited artifacts (klayout-tools#2718 landed)
+- **PR #62**: spec: correct NF and Gain disclosure notes per decision record 0004, Option A
+- **PR #60**: sim: stamped EM inductor model and lossy-inductor variant bench (issue #56, partial: 45-cell run blocked on fleet klt)
 
 ### 2026-10-03
 
