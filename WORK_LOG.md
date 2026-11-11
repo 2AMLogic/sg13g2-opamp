@@ -2,6 +2,11 @@
 
 <!-- Maintained by the Loom Guide role. Newest entries first. -->
 
+### 2026-11-11
+
+- **PR #349**: fix(sim): verify recorded ngspice against a major-version floor, not an exact pin
+- **Issue #348** (closed): env_identity: accept the fleet ngspice pin via a >= floor, not exact !=
+
 ### 2026-11-05
 
 - **PR #339**: test: make reservation race wait-loop failure self-diagnosing
