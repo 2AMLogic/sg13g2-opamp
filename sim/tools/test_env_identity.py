@@ -138,7 +138,25 @@ class EnvIdentity(unittest.TestCase):
     def test_wrong_record_or_simulator_is_error(self):
         s = self.sidecar()
         self.assertTrue(any("bound to record" in e for e in ei.verify(s, PIN, "20260202-000000-0000abc")))
-        self.assertTrue(any("simulator" in e for e in ei.verify(s, PIN, RID, ngspice="ngspice-47")))
+
+    def with_ngspice(self, version, pin=PIN):
+        if not hasattr(self, "_base"):
+            self._base = self.sidecar()
+        s = copy.deepcopy(self._base)
+        s["observed"]["ngspice"] = version
+        return ei.verify(s, pin, RID)
+
+    def test_ngspice_floor_accepts_46_47_and_multidigit_rejects_below_or_garbage(self):
+        for ok in ("ngspice-46", "ngspice-47", "ngspice-100"):
+            self.assertEqual(self.with_ngspice(ok), [], ok)
+        for bad in ("ngspice-45", "garbage", "", None):
+            self.assertTrue(any("floor" in e for e in self.with_ngspice(bad)), bad)
+
+    def test_ngspice_exact_fallback_when_floor_absent(self):
+        pin = copy.deepcopy(PIN)
+        del pin["osdi_toolchain"]["ngspice_min_major"]
+        self.assertEqual(self.with_ngspice("ngspice-46", pin), [])
+        self.assertTrue(any("expected" in e for e in self.with_ngspice("ngspice-47", pin)))
 
     def test_cli_capture_refuses_overwrite_and_verify_roundtrips(self):
         make_install(self.tmp / "c")

@@ -57,6 +57,7 @@ REQUIRED_OSDI_MODELS = ("psp103", "psp103_nqs", "r3_cmc", "mosvar")
 DEFAULT_MODELS = ("cornerMOSlv.lib", "cornerCAP.lib")
 _DIRECTIVE_RE = re.compile(r'^\s*\.(lib|include|inc)\s+(?:"([^"]+)"|\'([^\']+)\'|(\S+))(\s+\S+)?', re.IGNORECASE)
 _SHA_RE = re.compile(r"^[0-9a-f]{64}$")
+_NGSPICE_RE = re.compile(r"^ngspice-(\d+)")
 
 
 class IdentityError(Exception):
@@ -325,9 +326,17 @@ def verify(sidecar, pin: dict, record_id: str | None = None, ngspice: str | None
         errs.append("sidecar carries no observed release marker (install .fetched-version)")
     elif marker != _release_of(pin.get("release_tag")):
         errs.append(f"incompatible: observed install release {marker!r} is not the configured release {pin.get('release_tag')!r}")
-    want_ngspice = ngspice or (pin.get("osdi_toolchain") or {}).get("ngspice_actually_used")
-    if want_ngspice and obs.get("ngspice") != want_ngspice:
-        errs.append(f"incompatible: observed simulator {obs.get('ngspice')!r}, expected {want_ngspice!r}")
+    toolchain = pin.get("osdi_toolchain") or {}
+    floor = toolchain.get("ngspice_min_major")
+    if isinstance(floor, int) and not isinstance(floor, bool):
+        # Fleet policy: a floor on the ngspice major, not an exact pin.
+        m = _NGSPICE_RE.match(str(obs.get("ngspice")))
+        if not m or int(m.group(1)) < floor:
+            errs.append(f"incompatible: observed simulator {obs.get('ngspice')!r}, floor ngspice-{floor}")
+    else:
+        want_ngspice = ngspice or toolchain.get("ngspice_actually_used")
+        if want_ngspice and obs.get("ngspice") != want_ngspice:
+            errs.append(f"incompatible: observed simulator {obs.get('ngspice')!r}, expected {want_ngspice!r}")
     return errs
 
 
