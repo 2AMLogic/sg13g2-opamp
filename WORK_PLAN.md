@@ -31,6 +31,7 @@ _None._
 Human-approved issues ready for implementation (`loom:issue`).
 
 - **#3**: Track the gap to T1 sim-validated / bronze (klayout-tools design-evidence tiers)
+- **#101**: Prepare a four-row design-margin plan while preserving literal limits and raw FAILs
 - **#311**: Bump klayout-tools pin 0.6.0, 44cc42323184 → 0.8.0
 - **#332**: DR-0011: re-derive CMRR bound, re-check gain/swing vs market comps, restate swing headroom (PR #303 operator ruling)
 
@@ -38,7 +39,7 @@ Human-approved issues ready for implementation (`loom:issue`).
 
 Issues currently being built (`loom:building`).
 
-- **#101**: Prepare a four-row design-margin plan while preserving literal limits and raw FAILs
+_None._
 
 ## PRs Awaiting Review
 
@@ -81,8 +82,8 @@ _None._
 | Operator merge-risk holds | 0 |
 | Very important | 1 |
 | Important | 6 |
-| Ready (`loom:issue`) | 3 |
-| In Progress (`loom:building`) | 1 |
+| Ready (`loom:issue`) | 4 |
+| In Progress (`loom:building`) | 0 |
 | PRs awaiting review | 1 |
 | Approved PRs awaiting merge | 1 |
 | Curated | 9 |
