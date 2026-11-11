@@ -25,6 +25,7 @@ _None._
 - **#237**: design: reconcile schematic device representation with drawn fingering before citing post-layout (T1 item 7)
 - **#325**: sim: express the input-cmr (ICMR) bench as a klt sim request so the drawn-fingering re-run (#237) can run on the batch fleet
 - **#326**: decision: how do the offset-MC and CMRR-mismatch-MC rows follow the drawn-fingering netlist change (#237)
+- **#332**: DR-0011: re-derive CMRR bound, re-check gain/swing vs market comps, restate swing headroom (PR #303 operator ruling)
 
 ## Ready
 
@@ -81,7 +82,7 @@ _None._
 |------|-------|
 | Operator merge-risk holds | 0 |
 | Very important | 1 |
-| Important | 6 |
+| Important | 7 |
 | Ready (`loom:issue`) | 4 |
 | In Progress (`loom:building`) | 0 |
 | PRs awaiting review | 1 |
