@@ -255,6 +255,11 @@ minted while that banner is showing carry an unscreened solver: treat a join
 between them and committed evidence as mixed-environment until the screen is
 re-run and the pin bumped by a decision record.
 
+Record verification is looser than that trip-wire: `env_identity.py verify`
+accepts a sidecar whose observed ngspice major is at or above
+`osdi_toolchain.ngspice_min_major` in `pdk.json` (fleet floor policy, not an
+exact pin), while `preflight.sh` stays a warn-only exact-pin check.
+
 ## Experiments
 
 - [`gm-id-characterization/`](gm-id-characterization/) — gm/ID, gm/gds, Cgg

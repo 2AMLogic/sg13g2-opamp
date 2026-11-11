@@ -12,7 +12,7 @@
     "checked": "2026-09-08"
   },
   "osdi_toolchain": {
-    "_comment": "Provenance of the OSDI (Verilog-A compact model) binaries every MOS-instantiating testbench in this tree loads. sim/tools/build-osdi.sh is the executable source of truth (copied structurally from sg13g2-bandgap/sim/tools/build-osdi.sh, adjusted only for this repo's cache directory name); this block restates its pins as a greppable fact sheet -- except ngspice_actually_used, which sim/preflight.sh reads as the warn-only ngspice pin (see this file's top-level _comment).",
+    "_comment": "Provenance of the OSDI (Verilog-A compact model) binaries every MOS-instantiating testbench in this tree loads. sim/tools/build-osdi.sh is the executable source of truth (copied structurally from sg13g2-bandgap/sim/tools/build-osdi.sh, adjusted only for this repo's cache directory name); this block restates its pins as a greppable fact sheet -- except ngspice_actually_used, which sim/preflight.sh reads as the warn-only ngspice pin (see this file's top-level _comment). ngspice_min_major is the one other consumed field: sim/tools/env_identity.py verify() accepts a record iff its observed ngspice major is >= this floor.",
     "approach": "source-compile the PDK's own Verilog-A models with a checksum-pinned prebuilt OpenVAF-Reloaded compiler",
     "build_script": "sim/tools/build-osdi.sh",
     "compiler_repo": "OpenVAF/OpenVAF-Reloaded",
@@ -22,6 +22,7 @@
     "install_dir": "PDK_ROOT/ihp-sg13g2/libs.tech/ngspice/osdi (PDK-install territory, not tracked in this repo)",
     "models_this_study_actually_needs": ["psp103.osdi"],
     "note": "All four are loaded by every testbench in this tree per the shared build-osdi.sh --check convention, even though sim/gm-id-characterization/ only instantiates sg13_lv_nmos/sg13_lv_pmos (PSP103.6, psp103.osdi) -- no resistor (r3_cmc) or bipolar device appears in this study.",
-    "ngspice_actually_used": "ngspice-46"
+    "ngspice_actually_used": "ngspice-46",
+    "ngspice_min_major": 46
   }
 }
