@@ -82,6 +82,10 @@ def build(dut, art):
         req["netlist"] = "tb_openloop_ac.body.spice"
         if "KLT_PEX_SIM_BACKEND" in os.environ:
             req["backend"] = os.environ["KLT_PEX_SIM_BACKEND"]
+        if req.get("backend") == "batch":
+            # The fleet is vCPU-budgeted; wait with backoff for capacity
+            # instead of failing the submit on batch_no_capacity.
+            req.setdefault("batch", {}).setdefault("capacity_wait_s", 600)
         if fname.startswith("openloop_op"):
             req["measurements"] = [
                 m for m in req["measurements"]
