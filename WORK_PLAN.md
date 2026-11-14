@@ -26,6 +26,7 @@ Judge-approved PRs under a hold (`loom:blocked` or `loom:operator`) — only a h
 - **#325**: sim: express the input-cmr (ICMR) bench as a klt sim request so the drawn-fingering re-run (#237) can run on the batch fleet
 - **#326**: decision: how do the offset-MC and CMRR-mismatch-MC rows follow the drawn-fingering netlist change (#237)
 - **#332**: DR-0011: re-derive CMRR bound, re-check gain/swing vs market comps, restate swing headroom (PR #303 operator ruling)
+- **#353**: signoff: cite the committed 45-corner output-swing envelope in T1 item 5 (replace three stale gap rows)
 
 ## Ready
 
@@ -53,6 +54,7 @@ PRs waiting on Judge (`loom:review-requested`).
 PRs that passed review and are queued for Champion auto-merge (`loom:pr`).
 
 - **#303**: docs: submit DR-0011 for two-key ratification (status flip)
+- **#352**: docs: roadmap as of 2026-11-13
 
 ## Proposed
 
@@ -71,6 +73,7 @@ Issues carrying `loom:curated`.
 ## Proposed (Architect / Hermit)
 
 - **#105**: signoff: express the statistical rows as klt yield evidence for T1 item 6 (offset MC, mismatch CMRR) *(architect)*
+- **#355**: Split signoff/characterization/generate.py (2,972 lines) along its existing section banners *(hermit)*
 
 ## Epics
 
@@ -82,12 +85,12 @@ _None._
 |------|-------|
 | Operator merge-risk holds | 1 |
 | Very important | 1 |
-| Important | 7 |
+| Important | 8 |
 | Ready (`loom:issue`) | 4 |
 | In Progress (`loom:building`) | 0 |
 | PRs awaiting review | 1 |
-| Approved PRs awaiting merge | 1 |
+| Approved PRs awaiting merge | 2 |
 | Curated | 9 |
-| Architect / Hermit proposals | 1 |
+| Architect / Hermit proposals | 2 |
 | Active epics | 0 |
 <!-- guide:plan-body:end -->
