@@ -12,13 +12,15 @@
 # SG13G2_TEMPS / SG13G2_VDDS / SG13G2_CL_F (the grid's other two axes and the
 # stated load),
 # and SG13G2_NGSPICE_ERR_RE, the broken-simulation log signature every harness
-# scans its raw ngspice log for (see their own headers below). Eight companion
+# scans its raw ngspice log for (see their own headers below). Nine companion
 # functions cover the remaining shared per-caller work:
 # sg13g2_preflight_require_netlist (the DUT_NETLIST_SRC guard most -- not all
 # -- callers need), sg13g2_preflight_record_paths (the record-id and
 # output-path block all ten callers need), sg13g2_sim_broken (the per-point
 # "did this simulation actually solve?" gate all ten callers apply),
-# sg13g2_latest_record_csv (resolve the newest committed sibling record every
+# sg13g2_op_sanity (the per-point "is this DC operating point sane?" gate
+# behind every bench's op_pass column), sg13g2_latest_record_csv (resolve
+# the newest committed sibling record every
 # cross-referencing caller joins against), sg13g2_csv_lookup (read one
 # column out of such a record by header name, keyed on point_id),
 # sg13g2_render_netlist (the shared sed-template render three callers each
@@ -229,6 +231,59 @@ sg13g2_sim_broken() {
   fi
   grep -qiE "${re}" "${log}" && return 0
   return 1
+}
+
+# sg13g2_op_sanity <vdd> <vcm> <vout> <vd1> <vd2> <vtail>
+#   Decide whether one simulated point's DC operating point is sane, echoing
+#   "1" (sane) or "0" (not) -- the per-point `op_pass` column every
+#   evidence-producing bench records. The rule (README.md "Per-point sanity
+#   checks"): the output sits within 15% of VDD of mid-rail
+#   (|Vout-Vcm| <= 0.15*VDD) and none of vd1/vd2/vtail/vout is railed to a
+#   supply (each within [0.02*VDD, VDD-0.02*VDD]). Both ends of both windows
+#   are inclusive; the rail window's upper edge is VDD-0.02*VDD, NOT
+#   0.98*VDD -- those are not the same double, and the committed records
+#   were gated with the former.
+#
+#   This was four byte-identical inline python3 blocks, one per runner
+#   (issue #366) -- and op_pass is not cosmetic: it is an evidence-admission
+#   gate. signoff/characterization/generate.py (~line 1153) refuses a
+#   dc_continuity point whose op_pass is not "1", so these four copies were
+#   four independent definitions of "this corner counts as evidence", with
+#   nothing in the tree comparing them. Centralizing them here means a
+#   threshold change is now necessarily a change to ONE function, reviewed
+#   by every bench at once.
+#
+#   The thresholds are spec-bearing: they decide which simulated corners are
+#   admissible evidence against the ratified spec. DO NOT tune 0.15 / 0.02
+#   in a refactor. A threshold that looks wrong is a spec/ question with a
+#   decision record, exactly as for any other ratified number -- and if it
+#   ever is changed there, re-run the committed-record replay in
+#   sim/tools/test_op_sanity.py against records re-read (not re-gated) to
+#   keep the old and new gates honestly distinguished.
+#
+#   input-noise composes a bench-specific band-edge gain guard ON TOP of
+#   this gate at its own call site (0.9 <= closed-loop gain <= 1.1 at both
+#   band edges); that guard is deliberately not folded in here, because no
+#   other bench applies it -- the same call-site-visible widening pattern
+#   sg13g2_sim_broken's --extra hook uses.
+sg13g2_op_sanity() {
+  if [[ $# -ne 6 ]]; then
+    echo "${_sg13g2_preflight_self}: sg13g2_op_sanity: expected <vdd> <vcm> <vout> <vd1> <vd2> <vtail>, got $# argument(s)" >&2
+    exit 3
+  fi
+
+  python3 -c '
+import sys
+vdd, vcm, vout, vd1, vd2, vtail = (float(a) for a in sys.argv[1:7])
+tol = 0.15 * vdd
+rail_lo = 0.02 * vdd
+rail_hi = vdd - 0.02 * vdd
+ok = (abs(vout - vcm) <= tol)
+for node in (vd1, vd2, vtail, vout):
+    if not (rail_lo <= node <= rail_hi):
+        ok = False
+print("1" if ok else "0")
+' "$1" "$2" "$3" "$4" "$5" "$6"
 }
 
 # SG13G2_MOS_CORNERS
