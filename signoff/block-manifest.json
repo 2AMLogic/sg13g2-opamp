@@ -71,6 +71,16 @@
         "rows": [
           "psrr"
         ]
+      },
+      {
+        "file": "sim/output-swing/klt/records/20261101-010941-b7a1a86.sim.json",
+        "kind": "sim",
+        "content_hash": "sha256:20d7d6b5a2a7fb9d4b63329f23090479487fbe341395cb41981b0c7a157646e2",
+        "rows": [
+          "swing_headroom_vdd",
+          "swing_headroom_vss",
+          "swing_span"
+        ]
       }
     ],
     "8": {
@@ -125,16 +135,13 @@
         "id": "psrr"
       },
       {
-        "id": "swing_headroom_vdd",
-        "gap": "45-corner klt sim request not yet written or run; owner #100"
+        "id": "swing_headroom_vdd"
       },
       {
-        "id": "swing_headroom_vss",
-        "gap": "45-corner klt sim request not yet written or run; owner #100"
+        "id": "swing_headroom_vss"
       },
       {
-        "id": "swing_span",
-        "gap": "45-corner klt sim request not yet written or run; owner #100"
+        "id": "swing_span"
       },
       {
         "id": "cmrr_mismatch",
