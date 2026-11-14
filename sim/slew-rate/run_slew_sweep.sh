@@ -239,22 +239,12 @@ if [[ "${n_rows}" -ne "${expected}" ]]; then
 fi
 
 # --- Worst-corner summary (per metric) for the record's README-style table.
-WORST="$(python3 - "${CSV_OUT}" <<'PYEOF'
+WORST="$(PYTHONPATH="${SIM_DIR}/tools" python3 - "${CSV_OUT}" <<'PYEOF'
 import csv, sys
 
+from csv_summary import numeric
+
 rows = list(csv.DictReader(open(sys.argv[1])))
-
-
-def numeric(rows, key):
-    out = []
-    for r in rows:
-        try:
-            v = float(r[key])
-        except ValueError:
-            continue
-        if v == v:  # not NaN
-            out.append((v, r))
-    return out
 
 
 def line(label, t, worst=min):
