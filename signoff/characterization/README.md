@@ -8,7 +8,7 @@ hand-written, from committed evidence only:
 | File | What it is |
 |---|---|
 | [`selection.json`](selection.json) | The **explicit record selection**: every record the report reads, by path and pinned by sha256, and every claimed row (column, extremum, unit, load, ratified bound copied verbatim from the spec, decision record). Nothing is discovered by glob or file mtime. |
-| [`generate.py`](generate.py) | Stdlib-only generator: audits the selected records, aggregates, and renders the report. |
+| [`generate.py`](generate.py) + its seven sibling modules | Stdlib-only generator: audits the selected records, aggregates, and renders the report. `generate.py` is the CLI entrypoint; the rest of the code lives beside it — see [Module map](#module-map). |
 | [`test_generate.py`](test_generate.py) | Negative controls (removed corner, injected failing point, failed simulation point, duplicate point, non-finite value, missing record, unpinned change, mixed ngspice, different netlist, dB-domain CMRR, fabricated MC statistic, broken draws population, spec/inventory drift, append-only minting) plus reproduction tests. |
 | [`reports/`](reports/) | Minted records, **append-only**: `<UTC yyyymmdd-HHMMSS>-<short sha of HEAD>.json` (machine-readable) and its `.md` rendering. |
 
@@ -29,6 +29,46 @@ ngspice, and long PVT / Monte Carlo grids) — see each bench README's
 [`../evidence/testbenches.txt`](../evidence/testbenches.txt). A re-simulation
 mints new `sim/*/records/`; this report only changes when `selection.json` is
 deliberately edited to select them.
+
+## Module map
+
+The generator is eight stdlib-only modules in this directory (issue #355; it
+was one 2,972-line file before). `generate.py` is the only entrypoint — the
+command lines above are unchanged, and it re-exports the public surface
+`test_generate.py` reaches for.
+
+| Module | What it holds | Imports |
+|---|---|---|
+| [`common.py`](common.py) | Generic helpers (`sha256_*`, `canonical_json`, `fmt`, `parse_decimal`, `decimals_of`, `normalized_netlist_hash`, `SelectionError`, `CollisionError`) and the constants read from more than one module. | — (leaf) |
+| [`paths.py`](paths.py) | The six `sys.path` hops onto the shared bench modules (`env_identity`, `draws_contract`, `mc_samples`, `noise_post`, `slew_post`, `swing_post`) and their imports, in one place. | — (leaf) |
+| [`defchecks.py`](defchecks.py) | The definition checks — per-point identities a record's derived column must obey — and the `DEFINITION_CHECKS` table `load_record` dispatches on. | `common`, `paths` |
+| [`rows.py`](rows.py) | Spec-clause bound parsing, CL/load validation and `evaluate_row`. | `common` |
+| [`records.py`](records.py) | `load_record`, the five `_load_*_population` raw-evidence loaders, and PDK provenance. | `common`, `paths`, `defchecks`, `rows` |
+| [`selection.py`](selection.py) | `load_selection` and the `_validate_*_selection` family that holds every raw-artifact pin to its bench's measurement configuration. | `common`, `paths`, `defchecks` |
+| [`render.py`](render.py) | `render_markdown` and its cell helpers. `check()` re-renders a committed record and compares it to its `.md` twin, so this output is part of the reproduction contract. | — (leaf) |
+| [`generate.py`](generate.py) | CLI entrypoint: the report document (`build_content`, `make_report`), minting, the item 8 envelope, `--check`, and the re-export surface. | all of the above |
+
+Import order — **no module imports a later one**, and the graph is acyclic,
+so no deferred or in-function import is needed anywhere:
+
+```
+common -> paths -> defchecks -> rows -> records -> selection -> render -> generate
+```
+
+Two boundaries are worth knowing, because the physical order of the old
+single file disagrees with them. The `klt` selection validator travels with
+the other `_validate_*_selection` functions (`selection.py`) and the `klt`
+population loader with the other `_load_*_population` loaders (`records.py`),
+even though both sat inside the definition-checks section; keeping them there
+would make `defchecks` depend on `records` and `rows`, which those two import.
+`_check_open_loop_klt` does stay in `defchecks.py` — it is a `DEFINITION_CHECKS`
+entry.
+
+`record_metadata.generator_sha256` hashes the **module set** (the sorted
+`generator_modules` list, each path with its own sha256), not one file, so the
+provenance stamp still covers all the generator's code. It is excluded from
+reproduction — `--check` compares `content` and `content_sha256` only — so
+records minted before the split keep reproducing unchanged.
 
 ## What every row carries
 
