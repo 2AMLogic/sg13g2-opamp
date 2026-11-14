@@ -130,8 +130,8 @@ class Base(unittest.TestCase):
         return _envelope("ac", self.rows, self.bias), _envelope("op", self.rows, self.bias)
 
     def run_compare(self, ac_env, op_env, harness=None):
-        ac = C.index_envelope(ac_env, "ac")
-        op = C.index_envelope(op_env, "op")
+        ac = C.index_envelope(ac_env, kind="ac")
+        op = C.index_envelope(op_env, kind="op")
         return C.compare(ac, op, harness or self.harness, self.bias, ac_env, op_env)
 
 
@@ -242,14 +242,14 @@ class TestEnvelopeNegativeControls(Base):
         gone = ac["corners"].pop(7)
         ac["corner_count"] = len(ac["corners"])
         with self.assertRaisesRegex(C.InputError, rf"{gone['process']}_{gone['temperature_c']}C_.*missing from"):
-            C.index_envelope(ac, "ac")
+            C.index_envelope(ac, kind="ac")
 
     def test_duplicate_corner(self):
         _, op = self.envs()
         op["corners"].append(copy.deepcopy(op["corners"][4]))
         op["corner_count"] = len(op["corners"])
         with self.assertRaisesRegex(C.InputError, r"duplicate corner"):
-            C.index_envelope(op, "op")
+            C.index_envelope(op, kind="op")
 
     def test_extra_off_grid_corner(self):
         ac, _ = self.envs()
@@ -258,13 +258,13 @@ class TestEnvelopeNegativeControls(Base):
         ac["corners"].append(extra)
         ac["corner_count"] = len(ac["corners"])
         with self.assertRaisesRegex(C.InputError, r"mos_tt_85C_1.08V: not a point of the ratified grid"):
-            C.index_envelope(ac, "ac")
+            C.index_envelope(ac, kind="ac")
 
     def test_corner_count_mismatch(self):
         ac, _ = self.envs()
         ac["corner_count"] = 44
         with self.assertRaisesRegex(C.InputError, r"corner_count 44"):
-            C.index_envelope(ac, "ac")
+            C.index_envelope(ac, kind="ac")
 
     def test_null_measurement(self):
         ac, _ = self.envs()
@@ -272,55 +272,55 @@ class TestEnvelopeNegativeControls(Base):
         pid = C.key_str(C.make_key(ac["corners"][12]["process"], ac["corners"][12]["temperature_c"],
                                    ac["corners"][12]["supply_v"]["vdd"]))
         with self.assertRaisesRegex(C.InputError, rf"{pid}: measurement gbw_hz value None"):
-            C.index_envelope(ac, "ac")
+            C.index_envelope(ac, kind="ac")
 
     def test_nonfinite_measurement(self):
         _, op = self.envs()
         op["corners"][30]["measurements"][0]["value"] = float("inf")
         with self.assertRaisesRegex(C.InputError, r"measurement ivdd_total_a value inf"):
-            C.index_envelope(op, "op")
+            C.index_envelope(op, kind="op")
 
     def test_absent_measurement(self):
         _, op = self.envs()
         op["corners"][2]["measurements"] = [m for m in op["corners"][2]["measurements"]
                                             if m["name"] != "op_vd2_rail_frac"]
         with self.assertRaisesRegex(C.InputError, r"measurement op_vd2_rail_frac missing"):
-            C.index_envelope(op, "op")
+            C.index_envelope(op, kind="op")
 
     def test_vcm_not_half_vdd(self):
         ac, _ = self.envs()
         ac["corners"][20]["supply_v"]["vinp"] = 0.6
         ac["corners"][20]["supply_v"]["vdd"] = 1.32
         with self.assertRaisesRegex(C.InputError, r"vinp 0.6 != vdd/2"):
-            C.index_envelope(ac, "ac")
+            C.index_envelope(ac, kind="ac")
 
     def test_errored_corner_is_not_evidence(self):
         ac, _ = self.envs()
         ac["corners"][0]["status"] = "error"
         with self.assertRaisesRegex(C.InputError, r"mos_tt_-40C_1.08V: corner status 'error'"):
-            C.index_envelope(ac, "ac")
+            C.index_envelope(ac, kind="ac")
 
     def test_inconclusive_run_is_not_evidence(self):
         ac, _ = self.envs()
         ac["status"] = "inconclusive"
         with self.assertRaisesRegex(C.InputError, r"aggregate status 'inconclusive'"):
-            C.index_envelope(ac, "ac")
+            C.index_envelope(ac, kind="ac")
 
     def test_nothing_checked(self):
         _, op = self.envs()
         op["coverage"]["nothing_checked"] = True
         with self.assertRaisesRegex(C.InputError, r"nothing_checked"):
-            C.index_envelope(op, "op")
+            C.index_envelope(op, kind="op")
 
     def test_skipped_coverage(self):
         _, op = self.envs()
         op["coverage"]["skipped"] = [{"id": "limit:x", "reason": "unavailable_measurement"}]
         with self.assertRaisesRegex(C.InputError, r"coverage.skipped is non-empty"):
-            C.index_envelope(op, "op")
+            C.index_envelope(op, kind="op")
 
     def test_klt_error_envelope(self):
         with self.assertRaisesRegex(C.InputError, r"klt error envelope"):
-            C.index_envelope({"schema_version": 1, "error": {"command": "sim", "message": "x"}}, "ac")
+            C.index_envelope({"schema_version": 1, "error": {"command": "sim", "message": "x"}}, kind="ac")
 
 
 class TestComparisonNegativeControls(Base):
@@ -547,7 +547,9 @@ class TestCli(Base):
             args = ["compare", "--ac", pa, "--op", po, "--harness-csv", pb, "--json-out", pj]
             rc = C.main(args)
             rep = json.loads(_read(pj))
-            self.assertEqual(rep["inputs"]["harness_ac_dir"]["path"], None)
+            # run_cli skips an optional input that was not given, so the key is
+            # absent rather than carrying a null path (issue #357).
+            self.assertNotIn("harness_ac_dir", rep["inputs"])
             self.assertNotIn("method_bias", rep["points"][0]["metrics"]["gbw_hz"])
             self.assertNotIn("vout_dc_v", rep["points"][0]["metrics"])
             self.assertEqual(rc, 0 if rep["status"] == "agree" else 1)

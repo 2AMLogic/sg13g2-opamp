@@ -312,11 +312,13 @@ def run_cli(argv: Optional[List[str]], *, description: str, compare_help: str,
             inputs: Sequence[Tuple[str, str, bool]],
             summary: Callable[[dict], str],
             common_args: Sequence[Tuple[str, dict]] = (),
-            validate_noun: str = "corners") -> int:
+            validate_noun: str = "corners",
+            envelope_flag: str = "--envelope",
+            envelope_key: str = "envelope") -> int:
     """The compare.py command line shared by every bench.
 
     harness_args: (flag, add_argument kwargs) for the bench's harness files, added
-        between --envelope and --json-out.
+        between the envelope flag and --json-out.
     index_fn(env, label): the bench's envelope gate.
     run(args, tool, env) -> report: loads the harness files named by `args` and
         compares; may raise InputError (exit 2).
@@ -328,15 +330,20 @@ def run_cli(argv: Optional[List[str]], *, description: str, compare_help: str,
         parsed value is also passed to index_fn as a keyword argument named by
         its argparse dest.
     validate_noun: the word after the corner count in the validate line.
+    envelope_flag, envelope_key: the `compare` flag and the inputs-stanza key for
+        the primary envelope, for a bench that does not spell it --envelope /
+        "envelope" (open-loop-ac takes two envelopes and names its primary one
+        --ac / "ac_envelope"). The `validate` positional is unchanged; only its
+        metavar follows envelope_key.
     Exit 0 iff the report's status is "agree", 1 otherwise, 2 on InputError.
     """
     ap = argparse.ArgumentParser(description=description)
     sub = ap.add_subparsers(dest="cmd", required=True)
     v = sub.add_parser("validate", help="gate the envelope before it may enter records/")
-    v.add_argument("envelope")
+    v.add_argument("envelope", metavar=envelope_key)
     dests = [v.add_argument(flag, **kw).dest for flag, kw in common_args]
     c = sub.add_parser("compare", help=compare_help)
-    c.add_argument("--envelope", required=True)
+    env_dest = c.add_argument(envelope_flag, required=True).dest
     for flag, kw in harness_args:
         c.add_argument(flag, **kw)
     for flag, kw in common_args:
@@ -345,19 +352,20 @@ def run_cli(argv: Optional[List[str]], *, description: str, compare_help: str,
     c.add_argument("--provenance", action="append", default=[], metavar="KEY=VALUE")
     a = ap.parse_args(argv)
     index_kw = {d: getattr(a, d) for d in dests}
+    env_path = a.envelope if a.cmd == "validate" else getattr(a, env_dest)
 
     try:
         if a.cmd == "validate":
-            env, idx = load_envelope(a.envelope, index_fn, **index_kw)
-            print(f"validate: {a.envelope}: {len(idx)} {validate_noun}, status {env.get('status')}, ok")
+            env, idx = load_envelope(env_path, index_fn, **index_kw)
+            print(f"validate: {env_path}: {len(idx)} {validate_noun}, status {env.get('status')}, ok")
             return 0
-        env, tool_idx = load_envelope(a.envelope, index_fn, **index_kw)
+        env, tool_idx = load_envelope(env_path, index_fn, **index_kw)
         rep = run(a, tool_idx, env)
     except InputError as e:
         print(f"compare.py: {e}", file=sys.stderr)
         return 2
 
-    stanza = {"envelope": {"path": a.envelope, "sha256": sha256_file(a.envelope)}}
+    stanza = {envelope_key: {"path": env_path, "sha256": sha256_file(env_path)}}
     for key, dest, hashed in inputs:
         path = getattr(a, dest)
         if path is None:  # an optional input not given
