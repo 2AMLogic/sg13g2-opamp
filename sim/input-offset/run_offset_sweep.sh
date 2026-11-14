@@ -424,31 +424,26 @@ if [[ "${n_rows}" -ne "${expected}" ]]; then
   echo "run_offset_sweep.sh: WARNING -- ${n_rows} rows written, expected ${expected} (${#sim_fail_points[@]} failures)" >&2
 fi
 
-SUMMARY="$(python3 - "${CSV_OUT}" <<'PYEOF'
+SUMMARY="$(PYTHONPATH="${SIM_DIR}/tools" python3 - "${CSV_OUT}" <<'PYEOF'
 import csv, sys
+
+from csv_summary import numeric
 
 rows = list(csv.DictReader(open(sys.argv[1])))
 
-def num(r, k):
-    try:
-        v = float(r[k])
-    except (ValueError, KeyError):
-        return None
-    return v if v == v else None
-
-vals = [(num(r, "vos_null_v"), r) for r in rows if num(r, "vos_null_v") is not None]
+vals = numeric(rows, "vos_null_v")
 worst = max(vals, key=lambda t: abs(t[0]))
 best = min(vals, key=lambda t: abs(t[0]))
 print(f"worst_abs_vos_v: {abs(worst[0]):.6g} ({worst[0]:+.6g}) at {worst[1]['point_id']}")
 print(f"best_abs_vos_v: {abs(best[0]):.6g} ({best[0]:+.6g}) at {best[1]['point_id']}")
 print(f"vos_range_v: {min(v for v, _ in vals):+.6g} .. {max(v for v, _ in vals):+.6g}")
 
-deltas = [(num(r, "vos_method_delta_v"), r) for r in rows if num(r, "vos_method_delta_v") is not None]
+deltas = numeric(rows, "vos_method_delta_v")
 if deltas:
     wd = max(deltas, key=lambda t: abs(t[0]))
     print(f"worst_method_delta_v: {wd[0]:+.6g} at {wd[1]['point_id']} "
           f"(open-loop null minus closed-loop cross-check)")
-cf = [(num(r, "vos_coarse_fine_delta_v"), r) for r in rows if num(r, "vos_coarse_fine_delta_v") is not None]
+cf = numeric(rows, "vos_coarse_fine_delta_v")
 if cf:
     wcf = max(cf, key=lambda t: abs(t[0]))
     print(f"worst_coarse_fine_delta_v: {wcf[0]:+.6g} at {wcf[1]['point_id']} "
