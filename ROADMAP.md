@@ -11,7 +11,7 @@ where they disagree with this file, this file is stale.
 
 ## Where it stands
 
-The graded register (`signoff/reports/20261027-011623-f8ef0ba.signoff.json`,
+The graded register (`signoff/reports/20261114-043348-88c7f6d.signoff.json`,
 graded at the klayout-tools revision in `signoff/klt-pin.txt`, v0.8.0) marks
 **7 of 11 T1 items met**. Tracker: [#3](https://github.com/2AMLogic/sg13g2-opamp/issues/3).
 
@@ -21,7 +21,7 @@ graded at the klayout-tools revision in `signoff/klt-pin.txt`, v0.8.0) marks
 | 2 Layout | met | `layout/opamp_core/opamp_core.gds`, generator `layout/opamp_core/generate.py` |
 | 3 DRC clean | met | `layout/opamp_core/drc_report.json` (coverage gaps quoted in `layout/README.md`) |
 | 4 LVS clean | met | `layout/opamp_core/lvs_report.json`, `match` |
-| 5 Corner verification | unmet, `check_failed` | eight rows cited as `klt sim` envelopes; noise and systematic offset are recorded literal-bound misses; swing (three rows) and mismatch CMRR are declared gaps |
+| 5 Corner verification | unmet, `check_failed` | eleven rows cited as `klt sim` envelopes; noise, systematic offset and swing are recorded literal-bound misses; mismatch CMRR is the one declared gap |
 | 6 Monte Carlo evidence | unmet, `no_evidence` | offset and CMRR campaigns exist as harness records; no `klt yield` report, and no ratified per-draw limit or target yield |
 | 7 Post-layout | unmet, `no_evidence` | `layout/opamp_core/pex_report.json` exists but is not cited: its two legs simulate different device geometry (`signoff/README.md`, "Item 7") |
 | 8 Characterization report | unmet, `check_failed` | `signoff/characterization/` regenerates offline; the report is FAIL against the literal bounds |
