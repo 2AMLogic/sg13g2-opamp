@@ -32,6 +32,7 @@ sys.path.insert(0, HERE)
 # compare.py imports the shared envelope core from sim/tools (issue #142).
 sys.path.insert(0, os.path.normpath(os.path.join(HERE, "..", "..", "tools")))
 import compare as C  # noqa: E402
+import envelope_fixtures as F  # noqa: E402
 
 BENCH = os.path.dirname(HERE)
 HARNESS_ID = "20260918-203850-90844d2"
@@ -41,15 +42,7 @@ BOUND = C.NOISE_BOUND_VRMS
 
 
 def _harness_rows():
-    with open(HARNESS_CSV, newline="") as f:
-        return list(csv.DictReader(f))
-
-
-def _status(value, limits):
-    if not limits:
-        return "pass"
-    lo, hi = limits.get("min"), limits.get("max")
-    return "pass" if (lo is None or value >= lo) and (hi is None or value <= hi) else "fail"
+    return F.harness_rows(HARNESS_CSV)
 
 
 def _request():
@@ -58,44 +51,25 @@ def _request():
 
 
 def _request_limits():
-    return {m["name"]: m.get("limits") for m in _request()["measurements"]}
+    return F.request_limits(REQUEST)
+
+
+def _vals(r):
+    """This bench's measurement dict for one harness row."""
+    vals = {C.INTEGRATED: float(r["vni_int_vrms"])}
+    for m, col in C.SPOTS.items():
+        vals[m] = float(r[col])
+    vals.update(C.BAND_EXPECTED)
+    return vals
 
 
 def _envelope(rows):
     """A synthetic klt-sim-shaped envelope carrying the harness's own numbers."""
-    limits = _request_limits()
-    corners = []
-    for r in rows:
-        k = C.make_key(r["corner"], r["temp_c"], r["vdd_v"])
-        vdd = float(r["vdd_v"])
-        vals = {C.INTEGRATED: float(r["vni_int_vrms"])}
-        for m, col in C.SPOTS.items():
-            vals[m] = float(r[col])
-        vals.update(C.BAND_EXPECTED)
-        ms = [{"name": n, "value": v, "status": _status(v, limits[n])} for n, v in vals.items()]
-        corners.append({
-            "corner_id": f"{k[0]}/vdd={vdd:.3f}_vinp={vdd / 2:.3f}V/{k[1]}C",
-            "process": k[0], "temperature_c": k[1],
-            "supply_v": {"vdd": vdd, "vinp": vdd / 2},
-            "status": "fail" if any(m["status"] == "fail" for m in ms) else "pass",
-            "measurements": ms,
-        })
-    return {
-        "schema_version": 3,
-        "status": "fail" if any(c["status"] == "fail" for c in corners) else "pass",
-        "corner_count": len(corners),
-        "coverage": {"nothing_checked": False, "skipped": []},
-        "corners": corners,
-    }
+    return F.build_envelope(rows, _vals, C.make_key, _request_limits())
 
 
 def _regrade(env, corner):
-    lim = _request_limits()
-    for m in corner["measurements"]:
-        if m["value"] is not None:
-            m["status"] = _status(m["value"], lim[m["name"]])
-    corner["status"] = "fail" if any(m["status"] == "fail" for m in corner["measurements"]) else "pass"
-    env["status"] = "fail" if any(c["status"] == "fail" for c in env["corners"]) else "pass"
+    F.regrade(env, corner, _request_limits())
 
 
 class Base(unittest.TestCase):
@@ -115,13 +89,7 @@ class Base(unittest.TestCase):
 
     @staticmethod
     def find(env, point, name):
-        k = C.make_key(*point)
-        for c in env["corners"]:
-            if C.make_key(c["process"], c["temperature_c"], c["supply_v"]["vdd"]) == k:
-                for m in c["measurements"]:
-                    if m["name"] == name:
-                        return c, m
-        raise KeyError((point, name))
+        return F.find(env, point, name, C.make_key)
 
 
 WORST = ("mos_fs", 125, 1.08)   # harness-worst integrated noise (108.949 uVrms)
