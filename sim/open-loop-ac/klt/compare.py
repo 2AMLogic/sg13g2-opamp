@@ -38,14 +38,12 @@ the two measurement paths agree, and whether they agree about each bound.
 
 from __future__ import annotations
 
-import argparse
 import csv
 import functools
-import json
 import math
 import os
 import sys
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 
 # The grid, the key helpers, InputError and the envelope gate are shared by
 # every sim/*/klt/compare.py: sim/tools/klt_envelope.py (issue #142).
@@ -151,13 +149,13 @@ GBW_METHOD_BIAS_MAX = (1 + 10 ** (1 / 20)) / 2 / math.sqrt(10 ** (1 / 20)) - 1
 
 
 # --------------------------------------------------------------- envelopes
-def load_envelope(path: str, kind: str) -> Tuple[dict, Dict[Key, Dict[str, float]]]:
-    """Validate one `klt sim` envelope and index its corners by grid key."""
-    env = E.read_envelope(path)
-    return env, index_envelope(env, kind, path)
+def index_envelope(env: dict, label: str = "envelope", *,
+                   kind: str) -> Dict[Key, Dict[str, float]]:
+    """Gate one `klt sim` envelope and index its corners by grid key.
 
-
-def index_envelope(env: dict, kind: str, label: str = "envelope") -> Dict[Key, Dict[str, float]]:
+    `kind` is keyword-only so the signature matches E.load_envelope's
+    `index_fn(env, path, **kw)` call, which is how run_cli forwards --kind.
+    """
     return E.index_envelope(env, label, KIND_MEASUREMENTS[kind])
 
 
@@ -345,58 +343,37 @@ def _text_summary(rep: dict) -> str:
         lines.append(f"  {row:18s} bound {e['bound']}: tool {t.get('status')} "
                      f"(worst {wc.get('corner_id')} = {wc.get('value')}, margin {wc.get('margin')}); "
                      f"harness worst {hw['point']} = {hw['value']:.6g} ({hw['verdict']})")
-    for line in rep["out_of_tolerance"]:
-        lines.append(f"  OUT OF TOLERANCE: {line}")
-    for d in rep["bound_verdict_disagreements"]:
-        lines.append(f"  VERDICT DISAGREES: {d}")
-    return "\n".join(lines)
+    return "\n".join(E.summary_tail(lines, rep))
+
+
+def _run(a, ac: Dict[Key, Dict[str, float]], ac_env: dict) -> dict:
+    """compare's body: the AC envelope is already gated, load the rest and join."""
+    op_env, op = E.load_envelope(a.op, index_envelope, kind="op")
+    harness = load_harness_csv(a.harness_csv)
+    bias = None if not a.harness_ac_dir else {
+        k: gbw_method_bias(os.path.join(a.harness_ac_dir, f"{key_str(k)}_ac.csv"))
+        for k in expected_keys()}
+    return compare(ac, op, harness, bias, ac_env, op_env)
 
 
 def main(argv: Optional[List[str]] = None) -> int:
-    ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    sub = ap.add_subparsers(dest="cmd", required=True)
-    v = sub.add_parser("validate", help="gate one envelope before it may enter records/")
-    v.add_argument("--kind", choices=("ac", "op"), required=True)
-    v.add_argument("envelope")
-    c = sub.add_parser("compare", help="join both envelopes with the harness record")
-    c.add_argument("--ac", required=True)
-    c.add_argument("--op", required=True)
-    c.add_argument("--harness-csv", required=True)
-    c.add_argument("--harness-ac-dir",
-                   help="the harness record's corners/<id>/ directory (raw *_ac.csv sweeps); "
-                        "omit when the baseline is itself a klt-measured record (same .meas "
-                        "interpolation, so no GBW method bias to correct)")
-    c.add_argument("--json-out")
-    c.add_argument("--provenance", action="append", default=[], metavar="KEY=VALUE")
-    a = ap.parse_args(argv)
-
-    try:
-        if a.cmd == "validate":
-            env, idx = load_envelope(a.envelope, a.kind)
-            print(f"validate: {a.envelope}: {len(idx)} corners, status {env.get('status')}, ok")
-            return 0
-        ac_env, ac = load_envelope(a.ac, "ac")
-        op_env, op = load_envelope(a.op, "op")
-        harness = load_harness_csv(a.harness_csv)
-        bias = None if not a.harness_ac_dir else {
-            k: gbw_method_bias(os.path.join(a.harness_ac_dir, f"{key_str(k)}_ac.csv"))
-            for k in expected_keys()}
-        rep = compare(ac, op, harness, bias, ac_env, op_env)
-    except InputError as e:
-        print(f"compare.py: {e}", file=sys.stderr)
-        return 2
-
-    if a.cmd == "compare":
-        rep["inputs"] = {name: {"path": p, "sha256": E.sha256_file(p)} for name, p in
-                         (("ac_envelope", a.ac), ("op_envelope", a.op), ("harness_csv", a.harness_csv))}
-        rep["inputs"]["harness_ac_dir"] = {"path": a.harness_ac_dir}  # None: klt-measured baseline
-        rep["provenance"] = dict(kv.split("=", 1) for kv in a.provenance)
-        if a.json_out:
-            with open(a.json_out, "w") as f:
-                json.dump(rep, f, indent=2)
-                f.write("\n")
-        print(_text_summary(rep))
-    return 0 if rep["status"] == "agree" else 1
+    return E.run_cli(
+        argv, description=__doc__.split("\n\n")[0],
+        compare_help="join both envelopes with the harness record",
+        envelope_flag="--ac", envelope_key="ac_envelope",
+        harness_args=(("--op", {"required": True}), ("--harness-csv", {"required": True}),
+                      ("--harness-ac-dir", {"default": None, "help":
+                       "the harness record's corners/<id>/ directory (raw *_ac.csv sweeps); "
+                       "omit when the baseline is itself a klt-measured record (same .meas "
+                       "interpolation, so no GBW method bias to correct)"})),
+        common_args=(("--kind", {"choices": ("ac", "op"), "default": "ac", "help":
+                      "which measurement set `validate` gates (default: ac). `compare` "
+                      "always gates --ac as the AC envelope and --op as the OP one."}),),
+        index_fn=index_envelope,
+        run=_run,
+        inputs=(("op_envelope", "op", True), ("harness_csv", "harness_csv", True),
+                ("harness_ac_dir", "harness_ac_dir", False)),
+        summary=_text_summary)
 
 
 if __name__ == "__main__":
