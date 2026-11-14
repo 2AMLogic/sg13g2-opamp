@@ -311,20 +311,12 @@ if [[ "${n_rows}" -ne "${expected}" ]]; then
 fi
 
 # --- Worst-corner summary (per metric) for the record's README-style table.
-WORST="$(python3 - "${CSV_OUT}" <<'PYEOF'
+WORST="$(PYTHONPATH="${SIM_DIR}/tools" python3 - "${CSV_OUT}" <<'PYEOF'
 import csv, sys
 
+from csv_summary import pick
+
 rows = list(csv.DictReader(open(sys.argv[1])))
-def numeric(rows, key, pick):
-    out = []
-    for r in rows:
-        try:
-            v = float(r[key])
-        except ValueError:
-            continue
-        if v == v:  # not NaN
-            out.append((v, r))
-    return pick(out, key=lambda t: t[0]) if out else None
 
 def line(label, t):
     if t is None:
@@ -333,14 +325,14 @@ def line(label, t):
     v, r = t
     print(f"{label}: {v:.4g} at {r['point_id']}")
 
-line("worst_cmrr_db", numeric(rows, "cmrr_db", min))
-line("best_cmrr_db", numeric(rows, "cmrr_db", max))
-line("worst_cmrr_1khz_db", numeric(rows, "cmrr_1khz_db", min))
-line("best_cmrr_1khz_db", numeric(rows, "cmrr_1khz_db", max))
-line("worst_psrr_db", numeric(rows, "psrr_db", min))
-line("best_psrr_db", numeric(rows, "psrr_db", max))
-line("worst_psrr_1khz_db", numeric(rows, "psrr_1khz_db", min))
-line("best_psrr_1khz_db", numeric(rows, "psrr_1khz_db", max))
+line("worst_cmrr_db", pick(rows, "cmrr_db", min))
+line("best_cmrr_db", pick(rows, "cmrr_db", max))
+line("worst_cmrr_1khz_db", pick(rows, "cmrr_1khz_db", min))
+line("best_cmrr_1khz_db", pick(rows, "cmrr_1khz_db", max))
+line("worst_psrr_db", pick(rows, "psrr_db", min))
+line("best_psrr_db", pick(rows, "psrr_db", max))
+line("worst_psrr_1khz_db", pick(rows, "psrr_1khz_db", min))
+line("best_psrr_1khz_db", pick(rows, "psrr_1khz_db", max))
 PYEOF
 )"
 

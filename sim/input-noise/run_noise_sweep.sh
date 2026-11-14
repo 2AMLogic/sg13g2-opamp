@@ -261,21 +261,12 @@ if [[ "${n_rows}" -ne "${expected}" ]]; then
 fi
 
 # --- Worst-corner summary (per metric) for the record's README-style table.
-WORST="$(python3 - "${CSV_OUT}" <<'PYEOF'
+WORST="$(PYTHONPATH="${SIM_DIR}/tools" python3 - "${CSV_OUT}" <<'PYEOF'
 import csv, sys
 
-rows = list(csv.DictReader(open(sys.argv[1])))
+from csv_summary import numeric
 
-def numeric(key):
-    out = []
-    for r in rows:
-        try:
-            v = float(r[key])
-        except ValueError:
-            continue
-        if v == v:
-            out.append((v, r))
-    return out
+rows = list(csv.DictReader(open(sys.argv[1])))
 
 def line(label, pairs, worst):
     if not pairs:
@@ -284,17 +275,17 @@ def line(label, pairs, worst):
     v, r = worst(pairs, key=lambda t: t[0])
     print(f"{label}: {v:.4g} at {r['point_id']}")
 
-line("worst_vni_int_vrms", numeric("vni_int_vrms"), max)
-line("best_vni_int_vrms", numeric("vni_int_vrms"), min)
-line("worst_vni_100hz_v_rthz", numeric("vni_100hz_v_rthz"), max)
-line("worst_vni_1khz_v_rthz", numeric("vni_1khz_v_rthz"), max)
-line("worst_vni_1mhz_v_rthz", numeric("vni_1mhz_v_rthz"), max)
-line("worst_thermal_floor_v_rthz", numeric("thermal_floor_v_rthz"), max)
-line("highest_flicker_corner_hz", numeric("flicker_corner_hz"), max)
-line("lowest_flicker_corner_hz", numeric("flicker_corner_hz"), min)
-line("lowest_flicker_frac_of_msq", numeric("flicker_frac_of_msq"), min)
+line("worst_vni_int_vrms", numeric(rows, "vni_int_vrms"), max)
+line("best_vni_int_vrms", numeric(rows, "vni_int_vrms"), min)
+line("worst_vni_100hz_v_rthz", numeric(rows, "vni_100hz_v_rthz"), max)
+line("worst_vni_1khz_v_rthz", numeric(rows, "vni_1khz_v_rthz"), max)
+line("worst_vni_1mhz_v_rthz", numeric(rows, "vni_1mhz_v_rthz"), max)
+line("worst_thermal_floor_v_rthz", numeric(rows, "thermal_floor_v_rthz"), max)
+line("highest_flicker_corner_hz", numeric(rows, "flicker_corner_hz"), max)
+line("lowest_flicker_corner_hz", numeric(rows, "flicker_corner_hz"), min)
+line("lowest_flicker_frac_of_msq", numeric(rows, "flicker_frac_of_msq"), min)
 line("worst_int_crosscheck_ratio_dev",
-     [(abs(v - 1.0), r) for v, r in numeric("vni_int_crosscheck_ratio")], max)
+     [(abs(v - 1.0), r) for v, r in numeric(rows, "vni_int_crosscheck_ratio")], max)
 PYEOF
 )"
 
