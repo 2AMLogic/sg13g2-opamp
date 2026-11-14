@@ -29,6 +29,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.normpath(os.path.join(HERE, "..", "..", "tools")))
 import compare as C  # noqa: E402
+import envelope_fixtures as F  # noqa: E402
 
 BENCH = os.path.dirname(HERE)
 HARNESS_CSV = os.path.join(BENCH, "records", "20260918-203858-90844d2.csv")
@@ -37,61 +38,33 @@ BOUND = C.OFFSET_BOUND_V
 
 
 def _harness_rows():
-    with open(HARNESS_CSV, newline="") as f:
-        return list(csv.DictReader(f))
-
-
-def _status(value, limits):
-    if not limits:
-        return "pass"
-    lo, hi = limits.get("min"), limits.get("max")
-    return "pass" if (lo is None or value >= lo) and (hi is None or value <= hi) else "fail"
+    return F.harness_rows(HARNESS_CSV)
 
 
 def _request_limits():
-    with open(REQUEST) as f:
-        req = json.load(f)
-    return {m["name"]: m.get("limits") for m in req["measurements"]}
+    return F.request_limits(REQUEST)
+
+
+def _vals(r):
+    """This bench's measurement dict for one harness row."""
+    vdd = float(r["vdd_v"])
+    vd1, vd2, vtail = (float(r[c]) for c in ("vd1_sample_v", "vd2_sample_v", "vtail_sample_v"))
+    return {
+        "vos_null_v": float(r["vos_null_v"]), "vos_crossings_n": 1.0,
+        "gain_local_vv": 10 ** (float(r["av_local_db"]) / 20),
+        "vd1_dc_v": vd1, "vd2_dc_v": vd2, "vtail_dc_v": vtail,
+        "vibias_dc_v": float(r["vibias_sample_v"]),
+        "op_vd1_rail_frac": vd1 / vdd, "op_vd2_rail_frac": vd2 / vdd, "op_vtail_rail_frac": vtail / vdd,
+    }
 
 
 def _envelope(rows):
     """A synthetic klt-sim-shaped envelope carrying the harness's own numbers."""
-    limits = _request_limits()
-    corners = []
-    for r in rows:
-        k = C.make_key(r["corner"], r["temp_c"], r["vdd_v"])
-        vdd = float(r["vdd_v"])
-        vd1, vd2, vtail = (float(r[c]) for c in ("vd1_sample_v", "vd2_sample_v", "vtail_sample_v"))
-        vals = {
-            "vos_null_v": float(r["vos_null_v"]), "vos_crossings_n": 1.0,
-            "gain_local_vv": 10 ** (float(r["av_local_db"]) / 20),
-            "vd1_dc_v": vd1, "vd2_dc_v": vd2, "vtail_dc_v": vtail,
-            "vibias_dc_v": float(r["vibias_sample_v"]),
-            "op_vd1_rail_frac": vd1 / vdd, "op_vd2_rail_frac": vd2 / vdd, "op_vtail_rail_frac": vtail / vdd,
-        }
-        ms = [{"name": n, "value": v, "status": _status(v, limits[n])} for n, v in vals.items()]
-        corners.append({
-            "corner_id": f"{k[0]}/vdd={vdd:.3f}_vinp={vdd / 2:.3f}V/{k[1]}C",
-            "process": k[0], "temperature_c": k[1],
-            "supply_v": {"vdd": vdd, "vinp": vdd / 2},
-            "status": "fail" if any(m["status"] == "fail" for m in ms) else "pass",
-            "measurements": ms,
-        })
-    return {
-        "schema_version": 3,
-        "status": "fail" if any(c["status"] == "fail" for c in corners) else "pass",
-        "corner_count": len(corners),
-        "coverage": {"nothing_checked": False, "skipped": []},
-        "corners": corners,
-    }
+    return F.build_envelope(rows, _vals, C.make_key, _request_limits())
 
 
 def _regrade(env, corner):
-    lim = _request_limits()
-    for m in corner["measurements"]:
-        m["status"] = _status(m["value"], lim[m["name"]]) if m["value"] is not None else m["status"]
-    corner["status"] = "fail" if any(m["status"] == "fail" for m in corner["measurements"]) else "pass"
-    env["status"] = "fail" if any(c["status"] == "fail" for c in env["corners"]) else "pass"
+    F.regrade(env, corner, _request_limits())
 
 
 class Base(unittest.TestCase):
@@ -111,13 +84,7 @@ class Base(unittest.TestCase):
 
     @staticmethod
     def find(env, point, name):
-        k = C.make_key(*point)
-        for c in env["corners"]:
-            if C.make_key(c["process"], c["temperature_c"], c["supply_v"]["vdd"]) == k:
-                for m in c["measurements"]:
-                    if m["name"] == name:
-                        return c, m
-        raise KeyError((point, name))
+        return F.find(env, point, name, C.make_key)
 
 
 WORST = ("mos_fs", 125, 1.08)   # the harness's binding corner

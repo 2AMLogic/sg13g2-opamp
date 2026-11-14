@@ -28,6 +28,7 @@ sys.path.insert(0, HERE)
 # compare.py imports the shared envelope core from sim/tools (issue #142).
 sys.path.insert(0, os.path.normpath(os.path.join(HERE, "..", "..", "tools")))
 import compare as C  # noqa: E402
+import envelope_fixtures as F  # noqa: E402
 
 BENCH = os.path.dirname(HERE)
 SIM = os.path.dirname(BENCH)
@@ -42,11 +43,7 @@ def _rows(path):
         return list(csv.DictReader(f))
 
 
-def _status(value, limits):
-    if not limits:
-        return "pass"
-    lo, hi = limits.get("min"), limits.get("max")
-    return "pass" if (lo is None or value >= lo) and (hi is None or value <= hi) else "fail"
+_status = F.grade
 
 
 def _request():
