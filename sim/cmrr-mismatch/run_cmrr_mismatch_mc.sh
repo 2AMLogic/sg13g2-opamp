@@ -612,14 +612,20 @@ if ! "${SCRIPT_DIR}/make_draws_csv.sh" --record-csv "${CSV_OUT}" \
 fi
 
 # Grid summary + controls digest for the record .md.
-SUMMARY="$(python3 - "${CSV_OUT}" <<'PYEOF'
+SUMMARY="$(PYTHONPATH="${SIM_DIR}/tools" python3 - "${CSV_OUT}" <<'PYEOF'
 import csv, sys
+
+from csv_summary import numeric
+
 rows = list(csv.DictReader(open(sys.argv[1])))
+
 def col(key):
-    try:
-        return [(float(r[key]), r["point_id"]) for r in rows if r[key]]
-    except ValueError:
-        return []
+    # (value, point_id) pairs so min()/max() keep their value-then-pid
+    # ordering; unusable cells (missing column, unparseable, NaN) are
+    # skipped per cell by csv_summary.numeric -- this site used to discard
+    # the whole column on one bad cell, keep NaN, and abort on a missing
+    # column. See sim/tools/csv_summary.py.
+    return [(v, r["point_id"]) for v, r in numeric(rows, key)]
 print(f"points: {len(rows)}, mc_n per point: {rows[0]['mc_n']}")
 for key in ("cmrr_3sigma_db", "cmrr_1khz_3sigma_db", "cmrr_db_p01", "cmrr_db_min", "cmrr_db_mean"):
     vals = col(key)
