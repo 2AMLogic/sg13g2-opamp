@@ -73,6 +73,22 @@ def rows_by_id(content: dict) -> dict:
     return {row["id"]: row for row in content["rows"]}
 
 
+# One row per raw-population audit a control can detach, carrying the four
+# facts the detach needs: (flag suffix, TRIGGER record whose rewritten CSV
+# fires the detach, TARGET record the population hangs off, population key,
+# definition check to drop).
+#
+# Trigger and target differ for cmrr and must stay distinct: the CMRR audit
+# joins Av0 from the open-loop record (issue #208), so rewriting the
+# `open-loop-ac` CSV detaches the population hanging off `cmrr-mismatch`.
+POPULATION_AUDITS = (
+    ("cmrr",  "open-loop-ac", "cmrr-mismatch", "mc_samples", "cmrr_mc_statistics"),
+    ("klt",   "open-loop-ac", "open-loop-ac",  "klt_raw",    "open_loop_klt_audit"),
+    ("noise", "input-noise",  "input-noise",   "noise_raw",  "noise_raw_audit"),
+    ("swing", "output-swing", "output-swing",  "swing_raw",  "swing_raw_audit"),
+)
+
+
 class Fixture:
     """A minimal repo tree holding exactly the inputs the selection reads."""
 
@@ -87,15 +103,10 @@ class Fixture:
                 files.add(rec["draws_csv"])
             if "mc_samples" in rec:
                 files.update(e["path"] for e in rec["mc_samples"]["files"].values())
-            if "noise_raw" in rec:
-                for entry in rec["noise_raw"]["files"].values():
-                    files.update(pin["path"] for pin in entry.values())
-            if "slew_raw" in rec:
-                for entry in rec["slew_raw"]["files"].values():
-                    files.update(pin["path"] for pin in entry.values())
-            if "swing_raw" in rec:
-                for entry in rec["swing_raw"]["files"].values():
-                    files.update(pin["path"] for pin in entry.values())
+            for two_level in ("noise_raw", "slew_raw", "swing_raw"):
+                if two_level in rec:
+                    for entry in rec[two_level]["files"].values():
+                        files.update(pin["path"] for pin in entry.values())
             if "klt_raw" in rec:
                 files.update(pin["path"] for pin in rec["klt_raw"]["files"].values())
         files.update({generate.SELECTION_REL, generate.GENERATOR_REL})
@@ -121,6 +132,19 @@ class Fixture:
     def draws_path(self, key: str) -> Path:
         return self.root / self.selection["records"][key]["draws_csv"]
 
+    def detach_population(self, suffix: str) -> None:
+        """Drop one POPULATION_AUDITS row's raw population and its definition
+        check from the selection.
+
+        The shared body of the four named detach methods below; each of those
+        records WHY its own control detaches, which is the part that differs.
+        """
+        _, _, target, population, check = next(r for r in POPULATION_AUDITS if r[0] == suffix)
+        rec = self.selection["records"][target]
+        rec.pop(population, None)
+        rec["definition_checks"] = [c for c in rec.get("definition_checks", []) if c != check]
+        self.save_selection()
+
     keep_cmrr_audit = False
 
     def detach_cmrr_population(self) -> None:
@@ -128,10 +152,7 @@ class Fixture:
         control that perturbs open-loop Av0 for ITS OWN purpose would trip the
         join. Those controls drop the CMRR raw-sample audit; CmrrMcStatistics
         (keep_cmrr_audit) tests the join itself."""
-        rec = self.selection["records"]["cmrr-mismatch"]
-        rec.pop("mc_samples", None)
-        rec["definition_checks"] = [c for c in rec["definition_checks"] if c != "cmrr_mc_statistics"]
-        self.save_selection()
+        self.detach_population("cmrr")
 
     keep_klt_audit = False
 
@@ -141,9 +162,8 @@ class Fixture:
         KltRawAudit tests that audit itself. The corrected record's prose names
         no ngspice (the envelopes do), so the detached fixture's copy states
         the pinned one, as a real legacy record's does."""
+        self.detach_population("klt")
         rec = self.selection["records"]["open-loop-ac"]
-        rec.pop("klt_raw", None)
-        rec["definition_checks"] = [c for c in rec.get("definition_checks", []) if c != "open_loop_klt_audit"]
         md = self.root / rec["md"]
         md.write_text(md.read_text(encoding="utf-8") + "\nRan on ngspice-46.\n", encoding="utf-8")
         rec["md_sha256"] = generate.sha256_file(md)
@@ -155,10 +175,7 @@ class Fixture:
         """Controls that perturb the input-noise summary for THEIR OWN purpose
         (a bound comparison) drop the raw-noise audit (issue #213);
         NoiseRawAudit tests that audit itself."""
-        rec = self.selection["records"]["input-noise"]
-        rec.pop("noise_raw", None)
-        rec["definition_checks"] = [c for c in rec.get("definition_checks", []) if c != "noise_raw_audit"]
-        self.save_selection()
+        self.detach_population("noise")
 
     keep_swing_audit = False
 
@@ -166,20 +183,12 @@ class Fixture:
         """Controls that perturb the output-swing summary for THEIR OWN purpose
         (a bound comparison) drop the raw-curve audit (issue #230);
         SwingRawAudit tests that audit itself."""
-        rec = self.selection["records"]["output-swing"]
-        rec.pop("swing_raw", None)
-        rec["definition_checks"] = [c for c in rec.get("definition_checks", []) if c != "swing_raw_audit"]
-        self.save_selection()
+        self.detach_population("swing")
 
     def rewrite_csv(self, key: str, transform, repin: bool = True) -> None:
-        if key == "open-loop-ac" and not self.keep_cmrr_audit:
-            self.detach_cmrr_population()
-        if key == "open-loop-ac" and not self.keep_klt_audit:
-            self.detach_klt_population()
-        if key == "input-noise" and not self.keep_noise_audit:
-            self.detach_noise_population()
-        if key == "output-swing" and not self.keep_swing_audit:
-            self.detach_swing_population()
+        for suffix, trigger, *_ in POPULATION_AUDITS:
+            if key == trigger and not getattr(self, f"keep_{suffix}_audit"):
+                getattr(self, f"detach_{suffix}_population")()
         path = self.csv_path(key)
         lines = path.read_text(encoding="utf-8").splitlines()
         path.write_text("\n".join(transform(lines)) + "\n", encoding="utf-8")
