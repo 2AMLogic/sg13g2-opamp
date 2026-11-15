@@ -34,30 +34,28 @@ Human-approved issues ready for implementation (`loom:issue`).
 - **#3**: Track the gap to T1 sim-validated / bronze (klayout-tools design-evidence tiers)
 - **#101**: Prepare a four-row design-margin plan while preserving literal limits and raw FAILs
 - **#332**: DR-0011: re-derive CMRR bound, re-check gain/swing vs market comps, restate swing headroom (PR #303 operator ruling)
-- **#364**: Share one newest-signoff-record helper: sync_integrator.py re-implements check_signoff.py's record ordering under a comment-only parity contract
-- **#369**: Fold open-loop-ac's remaining synthetic-envelope fixture wrapper onto sim/tools/envelope_fixtures.py
-- **#373**: Dedup the numeric-CSV-column reader copied eight ways into the sim/*/run_*.sh worst-corner summaries
+- **#387**: test_klt_envelope metavar assertion depends on terminal width (COLUMNS)
 
 ## In Progress
 
 Issues currently being built (`loom:building`).
 
-- **#363**: Collapse the four hardcoded per-bench detach branches in test_generate.py's Fixture onto one table
-- **#366**: Dedup the op_pass operating-point sanity gate copied into four sim/*/run_*_sweep.sh runners
+- **#380**: Four more copies of the op_pass DC-sanity rule survive #366's dedupe (cmrr-mismatch x2, input-offset, post-layout)
+- **#390**: csv_summary.numeric() cannot distinguish a wholly-absent metric column from an unusable cell, so a writer/summariser column-name drift now prints "n/a" into a record instead of failing the sweep
 
 ## PRs Awaiting Review
 
 PRs waiting on Judge (`loom:review-requested`).
 
 - **#302**: docs: request EE and market key review of DR-0010
-- **#372**: refactor: drive test_generate.py's Fixture population detaches from one table
-- **#374**: refactor: dedupe the op_pass DC sanity gate into sg13g2_op_sanity
 
 ## Approved (Awaiting Merge)
 
 PRs that passed review and are queued for Champion auto-merge (`loom:pr`).
 
 - **#303**: docs: submit DR-0011 for two-key ratification (status flip)
+- **#394**: refactor: fold the last four op_pass DC-sanity copies into one shared predicate
+- **#395**: fix: csv_summary raises KeyError on absent column, skips short-row None cells
 
 ## Proposed
 
@@ -71,14 +69,13 @@ Issues carrying `loom:curated`.
 - **#325**: sim: express the input-cmr (ICMR) bench as a klt sim request so the drawn-fingering re-run (#237) can run on the batch fleet *(curated)*
 - **#332**: DR-0011: re-derive CMRR bound, re-check gain/swing vs market comps, restate swing headroom (PR #303 operator ruling) *(curated)*
 - **#342**: design: raise PSRR+ via bias/topology change, re-run 45 corners, carry bounds into spec (PR #303 operator ruling) *(curated)*
-- **#361**: ROADMAP.md: retire the completed "Now" item 3 (cite the output-swing envelope) and refresh the snapshot line *(curated)*
-- **#367**: Follow-on: restore the validate --kind requirement loosened by PR #360's common_args routing *(curated)*
-- **#369**: Fold open-loop-ac's remaining synthetic-envelope fixture wrapper onto sim/tools/envelope_fixtures.py *(curated)*
+- **#380**: Four more copies of the op_pass DC-sanity rule survive #366's dedupe (cmrr-mismatch x2, input-offset, post-layout) *(curated)*
+- **#387**: test_klt_envelope metavar assertion depends on terminal width (COLUMNS) *(curated)*
+- **#390**: csv_summary.numeric() cannot distinguish a wholly-absent metric column from an unusable cell, so a writer/summariser column-name drift now prints "n/a" into a record instead of failing the sweep *(curated)*
 
 ## Proposed (Architect / Hermit)
 
 - **#105**: signoff: express the statistical rows as klt yield evidence for T1 item 6 (offset MC, mismatch CMRR) *(architect)*
-- **#370**: Deduplicate the generic klt envelope negative controls restated in all six sim/*/klt/test_compare.py *(hermit)*
 
 ## Epics
 
@@ -91,11 +88,11 @@ _None._
 | Operator merge-risk holds | 1 |
 | Very important | 1 |
 | Important | 7 |
-| Ready (`loom:issue`) | 6 |
+| Ready (`loom:issue`) | 4 |
 | In Progress (`loom:building`) | 2 |
-| PRs awaiting review | 3 |
-| Approved PRs awaiting merge | 1 |
+| PRs awaiting review | 1 |
+| Approved PRs awaiting merge | 3 |
 | Curated | 11 |
-| Architect / Hermit proposals | 2 |
+| Architect / Hermit proposals | 1 |
 | Active epics | 0 |
 <!-- guide:plan-body:end -->
