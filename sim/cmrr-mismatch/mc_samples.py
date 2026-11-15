@@ -14,7 +14,20 @@ duplicate indices, missing pairs, empty files. Messages name the file, line,
 draw and offending field.
 """
 import math
+import os
 import re
+import sys
+
+# The shared op_pass predicate (sim/tools/op_sanity.py): resolve it relative
+# to THIS file so every importer (make_draws_csv.sh's python3 -I heredoc,
+# run_cmrr_mismatch_mc.sh, signoff/characterization/generate.py) gets it
+# without each caller having to put sim/tools on sys.path itself (#380).
+_TOOLS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                          os.pardir, "tools")
+if _TOOLS_DIR not in sys.path:
+    sys.path.insert(0, _TOOLS_DIR)
+import op_sanity  # noqa: E402
+
 
 _INT = re.compile(r"[0-9]+\Z")
 _NUM = re.compile(r"[+-]?(?:[0-9]+\.?[0-9]*|\.[0-9]+)(?:[eE][+-]?[0-9]+)?\Z")
@@ -92,24 +105,23 @@ def point_stats(n, ops, acs, av0_db, vdd, vcm, rail_frac, mid_frac, plateau_tol)
 
     Acceptance rules (per draw k): a draw is op_fail when |vout - vcm| >
     mid_frac*vdd or any of vout/vd1/vd2/vtail leaves [rail_frac*vdd,
-    vdd - rail_frac*vdd]; otherwise plateau_fail when |acm10m - acm01| >
+    vdd - rail_frac*vdd] -- the shared predicate op_sanity.op_sane
+    (sim/tools/op_sanity.py, issue #380), evaluated here rather than
+    restated; otherwise plateau_fail when |acm10m - acm01| >
     plateau_tol; else accepted. The DR-0004 statistic is computed in the
     LINEAR Acm domain: mean + 3*sigma (sample sigma, N-1) of 10**(acm/20),
     mapped to dB once: cmrr_3sigma_db = av0_db - 20*log10(mean + 3*sigma).
     dB-domain mean / 1st percentile / minimum are context columns.
     Raises SampleError when fewer than 2 draws are accepted.
     """
-    rail_lo, rail_hi = rail_frac * vdd, vdd - rail_frac * vdd
     acm_lin, acm1k_lin, cmrr_db, cmrr1k_db = [], [], [], []
     excluded = op_fail = plateau_fail = 0
     plateau_max = 0.0
     for k in range(n):
         vout, vd1, vd2, vtail = ops[k][:4]
         acm10m, acm01, acm1k = acs[k]
-        ok = abs(vout - vcm) <= mid_frac * vdd
-        for node in (vout, vd1, vd2, vtail):
-            if not (rail_lo <= node <= rail_hi):
-                ok = False
+        ok = op_sanity.op_sane(vdd, vcm, vout, vd1, vd2, vtail,
+                               rail_frac=rail_frac, mid_frac=mid_frac)
         pdelta = abs(acm10m - acm01)
         plateau_max = max(plateau_max, pdelta)
         if not ok:

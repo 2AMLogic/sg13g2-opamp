@@ -133,7 +133,13 @@ record does.
   the fine sweep's crossing sits on the edge of its window (both of these
   actually abort the point rather than merely flagging it);
 - `Vd1`, `Vd2`, `Vtail` or `Vout` at the null is outside
-  `(0.02·VDD, 0.98·VDD)` — i.e. any node railed to a supply;
+  `[0.02·VDD, VDD − 0.02·VDD]` — i.e. any node railed to a supply. This is
+  the shared rail window (`rail_ok` in `sim/tools/op_sanity.py`); the upper
+  edge is `VDD − 0.02·VDD`, not `0.98·VDD` — those are not the same double.
+  The shared gate's mid-rail term (`|Vout − Vcm| ≤ 0.15·VDD`) is
+  deliberately not applied here: this bench defines its operating point as
+  the `Vout = Vcm` crossing, so that term is vacuously true at every point
+  that survives to be graded;
 - the fitted local gain at the null is below `20 dB` (a flat/degenerate
   "null" must not read as a plausible offset);
 - `|Vos|` is not comfortably inside the coarse locate window.

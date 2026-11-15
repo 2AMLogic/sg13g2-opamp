@@ -139,6 +139,13 @@ def convert(ac_path, op_path, out=sys.stdout):
         a, o = ac[key], op[key]
         vcm = vdd / 2
         vout = o["vout_dc_v"]
+        # vout-only DC sanity, deliberately NOT the shared op_pass predicate
+        # (sim/tools/op_sanity.py, issue #380): this check sys.exit()s the
+        # whole conversion on a non-regulating point ("loud, never partial")
+        # rather than recording a 0/1, and the OP request drops d1/d2/tail
+        # (DROP_NODES) so BOTH legs run the identical bench -- a .SUBCKT DUT
+        # from klt pex hides internal nodes, so the rail window cannot span
+        # them here.
         if abs(vout - vcm) > 0.15 * vdd or not (0.02 * vdd <= vout <= 0.98 * vdd):
             sys.exit(f"klt_measure: {proc}/{vdd}V/{temp}C: non-regulating DC point (vout={vout:.4g} V, vcm={vcm:.4g} V)")
         pm = 180.0 + math.degrees(a["phase_at_ugf_rad"])
