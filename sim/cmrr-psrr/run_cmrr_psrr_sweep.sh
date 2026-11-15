@@ -216,23 +216,13 @@ PYEOF
         continue
       fi
 
-      # --- Per-point DC sanity check, same rule as sim/open-loop-ac/:
-      # output within 15% of VDD of mid-rail, and no internal node fully
-      # railed -- a non-regulating point must not read as a plausible
-      # rejection ratio. Same necessary-not-sufficient scope as open-loop's
-      # check (see README.md "Per-point sanity checks").
-      op_pass="$(python3 -c "
-vdd=${vdd}; vcm=${vcm}
-vout=${vout}; vd1=${vd1}; vd2=${vd2}; vtail=${vtail}
-tol=0.15*vdd
-rail_lo=0.02*vdd
-rail_hi=vdd-0.02*vdd
-ok = (abs(vout-vcm) <= tol)
-for node in (vd1, vd2, vtail, vout):
-    if not (rail_lo <= node <= rail_hi):
-        ok = False
-print('1' if ok else '0')
-")"
+      # --- Per-point DC sanity check, shared sg13g2_op_sanity rule
+      # (sim/preflight.sh, same gate as sim/open-loop-ac/): output within
+      # 15% of VDD of mid-rail, and no internal node fully railed -- a
+      # non-regulating point must not read as a plausible rejection ratio.
+      # Same necessary-not-sufficient scope as open-loop's check (see
+      # README.md "Per-point sanity checks").
+      op_pass="$(sg13g2_op_sanity "${vdd}" "${vcm}" "${vout}" "${vd1}" "${vd2}" "${vtail}")"
 
       read -r acm0_db _acm10x_db acm_1k_db acm_delta < <(read_ac_shelf "${CORNERS_OUT}/${point_id}_cmrr_ac.csv")
       read -r avs0_db _avs10x_db avs_1k_db avs_delta < <(read_ac_shelf "${CORNERS_OUT}/${point_id}_psrr_ac.csv")

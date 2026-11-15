@@ -119,23 +119,13 @@ for corner in "${CORNERS[@]}"; do
       # --- Per-point DC sanity check (issue #9 Test Plan "Edge cases"):
       # output within 15% of VDD of mid-rail, and no internal node fully
       # railed to a supply -- a non-regulating point must not read as a
-      # plausible margin. See README.md "Per-point sanity checks" for the
-      # exact rule and its honest scope (a necessary, not sufficient,
-      # saturation proxy -- this OSDI/PSP103 build exposes no per-device
-      # queryable operating-point parameters, same limitation
-      # sim/gm-id-characterization/README.md documents).
-      op_pass="$(python3 -c "
-vdd=${vdd}; vcm=${vcm}
-vout=${vout}; vd1=${vd1}; vd2=${vd2}; vtail=${vtail}
-tol=0.15*vdd
-rail_lo=0.02*vdd
-rail_hi=vdd-0.02*vdd
-ok = (abs(vout-vcm) <= tol)
-for node in (vd1, vd2, vtail, vout):
-    if not (rail_lo <= node <= rail_hi):
-        ok = False
-print('1' if ok else '0')
-")"
+      # plausible margin. The rule lives once in sim/preflight.sh
+      # (sg13g2_op_sanity), shared with the sibling benches; see README.md
+      # "Per-point sanity checks" for the exact rule and its honest scope
+      # (a necessary, not sufficient, saturation proxy -- this OSDI/PSP103
+      # build exposes no per-device queryable operating-point parameters,
+      # same limitation sim/gm-id-characterization/README.md documents).
+      op_pass="$(sg13g2_op_sanity "${vdd}" "${vcm}" "${vout}" "${vd1}" "${vd2}" "${vtail}")"
 
       # --- AC post-processing: Av0 (at the lowest swept frequency, 1 Hz --
       # see testbench header for why the L=1e18H loop-break choice keeps
