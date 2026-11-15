@@ -723,21 +723,12 @@ if [[ "${n_rows}" -ne "${expected}" ]]; then
 fi
 
 # --- Worst-corner summary (per metric) for the record's .md -------------
-WORST="$(python3 - "${CSV_OUT}" <<'PYEOF'
+WORST="$(PYTHONPATH="${SIM_DIR}/tools" python3 - "${CSV_OUT}" <<'PYEOF'
 import csv, sys
 
-rows = list(csv.DictReader(open(sys.argv[1])))
+from csv_summary import numeric
 
-def numeric(rows, key):
-    out = []
-    for r in rows:
-        try:
-            v = float(r[key])
-        except ValueError:
-            continue
-        if v == v:
-            out.append((v, r))
-    return out
+rows = list(csv.DictReader(open(sys.argv[1])))
 
 span = numeric(rows, "icmr_span_v")
 lo = numeric(rows, "icmr_lo_v")
