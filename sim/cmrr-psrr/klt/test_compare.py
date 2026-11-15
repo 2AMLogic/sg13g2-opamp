@@ -28,6 +28,7 @@ sys.path.insert(0, HERE)
 # compare.py imports the shared envelope core from sim/tools (issue #142).
 sys.path.insert(0, os.path.normpath(os.path.join(HERE, "..", "..", "tools")))
 import compare as C  # noqa: E402
+import envelope_control_mixin as M  # noqa: E402
 import envelope_fixtures as F  # noqa: E402
 
 BENCH = os.path.dirname(HERE)
@@ -246,56 +247,24 @@ class TestBaselineControl(Base):
         self.assertEqual(self.run_compare(env)["status"], "agree")
 
 
-class TestEnvelopeNegativeControls(Base):
-    def test_missing_corner(self):
-        env = copy.deepcopy(self.env)
-        env["corners"].pop()
-        env["corner_count"] = 44
-        with self.assertRaisesRegex(C.InputError, "mos_fs_125C_1.32V: missing from"):
-            self.tool(env)
+class TestEnvelopeNegativeControls(M.EnvelopeControlMixin, Base):
+    """The shared gate's thirteen generic envelope refusals
+    (envelope_control_mixin), each run through this bench's own comparator
+    gate. The bench-specific grid/status refusals stay below."""
 
-    def test_duplicate_corner(self):
-        env = copy.deepcopy(self.env)
-        env["corners"].append(copy.deepcopy(env["corners"][0]))
-        env["corner_count"] = 46
-        with self.assertRaisesRegex(C.InputError, "duplicate corner"):
-            self.tool(env)
+    WORST = ("mos_tt", 27, 1.2)
+    null_meas = "avs0_db"
+    nonfinite_meas = "avs_1khz_db"
+    absent_meas = "avs0_db"
 
-    def test_wrong_grid_key(self):
-        env = copy.deepcopy(self.env)
-        env["corners"][0]["supply_v"] = {"vdd": 1.10, "vinp": 0.55}
-        with self.assertRaisesRegex(C.InputError, "not a point of the ratified grid"):
-            self.tool(env)
+    def control(self, name):
+        # Base.env is an attribute rebuilt per test, not a factory method.
+        return copy.deepcopy(self.env), self.tool
 
     def test_wrong_temperature_key(self):
         env = copy.deepcopy(self.env)
         env["corners"][0]["temperature_c"] = 85
         with self.assertRaisesRegex(C.InputError, "mos_tt_-40C_1.08V: missing from"):
-            self.tool(env)
-
-    def test_corner_count_mismatch(self):
-        env = copy.deepcopy(self.env)
-        env["corner_count"] = 44
-        with self.assertRaisesRegex(C.InputError, "corner_count"):
-            self.tool(env)
-
-    def test_null_measurement(self):
-        env = copy.deepcopy(self.env)
-        self.meas(env, ("mos_tt", 27, 1.2), "avs0_db")["value"] = None
-        with self.assertRaisesRegex(C.InputError, r"mos_tt_27C_1.20V: measurement avs0_db value None"):
-            self.tool(env)
-
-    def test_nonfinite_measurement(self):
-        env = copy.deepcopy(self.env)
-        self.meas(env, ("mos_tt", 27, 1.2), "avs_1khz_db")["value"] = float("nan")
-        with self.assertRaisesRegex(C.InputError, "avs_1khz_db"):
-            self.tool(env)
-
-    def test_absent_avs_measurement_fails_closed(self):
-        env = copy.deepcopy(self.env)
-        c = self.corner(env, ("mos_ff", 125, 1.32))
-        c["measurements"] = [m for m in c["measurements"] if m["name"] != "avs0_db"]
-        with self.assertRaisesRegex(C.InputError, "mos_ff_125C_1.32V: measurement avs0_db missing"):
             self.tool(env)
 
     def test_skipped_measurement_status(self):
@@ -304,46 +273,11 @@ class TestEnvelopeNegativeControls(Base):
         with self.assertRaisesRegex(C.InputError, "avs0_db status 'skipped'"):
             self.tool(env)
 
-    def test_vinp_not_half_vdd(self):
-        env = copy.deepcopy(self.env)
-        self.corner(env, ("mos_tt", 27, 1.2))["supply_v"]["vinp"] = 0.55
-        with self.assertRaisesRegex(C.InputError, "vinp 0.55 != vdd/2"):
-            self.tool(env)
-
-    def test_errored_corner_is_not_evidence(self):
-        env = copy.deepcopy(self.env)
-        self.corner(env, ("mos_tt", 27, 1.2))["status"] = "error"
-        with self.assertRaisesRegex(C.InputError, "corner status 'error'"):
-            self.tool(env)
-
     def test_inconclusive_corner_is_not_evidence(self):
         env = copy.deepcopy(self.env)
         self.corner(env, ("mos_tt", 27, 1.2))["status"] = "inconclusive"
         with self.assertRaisesRegex(C.InputError, "corner status 'inconclusive'"):
             self.tool(env)
-
-    def test_inconclusive_aggregate(self):
-        env = copy.deepcopy(self.env)
-        env["status"] = "inconclusive"
-        with self.assertRaisesRegex(C.InputError, "aggregate status"):
-            self.tool(env)
-
-    def test_nothing_checked(self):
-        env = copy.deepcopy(self.env)
-        env["coverage"]["nothing_checked"] = True
-        with self.assertRaisesRegex(C.InputError, "nothing_checked"):
-            self.tool(env)
-
-    def test_skipped_coverage(self):
-        env = copy.deepcopy(self.env)
-        env["coverage"]["skipped"] = [{"id": "limit:x", "reason": "r"}]
-        with self.assertRaisesRegex(C.InputError, "coverage.skipped"):
-            self.tool(env)
-
-    def test_klt_error_envelope(self):
-        with self.assertRaisesRegex(C.InputError, "klt error envelope"):
-            C.index_envelope({"error": {"message": "boom"}})
-
 
 class TestComparisonNegativeControls(Base):
     def test_perturbed_avs0_outside_tolerance_is_named(self):

@@ -19,7 +19,6 @@ records/ (when one lands) is the evidence.
 
 from __future__ import annotations
 
-import copy
 import csv
 import json
 import os
@@ -32,6 +31,7 @@ sys.path.insert(0, HERE)
 # compare.py imports the shared envelope core from sim/tools (issue #142).
 sys.path.insert(0, os.path.normpath(os.path.join(HERE, "..", "..", "tools")))
 import compare as C  # noqa: E402
+import envelope_control_mixin as M  # noqa: E402
 import envelope_fixtures as F  # noqa: E402
 
 BENCH = os.path.dirname(HERE)
@@ -225,63 +225,15 @@ class TestBaselineControl(Base):
         self.assertEqual(self.compare(env)["status"], "agree")
 
 
-class TestEnvelopeNegativeControls(Base):
-    def test_missing_corner(self):
-        env = self.env()
-        env["corners"].pop(7)
-        env["corner_count"] = 44
-        with self.assertRaisesRegex(C.InputError, "missing from test"):
-            self.tool(env)
+class TestEnvelopeNegativeControls(M.EnvelopeControlMixin, Base):
+    """The shared gate's thirteen generic envelope refusals
+    (envelope_control_mixin), each run through this bench's own comparator
+    gate. The bench-specific noise-shape refusals stay below."""
 
-    def test_duplicate_corner(self):
-        env = self.env()
-        env["corners"].append(copy.deepcopy(env["corners"][0]))
-        env["corner_count"] = 46
-        with self.assertRaisesRegex(C.InputError, "duplicate corner"):
-            self.tool(env)
-
-    def test_extra_off_grid_corner(self):
-        env = self.env()
-        extra = copy.deepcopy(env["corners"][0])
-        extra["supply_v"] = {"vdd": 1.10, "vinp": 0.55}
-        env["corners"].append(extra)
-        env["corner_count"] = 46
-        with self.assertRaisesRegex(C.InputError, "not a point of the ratified grid"):
-            self.tool(env)
-
-    def test_corner_count_mismatch(self):
-        env = self.env()
-        env["corner_count"] = 44
-        with self.assertRaisesRegex(C.InputError, "corner_count"):
-            self.tool(env)
-
-    def test_null_measurement(self):
-        env = self.env()
-        _, m = self.find(env, WORST, C.INTEGRATED)
-        m["value"] = None
-        with self.assertRaisesRegex(C.InputError, "mos_fs_125C_1.08V: measurement inoise_int_vrms"):
-            self.tool(env)
-
-    def test_nonfinite_measurement(self):
-        env = self.env()
-        _, m = self.find(env, WORST, "inoise_1khz_v_rthz")
-        m["value"] = float("nan")
-        with self.assertRaisesRegex(C.InputError, "non-finite"):
-            self.tool(env)
-
-    def test_absent_measurement(self):
-        env = self.env()
-        c, m = self.find(env, WORST, "inoise_1mhz_v_rthz")
-        c["measurements"].remove(m)
-        with self.assertRaisesRegex(C.InputError, "inoise_1mhz_v_rthz missing"):
-            self.tool(env)
-
-    def test_vcm_not_half_vdd(self):
-        env = self.env()
-        c, _ = self.find(env, WORST, C.INTEGRATED)
-        c["supply_v"]["vinp"] = 0.60
-        with self.assertRaisesRegex(C.InputError, "vinp 0.6 != vdd/2"):
-            self.tool(env)
+    WORST = WORST
+    null_meas = C.INTEGRATED
+    nonfinite_meas = "inoise_1khz_v_rthz"
+    absent_meas = "inoise_1mhz_v_rthz"
 
     def test_wrong_band_is_refused(self):
         # a different upper band edge changes the number; it is not a looser measurement
@@ -304,36 +256,6 @@ class TestEnvelopeNegativeControls(Base):
         m["value"] = 10000.0 * 1.12
         with self.assertRaisesRegex(C.InputError, "spot_f_10khz_hz"):
             self.tool(env)
-
-    def test_errored_corner_is_not_evidence(self):
-        env = self.env()
-        c, _ = self.find(env, WORST, C.INTEGRATED)
-        c["status"] = "error"
-        with self.assertRaisesRegex(C.InputError, "corner status 'error'"):
-            self.tool(env)
-
-    def test_inconclusive_run_is_not_evidence(self):
-        env = self.env()
-        env["status"] = "inconclusive"
-        with self.assertRaisesRegex(C.InputError, "aggregate status"):
-            self.tool(env)
-
-    def test_nothing_checked(self):
-        env = self.env()
-        env["coverage"]["nothing_checked"] = True
-        with self.assertRaisesRegex(C.InputError, "nothing_checked"):
-            self.tool(env)
-
-    def test_skipped_coverage(self):
-        env = self.env()
-        env["coverage"]["skipped"] = ["limit:[0,...]"]
-        with self.assertRaisesRegex(C.InputError, "skipped is non-empty"):
-            self.tool(env)
-
-    def test_klt_error_envelope(self):
-        with self.assertRaisesRegex(C.InputError, "klt error envelope"):
-            C.index_envelope({"error": {"code": "batch_runner_version_mismatch"}}, "test")
-
 
 class TestComparisonNegativeControls(Base):
     def _scale(self, env, point, name, factor):
