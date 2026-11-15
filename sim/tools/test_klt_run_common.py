@@ -67,7 +67,7 @@ sg13g2_env_identity_finalize() {
 KLT="${STUB_KLT}"
 klt_check_client
 klt_begin_record stub "${SUFFIX}"
-echo "BEGUN ${RECORD_ID}"
+echo "BEGUN ${RECORD_ID} pid=$$ t=${EPOCHREALTIME:-0} reserve=${KLT_RESERVATION}"
 if [[ -n "${HOLD:-}" ]]; then
   while [[ ! -e "${HOLD}" ]]; do sleep 0.005; done
 fi
@@ -157,16 +157,21 @@ class Reservation(unittest.TestCase):
                 states = [f"child {i}: " + ("running" if p.poll() is None
                                             else f"exited rc={p.returncode}")
                           for i, p in enumerate(procs)]
-                hold.write_text("go")  # free the owner so nothing leaks
+                # #401: collect before freeing anything. SIGKILL runs no EXIT
+                # trap, so no reservation is released here, and the hold file
+                # is never written: the captured output is exactly what was on
+                # the wire at the deadline, so a second BEGUN in it cannot
+                # have been manufactured by this diagnostic.
                 for p in procs:
                     if p.poll() is None:
                         p.kill()
-                diag = []
-                for i, p in enumerate(procs):
-                    out, err = p.communicate(timeout=30)
-                    diag.append(f"child {i} stdout={out!r} stderr={err!r}")
+                outs = [p.communicate(timeout=30) for p in procs]
+                diag = [f"child {i} stdout={out!r} stderr={err!r}"
+                        for i, (out, err) in enumerate(outs)]
+                owners = sum("BEGUN" in out for out, _ in outs)
                 self.fail(f"{exited} != 5 children exited after "
                           f"{time.monotonic() - t0:.1f}s of a 30s deadline; "
+                          f"BEGUN owners={owners}; "
                           + "; ".join(states) + "\n" + "\n".join(diag))
             self.assertEqual(fx.klt_calls(), 0)  # nobody ran klt yet
             hold.write_text("go")
