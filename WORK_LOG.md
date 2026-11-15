@@ -2,8 +2,22 @@
 
 <!-- Maintained by the Loom Guide role. Newest entries first. -->
 
+### 2026-11-15
+
+- **PR #382**: test: pin run_cli envelope_flag/envelope_key in the shared CLI scaffold suite
+- **PR #379**: test: fold open-loop-ac envelope fixtures into sim/tools kit
+- **PR #376**: refactor: share the newest-signoff-record selector between check_signoff and sync_integrator
+- **PR #374**: refactor: dedupe the op_pass DC sanity gate into sg13g2_op_sanity
+- **PR #372**: refactor: drive test_generate.py's Fixture population detaches from one table
+- **Issue #369** (closed): Fold open-loop-ac's remaining synthetic-envelope fixture wrapper onto sim/tools/envelope_fixtures.py
+- **Issue #366** (closed): Dedup the op_pass operating-point sanity gate copied into four sim/*/run_*_sweep.sh runners
+- **Issue #364** (closed): Share one newest-signoff-record helper: sync_integrator.py re-implements check_signoff.py's record ordering under a comment-only parity contract
+- **Issue #363** (closed): Collapse the four hardcoded per-bench detach branches in test_generate.py's Fixture onto one table
+- **Issue #362** (closed): open-loop-ac compare: --kind is documented as inert on `compare` but is forwarded to the AC envelope gate
+
 ### 2026-11-14
 
+- **Issue #354** (closed): docs: ROADMAP.md attributes the graded register to the 0.8.0 pin; the committed report was graded at the prior revision
 - **PR #365**: refactor: split the characterization generator into eight stdlib modules
 - **PR #368**: refactor: fold the copied synthetic-envelope test fixtures onto sim/tools/envelope_fixtures.py
 - **PR #360**: refactor: move open-loop-ac compare.py onto the shared run_cli and summary_tail
