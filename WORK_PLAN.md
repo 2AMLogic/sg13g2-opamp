@@ -39,14 +39,13 @@ Human-approved issues ready for implementation (`loom:issue`).
 
 Issues currently being built (`loom:building`).
 
-- **#398**: Remove 12 unused imports and 1 unused local left in 13 Python files (sibling of #371)
+_None._
 
 ## PRs Awaiting Review
 
 PRs waiting on Judge (`loom:review-requested`).
 
 - **#302**: docs: request EE and market key review of DR-0010
-- **#399**: chore: drop 12 unused imports and an unused local across 13 Python files
 
 ## Approved (Awaiting Merge)
 
@@ -83,8 +82,8 @@ _None._
 | Very important | 1 |
 | Important | 7 |
 | Ready (`loom:issue`) | 3 |
-| In Progress (`loom:building`) | 1 |
-| PRs awaiting review | 2 |
+| In Progress (`loom:building`) | 0 |
+| PRs awaiting review | 1 |
 | Approved PRs awaiting merge | 1 |
 | Curated | 8 |
 | Architect / Hermit proposals | 1 |

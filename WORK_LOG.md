@@ -8,6 +8,8 @@
 
 ### 2026-11-15
 
+- **PR #402**: test: collect race diagnostics before freeing hold, enrich BEGUN line
+- **Issue #401** (closed): test flake (now shows two owners): test_overlapping_starts_give_exactly_one_owner fails on T1 signoff register
 - **PR #399**: chore: drop 12 unused imports and an unused local across 13 Python files
 - **Issue #398** (closed): Remove 12 unused imports and 1 unused local left in 13 Python files (sibling of #371)
 - **PR #397**: fix: pin klt_envelope metavar via argparse error line, not width-wrapped usage line
