@@ -384,6 +384,34 @@ _L_METAL5 = (67, 0)
 # --------------------------------------------------------------------------- #
 # Signoff DRC over a committed stream
 # --------------------------------------------------------------------------- #
+def klt_drc_json(gds: Path, klt: str = "klt") -> dict:
+    """Spawn ``klt drc --deck sg13g2 --format json`` and return the parsed report.
+
+    The one implementation of the spawn-and-parse step shared by
+    :func:`run_drc` and the scratch paths in ``layout/opamp_core``. Raises
+    ``RuntimeError`` (carrying stderr) instead of a bare ``JSONDecodeError``
+    when ``klt``'s stdout is not JSON, so a crashed ``klt`` says what went
+    wrong rather than silently discarding its error output.
+    """
+    argv = [
+        require_klt(klt),
+        "drc",
+        str(gds),
+        "--deck",
+        "sg13g2",
+        "--format",
+        "json",
+    ]
+    proc = subprocess.run(argv, capture_output=True, text=True, check=False)
+    try:
+        return json.loads(proc.stdout)
+    except json.JSONDecodeError as exc:
+        raise RuntimeError(
+            f"`klt drc` did not emit JSON (exit {proc.returncode}): {exc}\n"
+            f"{proc.stderr.strip()}\n{proc.stdout[:2000]}"
+        ) from exc
+
+
 def run_drc(
     gds: Path,
     report: Path,
@@ -400,6 +428,8 @@ def run_drc(
     rewrite in particular) is what makes the byte-for-byte regeneration
     criterion hold, so it must have exactly one implementation or the two
     copies drift and only one of the two committed reports stays reproducible.
+    The spawn-and-parse step itself lives in :func:`klt_drc_json`, shared
+    with the scratch paths.
 
     The report's ``file`` field is rewritten to ``committed_gds``'s path
     relative to ``repo_root`` -- ``klt`` records the path it was handed, and
@@ -411,23 +441,7 @@ def run_drc(
     recorded. Every other field, including ``provenance.input.content_hash``
     (the stream's own sha256), is left exactly as ``klt`` emitted it.
     """
-    argv = [
-        require_klt(klt),
-        "drc",
-        str(gds),
-        "--deck",
-        "sg13g2",
-        "--format",
-        "json",
-    ]
-    proc = subprocess.run(argv, capture_output=True, text=True, check=False)
-    try:
-        data = json.loads(proc.stdout)
-    except json.JSONDecodeError as exc:
-        raise RuntimeError(
-            f"`klt drc` did not emit JSON (exit {proc.returncode}): {exc}\n"
-            f"{proc.stderr.strip()}\n{proc.stdout[:2000]}"
-        ) from exc
+    data = klt_drc_json(gds, klt)
     data["file"] = str(committed_gds.relative_to(repo_root))
     report.parent.mkdir(parents=True, exist_ok=True)
     report.write_text(json.dumps(data, indent=2, sort_keys=False) + "\n")

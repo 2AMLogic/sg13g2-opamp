@@ -1168,22 +1168,7 @@ def negative_control(klt: str = "klt") -> int:
         failures = check_connectivity(b, r)
         broken_gds = Path(tmp) / "broken.gds"
         b.write(broken_gds)
-        drc = json.loads(
-            subprocess.run(
-                [
-                    devices.require_klt(klt),
-                    "drc",
-                    str(broken_gds),
-                    "--deck",
-                    "sg13g2",
-                    "--format",
-                    "json",
-                ],
-                capture_output=True,
-                text=True,
-                check=False,
-            ).stdout
-        )
+        drc = devices.klt_drc_json(broken_gds, klt)
     print(
         f"negative control: klt drc on the broken block says status="
         f"{drc['status']} violations={drc['violation_count']}"
@@ -1224,27 +1209,11 @@ def drc_each_device(klt: str = "klt") -> int:
     different problem from one created by the assembly, and a per-device pass
     is what tells the two apart.
     """
-    exe = devices.require_klt(klt)
     failures = 0
     with tempfile.TemporaryDirectory(prefix="sg13g2-opamp-devices-") as tmp:
         generated = generate_devices(Path(tmp), klt=klt)
         for name, dev in generated.items():
-            out = json.loads(
-                subprocess.run(
-                    [
-                        exe,
-                        "drc",
-                        str(dev.gds_path),
-                        "--deck",
-                        "sg13g2",
-                        "--format",
-                        "json",
-                    ],
-                    capture_output=True,
-                    text=True,
-                    check=False,
-                ).stdout
-            )
+            out = devices.klt_drc_json(dev.gds_path, klt)
             bbox = dev.report["bbox_um"]
             print(
                 f"  {name:<12} {dev.kind:<14} "
@@ -1323,14 +1292,7 @@ def drc_negative_control(klt: str = "klt") -> int:
         if draw.returncode != 0:
             print(f"FAIL: `klt draw` failed: {draw.stderr.strip()}", file=sys.stderr)
             return 1
-        drc = json.loads(
-            subprocess.run(
-                [exe, "drc", str(bad_gds), "--deck", "sg13g2", "--format", "json"],
-                capture_output=True,
-                text=True,
-                check=False,
-            ).stdout
-        )
+        drc = devices.klt_drc_json(bad_gds, klt)
     print(
         f"negative control: status={drc['status']} "
         f"violations={drc['violation_count']} rule_counts={drc['rule_counts']}"
