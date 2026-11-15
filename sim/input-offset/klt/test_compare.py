@@ -16,7 +16,6 @@ records/ is.
 
 from __future__ import annotations
 
-import copy
 import csv
 import json
 import math
@@ -29,6 +28,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.normpath(os.path.join(HERE, "..", "..", "tools")))
 import compare as C  # noqa: E402
+import envelope_control_mixin as M  # noqa: E402
 import envelope_fixtures as F  # noqa: E402
 
 BENCH = os.path.dirname(HERE)
@@ -191,92 +191,15 @@ class TestBaselineControl(Base):
         self.assertEqual(self.compare(env)["status"], "agree")
 
 
-class TestEnvelopeNegativeControls(Base):
-    def test_missing_corner(self):
-        env = self.env()
-        env["corners"].pop(7)
-        env["corner_count"] = 44
-        with self.assertRaisesRegex(C.InputError, "missing from test"):
-            self.tool(env)
+class TestEnvelopeNegativeControls(M.EnvelopeControlMixin, Base):
+    """The shared gate's thirteen generic envelope refusals
+    (envelope_control_mixin), each run through this bench's own comparator
+    gate. The bench-specific input check stays below."""
 
-    def test_duplicate_corner(self):
-        env = self.env()
-        env["corners"].append(copy.deepcopy(env["corners"][0]))
-        env["corner_count"] = 46
-        with self.assertRaisesRegex(C.InputError, "duplicate corner"):
-            self.tool(env)
-
-    def test_extra_off_grid_corner(self):
-        env = self.env()
-        extra = copy.deepcopy(env["corners"][0])
-        extra["supply_v"] = {"vdd": 1.10, "vinp": 0.55}
-        env["corners"].append(extra)
-        env["corner_count"] = 46
-        with self.assertRaisesRegex(C.InputError, "not a point of the ratified grid"):
-            self.tool(env)
-
-    def test_corner_count_mismatch(self):
-        env = self.env()
-        env["corner_count"] = 44
-        with self.assertRaisesRegex(C.InputError, "corner_count"):
-            self.tool(env)
-
-    def test_null_measurement(self):
-        env = self.env()
-        _, m = self.find(env, WORST, "vos_null_v")
-        m["value"] = None
-        with self.assertRaisesRegex(C.InputError, "mos_fs_125C_1.08V: measurement vos_null_v"):
-            self.tool(env)
-
-    def test_nonfinite_measurement(self):
-        env = self.env()
-        _, m = self.find(env, WORST, "gain_local_vv")
-        m["value"] = float("nan")
-        with self.assertRaisesRegex(C.InputError, "non-finite"):
-            self.tool(env)
-
-    def test_absent_measurement(self):
-        env = self.env()
-        c, m = self.find(env, WORST, "vos_crossings_n")
-        c["measurements"].remove(m)
-        with self.assertRaisesRegex(C.InputError, "vos_crossings_n missing"):
-            self.tool(env)
-
-    def test_vcm_not_half_vdd(self):
-        env = self.env()
-        c, _ = self.find(env, WORST, "vos_null_v")
-        c["supply_v"]["vinp"] = 0.60
-        with self.assertRaisesRegex(C.InputError, "vinp 0.6 != vdd/2"):
-            self.tool(env)
-
-    def test_errored_corner_is_not_evidence(self):
-        env = self.env()
-        c, _ = self.find(env, WORST, "vos_null_v")
-        c["status"] = "error"
-        with self.assertRaisesRegex(C.InputError, "corner status 'error'"):
-            self.tool(env)
-
-    def test_inconclusive_run_is_not_evidence(self):
-        env = self.env()
-        env["status"] = "inconclusive"
-        with self.assertRaisesRegex(C.InputError, "aggregate status"):
-            self.tool(env)
-
-    def test_nothing_checked(self):
-        env = self.env()
-        env["coverage"]["nothing_checked"] = True
-        with self.assertRaisesRegex(C.InputError, "nothing_checked"):
-            self.tool(env)
-
-    def test_skipped_coverage(self):
-        env = self.env()
-        env["coverage"]["skipped"] = ["limit:[0,...]"]
-        with self.assertRaisesRegex(C.InputError, "skipped is non-empty"):
-            self.tool(env)
-
-    def test_klt_error_envelope(self):
-        with self.assertRaisesRegex(C.InputError, "klt error envelope"):
-            C.index_envelope({"error": {"code": "batch_runner_version_mismatch"}}, "test")
+    WORST = WORST
+    null_meas = "vos_null_v"
+    nonfinite_meas = "gain_local_vv"
+    absent_meas = "vos_crossings_n"
 
     def test_nonpositive_gain_is_input_error(self):
         env = self.env()

@@ -28,7 +28,11 @@ import unittest
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
+# compare.py imports the shared envelope core from sim/tools (issue #142);
+# the shared negative-control mixin lives there too (issue #370).
+sys.path.insert(0, os.path.normpath(os.path.join(HERE, "..", "..", "tools")))
 import compare as C  # noqa: E402
+import envelope_control_mixin as M  # noqa: E402
 
 BENCH = os.path.dirname(HERE)
 HARNESS_ID = "20260921-151759-707b34c"
@@ -218,23 +222,27 @@ class TestValidJoins(Base):
                          C.INTEGRITY_LIMITS)
 
 
-class TestEnvelopeRejections(Base):
+class TestEnvelopeNegativeControls(M.EnvelopeControlMixin, Base):
+    """The shared gate's thirteen generic envelope refusals
+    (envelope_control_mixin), each run through this bench's own comparator
+    gate on the ratified grid under the vcm supply key. The bench-specific
+    limit/integrity/verdict rejections stay below."""
+
+    supply_key = "vcm"
+    points = GRID
+    WORST = ("mos_tt", 27, 1.2)
+    null_meas = "headroom_hi_v"
+    nonfinite_meas = "vmax_track_v"
+    absent_meas = "swing_span_v"
+
+    def control(self, name):
+        return self.grid_env(), lambda e: self.index(e, GRID)
+
     def corner(self, env, i=0):
         return env["corners"][i]
 
     def meas(self, c, name):
         return next(m for m in c["measurements"] if m["name"] == name)
-
-    def test_missing_point(self):
-        env = self.grid_env()
-        env["corners"].pop()
-        env["corner_count"] -= 1
-        self.assertRejects(env, "missing from envelope")
-
-    def test_duplicate_point(self):
-        env = self.grid_env()
-        env["corners"][1] = copy.deepcopy(env["corners"][0])
-        self.assertRejects(env, "duplicate corner")
 
     def test_extra_point(self):
         env = self.nom_env()
@@ -244,36 +252,11 @@ class TestEnvelopeRejections(Base):
         env["corner_count"] = 2
         self.assertRejects(env, "unexpected point", NOM)
 
-    def test_grid_envelope_with_extra_off_grid_point(self):
-        env = self.grid_env()
-        extra = copy.deepcopy(env["corners"][0])
-        extra["supply_v"] = {"vdd": 1.5, "vcm": 0.75}
-        env["corners"].append(extra)
-        env["corner_count"] += 1
-        self.assertRejects(env, "unexpected point")
-
-    def test_missing_measurement(self):
-        env = self.nom_env()
-        c = self.corner(env)
-        c["measurements"] = [m for m in c["measurements"] if m["name"] != "swing_span_v"]
-        self.assertRejects(env, "measurement swing_span_v missing", NOM)
-
     def test_duplicate_measurement(self):
         env = self.nom_env()
         c = self.corner(env)
         c["measurements"].append(copy.deepcopy(c["measurements"][0]))
         self.assertRejects(env, "reported twice", NOM)
-
-    def test_null_value(self):
-        env = self.nom_env()
-        self.meas(self.corner(env), "headroom_hi_v")["value"] = None
-        self.assertRejects(env, "headroom_hi_v value None is missing or non-finite", NOM)
-
-    def test_nonfinite_values(self):
-        for bad in (float("nan"), float("inf"), float("-inf")):
-            env = self.nom_env()
-            self.meas(self.corner(env), "vmax_track_v")["value"] = bad
-            self.assertRejects(env, "vmax_track_v", NOM)
 
     def test_boolean_value_is_not_a_number(self):
         env = self.nom_env()
@@ -298,47 +281,16 @@ class TestEnvelopeRejections(Base):
             self.meas(self.corner(env), "swing_span_v")["status"] = st
             self.assertRejects(env, f"swing_span_v status {st!r}", NOM)
 
-    def test_corner_status_errored(self):
-        for st in ("error", "inconclusive"):
-            env = self.nom_env()
-            self.corner(env)["status"] = st
-            self.assertRejects(env, f"corner status {st!r}", NOM)
-
-    def test_aggregate_status_not_pass_fail(self):
-        for st in ("error", "inconclusive", "not_checked", None):
-            env = self.nom_env()
-            env["status"] = st
-            self.assertRejects(env, "only a complete pass/fail run is evidence", NOM)
-
     def test_errored_or_inconclusive_counts(self):
         for field in ("errored", "inconclusive"):
             env = self.nom_env()
             env[field] = 1
             self.assertRejects(env, f"{field} = 1", NOM)
 
-    def test_nothing_checked(self):
-        for v in (True, None):
-            env = self.nom_env()
-            env["coverage"]["nothing_checked"] = v
-            self.assertRejects(env, "nothing_checked", NOM)
-
-    def test_skipped_coverage(self):
-        env = self.nom_env()
-        env["coverage"]["skipped"] = [{"id": "limit:x", "reason": "r"}]
-        self.assertRejects(env, "coverage.skipped is non-empty", NOM)
-
     def test_missing_coverage_block(self):
         env = self.nom_env()
         del env["coverage"]
         self.assertRejects(env, "no coverage block", NOM)
-
-    def test_klt_error_envelope(self):
-        self.assertRejects({"error": "batch_runner_version_mismatch"}, "klt error envelope", NOM)
-
-    def test_corner_count_mismatch(self):
-        env = self.nom_env()
-        env["corner_count"] = 2
-        self.assertRejects(env, "corner_count", NOM)
 
     def test_relaxed_limit_is_not_evidence(self):
         env = self.nom_env()
@@ -409,11 +361,6 @@ class TestEnvelopeRejections(Base):
             self.meas(self.corner(env), name)["value"] = val
             self.assertRejects(env, f"measurement {name} status 'pass' contradicts value {val!r} "
                                     f"against the literal bound {C.INTEGRITY_LIMITS[name]!r}", NOM)
-
-    def test_vcm_not_mid_rail(self):
-        env = self.nom_env()
-        self.corner(env)["supply_v"]["vcm"] = 0.55
-        self.assertRejects(env, "!= vdd/2", NOM)
 
     def test_missing_vcm(self):
         env = self.nom_env()
