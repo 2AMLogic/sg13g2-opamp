@@ -26,7 +26,10 @@ import unittest
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
+# compare.py imports the shared envelope core from sim/tools (issue #142).
+sys.path.insert(0, os.path.normpath(os.path.join(HERE, "..", "..", "tools")))
 import compare as C  # noqa: E402
+import envelope_fixtures as F  # noqa: E402
 
 BENCH = os.path.dirname(HERE)
 HARNESS_ID = "20260910-221601-22feaba"
@@ -45,8 +48,7 @@ def _write(path, text):
 
 
 def _harness_rows():
-    with open(HARNESS_CSV, newline="") as f:
-        return list(csv.DictReader(f))
+    return F.harness_rows(HARNESS_CSV)
 
 
 REQUEST_AC = os.path.join(HERE, "openloop_ac.request.json")
@@ -72,50 +74,42 @@ def _wrap_rad(phi):
     return w - math.pi
 
 
+def _vals_ac(r, bias):
+    """This bench's AC measurement dict for one harness row."""
+    k = C.make_key(r["corner"], r["temp_c"], r["vdd_v"])
+    return {
+        "av0_db": float(r["av0_db"]),
+        "gbw_hz": float(r["gbw_hz"]) * (1 + bias[k]),
+        "phase_at_ugf_rad": math.radians(float(r["pm_deg"]) - 180.0),
+    }
+
+
+def _vals_op(r):
+    """This bench's OP measurement dict for one harness row."""
+    vdd = float(r["vdd_v"])
+    vout, vd1, vd2, vtail = (float(r[c]) for c in ("vout_dc_v", "vd1_dc_v", "vd2_dc_v", "vtail_dc_v"))
+    return {
+        "ivdd_total_a": float(r["ivdd_total_a"]),
+        "vout_dc_v": vout,
+        "vd1_dc_v": vd1,
+        "vd2_dc_v": vd2,
+        "vtail_dc_v": vtail,
+        "vibias_dc_v": float(r["vibias_dc_v"]),
+        "op_vcm_frac": 0.5,
+        "op_vout_offset_frac": abs(vout - vdd / 2) / vdd,
+        "op_vout_rail_frac": vout / vdd,
+        "op_vd1_rail_frac": vd1 / vdd,
+        "op_vd2_rail_frac": vd2 / vdd,
+        "op_vtail_rail_frac": vtail / vdd,
+    }
+
+
 def _envelope(kind, rows, bias):
     """A synthetic klt-sim-shaped envelope carrying the harness's own numbers."""
-    corners = []
-    for r in rows:
-        k = C.make_key(r["corner"], r["temp_c"], r["vdd_v"])
-        vdd = float(r["vdd_v"])
-        if kind == "ac":
-            vals = [
-                ("av0_db", float(r["av0_db"]), "min", 37.8),
-                ("gbw_hz", float(r["gbw_hz"]) * (1 + bias[k]), "min", 4.74e6),
-                ("phase_at_ugf_rad", math.radians(float(r["pm_deg"]) - 180.0), "range",
-                 (PHASE_MIN_RAD, 0.0)),
-            ]
-        else:
-            vout, vd1, vd2, vtail = (float(r[c]) for c in ("vout_dc_v", "vd1_dc_v", "vd2_dc_v", "vtail_dc_v"))
-            vals = [
-                ("ivdd_total_a", float(r["ivdd_total_a"]), "max", 119.7e-6),
-                ("vout_dc_v", vout, None, None),
-                ("vd1_dc_v", vd1, None, None),
-                ("vd2_dc_v", vd2, None, None),
-                ("vtail_dc_v", vtail, None, None),
-                ("vibias_dc_v", float(r["vibias_dc_v"]), None, None),
-                ("op_vcm_frac", 0.5, None, None),
-                ("op_vout_offset_frac", abs(vout - vdd / 2) / vdd, "max", 0.15),
-                ("op_vout_rail_frac", vout / vdd, None, None),
-                ("op_vd1_rail_frac", vd1 / vdd, None, None),
-                ("op_vd2_rail_frac", vd2 / vdd, None, None),
-                ("op_vtail_rail_frac", vtail / vdd, None, None),
-            ]
-        ms = [{"name": n, "value": v, "status": _status(v, kd, b)} for n, v, kd, b in vals]
-        st = "fail" if any(m["status"] == "fail" for m in ms) else "pass"
-        corners.append({
-            "corner_id": f"{k[0]}/vdd={vdd:.3f}_vinp={vdd / 2:.3f}V/{k[1]}C",
-            "process": k[0], "temperature_c": k[1],
-            "supply_v": {"vdd": vdd, "vinp": vdd / 2},
-            "status": st, "measurements": ms,
-        })
-    return {
-        "schema_version": 3,
-        "status": "fail" if any(c["status"] == "fail" for c in corners) else "pass",
-        "corner_count": len(corners),
-        "coverage": {"nothing_checked": False, "skipped": []},
-        "corners": corners,
-    }
+    if kind == "ac":
+        return F.build_envelope(rows, lambda r: _vals_ac(r, bias), C.make_key,
+                                F.request_limits(REQUEST_AC))
+    return F.build_envelope(rows, _vals_op, C.make_key, F.request_limits(REQUEST_OP))
 
 
 class Base(unittest.TestCase):
