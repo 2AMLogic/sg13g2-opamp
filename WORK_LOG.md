@@ -2,6 +2,19 @@
 
 <!-- Maintained by the Loom Guide role. Newest entries first. -->
 
+### 2026-11-14
+
+- **PR #365**: refactor: split the characterization generator into eight stdlib modules
+- **PR #368**: refactor: fold the copied synthetic-envelope test fixtures onto sim/tools/envelope_fixtures.py
+- **PR #360**: refactor: move open-loop-ac compare.py onto the shared run_cli and summary_tail
+- **PR #359**: signoff: cite the committed 45-corner output-swing envelope in T1 item 5
+- **PR #352**: docs: roadmap as of 2026-11-13
+- **Issue #355** (closed): Split signoff/characterization/generate.py (2,972 lines) along its existing section banners
+- **Issue #311** (closed): Bump klayout-tools pin 0.6.0, 44cc42323184 → 0.8.0
+- **Issue #358** (closed): Fold the duplicated synthetic-envelope test fixtures in sim/*/klt/test_compare.py onto a shared sim/tools helper
+- **Issue #357** (closed): Fold open-loop-ac compare.py onto the shared klt_envelope CLI: the last bench still hand-rolling run_cli and summary_tail
+- **Issue #353** (closed): signoff: cite the committed 45-corner output-swing envelope in T1 item 5 (replace three stale gap rows)
+
 ### 2026-11-11
 
 - **PR #349**: fix(sim): verify recorded ngspice against a major-version floor, not an exact pin

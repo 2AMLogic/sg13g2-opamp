@@ -445,24 +445,36 @@ def check_lvs_reference(manifest_evidence: dict, failures: Failures) -> None:
             print(f"  ok  evidence[{label}] LVS match is against current {rel(ref_path)}")
 
 
-def latest_report(failures: Failures) -> Path | None:
-    if not REPORTS_DIR.is_dir():
-        failures.add(f"no report directory at {rel(REPORTS_DIR)}")
-        return None
-    reports = sorted(p for p in REPORTS_DIR.glob("*.signoff.json"))
+def newest_record(reports_dir: Path) -> tuple[Path | None, list[str]]:
+    """Which committed record is the verdict of record, and any problems.
+
+    The one "newest *.signoff.json under a reports directory" selector: glob,
+    lexicographic sort, record-id screening, last wins. latest_report feeds
+    the problems into its Failures; sync_integrator.py imports this helper so
+    both entry points pick -- and refuse -- the same record.
+    """
+    if not reports_dir.is_dir():
+        return None, [f"no report directory at {rel(reports_dir)}"]
+    reports = sorted(p for p in reports_dir.glob("*.signoff.json"))
     if not reports:
-        failures.add(
-            f"{rel(REPORTS_DIR)} holds no *.signoff.json record -- the manifest's "
+        return None, [
+            f"{rel(reports_dir)} holds no *.signoff.json record -- the manifest's "
             "verdict of record is missing"
-        )
-        return None
-    for report in reports:
-        if not RECORD_ID_RE.match(report.name):
-            failures.add(
-                f"report {report.name} does not use the "
-                "<YYYYMMDD>-<HHMMSS>-<short-sha>.signoff.json record id"
-            )
-    return reports[-1]
+        ]
+    problems = [
+        f"report {report.name} does not use the "
+        "<YYYYMMDD>-<HHMMSS>-<short-sha>.signoff.json record id"
+        for report in reports
+        if not RECORD_ID_RE.match(report.name)
+    ]
+    return reports[-1], problems
+
+
+def latest_report(failures: Failures) -> Path | None:
+    path, problems = newest_record(REPORTS_DIR)
+    for problem in problems:
+        failures.add(problem)
+    return path
 
 
 def check_report(report_doc, manifest, manifest_evidence: dict, failures: Failures) -> None:

@@ -6,8 +6,8 @@ fields and published artifact paths are derived, not hand-edited:
 
   * maturity.{tier,t1_items_total,t1_items_met,statement,source_record} and
     provenance.signoff_record come from the newest committed record under
-    signoff/reports/, ordered exactly as signoff/check_signoff.py orders them
-    (lexicographic sort of *.signoff.json, last wins);
+    signoff/reports/, chosen by check_signoff.newest_record -- the same
+    selector that grades the manifest's verdict;
   * artifacts.gds is the committed layout GDS, and every published artifact
     path must exist in the tree.
 
@@ -30,9 +30,10 @@ import re
 import sys
 from pathlib import Path
 
+import check_signoff as ck
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 INTEGRATOR = REPO_ROOT / "spec" / "integrator.json"
-REPORTS_DIR = REPO_ROOT / "signoff" / "reports"
 GDS_PATH = "layout/opamp_core/opamp_core.gds"
 GDS_NOTE = (
     "committed layout GDS (top cell opamp_core); availability only - not a "
@@ -43,16 +44,10 @@ GDS_NOTE = (
 PATH_ARTIFACTS = ("schematic", "symbol", "sizing_derivation", "netlist", "gds")
 
 
-def newest_record() -> Path:
-    # Same ordering as signoff/check_signoff.py:latest_report.
-    reports = sorted(REPORTS_DIR.glob("*.signoff.json"))
-    if not reports:
-        raise SystemExit(f"no *.signoff.json record under {REPORTS_DIR}")
-    return reports[-1]
-
-
 def derive() -> dict:
-    record = newest_record()
+    record, problems = ck.newest_record(ck.REPORTS_DIR)
+    if record is None or problems:
+        raise SystemExit("; ".join(problems))
     doc = json.loads(record.read_text())
     total, met = doc["t1_item_count"], doc["t1_met_count"]
     tier = doc.get("tier")

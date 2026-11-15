@@ -415,6 +415,49 @@ class TestCliScaffold(unittest.TestCase):
             self.assertEqual(self._kind_cli(index, ["validate", one, "--kind", "op"])[0], 0)
             self.assertEqual(seen, ["ac", "op"])
 
+    def test_envelope_flag_and_key_reach_flag_stanza_and_metavar(self):
+        err_text = []
+
+        def cli(argv):
+            out, err = io.StringIO(), io.StringIO()
+            with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+                try:
+                    rc = E.run_cli(argv, description="d", compare_help="h",
+                                   harness_args=(("--extra", {"required": True}),),
+                                   index_fn=self._index,
+                                   run=lambda a, tool, env: {"status": "agree"},
+                                   inputs=(), summary=lambda rep: f"S {rep['status']}",
+                                   envelope_flag="--spec", envelope_key="spec_envelope")
+                except SystemExit:
+                    err_text.append(err.getvalue())
+                    raise
+            return rc, out.getvalue(), err.getvalue()
+
+        with tempfile.TemporaryDirectory() as d:
+            good = self._good(d)
+            # compare accepts the envelope under the custom flag...
+            rep_path = os.path.join(d, "r.json")
+            self.assertEqual(cli(["compare", "--spec", good, "--extra", "x", "--json-out", rep_path])[:2],
+                             (0, "S agree\n"))
+            # ...keys the report's inputs stanza under the custom key (exact: no
+            # default "envelope" entry may appear)...
+            with open(rep_path) as f:
+                rep = json.load(f)
+            self.assertEqual(list(rep["inputs"]), ["spec_envelope"])
+            self.assertEqual(rep["inputs"]["spec_envelope"],
+                             {"path": good, "sha256": E.sha256_file(good)})
+            self.assertEqual(len(rep["inputs"]["spec_envelope"]["sha256"]), 64)
+            # ...and rejects the default flag: argparse exits rather than
+            # returning 2, because --spec is the required one.
+            with self.assertRaises(SystemExit):
+                cli(["compare", "--envelope", good, "--extra", "x"])
+            self.assertIn("the following arguments are required: --spec", err_text[-1])
+            # The validate positional's dest is unchanged; only its metavar
+            # follows the custom key (usage line of the missing-positional error).
+            with self.assertRaises(SystemExit):
+                cli(["validate"])
+            self.assertIn("validate [-h] spec_envelope", err_text[-1])
+
 
 if __name__ == "__main__":
     unittest.main()
