@@ -26,7 +26,6 @@ Judge-approved PRs under a hold (`loom:blocked` or `loom:operator`) — only a h
 - **#325**: sim: express the input-cmr (ICMR) bench as a klt sim request so the drawn-fingering re-run (#237) can run on the batch fleet
 - **#326**: decision: how do the offset-MC and CMRR-mismatch-MC rows follow the drawn-fingering netlist change (#237)
 - **#332**: DR-0011: re-derive CMRR bound, re-check gain/swing vs market comps, restate swing headroom (PR #303 operator ruling)
-- **#353**: signoff: cite the committed 45-corner output-swing envelope in T1 item 5 (replace three stale gap rows)
 
 ## Ready
 
@@ -34,27 +33,31 @@ Human-approved issues ready for implementation (`loom:issue`).
 
 - **#3**: Track the gap to T1 sim-validated / bronze (klayout-tools design-evidence tiers)
 - **#101**: Prepare a four-row design-margin plan while preserving literal limits and raw FAILs
-- **#311**: Bump klayout-tools pin 0.6.0, 44cc42323184 → 0.8.0
 - **#332**: DR-0011: re-derive CMRR bound, re-check gain/swing vs market comps, restate swing headroom (PR #303 operator ruling)
+- **#364**: Share one newest-signoff-record helper: sync_integrator.py re-implements check_signoff.py's record ordering under a comment-only parity contract
+- **#369**: Fold open-loop-ac's remaining synthetic-envelope fixture wrapper onto sim/tools/envelope_fixtures.py
+- **#373**: Dedup the numeric-CSV-column reader copied eight ways into the sim/*/run_*.sh worst-corner summaries
 
 ## In Progress
 
 Issues currently being built (`loom:building`).
 
-_None._
+- **#363**: Collapse the four hardcoded per-bench detach branches in test_generate.py's Fixture onto one table
+- **#366**: Dedup the op_pass operating-point sanity gate copied into four sim/*/run_*_sweep.sh runners
 
 ## PRs Awaiting Review
 
 PRs waiting on Judge (`loom:review-requested`).
 
 - **#302**: docs: request EE and market key review of DR-0010
+- **#372**: refactor: drive test_generate.py's Fixture population detaches from one table
+- **#374**: refactor: dedupe the op_pass DC sanity gate into sg13g2_op_sanity
 
 ## Approved (Awaiting Merge)
 
 PRs that passed review and are queued for Champion auto-merge (`loom:pr`).
 
 - **#303**: docs: submit DR-0011 for two-key ratification (status flip)
-- **#352**: docs: roadmap as of 2026-11-13
 
 ## Proposed
 
@@ -64,16 +67,18 @@ Issues carrying `loom:curated`.
 - **#105**: signoff: express the statistical rows as klt yield evidence for T1 item 6 (offset MC, mismatch CMRR) *(curated)*
 - **#108**: spec: ratify per-draw limits and target_yield for the statistical rows (offset random half, CMRR) -- needs a decision record *(curated)*
 - **#300**: Open the ratification PRs for DR-0011 (#101) and then DR-0010 (#108), with both key reviews *(curated)*
-- **#311**: Bump klayout-tools pin 0.6.0, 44cc42323184 → 0.8.0 *(curated)*
 - **#312**: Move layout/klt-pin.txt to klt 0.8.0: re-transcribe DECK_MIN_UM and regenerate layout evidence *(curated)*
 - **#325**: sim: express the input-cmr (ICMR) bench as a klt sim request so the drawn-fingering re-run (#237) can run on the batch fleet *(curated)*
 - **#332**: DR-0011: re-derive CMRR bound, re-check gain/swing vs market comps, restate swing headroom (PR #303 operator ruling) *(curated)*
 - **#342**: design: raise PSRR+ via bias/topology change, re-run 45 corners, carry bounds into spec (PR #303 operator ruling) *(curated)*
+- **#361**: ROADMAP.md: retire the completed "Now" item 3 (cite the output-swing envelope) and refresh the snapshot line *(curated)*
+- **#367**: Follow-on: restore the validate --kind requirement loosened by PR #360's common_args routing *(curated)*
+- **#369**: Fold open-loop-ac's remaining synthetic-envelope fixture wrapper onto sim/tools/envelope_fixtures.py *(curated)*
 
 ## Proposed (Architect / Hermit)
 
 - **#105**: signoff: express the statistical rows as klt yield evidence for T1 item 6 (offset MC, mismatch CMRR) *(architect)*
-- **#355**: Split signoff/characterization/generate.py (2,972 lines) along its existing section banners *(hermit)*
+- **#370**: Deduplicate the generic klt envelope negative controls restated in all six sim/*/klt/test_compare.py *(hermit)*
 
 ## Epics
 
@@ -85,12 +90,12 @@ _None._
 |------|-------|
 | Operator merge-risk holds | 1 |
 | Very important | 1 |
-| Important | 8 |
-| Ready (`loom:issue`) | 4 |
-| In Progress (`loom:building`) | 0 |
-| PRs awaiting review | 1 |
-| Approved PRs awaiting merge | 2 |
-| Curated | 9 |
+| Important | 7 |
+| Ready (`loom:issue`) | 6 |
+| In Progress (`loom:building`) | 2 |
+| PRs awaiting review | 3 |
+| Approved PRs awaiting merge | 1 |
+| Curated | 11 |
 | Architect / Hermit proposals | 2 |
 | Active epics | 0 |
 <!-- guide:plan-body:end -->
