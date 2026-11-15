@@ -26,18 +26,13 @@ Exit codes: 0 report rendered, overall PASS (or --check/--mint succeeded);
 from __future__ import annotations
 
 import argparse
-import csv
 import datetime as _dt
-import hashlib
-import io
 import json
-import math
 import os
 import re
 import subprocess
 import sys
 import tempfile
-from decimal import ROUND_HALF_EVEN, Decimal, InvalidOperation
 from pathlib import Path
 
 # The generator is an eight-module package under signoff/characterization/
