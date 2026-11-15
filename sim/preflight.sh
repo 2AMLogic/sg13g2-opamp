@@ -246,12 +246,12 @@ sg13g2_sim_broken() {
 #
 #   This was four byte-identical inline python3 blocks, one per runner
 #   (issue #366) -- and op_pass is not cosmetic: it is an evidence-admission
-#   gate. signoff/characterization/generate.py (~line 1153) refuses a
-#   dc_continuity point whose op_pass is not "1", so these four copies were
-#   four independent definitions of "this corner counts as evidence", with
-#   nothing in the tree comparing them. Centralizing them here means a
-#   threshold change is now necessarily a change to ONE function, reviewed
-#   by every bench at once.
+#   gate. signoff/characterization/defchecks.py (_check_open_loop_klt,
+#   ~line 390) refuses a dc_continuity point whose op_pass is not "1", so
+#   these four copies were four independent definitions of "this corner
+#   counts as evidence", with nothing in the tree comparing them.
+#   Centralizing them here means a threshold change is now necessarily a
+#   change to ONE function, reviewed by every bench at once.
 #
 #   The thresholds are spec-bearing: they decide which simulated corners are
 #   admissible evidence against the ratified spec. DO NOT tune 0.15 / 0.02

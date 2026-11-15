@@ -4,7 +4,7 @@ Issue #366: the per-point DC operating-point sanity gate (`op_pass`) was
 byte-identical inline `python3 -c` in four sim/*/run_*.sh runners
 (open-loop-ac, slew-rate, cmrr-psrr, input-noise -- the last with an extra
 closed-loop-gain band-edge guard). op_pass is an evidence-admission gate
-(signoff/characterization/generate.py refuses a dc_continuity point whose
+(signoff/characterization/defchecks.py refuses a dc_continuity point whose
 op_pass is not 1), so four independent copies meant four independent
 definitions of "this corner counts as evidence". They are now one helper,
 sg13g2_op_sanity <vdd> <vcm> <vout> <vd1> <vd2> <vtail>, echoing 1/0.
