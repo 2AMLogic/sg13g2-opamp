@@ -2,8 +2,14 @@
 
 <!-- Maintained by the Loom Guide role. Newest entries first. -->
 
+## Archives
+
+- [2026-09](work_log/WORK_LOG_2026-09.md)
+
 ### 2026-11-15
 
+- **PR #399**: chore: drop 12 unused imports and an unused local across 13 Python files
+- **Issue #398** (closed): Remove 12 unused imports and 1 unused local left in 13 Python files (sibling of #371)
 - **PR #397**: fix: pin klt_envelope metavar via argparse error line, not width-wrapped usage line
 - **PR #395**: fix: csv_summary raises KeyError on absent column, skips short-row None cells
 - **PR #394**: refactor: fold the last four op_pass DC-sanity copies into one shared predicate
@@ -500,14 +506,3 @@
 - **PR #20**: sim: add input-referred noise PVT bench, choose the noise band
 - **PR #18**: feat(sim): add deterministic PVT input-referred offset bench
 
-### 2026-09-10
-
-- **Issue #9** (closed): design: first-cut gm/ID sizing + xschem schematic of the DR-0001 two-stage Miller op-amp, with an open-loop gain/GBW/PM bench into CL = 2 pF across the five-corner grid
-- **PR #10**: feat: first-cut gm/ID sizing, xschem schematic, and open-loop AC bench for DR-0001 op-amp
-
-### 2026-09-09
-
-- **Issue #6** (closed): spec: topology + CL decision record, informed by gm/ID study (issue #5)
-- **Issue #5** (closed): sim: gm/ID characterization sweep of SG13G2 LV core MOS — the first engineering task (porting-plan §4, gm/ID-first)
-- **PR #8**: spec: ratify two-stage topology and CL target (DR-1)
-- **PR #7**: sim: gm/ID characterization sweep of SG13G2 LV core MOS (issue #5)
