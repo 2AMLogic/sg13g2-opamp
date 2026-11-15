@@ -281,11 +281,7 @@ def compare(tool: Dict[Key, Dict[str, object]], harness: Dict[Key, Dict[str, obj
     unexplained = [d for d in disagreements if not d["explained_by_tolerance"]]
     summary: Dict[str, object] = {"ratified_limits": RATIFIED_LIMITS}
     if env is not None:
-        summary["tool"] = {}
-        for m in env.get("measurements") or []:
-            if m.get("name") in RATIFIED_LIMITS:
-                summary["tool"][m["name"]] = {"status": m.get("status"), "limits": m.get("limits"),
-                                              "worst_case": m.get("worst_case")}
+        summary["tool"] = E.tool_summary(env, RATIFIED_LIMITS)
     return {
         "schema": "sg13g2-opamp/output-swing/klt-compare/1",
         "points_compared": len(point_reports),
