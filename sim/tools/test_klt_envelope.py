@@ -453,10 +453,10 @@ class TestCliScaffold(unittest.TestCase):
                 cli(["compare", "--envelope", good, "--extra", "x"])
             self.assertIn("the following arguments are required: --spec", err_text[-1])
             # The validate positional's dest is unchanged; only its metavar
-            # follows the custom key (usage line of the missing-positional error).
+            # follows the custom key (error line of the missing-positional error).
             with self.assertRaises(SystemExit):
                 cli(["validate"])
-            self.assertIn("validate [-h] spec_envelope", err_text[-1])
+            self.assertIn("the following arguments are required: spec_envelope", err_text[-1])
 
 
 class TestCompareReports(unittest.TestCase):
