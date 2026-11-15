@@ -4,11 +4,15 @@
     python3 -m unittest discover -s sim/tools -p 'test_*.py'
 
 These pin the unified "unusable value" semantics the eight copied heredoc
-readers were folded into: a cell is skipped on a missing column (KeyError) or
-an unparseable string (ValueError), and on NaN via the `v == v` filter every
-inherited copy except cmrr-mismatch's carried. +-inf parses and is KEPT --
-that is the inherited behaviour too (the filter is NaN-only), and min/max
-stay deterministic on it, so the test pins it rather than "fixes" it.
+readers were folded into (#373), refined by #390: a column absent from the
+header raises KeyError -- a writer/summariser name drift must abort the
+summary, not print "n/a" into the record's worst-corner table -- while a
+per-cell unusable value is skipped: a DictReader short row's None cell
+(TypeError), an unparseable string (ValueError), and NaN via the `v == v`
+filter every inherited copy except cmrr-mismatch's carried. +-inf parses
+and is KEPT -- that is the inherited behaviour too (the filter is
+NaN-only), and min/max stay deterministic on it, so the test pins it
+rather than "fixes" it.
 
 The reduction-stability tests matter because these readers decide which grid
 point is reported as the binding corner in every record's worst-corner table:
@@ -42,13 +46,23 @@ class NumericTests(unittest.TestCase):
         # the row dict is the ORIGINAL object, so point_id attribution works
         self.assertIs(pairs[0][1], rows[0])
 
-    def test_missing_column_is_skipped_per_row(self):
-        # KeyError tolerance: the input-offset copy's behaviour, inherited by all
-        rows = [row("a", x="1.0"), row("b"), row("c", x="3.0")]
+    def test_short_row_none_cell_is_skipped_per_row(self):
+        # Revised from test_missing_column_is_skipped_per_row (#390): the
+        # hand-built dict omitting the key was a row shape DictReader never
+        # produces. The real ragged shape is a short row, whose missing
+        # field DictReader fills with None (restval); float(None) raises
+        # TypeError, which numeric() skips -- sibling rows still contribute.
+        rows = [row("a", x="1.0"), row("b", x=None), row("c", x="3.0")]
         self.assertEqual([v for v, _ in cs.numeric(rows, "x")], [1.0, 3.0])
 
-    def test_entirely_missing_column_yields_empty(self):
-        self.assertEqual(cs.numeric([row("a"), row("b")], "nope"), [])
+    def test_entirely_missing_column_raises_key_error(self):
+        # Revised from test_entirely_missing_column_yields_empty (#390): a
+        # key absent from the header means the runner's writer and its
+        # summary disagree about a column name -- abort loudly instead of
+        # yielding an empty column the call site renders as "n/a".
+        # DictReader gives every row exactly the header's key set, so
+        # KeyError is all-or-nothing and the raise IS the absent-column test.
+        self.assertRaises(KeyError, cs.numeric, [row("a"), row("b")], "nope")
 
     def test_empty_cell_is_skipped(self):
         rows = [row("a", x=""), row("b", x="2.0")]
@@ -100,8 +114,16 @@ class PickTests(unittest.TestCase):
         self.assertEqual(cs.pick(rows, "x", min)[1]["point_id"], "first")
         self.assertEqual(cs.pick(rows, "x", max)[1]["point_id"], "first")
 
-    def test_missing_column_with_pick_yields_none(self):
-        self.assertIsNone(cs.pick([row("a")], "x", max))
+    def test_missing_column_with_pick_raises_key_error(self):
+        # Revised from test_missing_column_with_pick_yields_none (#390):
+        # pick() propagates numeric()'s KeyError for an absent column too.
+        self.assertRaises(KeyError, cs.pick, [row("a")], "x", max)
+
+    def test_all_none_cells_with_pick_yields_none(self):
+        # The all-cells-unusable contract (#373) is unchanged: pick() still
+        # returns None when nothing is usable. The None cells here are the
+        # short-row shape; an absent column raises instead (see above).
+        self.assertIsNone(cs.pick([row("a", x=None), row("b", x=None)], "x", max))
 
 
 if __name__ == "__main__":
