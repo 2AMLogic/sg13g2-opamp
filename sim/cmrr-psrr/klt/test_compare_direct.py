@@ -11,7 +11,6 @@ measurement, a skipped/errored corner and a non-45-point join record.
 
 from __future__ import annotations
 
-import copy
 import glob
 import json
 import os

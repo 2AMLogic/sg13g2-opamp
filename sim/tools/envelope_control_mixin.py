@@ -44,7 +44,7 @@ named only a substring).
 from __future__ import annotations
 
 import copy
-from typing import Callable, Dict, List, Optional, Sequence, Tuple
+from typing import Callable, Dict, Optional, Sequence, Tuple
 
 import klt_envelope as K
 

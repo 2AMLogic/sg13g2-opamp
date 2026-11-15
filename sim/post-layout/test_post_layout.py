@@ -9,7 +9,6 @@ import math
 import os
 import tempfile
 import unittest
-from contextlib import redirect_stdout
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 

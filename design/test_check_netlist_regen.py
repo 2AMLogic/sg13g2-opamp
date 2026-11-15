@@ -1,5 +1,4 @@
 """Offline tests for the comparison logic of check_netlist_regen.py (no xschem)."""
-import os
 import sys
 import tempfile
 import unittest

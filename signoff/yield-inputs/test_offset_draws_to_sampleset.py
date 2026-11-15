@@ -1,5 +1,4 @@
 """Offline fixture tests for offset_draws_to_sampleset.py (stdlib only)."""
-import csv
 import importlib.util
 import io
 import json

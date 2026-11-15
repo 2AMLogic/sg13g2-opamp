@@ -49,7 +49,7 @@ import functools
 import math
 import os
 import sys
-from typing import Dict, Iterable, List, Optional, Tuple
+from typing import Dict, Iterable, List, Optional
 
 # The grid, the key helpers, InputError and the envelope gate are shared by
 # every sim/*/klt/compare.py: sim/tools/klt_envelope.py (issue #142).
