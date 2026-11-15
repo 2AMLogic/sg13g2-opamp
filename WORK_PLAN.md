@@ -34,28 +34,25 @@ Human-approved issues ready for implementation (`loom:issue`).
 - **#3**: Track the gap to T1 sim-validated / bronze (klayout-tools design-evidence tiers)
 - **#101**: Prepare a four-row design-margin plan while preserving literal limits and raw FAILs
 - **#332**: DR-0011: re-derive CMRR bound, re-check gain/swing vs market comps, restate swing headroom (PR #303 operator ruling)
-- **#387**: test_klt_envelope metavar assertion depends on terminal width (COLUMNS)
 
 ## In Progress
 
 Issues currently being built (`loom:building`).
 
-- **#380**: Four more copies of the op_pass DC-sanity rule survive #366's dedupe (cmrr-mismatch x2, input-offset, post-layout)
-- **#390**: csv_summary.numeric() cannot distinguish a wholly-absent metric column from an unusable cell, so a writer/summariser column-name drift now prints "n/a" into a record instead of failing the sweep
+- **#398**: Remove 12 unused imports and 1 unused local left in 13 Python files (sibling of #371)
 
 ## PRs Awaiting Review
 
 PRs waiting on Judge (`loom:review-requested`).
 
 - **#302**: docs: request EE and market key review of DR-0010
+- **#399**: chore: drop 12 unused imports and an unused local across 13 Python files
 
 ## Approved (Awaiting Merge)
 
 PRs that passed review and are queued for Champion auto-merge (`loom:pr`).
 
 - **#303**: docs: submit DR-0011 for two-key ratification (status flip)
-- **#394**: refactor: fold the last four op_pass DC-sanity copies into one shared predicate
-- **#395**: fix: csv_summary raises KeyError on absent column, skips short-row None cells
 
 ## Proposed
 
@@ -69,9 +66,6 @@ Issues carrying `loom:curated`.
 - **#325**: sim: express the input-cmr (ICMR) bench as a klt sim request so the drawn-fingering re-run (#237) can run on the batch fleet *(curated)*
 - **#332**: DR-0011: re-derive CMRR bound, re-check gain/swing vs market comps, restate swing headroom (PR #303 operator ruling) *(curated)*
 - **#342**: design: raise PSRR+ via bias/topology change, re-run 45 corners, carry bounds into spec (PR #303 operator ruling) *(curated)*
-- **#380**: Four more copies of the op_pass DC-sanity rule survive #366's dedupe (cmrr-mismatch x2, input-offset, post-layout) *(curated)*
-- **#387**: test_klt_envelope metavar assertion depends on terminal width (COLUMNS) *(curated)*
-- **#390**: csv_summary.numeric() cannot distinguish a wholly-absent metric column from an unusable cell, so a writer/summariser column-name drift now prints "n/a" into a record instead of failing the sweep *(curated)*
 
 ## Proposed (Architect / Hermit)
 
@@ -88,11 +82,11 @@ _None._
 | Operator merge-risk holds | 1 |
 | Very important | 1 |
 | Important | 7 |
-| Ready (`loom:issue`) | 4 |
-| In Progress (`loom:building`) | 2 |
-| PRs awaiting review | 1 |
-| Approved PRs awaiting merge | 3 |
-| Curated | 11 |
+| Ready (`loom:issue`) | 3 |
+| In Progress (`loom:building`) | 1 |
+| PRs awaiting review | 2 |
+| Approved PRs awaiting merge | 1 |
+| Curated | 8 |
 | Architect / Hermit proposals | 1 |
 | Active epics | 0 |
 <!-- guide:plan-body:end -->

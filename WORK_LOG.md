@@ -4,6 +4,12 @@
 
 ### 2026-11-15
 
+- **PR #397**: fix: pin klt_envelope metavar via argparse error line, not width-wrapped usage line
+- **PR #395**: fix: csv_summary raises KeyError on absent column, skips short-row None cells
+- **PR #394**: refactor: fold the last four op_pass DC-sanity copies into one shared predicate
+- **Issue #390** (closed): csv_summary.numeric() cannot distinguish a wholly-absent metric column from an unusable cell, so a writer/summariser column-name drift now prints "n/a" into a record instead of failing the sweep
+- **Issue #387** (closed): test_klt_envelope metavar assertion depends on terminal width (COLUMNS)
+- **Issue #380** (closed): Four more copies of the op_pass DC-sanity rule survive #366's dedupe (cmrr-mismatch x2, input-offset, post-layout)
 - **PR #393**: chore: drop seven stdlib imports left unused in generate.py by the module split
 - **PR #392**: test: dedupe the six benches' generic klt envelope refusals into one mixin
 - **PR #391**: ci: run layout negative controls and per-device DRC on every push/PR
