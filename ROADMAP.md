@@ -3,7 +3,7 @@
 A two-stage Miller-compensated op-amp on IHP SG13G2 (CMOS devices only), with
 every spec row carried on recorded PVT evidence.
 
-Status as of 2026-11-13, `main` @ `85e7dbb`.
+Status as of 2026-11-15, `main` @ `e2d709d`.
 
 [`WORK_PLAN.md`](WORK_PLAN.md) is the generated label snapshot and the newest
 record under [`signoff/reports/`](signoff/reports/) is the verdict of record;
@@ -57,13 +57,6 @@ so far describes the DR-0001 circuit.
    Done when the shard-mode instruction in `sim/cmrr-psrr/README.md` names
    0.8.0 and every `corners.supply_v` key in the committed
    `sim/**/*.request.json` files is shown to name a voltage source. No grid.
-3. **Cite the committed output-swing envelope in T1 item 5** (no issue yet).
-   `signoff/block-manifest.json` still declares the three swing rows as gaps
-   ("request not yet written or run"), but PR #323 committed
-   `sim/output-swing/klt/records/20261101-010941-b7a1a86.sim.json`. Done when
-   the manifest cites it and a new record is appended under
-   `signoff/reports/`. The item stays `unmet` (the span miss is recorded, CMRR
-   is still a gap); a stale gap becomes evidence.
 
 ## Next
 
