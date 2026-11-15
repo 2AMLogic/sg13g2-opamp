@@ -249,6 +249,7 @@ class Tree:
         (self.sim / "tools").mkdir(parents=True)
         (self.sim / "pdk.json").write_text(PIN_TEXT, encoding="utf-8")
         shutil.copy2(TOOLS_DIR / "env_identity.py", self.sim / "tools" / "env_identity.py")
+        shutil.copy2(TOOLS_DIR / "csv_summary.py", self.sim / "tools" / "csv_summary.py")
         self.install_a = self.root / "pdk-a"
         make_install(self.install_a)
         self.pdk_root = self.root / "pdk"
