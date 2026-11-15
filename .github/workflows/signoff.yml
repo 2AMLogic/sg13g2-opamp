@@ -200,6 +200,18 @@ jobs:
           python3 layout/opamp_core/lvs_reference.py --check
           python3 -m unittest discover -s layout/opamp_core -p 'test_lvs_reference.py' -v
 
+      - name: LVS compare negative control detects a perturbed reference net (offline)
+        # Proves the committed LVS compare can fail: perturb one net of a
+        # scratch copy of the committed reference (vss -> vdd on XM5's
+        # units), re-run `klt lvs` against the real layout, and assert the
+        # verdict flips to mismatch naming real unmatched devices. An LVS
+        # compare that cannot fail proves nothing. Uses the `klt` this job
+        # installed above (no --klt flag needed); no PDK, writes nothing to
+        # the repo.
+        run: |
+          set -euo pipefail
+          python3 layout/opamp_core/lvs_reference.py --negative-control
+
       - name: Re-grade the block manifest
         # `klt signoff --manifest` exits 3 when the block is not yet T1,
         # which is this block's current state and not an error --
@@ -308,3 +320,33 @@ jobs:
         run: |
           set -euo pipefail
           python3 layout/opamp_core/generate.py --check
+
+      - name: Every device stream is individually DRC-clean before assembly
+        # --devices DRCs each generated device stream on its own, before
+        # assembly: a violation that only the assembled block triggers (and
+        # that the block-level --check above cannot attribute to a single
+        # device) still fails here. Same pinned toolchain as the --check
+        # step; writes nothing to the repo.
+        run: |
+          set -euo pipefail
+          python3 layout/opamp_core/generate.py --devices
+
+      - name: Connectivity negative control detects a removed wire, and names the net
+        # Proves the connectivity self-check can fail: delete one wire from
+        # a scratch copy of the layout and assert the check reports the
+        # break and names the net, while `klt drc` still reports clean on
+        # the broken block. If this goes red the control rotted (or the
+        # check stopped detecting) -- that is the finding, not an obstacle.
+        run: |
+          set -euo pipefail
+          python3 layout/opamp_core/generate.py --negative-control
+
+      - name: DRC-deck negative control flags deliberately illegal shapes, and attributes them
+        # Proves `klt drc --deck sg13g2` can fail: draw three deliberately
+        # illegal shapes and assert the deck reports exactly the expected
+        # rule counts (activ.width.1, metal1.space.1, metal1.width.1).
+        # Needs klt but not the PDK; runs in this job so the deck is
+        # exercised at the same pin as the --check gate above.
+        run: |
+          set -euo pipefail
+          python3 layout/opamp_core/generate.py --drc-negative-control
