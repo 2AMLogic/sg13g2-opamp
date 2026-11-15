@@ -53,6 +53,19 @@ only; negative controls in `tools/test_klt_envelope.py`). A bench keeps only its
 `reject_statuses=`), its harness loader and its comparison. A new `klt sim`
 bench imports this module instead of copying an existing `compare.py`.
 
+A change to `klt_envelope.py` must keep its regression set green:
+`tools/test_klt_envelope.py` plus every consumer suite, one `test_compare.py`
+per bench — [`open-loop-ac/klt/test_compare.py`](open-loop-ac/klt/test_compare.py),
+[`output-swing/klt/test_compare.py`](output-swing/klt/test_compare.py),
+[`cmrr-psrr/klt/test_compare.py`](cmrr-psrr/klt/test_compare.py),
+[`cmrr-psrr/klt/test_compare_direct.py`](cmrr-psrr/klt/test_compare_direct.py),
+[`cmrr-psrr/klt/test_shard.py`](cmrr-psrr/klt/test_shard.py),
+[`input-noise/klt/test_compare.py`](input-noise/klt/test_compare.py),
+[`input-offset/klt/test_compare.py`](input-offset/klt/test_compare.py) and
+[`slew-rate/klt/test_compare.py`](slew-rate/klt/test_compare.py) (seven
+`E.run_cli` benches; `cmrr-psrr` carries two `compare.py` callers, so two
+suites there plus its `test_shard.py`).
+
 ## PDK pin
 
 Every record in this tree is generated against the PDK revision pinned in

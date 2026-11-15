@@ -350,6 +350,71 @@ class TestCliScaffold(unittest.TestCase):
             self.assertEqual(cli(["validate", one])[0], 2)
             self.assertEqual(cli(["compare", "--envelope", one, "--extra", "x", "--points", "tt"])[:2], (0, "S 1\n"))
 
+    # issue #367: the validate-only arg hook. A validate_args entry with
+    # required=True restores the pre-#360 --kind contract: omission is a
+    # one-line argparse error, the flag is not accepted on compare at all, and
+    # the compare path's gate runs on the fixed compare_index_kw instead.
+
+    def _kind_cli(self, index, argv):
+        out, err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            try:
+                rc = E.run_cli(argv, description="d", compare_help="h",
+                               harness_args=(("--extra", {"required": True}),),
+                               validate_args=(("--kind", {"choices": ("ac", "op"), "required": True}),),
+                               compare_index_kw={"kind": "ac"},
+                               index_fn=index, run=lambda a, tool, env: {"status": "agree", "n": len(tool)},
+                               inputs=(), summary=lambda rep: f"S {rep['n']}")
+            except SystemExit as e:
+                rc = e.code
+        return rc, out.getvalue(), err.getvalue()
+
+    def test_validate_args_required_on_validate(self):
+        def index(env, label, kind):
+            return E.index_envelope(env, label, MEAS)
+
+        with tempfile.TemporaryDirectory() as d:
+            one = os.path.join(d, "one.json")
+            with open(one, "w") as f:
+                json.dump(_envelope(), f)
+            rc, out, err = self._kind_cli(index, ["validate", one])
+            self.assertEqual((rc, out), (2, ""))
+            self.assertIn("the following arguments are required: --kind", err)
+            self.assertNotIn("measurement", err)  # not a 135-item gate report
+            rc, out, _ = self._kind_cli(index, ["validate", one, "--kind", "ac"])
+            self.assertEqual((rc, out), (0, f"validate: {one}: 45 corners, status pass, ok\n"))
+
+    def test_validate_args_absent_from_compare(self):
+        def index(env, label, kind):
+            return E.index_envelope(env, label, MEAS)
+
+        with tempfile.TemporaryDirectory() as d:
+            one = os.path.join(d, "one.json")
+            with open(one, "w") as f:
+                json.dump(_envelope(), f)
+            rc, out, err = self._kind_cli(index, ["compare", "--envelope", one, "--extra", "x", "--kind", "op"])
+            self.assertEqual((rc, out), (2, ""))
+            self.assertIn("unrecognized arguments: --kind op", err)
+            rc, out, _ = self._kind_cli(index, ["compare", "--envelope", one, "--extra", "x"])
+            self.assertEqual((rc, out), (0, "S 45\n"))
+
+    def test_compare_index_kw_reach_the_gate(self):
+        seen = []
+
+        def index(env, label, kind):
+            seen.append(kind)
+            return E.index_envelope(env, label, MEAS)
+
+        with tempfile.TemporaryDirectory() as d:
+            one = os.path.join(d, "one.json")
+            with open(one, "w") as f:
+                json.dump(_envelope(), f)
+            self.assertEqual(self._kind_cli(index, ["compare", "--envelope", one, "--extra", "x"])[:2],
+                             (0, "S 45\n"))
+            self.assertEqual(seen, ["ac"])
+            self.assertEqual(self._kind_cli(index, ["validate", one, "--kind", "op"])[0], 0)
+            self.assertEqual(seen, ["ac", "op"])
+
 
 if __name__ == "__main__":
     unittest.main()

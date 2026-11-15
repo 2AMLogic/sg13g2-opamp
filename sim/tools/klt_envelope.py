@@ -23,7 +23,8 @@ What lives here (issue #142; previously copy-pasted into each compare.py):
 The output-swing bench (issue #176) needs a selectable point set, a `vcm`
 supply key and extra envelope- and measurement-level rules; those are the
 points= / supply_key= / accept_statuses= parameters, the envelope_check and
-measurement_check hooks and run_cli's common_args / validate_noun. Their
+measurement_check hooks and run_cli's common_args / validate_args /
+compare_index_kw / validate_noun. Their
 defaults reproduce the behaviour every other bench already relied on.
 
 key_str is shared on purpose: every bench joins its envelope against a harness
@@ -47,7 +48,7 @@ import hashlib
 import json
 import math
 import sys
-from typing import Callable, Dict, Iterable, List, Optional, Sequence, Tuple
+from typing import Callable, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
 
 # ---------------------------------------------------------------- the grid
 # spec/target-spec.md section 1 [DR-1]/[DR-2]: cornerMOSlv.lib's five
@@ -312,6 +313,8 @@ def run_cli(argv: Optional[List[str]], *, description: str, compare_help: str,
             inputs: Sequence[Tuple[str, str, bool]],
             summary: Callable[[dict], str],
             common_args: Sequence[Tuple[str, dict]] = (),
+            validate_args: Sequence[Tuple[str, dict]] = (),
+            compare_index_kw: Optional[Mapping[str, object]] = None,
             validate_noun: str = "corners",
             envelope_flag: str = "--envelope",
             envelope_key: str = "envelope") -> int:
@@ -329,6 +332,16 @@ def run_cli(argv: Optional[List[str]], *, description: str, compare_help: str,
     common_args: (flag, add_argument kwargs) added to BOTH subcommands; each
         parsed value is also passed to index_fn as a keyword argument named by
         its argparse dest.
+    validate_args: (flag, add_argument kwargs) added to the `validate`
+        subcommand only (required= is honoured); each parsed value is passed to
+        index_fn on the validate path, named by its argparse dest. For a flag
+        meaningful only to the gate (open-loop-ac's --kind): a common_args
+        entry cannot carry required=True, and forwarding it to compare would
+        let the compare parser accept a flag its report never uses.
+    compare_index_kw: fixed keyword arguments passed to index_fn on the
+        `compare` path, standing in for the validate-only flags the compare
+        parser does not define (open-loop-ac always gates its primary envelope
+        with kind="ac").
     validate_noun: the word after the corner count in the validate line.
     envelope_flag, envelope_key: the `compare` flag and the inputs-stanza key for
         the primary envelope, for a bench that does not spell it --envelope /
@@ -341,7 +354,8 @@ def run_cli(argv: Optional[List[str]], *, description: str, compare_help: str,
     sub = ap.add_subparsers(dest="cmd", required=True)
     v = sub.add_parser("validate", help="gate the envelope before it may enter records/")
     v.add_argument("envelope", metavar=envelope_key)
-    dests = [v.add_argument(flag, **kw).dest for flag, kw in common_args]
+    common_dests = [v.add_argument(flag, **kw).dest for flag, kw in common_args]
+    validate_dests = [v.add_argument(flag, **kw).dest for flag, kw in validate_args]
     c = sub.add_parser("compare", help=compare_help)
     env_dest = c.add_argument(envelope_flag, required=True).dest
     for flag, kw in harness_args:
@@ -351,14 +365,16 @@ def run_cli(argv: Optional[List[str]], *, description: str, compare_help: str,
     c.add_argument("--json-out")
     c.add_argument("--provenance", action="append", default=[], metavar="KEY=VALUE")
     a = ap.parse_args(argv)
-    index_kw = {d: getattr(a, d) for d in dests}
     env_path = a.envelope if a.cmd == "validate" else getattr(a, env_dest)
 
     try:
         if a.cmd == "validate":
+            index_kw = {d: getattr(a, d) for d in common_dests + validate_dests}
             env, idx = load_envelope(env_path, index_fn, **index_kw)
             print(f"validate: {env_path}: {len(idx)} {validate_noun}, status {env.get('status')}, ok")
             return 0
+        index_kw = {d: getattr(a, d) for d in common_dests}
+        index_kw.update(compare_index_kw or {})
         env, tool_idx = load_envelope(env_path, index_fn, **index_kw)
         rep = run(a, tool_idx, env)
     except InputError as e:
