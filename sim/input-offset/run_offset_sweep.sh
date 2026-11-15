@@ -245,8 +245,10 @@ PYEOF
       # local small-signal gain, applies the per-point sanity rule
       # (README.md "Per-point sanity checks"), and computes the closed-loop
       # cross-check value.
-      row="$(python3 - "${fine_csv}" "${vcm}" "${vdd}" "${vos_coarse}" "${vout_cl}" "${av0_db_ac}" <<'PYEOF'
+      row="$(PYTHONPATH="${SIM_DIR}/tools" python3 - "${fine_csv}" "${vcm}" "${vdd}" "${vos_coarse}" "${vout_cl}" "${av0_db_ac}" <<'PYEOF'
 import math, sys
+
+from op_sanity import rail_ok
 
 fine_path = sys.argv[1]
 vcm = float(sys.argv[2])
@@ -335,11 +337,16 @@ else:
 av_local_db = 20 * math.log10(av_local) if av_local == av_local and av_local > 0 else float("nan")
 
 # --- per-point sanity rule (README.md "Per-point sanity checks") --------
-rail_lo, rail_hi = 0.02 * vdd, 0.98 * vdd
-op_pass = 1
-for node in (vd1, vd2, vtail, vout_sample):
-    if not (rail_lo <= node <= rail_hi):
-        op_pass = 0
+# The rail window is the shared predicate's rail_ok (sim/tools/op_sanity.py,
+# issue #380): same thresholds, and the same VDD - rail_frac*VDD spelling of
+# the upper edge the committed records were gated with (NOT 0.98*VDD -- not
+# the same double). The full gate's mid-rail gap term (|Vout-Vcm| <=
+# 0.15*VDD) is DELIBERATELY absent, not a narrowed copy: this bench defines
+# its operating point as the Vout = Vcm crossing located above (README), so
+# the gap term is vacuously true at every point that survives to be graded.
+# The guards composed on top are bench-specific, exactly like input-noise's
+# band-edge gain guard:
+op_pass = 1 if rail_ok(vdd, (vd1, vd2, vtail, vout_sample)) else 0
 # The null must be a real amplifying point, not a flat/railed region.
 if not (av_local == av_local and av_local >= 10.0):
     op_pass = 0

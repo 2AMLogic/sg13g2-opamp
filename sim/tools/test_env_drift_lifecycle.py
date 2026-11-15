@@ -455,6 +455,9 @@ class OpenLoopRunner(unittest.TestCase):
         for name in ("preflight.sh", "env.sh", "record-paths.sh", "env-identity.sh", "ac-join.sh"):
             shutil.copy2(SIM_DIR / name, self.t.sim / name)
         _write_exec(self.t.sim / "tools" / "build-osdi.sh", "#!/usr/bin/env bash\nexit 0\n")
+        # sg13g2_op_sanity delegates to the shared predicate (#380); the
+        # fixture tree needs the real module like any runner's sim/tools.
+        shutil.copy2(TOOLS_DIR / "op_sanity.py", self.t.sim / "tools" / "op_sanity.py")
         self.bench = self.t.sim / "open-loop-ac"
         (self.bench / "testbench").mkdir(parents=True)
         shutil.copy2(SIM_DIR / "open-loop-ac" / "run_pvt_sweep.sh", self.bench / "run_pvt_sweep.sh")
@@ -605,6 +608,9 @@ class NativeNoiseRunner(unittest.TestCase):
         for name in ("preflight.sh", "env.sh", "record-paths.sh", "env-identity.sh", "ac-join.sh"):
             shutil.copy2(SIM_DIR / name, self.t.sim / name)
         _write_exec(self.t.sim / "tools" / "build-osdi.sh", "#!/usr/bin/env bash\nexit 0\n")
+        # sg13g2_op_sanity delegates to the shared predicate (#380); the
+        # fixture tree needs the real module like any runner's sim/tools.
+        shutil.copy2(TOOLS_DIR / "op_sanity.py", self.t.sim / "tools" / "op_sanity.py")
         self.bench = self.t.sim / "input-noise"
         (self.bench / "testbench").mkdir(parents=True)
         shutil.copy2(SIM_DIR / "input-noise" / "run_noise_sweep.sh", self.bench / "run_noise_sweep.sh")

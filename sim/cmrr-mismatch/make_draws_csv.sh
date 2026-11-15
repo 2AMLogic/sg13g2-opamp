@@ -15,8 +15,9 @@
 #
 # status is PASS or EXCLUDED; fail_reason is op_fail or plateau_fail, using
 # the SAME per-draw gates as stat_point() in run_cmrr_mismatch_mc.sh
-# (OP_RAIL_FRAC / OP_MID_FRAC / PLATEAU_TOL_DB, same defaults), so excluded
-# draws stay visible instead of being dropped. draw_seed is the point's
+# (OP_RAIL_FRAC / OP_MID_FRAC / PLATEAU_TOL_DB, same defaults) -- both
+# evaluate the shared op_sanity.op_sane predicate (issue #380) -- so
+# excluded draws stay visible instead of being dropped. draw_seed is the point's
 # setseed (MC_SEED_BASE + grid index): the bench seeds once per point and
 # resets per sample, so every draw of a point shares it; draw_index is the
 # sample index. av0_db is the joined SYSTEMATIC Av0 of the grid point
@@ -67,6 +68,7 @@ import csv, math, os, sys
 rec, sdir, out, seed_base, rail_frac, mid_frac, plateau_tol, lib_dir = sys.argv[1:9]
 sys.path.insert(0, lib_dir)
 import mc_samples  # strict shared parser (issue #174), also used by run_cmrr_mismatch_mc.sh
+import op_sanity  # noqa: E402  -- the shared op_pass predicate (#380); mc_samples put sim/tools on sys.path
 seed_base = int(seed_base)
 rail_frac, mid_frac, plateau_tol = float(rail_frac), float(mid_frac), float(plateau_tol)
 
@@ -89,16 +91,13 @@ for pidx, r in enumerate(csv.DictReader(open(rec))):
     pid = r["point_id"]
     vdd = float(r["vdd_v"]); vcm = float(r["vcm_v"]); av0_db = float(r["av0_db"])
     n, ops, acs, toks = read_samples(os.path.join(sdir, f"{pid}_mc_samples.txt"))
-    rail_lo, rail_hi = rail_frac * vdd, vdd - rail_frac * vdd
     lin, cm = [], []
     op_fail = plateau_fail = 0
     for k in range(n):
         vout, vd1, vd2, vtail = ops[k][:4]
         a10, a01, a1k = acs[k]
-        ok = abs(vout - vcm) <= mid_frac * vdd
-        for node in (vout, vd1, vd2, vtail):
-            if not (rail_lo <= node <= rail_hi):
-                ok = False
+        ok = op_sanity.op_sane(vdd, vcm, vout, vd1, vd2, vtail,
+                               rail_frac=rail_frac, mid_frac=mid_frac)
         reason = ""
         if not ok:
             op_fail += 1; reason = "op_fail"

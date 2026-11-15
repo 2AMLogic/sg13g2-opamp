@@ -245,13 +245,22 @@ sg13g2_sim_broken() {
 #   were gated with the former.
 #
 #   This was four byte-identical inline python3 blocks, one per runner
-#   (issue #366) -- and op_pass is not cosmetic: it is an evidence-admission
-#   gate. signoff/characterization/defchecks.py (_check_open_loop_klt,
-#   ~line 390) refuses a dc_continuity point whose op_pass is not "1", so
-#   these four copies were four independent definitions of "this corner
-#   counts as evidence", with nothing in the tree comparing them.
-#   Centralizing them here means a threshold change is now necessarily a
-#   change to ONE function, reviewed by every bench at once.
+#   (issue #366), then four more copies elsewhere (issue #380) -- and
+#   op_pass is not cosmetic: it is an evidence-admission gate.
+#   signoff/characterization/defchecks.py (_check_open_loop_klt, ~line 390)
+#   refuses a dc_continuity point whose op_pass is not "1", so every copy
+#   was an independent definition of "this corner counts as evidence",
+#   with nothing in the tree comparing them. Since #380 the definition
+#   itself is ONE importable function, op_sane in sim/tools/op_sanity.py:
+#   this helper delegates to it, as do both cmrr-mismatch Monte Carlo gates
+#   (mc_samples.point_stats and make_draws_csv.sh) and input-offset's rail
+#   window (run_offset_sweep.sh, via rail_ok). A threshold change is
+#   therefore now necessarily a change to ONE function, reviewed by every
+#   bench whose op_pass derives from this rule at once. Two deliberate
+#   exceptions, neither a copy of this rule: post-layout's vout-only DC
+#   check (sim/post-layout/klt_measure.py -- different failure semantics
+#   and node set, see its comment) and input-cmr / output-swing's
+#   bench-specific op_pass predicates.
 #
 #   The thresholds are spec-bearing: they decide which simulated corners are
 #   admissible evidence against the ratified spec. DO NOT tune 0.15 / 0.02
@@ -266,24 +275,18 @@ sg13g2_sim_broken() {
 #   band edges); that guard is deliberately not folded in here, because no
 #   other bench applies it -- the same call-site-visible widening pattern
 #   sg13g2_sim_broken's --extra hook uses.
+#
+#   The module path resolves from SIM_DIR, which callers must set before
+#   sourcing this file (see this file's header) -- NOT from
+#   ${BASH_SOURCE[0]}, which inside a sourced file resolves to this file's
+#   own directory.
 sg13g2_op_sanity() {
   if [[ $# -ne 6 ]]; then
     echo "${_sg13g2_preflight_self}: sg13g2_op_sanity: expected <vdd> <vcm> <vout> <vd1> <vd2> <vtail>, got $# argument(s)" >&2
     exit 3
   fi
 
-  python3 -c '
-import sys
-vdd, vcm, vout, vd1, vd2, vtail = (float(a) for a in sys.argv[1:7])
-tol = 0.15 * vdd
-rail_lo = 0.02 * vdd
-rail_hi = vdd - 0.02 * vdd
-ok = (abs(vout - vcm) <= tol)
-for node in (vd1, vd2, vtail, vout):
-    if not (rail_lo <= node <= rail_hi):
-        ok = False
-print("1" if ok else "0")
-' "$1" "$2" "$3" "$4" "$5" "$6"
+  python3 "${SIM_DIR}/tools/op_sanity.py" "$1" "$2" "$3" "$4" "$5" "$6"
 }
 
 # SG13G2_MOS_CORNERS

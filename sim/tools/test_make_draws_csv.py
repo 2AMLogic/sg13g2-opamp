@@ -8,6 +8,7 @@ ngspice or klt is needed.
 """
 import csv
 import math
+import os
 import subprocess
 import tempfile
 import unittest
@@ -246,6 +247,70 @@ class MakeDrawsCsv(unittest.TestCase):
         self.assertAlmostEqual(float(worst["cmrr_db"]), 25.94, places=2)
         committed = REAL_RECORD.with_name(REAL_RECORD.stem + "-draws.csv")
         self.assertEqual(out.read_bytes(), committed.read_bytes())
+
+    # --- OP_RAIL_FRAC / OP_MID_FRAC stay live knobs through the fold (#380):
+    # the script must keep feeding them to the shared predicate. Each test
+    # builds a record consistent under the non-default knob, asserts the run
+    # matches it exactly, then asserts the same input under the DEFAULTS
+    # contradicts that record -- proving the env really moved the verdict,
+    # not just the bookkeeping.
+    def _build_with_edge_draw(self, pid, op_line, n_bad=1):
+        lines = []
+        for k, a in enumerate(ACM):
+            lines.append(op_line(k))
+            lines.append(f"AC {k} {a} {a} {a - 0.001}")
+        (self.samples / f"{pid}_mc_samples.txt").write_text("\n".join(lines) + "\n")
+        row = summary_row(pid, ACM, n_bad=n_bad)
+        cols = HEADER.split(",")
+        rec = self.rec_dir / "rid.csv"
+        with open(rec, "w", newline="") as f:
+            w = csv.DictWriter(f, cols, restval="0", lineterminator="\n")
+            w.writeheader()
+            w.writerow(row)
+        return rec
+
+    def test_op_rail_frac_env_reaches_the_shared_predicate(self):
+        # vd1 = 1.14 = 0.95*VDD: inside the default rail window
+        # ([0.02, 0.98]*VDD), outside the rail_frac=0.1 one ([0.1, 0.9]*VDD).
+        # vout stays mid-rail so the gap term never fires.
+        pid = "mos_tt_27C_1.20V"
+        rec = self._build_with_edge_draw(
+            pid, lambda k: f"OP {k} 0.6 {1.14 if k == 0 else 0.6} 0.45 0.15 0.38 0.0001")
+        out = self.rec_dir / "knob-draws.csv"
+        p = subprocess.run(
+            [str(SCRIPT), "--record-csv", str(rec), "--samples-dir", str(self.samples),
+             "--out", str(out)],
+            capture_output=True, text=True, env=dict(os.environ, OP_RAIL_FRAC="0.1"))
+        self.assertEqual(p.returncode, 0, p.stderr)
+        rows = list(csv.DictReader(open(out)))
+        self.assertEqual((rows[0]["status"], rows[0]["fail_reason"]),
+                         ("EXCLUDED", "op_fail"))
+        self.assertTrue(all(r["status"] == "PASS" for r in rows[1:]))
+        p2, _ = self.run_script(rec, out=self.rec_dir / "defaults-draws.csv")
+        self.assertEqual(p2.returncode, 1)
+        self.assertIn("ROUND-TRIP MISMATCH", p2.stderr)
+
+    def test_op_mid_frac_env_reaches_the_shared_predicate(self):
+        # vout = 0.735: gap = 0.135, comfortably inside the default
+        # inclusive 0.15*VDD window and comfortably outside the
+        # mid_frac=0.1 one (0.12) -- solid margins on both sides, no
+        # boundary-double fragility.
+        pid = "mos_tt_27C_1.20V"
+        rec = self._build_with_edge_draw(
+            pid, lambda k: f"OP {k} {0.735 if k == 0 else 0.6} 0.6 0.45 0.15 0.38 0.0001")
+        out = self.rec_dir / "knob-draws.csv"
+        p = subprocess.run(
+            [str(SCRIPT), "--record-csv", str(rec), "--samples-dir", str(self.samples),
+             "--out", str(out)],
+            capture_output=True, text=True, env=dict(os.environ, OP_MID_FRAC="0.1"))
+        self.assertEqual(p.returncode, 0, p.stderr)
+        rows = list(csv.DictReader(open(out)))
+        self.assertEqual((rows[0]["status"], rows[0]["fail_reason"]),
+                         ("EXCLUDED", "op_fail"))
+        self.assertTrue(all(r["status"] == "PASS" for r in rows[1:]))
+        p2, _ = self.run_script(rec, out=self.rec_dir / "defaults-draws.csv")
+        self.assertEqual(p2.returncode, 1)
+        self.assertIn("ROUND-TRIP MISMATCH", p2.stderr)
 
 
 if __name__ == "__main__":
