@@ -72,7 +72,6 @@ def _request_limits():
 def _envelope(rows):
     limits = _request_limits()
     corners = []
-    worst = {}
     for r in rows:
         vdd = float(r["vdd_v"])
         vals = _row_measurements(r)
