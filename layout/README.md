@@ -56,16 +56,19 @@ python3 layout/opamp_core/generate.py
 # drift from the committed GDS (byte-for-byte) or DRC verdict/coverage.
 python3 layout/opamp_core/generate.py --check
 
-# DRC each generated device stream on its own, before assembly.
+# DRC each generated device stream on its own, before assembly. Also
+# enforced in CI per push/PR (layout-regen job).
 python3 layout/opamp_core/generate.py --devices
 
 # Negative control: delete one wire and prove the connectivity self-check
-# notices (and that `klt drc` does not). Writes nothing to the repo.
+# notices (and that `klt drc` does not). Writes nothing to the repo. Also
+# enforced in CI per push/PR (layout-regen job).
 python3 layout/opamp_core/generate.py --negative-control
 
 # Regenerate the LVS reference netlist (after a netlist/generator change)
 # and re-run the committed LVS compare. Also `--check` (byte-diff only) and
-# `--negative-control` (perturb the reference, assert the compare fails).
+# `--negative-control` (perturb the reference, assert the compare fails;
+# also enforced in CI per push/PR, signoff job).
 python3 layout/opamp_core/lvs_reference.py
 bash layout/opamp_core/run_lvs.sh
 python3 layout/opamp_core/lvs_reference.py --check
@@ -83,7 +86,8 @@ bash layout/opamp_core/run_erc.sh
 
 # Negative control for the DRC deck: draw three deliberately illegal shapes
 # with `klt draw` and prove `klt drc --deck sg13g2` flags and attributes them.
-# Writes nothing to the repo.
+# Writes nothing to the repo. Also enforced in CI per push/PR (layout-regen
+# job).
 python3 layout/opamp_core/generate.py --drc-negative-control
 ```
 
@@ -745,17 +749,34 @@ not an obstacle.
 ### What CI actually enforces, and what it does not
 
 **The paragraphs above are all verified, and since #201 the regeneration
-itself is machine-checked.** `.github/workflows/signoff.yml` runs two gates
-over the committed stream:
+itself is machine-checked.** `.github/workflows/signoff.yml` runs the
+following gates over the committed stream on **every push and PR** — the
+positive checks and, since #384, the negative controls that prove each of
+them can still fail:
 
-- **Offline re-hash** (`signoff/check_signoff.py`, the `signoff` job):
+In the `signoff` job (its own klt pin, no PDK):
+
+- **Offline re-hash** (`signoff/check_signoff.py`):
   fails if a committed byte moves without the DRC report and the signoff
   pins moving with it — that closes "someone hand-edited the stream".
+- **LVS-reference freshness** (`lvs_reference.py --check`, plus its unit
+  tests): re-derives the committed reference netlist from the schematic
+  netlist and the layout device tables, and diffs against the committed
+  text.
+- **LVS compare negative control** (`lvs_reference.py --negative-control`,
+  added by #384): perturbs one net of a scratch copy of the committed
+  reference, re-runs `klt lvs` against the real layout, and asserts the
+  verdict flips to `mismatch` naming real unmatched devices — a compare
+  that cannot fail proves nothing.
+
+In the `layout-regen` job (the `klt-pin.txt` pin plus the pinned PDK,
+deliberately independent of the `signoff` job's pin):
+
 - **Regeneration gate** (`layout-regen` job, added by #201): provisions the
   pinned PDK (the same `sim/pdk.json` release the netlist-regen job fetches,
   via the shared `.github/actions/setup-sg13g2-pdk` composite action) and
-  runs `python3 layout/opamp_core/generate.py --check` on **every push and
-  PR**, installing exactly the revisions this table records — `klt` at
+  runs `python3 layout/opamp_core/generate.py --check`, installing exactly
+  the revisions this table records — `klt` at
   [`klt-pin.txt`](klt-pin.txt)'s tag commit in its own venv, and
   `klayout==0.30.10` in the job interpreter builder.py runs under, the same
   two-environment split the committed bytes were produced with (the job
@@ -763,6 +784,39 @@ over the committed stream:
   provisioning failure, a missing `klt`, a byte drift or a DRC-report drift
   all fail the job. It regenerates into a temp directory and never writes
   `layout/opamp_core/`.
+- **Per-device DRC** (`generate.py --devices`, added by #384): DRCs each of
+  the generated device streams individually, before assembly — a violation
+  one device triggers but the assembled block absorbs (invisible to the
+  block-level `--check` above) fails here, attributed to its stream.
+- **Connectivity negative control** (`generate.py --negative-control`,
+  added by #384): deletes one wire from a scratch copy of the block and
+  asserts the connectivity self-check reports the break and names the net
+  — while `klt drc` still reports `clean` on the broken stream, which is
+  exactly why the self-check exists.
+- **DRC-deck negative control** (`generate.py --drc-negative-control`,
+  added by #384): draws three deliberately illegal shapes and asserts the
+  curated deck flags exactly the expected rule counts
+  (`activ.width.1`, `metal1.space.1`, `metal1.width.1`) — proof the deck
+  can fail a bad stream and say which rule it failed on.
+
+None of these steps carries a `continue-on-error`, an `if:` guard or a
+path filter: an errored or skipped control fails its job, it is never
+allowed to look like a pass — a check that cannot run must not look like a
+check that passed.
+
+**These gates are per-PR, not scheduled — by measurement, not assumption**
+(decided by #384, 2026-11-15). On the Actions runners the `--check` step
+itself costs ~2 s and the whole `layout-regen` job 54–61 s (≈31 s PDK fetch
++ ≈17 s toolchain install + the check), while the `signoff` job — the
+workflow's actual long pole, running in parallel — takes 396–475 s. The
+control steps add single-digit seconds each (measured locally on a
+comparable klt: ≈1.9 s for `--drc-negative-control`, ≈0.7 s for
+`lvs_reference.py --negative-control`; `--devices` and
+`generate.py --negative-control` repeat the ~2 s `--check` shape: one
+`build()` plus small-stream DRC runs), so the workflow's per-PR wall-clock
+does not move. A nightly schedule would add a trigger and a
+failure-reporting path this repo does not have, and a red daily run nobody
+reads is worse than none.
 
 The regeneration gate is the coordinate-perturbation-negative-control kind of
 check: with one floorplan coordinate moved (`miller_cap` x 46.0 → 46.2 µm in
