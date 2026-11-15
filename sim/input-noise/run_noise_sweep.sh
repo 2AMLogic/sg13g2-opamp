@@ -179,30 +179,25 @@ for corner in "${CORNERS[@]}"; do
 
       # --- Per-point sanity check. Two parts, both documented in
       # README.md "Per-point sanity checks":
-      #   (a) the same DC-operating-point rule sim/open-loop-ac/ applies
-      #       (output near mid-rail, no internal node railed), so a
-      #       non-regulating point cannot read as a plausible noise figure;
+      #   (a) the shared sg13g2_op_sanity rule (sim/preflight.sh), the
+      #       same DC-operating-point gate every evidence-producing bench
+      #       applies (output near mid-rail, no internal node railed), so
+      #       a non-regulating point cannot read as a plausible noise
+      #       figure;
       #   (b) a noise-gain guard specific to this bench -- the closed-loop
       #       gain must still be ~1 at BOTH band edges, otherwise the
       #       input-referral at the band top is dividing by a collapsed
       #       gain and the reported density is inflated rather than
-      #       measured.
-      op_pass="$(python3 -c "
-vdd=${vdd}; vcm=${vcm}
-vout=${vout}; vd1=${vd1}; vd2=${vd2}; vtail=${vtail}
+      #       measured. Deliberately composed at this call site, not
+      #       folded into the shared gate: no other bench applies it
+      #       (same pattern as sg13g2_sim_broken's --extra hook).
+      op_pass="$(sg13g2_op_sanity "${vdd}" "${vcm}" "${vout}" "${vd1}" "${vd2}" "${vtail}")"
+      if [[ "${op_pass}" == "1" ]]; then
+        op_pass="$(python3 -c "
 glo=${clgain_lo}; ghi=${clgain_hi}
-tol=0.15*vdd
-rail_lo=0.02*vdd
-rail_hi=vdd-0.02*vdd
-ok = (abs(vout-vcm) <= tol)
-for node in (vd1, vd2, vtail, vout):
-    if not (rail_lo <= node <= rail_hi):
-        ok = False
-for g in (glo, ghi):
-    if not (0.9 <= g <= 1.1):
-        ok = False
-print('1' if ok else '0')
+print('1' if all(0.9 <= g <= 1.1 for g in (glo, ghi)) else '0')
 ")"
+      fi
 
       # --- Noise post-processing: spot densities at the five stated
       # frequencies (each re-derived from the CSV and asserted, never
