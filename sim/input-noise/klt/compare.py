@@ -154,15 +154,7 @@ def compare(tool: Dict[Key, Dict[str, object]], harness: Dict[Key, Dict[str, obj
             pairs[m] = (t[m], float(h[col]))
         metrics = {}
         for m, (tv, hv) in pairs.items():
-            tol = _tol(m, hv)
-            delta = tv - hv
-            entry = {"harness": hv, "tool": tv, "delta": delta,
-                     "rel_delta": delta / hv if hv else None, "tolerance": tol,
-                     "unit": TOLERANCES[m]["unit"], "within": abs(delta) <= tol}
-            if not entry["within"]:
-                out_of_tol.append(f"{key_str(k)} {m}: tool {tv:.9g} vs harness {hv:.9g} "
-                                  f"(delta {delta:.3g} {TOLERANCES[m]['unit']}, tolerance {tol:.3g})")
-            metrics[m] = entry
+            metrics[m] = E.metric_entry(TOLERANCES, m, tv, hv, out_of_tol, key_str(k))
 
         # Ratified row: the tool's own verdict on the integrated figure vs the
         # bound applied to the harness value. A bound miss stays a miss.
@@ -186,11 +178,7 @@ def compare(tool: Dict[Key, Dict[str, object]], harness: Dict[Key, Dict[str, obj
                "harness_worst": {"point": key_str(hw[1]), "value": hw[0],
                                  "verdict": "pass" if hw[0] <= NOISE_BOUND_VRMS else "fail"}}
     if env is not None:
-        summary["tool"] = {}
-        for m in env.get("measurements") or []:
-            if m.get("name") == INTEGRATED:
-                summary["tool"][m["name"]] = {"status": m.get("status"), "limits": m.get("limits"),
-                                              "worst_case": m.get("worst_case")}
+        summary["tool"] = E.tool_summary(env, (INTEGRATED,))
     return {
         "schema": "sg13g2-opamp/input-noise/klt-compare/1",
         "points_compared": len(points),
@@ -212,9 +200,7 @@ def _text_summary(rep: dict) -> str:
     hw = r["harness_worst"]
     lines = [f"compare: {rep['points_compared']} points, status {rep['status']}",
              f"  input_referred_noise bound {r['bound']}: harness worst {hw['point']} = {hw['value']:.6g} ({hw['verdict']})"]
-    for n, e in (r.get("tool") or {}).items():
-        wc = e.get("worst_case") or {}
-        lines.append(f"    tool {n}: {e.get('status')} (worst {wc.get('corner_id')} = {wc.get('value')}, margin {wc.get('margin')})")
+    lines.extend(E.tool_summary_lines(rep))
     return "\n".join(E.summary_tail(lines, rep))
 
 

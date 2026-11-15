@@ -236,20 +236,13 @@ def compare(tool: Dict[Key, Dict[str, object]], harness: Dict[Key, Dict[str, obj
         metrics = {}
         for m, tv in tv_all.items():
             hv = float(h[m])
-            tol = _tol(m, hv)
-            delta = tv - hv
-            entry = {"harness": hv, "tool": tv, "delta": delta,
-                     "rel_delta": delta / hv if hv else None, "tolerance": tol,
-                     "unit": TOLERANCES[m]["unit"], "within": abs(delta) <= tol}
+            entry = E.metric_entry(TOLERANCES, m, tv, hv, out_of_tol, key_str(k))
             if methods is not None and m in methods[k]:
                 mc = methods[k][m]
                 entry["method_check"] = {"meas_style_on_harness_waveform": mc,
                                          "rel_delta_vs_csv": (mc - hv) / hv if hv else None}
                 if not (abs(mc - hv) <= METHOD_CHECK_REL * abs(hv)):
                     method_failures.append(f"{key_str(k)} {m}: .meas-style {mc:.9g} vs CSV {hv:.9g}")
-            if not entry["within"]:
-                out_of_tol.append(f"{key_str(k)} {m}: tool {tv:.9g} vs harness {hv:.9g} "
-                                  f"(delta {delta:.3g} {TOLERANCES[m]['unit']}, tolerance {tol:.3g})")
             metrics[m] = entry
 
         flags = {
@@ -286,11 +279,7 @@ def compare(tool: Dict[Key, Dict[str, object]], harness: Dict[Key, Dict[str, obj
                "harness_worst": {"point": key_str(hw[1]), "value": hw[0],
                                  "verdict": "pass" if hw[0] >= SLEW_BOUND_V_PER_US else "fail"}}
     if env is not None:
-        summary["tool"] = {}
-        for m in env.get("measurements") or []:
-            if m.get("name") in EDGE_MEASUREMENTS:
-                summary["tool"][m["name"]] = {"status": m.get("status"), "limits": m.get("limits"),
-                                              "worst_case": m.get("worst_case")}
+        summary["tool"] = E.tool_summary(env, EDGE_MEASUREMENTS)
     return {
         "schema": "sg13g2-opamp/slew-rate/klt-compare/1",
         "points_compared": len(points),
@@ -311,9 +300,7 @@ def _text_summary(rep: dict) -> str:
     hw = r["harness_worst"]
     lines = [f"compare: {rep['points_compared']} points, status {rep['status']}",
              f"  slew_rate bound {r['bound']}: harness worst {hw['point']} = {hw['value']:.6g} ({hw['verdict']})"]
-    for n, e in (r.get("tool") or {}).items():
-        wc = e.get("worst_case") or {}
-        lines.append(f"    tool {n}: {e.get('status')} (worst {wc.get('corner_id')} = {wc.get('value')}, margin {wc.get('margin')})")
+    lines.extend(E.tool_summary_lines(rep))
     for line in rep["method_check_failures"]:
         lines.append(f"  METHOD CHECK FAILS: {line}")
     return "\n".join(E.summary_tail(lines, rep))

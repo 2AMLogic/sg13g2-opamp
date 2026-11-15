@@ -18,7 +18,12 @@ What lives here (issue #142; previously copy-pasted into each compare.py):
 * the CLI scaffold above them (issue #146): tol / load_envelope / summary_tail /
   run_cli -- the validate subcommand, --json-out, --provenance KEY=VALUE, the
   InputError -> stderr -> exit 2 path, the inputs sha256 stanza and the
-  exit-0-iff-agree rule.
+  exit-0-iff-agree rule;
+* the compare-report builders (issue #385): metric_entry / tool_summary /
+  tool_summary_lines -- the per-metric comparison entry with its
+  out-of-tolerance message, the row.tool stanza and the text-summary tool
+  lines, previously copy-pasted across the benches (open-loop-ac's
+  bias-corrected entry variant stays per bench).
 
 The output-swing bench (issue #176) needs a selectable point set, a `vcm`
 supply key and extra envelope- and measurement-level rules; those are the
@@ -303,6 +308,58 @@ def summary_tail(lines: List[str], rep: dict) -> List[str]:
         lines.append(f"  OUT OF TOLERANCE: {line}")
     for d in rep["bound_verdict_disagreements"]:
         lines.append(f"  VERDICT DISAGREES: {d}")
+    return lines
+
+
+# --------------------------------------------------------- compare reports
+# The compare-report builders (issue #385; previously copy-pasted across the
+# benches): one metrics[m] entry with its out-of-tolerance message, the
+# row.tool stanza and the text-summary tool lines. As with everything else in
+# this module the strings and dict key orders are byte-neutral: the
+# *-compare/1 report schemas are evidence and the benches' tests pin them.
+# open-loop-ac keeps its own entry variant (a method-bias-corrected `ref`
+# stands in for the harness value).
+def metric_entry(tolerances: Dict[str, Dict[str, float]], metric: str,
+                 tool_v: float, harness_v: float,
+                 out_of_tol: List[str], point: str) -> dict:
+    """One metrics[m] entry of a compare report: the harness/tool values, their
+    delta, the tolerance (tol()) and the within flag -- plus the
+    `<point> <metric>: tool ... vs harness ...` line appended to `out_of_tol`
+    when the comparison misses (the `.9g`/`.3g` message format is pinned by
+    the benches' tests)."""
+    t = tol(tolerances, metric, harness_v)
+    delta = tool_v - harness_v
+    entry = {"harness": harness_v, "tool": tool_v, "delta": delta,
+             "rel_delta": delta / harness_v if harness_v else None, "tolerance": t,
+             "unit": tolerances[metric]["unit"], "within": abs(delta) <= t}
+    if not entry["within"]:
+        out_of_tol.append(f"{point} {metric}: tool {tool_v:.9g} vs harness {harness_v:.9g} "
+                          f"(delta {delta:.3g} {tolerances[metric]['unit']}, tolerance {t:.3g})")
+    return entry
+
+
+def tool_summary(env: dict, names: Iterable[str]) -> Dict[str, dict]:
+    """The row.tool stanza of a compare report: status / limits / worst_case
+    for every envelope measurement named in `names`, in the envelope's own
+    order. The caller keeps the `if env is not None` guard, so a compare run
+    without an envelope still carries no tool stanza at all."""
+    names = tuple(names)
+    out: Dict[str, dict] = {}
+    for m in env.get("measurements") or []:
+        if m.get("name") in names:
+            out[m["name"]] = {"status": m.get("status"), "limits": m.get("limits"),
+                              "worst_case": m.get("worst_case")}
+    return out
+
+
+def tool_summary_lines(rep: dict) -> List[str]:
+    """The `    tool <name>: ...` lines a bench's _text_summary appends from its
+    row.tool stanza, in stanza order (none when the stanza is empty or
+    absent)."""
+    lines: List[str] = []
+    for n, e in (rep["row"].get("tool") or {}).items():
+        wc = e.get("worst_case") or {}
+        lines.append(f"    tool {n}: {e.get('status')} (worst {wc.get('corner_id')} = {wc.get('value')}, margin {wc.get('margin')})")
     return lines
 
 

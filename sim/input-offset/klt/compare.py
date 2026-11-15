@@ -178,16 +178,7 @@ def compare(tool: Dict[Key, Dict[str, object]], harness: Dict[Key, Dict[str, obj
         }
         metrics = {}
         for m, tv in tv_all.items():
-            hv = float(h[JOIN[m]])
-            tol = _tol(m, hv)
-            delta = tv - hv
-            entry = {"harness": hv, "tool": tv, "delta": delta,
-                     "rel_delta": delta / hv if hv else None, "tolerance": tol,
-                     "unit": TOLERANCES[m]["unit"], "within": abs(delta) <= tol}
-            if not entry["within"]:
-                out_of_tol.append(f"{key_str(k)} {m}: tool {tv:.9g} vs harness {hv:.9g} "
-                                  f"(delta {delta:.3g} {TOLERANCES[m]['unit']}, tolerance {tol:.3g})")
-            metrics[m] = entry
+            metrics[m] = E.metric_entry(TOLERANCES, m, tv, float(h[JOIN[m]]), out_of_tol, key_str(k))
 
         tool_op = all(t.get(n + "__status") == "pass" for n in OP_SANITY)
         flag = {"harness_pass": h["op_pass"], "tool_pass": tool_op, "agree": h["op_pass"] == tool_op}
@@ -219,11 +210,7 @@ def compare(tool: Dict[Key, Dict[str, object]], harness: Dict[Key, Dict[str, obj
                "harness_points_over_bound": [key_str(k) for k in expected_keys()
                                              if abs(float(harness[k]["vos_null_v"])) > OFFSET_BOUND_V]}
     if env is not None:
-        summary["tool"] = {}
-        for m in env.get("measurements") or []:
-            if m.get("name") == "vos_null_v":
-                summary["tool"][m["name"]] = {"status": m.get("status"), "limits": m.get("limits"),
-                                              "worst_case": m.get("worst_case")}
+        summary["tool"] = E.tool_summary(env, ("vos_null_v",))
     return {
         "schema": "sg13g2-opamp/input-offset/klt-compare/1",
         "points_compared": len(points),
@@ -242,9 +229,7 @@ def _text_summary(rep: dict) -> str:
     hw = r["harness_worst"]
     lines = [f"compare: {rep['points_compared']} points, status {rep['status']}",
              f"  offset bound |Vos| <= {r['bound']['max_abs_v']}: harness worst {hw['point']} = {hw['value']:.6g} ({hw['verdict']})"]
-    for n, e in (r.get("tool") or {}).items():
-        wc = e.get("worst_case") or {}
-        lines.append(f"    tool {n}: {e.get('status')} (worst {wc.get('corner_id')} = {wc.get('value')}, margin {wc.get('margin')})")
+    lines.extend(E.tool_summary_lines(rep))
     return "\n".join(E.summary_tail(lines, rep))
 
 

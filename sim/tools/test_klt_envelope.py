@@ -459,5 +459,56 @@ class TestCliScaffold(unittest.TestCase):
             self.assertIn("validate [-h] spec_envelope", err_text[-1])
 
 
+class TestCompareReports(unittest.TestCase):
+    """The compare-report builders (issue #385): entry dict key order, the
+    `{tv:.9g}` out-of-tolerance message and the tool-summary line format are
+    pinned -- the benches' `*-compare/1` report schemas are evidence."""
+
+    TOLS = {"m": {"abs": 0.5, "rel": 0.1, "unit": "V"}}
+
+    def test_metric_entry(self):
+        out = []
+        e = E.metric_entry(self.TOLS, "m", 1.0, 1.0, out, "p1")
+        self.assertEqual(list(e), ["harness", "tool", "delta", "rel_delta", "tolerance", "unit", "within"])
+        self.assertEqual(e, {"harness": 1.0, "tool": 1.0, "delta": 0.0, "rel_delta": 0.0,
+                             "tolerance": 0.6, "unit": "V", "within": True})
+        self.assertEqual(out, [])
+        e = E.metric_entry(self.TOLS, "m", 2.0, 1.0, out, "p1")
+        self.assertFalse(e["within"])
+        self.assertEqual(out, ["p1 m: tool 2 vs harness 1 (delta 1 V, tolerance 0.6)"])
+        # a zero harness value: rel_delta is None, as the per-bench copies did
+        e = E.metric_entry(self.TOLS, "m", 1.0, 0.0, out, "p1")
+        self.assertIsNone(e["rel_delta"])
+        self.assertEqual(out, ["p1 m: tool 2 vs harness 1 (delta 1 V, tolerance 0.6)",
+                               "p1 m: tool 1 vs harness 0 (delta 1 V, tolerance 0.5)"])
+
+    def test_tool_summary(self):
+        env = {"measurements": [
+            {"name": "a", "status": "pass", "limits": {"max": 2.0}, "worst_case": {"corner_id": "c"}},
+            {"name": "other", "status": "pass", "limits": None, "worst_case": None},
+            {"name": "b", "status": "fail", "limits": None, "worst_case": None},
+        ]}
+        self.assertEqual(E.tool_summary(env, ("a",)),
+                         {"a": {"status": "pass", "limits": {"max": 2.0}, "worst_case": {"corner_id": "c"}}})
+        self.assertEqual(E.tool_summary(env, ("b", "a")), {
+            "a": {"status": "pass", "limits": {"max": 2.0}, "worst_case": {"corner_id": "c"}},
+            "b": {"status": "fail", "limits": None, "worst_case": None}})
+        self.assertEqual(E.tool_summary(env, ()), {})
+        self.assertEqual(E.tool_summary({}, ("a",)), {})
+        self.assertEqual(E.tool_summary({"measurements": None}, ("a",)), {})
+
+    def test_tool_summary_lines(self):
+        rep = {"row": {"tool": {
+            "a": {"status": "pass", "worst_case": {"corner_id": "c1", "value": 1.5, "margin": 0.5}},
+            "b": {"status": "fail", "worst_case": None},
+        }}}
+        self.assertEqual(E.tool_summary_lines(rep), [
+            "    tool a: pass (worst c1 = 1.5, margin 0.5)",
+            "    tool b: fail (worst None = None, margin None)",
+        ])
+        self.assertEqual(E.tool_summary_lines({"row": {}}), [])
+        self.assertEqual(E.tool_summary_lines({"row": {"tool": {}}}), [])
+
+
 if __name__ == "__main__":
     unittest.main()
