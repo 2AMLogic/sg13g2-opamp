@@ -366,9 +366,9 @@ def main(argv: Optional[List[str]] = None) -> int:
                        "the harness record's corners/<id>/ directory (raw *_ac.csv sweeps); "
                        "omit when the baseline is itself a klt-measured record (same .meas "
                        "interpolation, so no GBW method bias to correct)"})),
-        common_args=(("--kind", {"choices": ("ac", "op"), "default": "ac", "help":
-                      "which measurement set `validate` gates (default: ac). `compare` "
-                      "always gates --ac as the AC envelope and --op as the OP one."}),),
+        validate_args=(("--kind", {"choices": ("ac", "op"), "required": True, "help":
+                      "which measurement set `validate` gates"}),),
+        compare_index_kw={"kind": "ac"},
         index_fn=index_envelope,
         run=_run,
         inputs=(("op_envelope", "op", True), ("harness_csv", "harness_csv", True),
