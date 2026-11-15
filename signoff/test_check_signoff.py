@@ -123,7 +123,8 @@ class FixtureCase(unittest.TestCase):
             mock.patch.object(ck, "LVS_REQUEST", self.root / "lay" / "lvs_request.json"),
             mock.patch.object(si, "REPO_ROOT", self.root),
             mock.patch.object(si, "INTEGRATOR", self.root / "spec" / "integrator.json"),
-            mock.patch.object(si, "REPORTS_DIR", self.reports_dir),
+            # si reads the reports dir through check_signoff.REPORTS_DIR (the
+            # shared selector), so the ck patch above covers both modules.
             # Guard: no test may spawn generate.py or klt.
             mock.patch.object(ck.subprocess, "run", side_effect=AssertionError("subprocess")),
         ]
@@ -428,6 +429,19 @@ class LatestReportTest(FixtureCase):
         self.assertTrue(
             any("notarecord.signoff.json does not use the" in m for m in self.latest())
         )
+
+    def test_stray_record_refused_by_both_entry_points(self):
+        # A non-conforming name that sorts after the real record id is exactly
+        # the stray a selector without the record-id screen would publish as
+        # the verdict of record. Both entry points must refuse it.
+        self.write()
+        (self.reports_dir / "zz-draft.signoff.json").write_text("{}")
+        self.assertTrue(
+            any("zz-draft.signoff.json does not use the" in m for m in self.latest())
+        )
+        with self.assertRaises(SystemExit) as cm:
+            si.derive()
+        self.assertIn("zz-draft.signoff.json", str(cm.exception))
 
 
 class CharacterizationTest(FixtureCase):
