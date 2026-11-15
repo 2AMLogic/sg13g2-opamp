@@ -4,6 +4,22 @@
 
 ### 2026-11-15
 
+- **PR #393**: chore: drop seven stdlib imports left unused in generate.py by the module split
+- **PR #392**: test: dedupe the six benches' generic klt envelope refusals into one mixin
+- **PR #391**: ci: run layout negative controls and per-device DRC on every push/PR
+- **PR #388**: refactor: hoist the compare-report builders into the shared klt_envelope kit
+- **PR #386**: docs: retire the completed output-swing Now item and refresh the roadmap stamp
+- **PR #383**: fix: restore the validate --kind contract with a validate-only run_cli arg hook
+- **PR #381**: refactor: extract klt_drc_json helper, dedupe three inline klt drc spawn+parse copies
+- **PR #377**: refactor: fold the eight copied worst-corner CSV-column readers into sim/tools/csv_summary.py
+- **Issue #385** (closed): Dedup the per-metric comparison entry, tool-summary block and tool text lines still copied across sim/*/klt/compare.py
+- **Issue #384** (closed): CI never runs layout/opamp_core/generate.py's negative controls or per-device DRC
+- **Issue #378** (closed): Dedupe the three inline klt drc subprocess+JSON copies in layout/opamp_core/generate.py
+- **Issue #373** (closed): Dedup the numeric-CSV-column reader copied eight ways into the sim/*/run_*.sh worst-corner summaries
+- **Issue #371** (closed): Drop seven unused stdlib imports left in signoff/characterization/generate.py by the module split
+- **Issue #370** (closed): Deduplicate the generic klt envelope negative controls restated in all six sim/*/klt/test_compare.py
+- **Issue #367** (closed): Follow-on: restore the validate --kind requirement loosened by PR #360's common_args routing
+- **Issue #361** (closed): ROADMAP.md: retire the completed "Now" item 3 (cite the output-swing envelope) and refresh the snapshot line
 - **PR #382**: test: pin run_cli envelope_flag/envelope_key in the shared CLI scaffold suite
 - **PR #379**: test: fold open-loop-ac envelope fixtures into sim/tools kit
 - **PR #376**: refactor: share the newest-signoff-record selector between check_signoff and sync_integrator
