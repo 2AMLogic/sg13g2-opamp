@@ -6,6 +6,10 @@
 
 - [2026-09](work_log/WORK_LOG_2026-09.md)
 
+### 2026-11-16
+
+- **PR #405**: chore(loom): resync installed Loom to v0.19.1302
+
 ### 2026-11-15
 
 - **PR #402**: test: collect race diagnostics before freeing hold, enrich BEGUN line
