@@ -112,8 +112,9 @@ python3 -m unittest discover -s design -p 'test_check_netlist_regen.py'   # offl
 xschem exiting non-zero, reporting errors/missing symbols on stderr, an
 unresolvable PDK, or producing no output all fail explicitly (exit 2). The
 tool prints the xschem version and PDK version it used; CI (`netlist-regen`
-job in `.github/workflows/signoff.yml`) installs xschem via apt and fetches
-the `release_tag` from `sim/pdk.json`. Last verified locally with
+job in `.github/workflows/signoff.yml`) builds xschem from the fleet-pinned
+source tag via `.github/scripts/install-xschem` and fetches the
+`release_tag` from `sim/pdk.json`. Last verified locally with
 `XSCHEM V3.4.4` and ihp-sg13g2 `0.3.0`.
 
 **Intentional refresh** after a deliberate schematic change: run

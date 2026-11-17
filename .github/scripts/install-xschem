@@ -1,0 +1,114 @@
+#!/usr/bin/env bash
+# install-xschem -- credential-free install of the fleet-pinned xschem for CI
+# (mirrored from 2AMLogic/sg13g2-lna .github/scripts/install-xschem,
+# its issue #259; fleet-wide ask is 2AMLogic/2am#7275).
+#
+#   .github/scripts/install-xschem           # build + install + verify
+#   .github/scripts/install-xschem --check   # verify an existing install only
+#
+# WHY NOT APT. Ubuntu noble's archive ships xschem 3.4.4, and the repo's
+# netlist pin is the fleet's 3.4.7 (2am#6535; check-netlist-regen's
+# XSCHEM_VERSION). CI holds no infra credentials (operator position
+# 2026-10-05), so the S3 build artifact the batch image bakes is out; a
+# source build of the pinned tag from the upstream public repo is the
+# remaining route. This script mirrors the fleet's build recipe
+# (2AMLogic/2am infra/aws/build-xschem-artifact.py, whose master pin is
+# 2AMLogic/klayout-tools docker/eda-sim/pdk-versions.json tools.xschem and
+# whose 2am-side mirror is infra/aws/batch-image-pins.env PIN_XSCHEM_*):
+# same repo, same tag-to-commit assertion, same build deps and configure
+# line. A pin bump lands in klayout-tools first, then the fleet mirrors,
+# then here -- grep XSCHEM_COMMIT when bumping.
+#
+# The build lands under "$RUNNER_TEMP/xschem" (a plain local prefix, no
+# root needed) and the bin dir is exported to GITHUB_PATH so later steps
+# resolve `xschem` to it. Runtime libraries are apt's tcl/tk/X11 stack,
+# which ubuntu-latest images carry; the -dev packages below are build-time
+# only.
+#
+# A headless netlist smoke follows the build, because xschem's CLI exits
+# non-zero on a successful -x run -- the verdict is the output file, and
+# proving that once per runner beats debugging it inside
+# check-netlist-regen. Bounded by `timeout` either way.
+#
+# The smoke passes an explicit --rcfile: xschem resolves the stock
+# `devices/*.sym` symbols through XSCHEM_LIBRARY_PATH, whose default is
+# baked in at configure time (the fleet artifact carries /opt/eda/xschem;
+# the env var of the same name is not consulted by the headless run), so a
+# relocated build finds no symbols without one. This is the same route the
+# repo's own netlisting takes (design/xschemrc, passed by
+# check-netlist-regen as --rcfile). The rc lists both resolution forms:
+# the library root for `devices/res.sym`-style stock references, and the
+# devices dir for plain `res.sym`-style references (design/xschemrc's
+# baseline).
+set -euo pipefail
+
+XSCHEM_REPO="https://github.com/StefanSchippers/xschem"
+XSCHEM_TAG="3.4.7"
+XSCHEM_COMMIT="92dd8fe5f4d5c1057489710d8a22f18fdc9d7ed0"
+PREFIX="${RUNNER_TEMP:-${TMPDIR:-/tmp}}/xschem"
+
+die() { echo "install-xschem: $1" >&2; exit 1; }
+
+version_of() { "$1" --version 2>&1 | grep -oE 'XSCHEM V[0-9]+\.[0-9]+\.[0-9]+' | head -n 1; }
+
+if [ "${1:-}" = "--check" ]; then
+  command -v xschem >/dev/null 2>&1 || die "no xschem on PATH"
+  got="$(version_of xschem)" || die "cannot read xschem --version"
+  [ "$got" = "XSCHEM V${XSCHEM_TAG}" ] \
+    || die "xschem is ${got:-unknown}, want XSCHEM V${XSCHEM_TAG}"
+  echo "install-xschem: ok ($got)"
+  exit 0
+fi
+
+[ "$(version_of "${PREFIX}/bin/xschem" 2>/dev/null || true)" = "XSCHEM V${XSCHEM_TAG}" ] && {
+  echo "install-xschem: ${PREFIX} already has xschem ${XSCHEM_TAG}; skipping the build"
+  exit 0
+}
+
+export DEBIAN_FRONTEND=noninteractive
+sudo apt-get update -qq
+sudo apt-get install -y --no-install-recommends \
+  ca-certificates git build-essential bison flex gawk \
+  libcairo2-dev libx11-dev libxcb1-dev libxpm-dev libxrender-dev \
+  tcl-dev tk-dev >/dev/null
+
+work="$(mktemp -d)"
+trap 'rm -rf "$work"' EXIT
+git clone -q --depth 1 --branch "$XSCHEM_TAG" "$XSCHEM_REPO" "$work/xschem"
+got="$(git -C "$work/xschem" rev-parse HEAD)"
+[ "$got" = "$XSCHEM_COMMIT" ] \
+  || die "tag ${XSCHEM_TAG} resolved to ${got}, pinned to ${XSCHEM_COMMIT}"
+
+(cd "$work/xschem" && ./configure --prefix="$PREFIX" >/dev/null)
+make -C "$work/xschem" -s -j"$(nproc)" >/dev/null
+make -C "$work/xschem" -s install >/dev/null
+
+got="$(version_of "${PREFIX}/bin/xschem")" || die "built xschem reports no version"
+[ "$got" = "XSCHEM V${XSCHEM_TAG}" ] || die "built xschem is ${got}, want XSCHEM V${XSCHEM_TAG}"
+
+# Headless netlist smoke: -x keeps xschem from starting Tk; the exit status
+# is non-zero on success, so the verdict is the output file (the same probe
+# the fleet's build-xschem-artifact.py runs).
+smoke="$work/smoke"
+mkdir -p "$smoke/netlist"
+printf '%s\n' \
+  'set XSCHEM_LIBRARY_PATH {}' \
+  'append XSCHEM_LIBRARY_PATH :${XSCHEM_SHAREDIR}/xschem_library' \
+  'append XSCHEM_LIBRARY_PATH :${XSCHEM_SHAREDIR}/xschem_library/devices' \
+  > "$smoke/rc"
+printf '%s\n' \
+  'v {xschem version=3.4.7 file_version=1.2}' \
+  'C {devices/res.sym} 0 0 0 0 {name=R1 value=1k}' \
+  'C {devices/lab_pin.sym} 0 -30 0 0 {name=p1 lab=a}' \
+  'C {devices/lab_pin.sym} 0 30 0 0 {name=p2 lab=0}' > "$smoke/t.sch"
+HOME="$smoke" timeout -k 5 60 "${PREFIX}/bin/xschem" -n -s -q -x -r \
+  --rcfile "$smoke/rc" -o "$smoke/netlist" "$smoke/t.sch" >"$smoke/log" 2>&1 || true
+grep -qE '^R1 ' "$smoke/netlist/t.spice" \
+  || die "headless netlist smoke failed ($(tail -n 5 "$smoke/log" "$smoke/netlist/t.spice" 2>/dev/null | tr '\n' ' '))"
+
+if [ -n "${GITHUB_PATH:-}" ] && [ -n "${CI:-}" ]; then
+  echo "${PREFIX}/bin" >> "$GITHUB_PATH"
+else
+  echo "install-xschem: add ${PREFIX}/bin to PATH to use it" >&2
+fi
+echo "install-xschem: built ${got} at ${PREFIX} (commit ${XSCHEM_COMMIT})"
