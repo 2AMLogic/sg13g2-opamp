@@ -242,11 +242,14 @@ jobs:
         run: python3 -m unittest discover -s design -p 'test_check_netlist_regen.py' -v
 
       - name: Install xschem
+        # Fleet-pinned source build (issue #412): the pinned tag is 3.4.7 and
+        # Ubuntu noble's apt only carries 3.4.4, so install via the vendored
+        # build script instead of apt. GITHUB_PATH takes effect on later
+        # steps; the version echo here uses the build prefix directly.
         run: |
           set -euo pipefail
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends xschem
-          xschem --version 2>&1 | head -1
+          .github/scripts/install-xschem
+          "${RUNNER_TEMP}/xschem/bin/xschem" --version 2>&1 | head -1
 
       - name: Fetch the SG13G2 release pinned by sim/pdk.json
         # Shared with the layout-regen job below (issue #201): same fetch,
