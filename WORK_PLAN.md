@@ -3,6 +3,7 @@
 This roadmap is generated from the repository's current GitHub label state.
 
 <!-- guide:plan-body:start -->
+_Generated: 2026-11-18T16:11:19Z (snapshot; compare against live labels)_
 ## Operator Attention: Merge-Risk-Hold Pileup
 
 Judge-approved PRs under a hold (`loom:blocked` or `loom:operator`) — only a human merge decision is missing.
@@ -38,7 +39,7 @@ Human-approved issues (`loom:issue`) ready for implementation — excluding held
 
 Issues currently being built (`loom:building`).
 
-- **#419**: Docs: four sites describe signoff.yml as running "on every push and PR" — merge_group runs now missing
+_None._
 
 ## PRs Awaiting Review
 
@@ -51,7 +52,6 @@ PRs waiting on Judge (`loom:review-requested`).
 PRs that passed review and are queued for Champion auto-merge (`loom:pr`).
 
 - **#303**: docs: submit DR-0011 for two-key ratification (status flip)
-- **#421**: docs: name merge-group runs in signoff.yml trigger prose; re-pin hygiene evidence — closes #419
 
 ## Proposed
 
@@ -65,7 +65,6 @@ Issues carrying `loom:curated`.
 - **#325**: sim: express the input-cmr (ICMR) bench as a klt sim request so the drawn-fingering re-run (#237) can run on the batch fleet *(curated)* *(held)*
 - **#332**: DR-0011: re-derive CMRR bound, re-check gain/swing vs market comps, restate swing headroom (PR #303 operator ruling) *(curated)*
 - **#342**: design: raise PSRR+ via bias/topology change, re-run 45 corners, carry bounds into spec (PR #303 operator ruling) *(curated)* *(held)*
-- **#419**: Docs: four sites describe signoff.yml as running "on every push and PR" — merge_group runs now missing *(curated)*
 
 ## Proposed (Architect / Hermit)
 
@@ -83,10 +82,10 @@ _None._
 | Very important | 1 |
 | Important | 7 |
 | Ready (`loom:issue`, net of holds/building/merge-pending) | 2 |
-| In Progress (`loom:building`) | 1 |
+| In Progress (`loom:building`) | 0 |
 | PRs awaiting review | 1 |
-| Approved PRs awaiting merge | 2 |
-| Curated | 9 |
+| Approved PRs awaiting merge | 1 |
+| Curated | 8 |
 | Architect / Hermit proposals | 1 |
 | Active epics | 0 |
 <!-- guide:plan-body:end -->

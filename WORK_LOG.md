@@ -8,6 +8,8 @@
 
 ### 2026-11-18
 
+- **PR #424**: docs: name merge-group runs in the three remaining push+PR-only CI trigger descriptions
+- **Issue #422** (closed): Docs: three more sites still describe signoff.yml / layout-regen as push+PR only (missed by #419's grep pattern)
 - **PR #421**: docs: name merge-group runs in signoff.yml trigger prose; re-pin hygiene evidence
 - **Issue #419** (closed): Docs: four sites describe signoff.yml as running "on every push and PR" — merge_group runs now missing
 - **PR #417**: ci: run the signoff gates on merge_group and select comparison commits in the checker
