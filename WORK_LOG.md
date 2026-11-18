@@ -6,6 +6,11 @@
 
 - [2026-09](work_log/WORK_LOG_2026-09.md)
 
+### 2026-11-18
+
+- **PR #417**: ci: run the signoff gates on merge_group and select comparison commits in the checker
+- **Issue #416** (closed): Merge queue: add the merge_group trigger and adapt the PR-metadata gates
+
 ### 2026-11-17
 
 - **PR #413**: ci: build xschem from the fleet-pinned 3.4.7 tag instead of apt
