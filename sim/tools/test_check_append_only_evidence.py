@@ -291,6 +291,131 @@ class GateTest(unittest.TestCase):
         self.assertEqual(p.returncode, 1)
         self.assertIn(REC, p.stderr)
 
+    # --- event selection: merge_group (merge queue), pull_request, push ----
+    def cli(self, repo, *a):
+        script = str(Path(__file__).with_name("check_append_only_evidence.py"))
+        return subprocess.run(["python3", script, "--repo", repo, *a],
+                              capture_output=True, text=True)
+
+    def test_cli_merge_group_compares_event_base_to_head(self):
+        root = str(self.r.root)
+        self.r.write("sim/open-loop-ac/records/mg-new.csv", "n\n")
+        head = self.r.commit()
+        p = self.cli(root, "--event", "merge_group",
+                     "--merge-group-base-sha", self.base,
+                     "--merge-group-head-sha", head)
+        self.assertEqual(p.returncode, 0, p.stderr)
+        self.assertIn("ok", p.stdout)
+        self.r.write(REC, "tampered in the queue\n")
+        head = self.r.commit()
+        p = self.cli(root, "--event", "merge_group",
+                     "--merge-group-base-sha", self.base,
+                     "--merge-group-head-sha", head)
+        self.assertEqual(p.returncode, 1, p.stderr)
+        self.assertIn(REC, p.stderr)
+
+    def test_cli_merge_group_without_base_fails_closed(self):
+        # Empty or all-zero merge-group base is broken event telemetry, not a
+        # first push: it fails, it never passes.
+        head = self.r.g("rev-parse", "HEAD")
+        for bad in ("", "0" * 40):
+            p = self.cli(str(self.r.root), "--event", "merge_group",
+                         "--merge-group-base-sha", bad,
+                         "--merge-group-head-sha", head)
+            self.assertEqual(p.returncode, 2, p.stderr)
+            self.assertIn("merge_group", p.stderr)
+
+    def test_cli_merge_group_without_head_fails_closed(self):
+        p = self.cli(str(self.r.root), "--event", "merge_group",
+                     "--merge-group-base-sha", self.base,
+                     "--merge-group-head-sha", "")
+        self.assertEqual(p.returncode, 2, p.stderr)
+        self.assertIn("merge_group", p.stderr)
+
+    def test_cli_pull_request_and_push_selection_unchanged(self):
+        root = str(self.r.root)
+        p = self.cli(root, "--event", "pull_request", "--pr-base-sha", self.base)
+        self.assertEqual(p.returncode, 0, p.stderr)
+        p = self.cli(root, "--event", "pull_request", "--pr-base-sha", "")
+        self.assertEqual(p.returncode, 2, p.stderr)
+        self.assertIn("no comparison base for event pull_request", p.stderr)
+        p = self.cli(root, "--event", "push", "--push-before-sha", self.base)
+        self.assertEqual(p.returncode, 0, p.stderr)
+        p = self.cli(root, "--event", "push", "--push-before-sha", "")
+        self.assertEqual(p.returncode, 2, p.stderr)
+        self.assertIn("no comparison base for event push", p.stderr)
+        # First push of a branch keeps its explicit all-zero pass.
+        p = self.cli(root, "--event", "push", "--push-before-sha", "0" * 40)
+        self.assertEqual(p.returncode, 0, p.stderr)
+        self.assertIn("first push", p.stdout)
+        # An event the workflow is not configured for still fails closed.
+        p = self.cli(root, "--event", "workflow_dispatch")
+        self.assertEqual(p.returncode, 2, p.stderr)
+
+    def test_merge_group_base_missing_from_shallow_clone_fails(self):
+        self.r.write("sim/open-loop-ac/records/mg-post.csv", "n\n")
+        self.r.commit("queue commit")
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
+            dst = os.path.join(td, "shallow")
+            subprocess.run(["git", "clone", "-q", "--depth", "1",
+                            "file://" + str(self.r.root), dst],
+                           check=True, capture_output=True)
+            head = subprocess.run(["git", "-C", dst, "rev-parse", "HEAD"],
+                                  capture_output=True, text=True,
+                                  check=True).stdout.strip()
+            b, h = gate.select_comparison("merge_group", mg_base=self.base,
+                                          mg_head=head)
+            out, err = io.StringIO(), io.StringIO()
+            rc = gate.run(dst, b, h, out, err)
+            self.assertEqual(rc, 2, err.getvalue())
+            self.assertIn("cannot obtain base commit", err.getvalue())
+
+
+class EventSelectionTest(unittest.TestCase):
+    """select_comparison is pure: no git, no repo, just event -> (base, head)."""
+
+    def test_pull_request_selects_pr_base(self):
+        self.assertEqual(gate.select_comparison(
+            "pull_request", pr_base="abc", push_before="def"), ("abc", "HEAD"))
+
+    def test_pull_request_without_base_is_an_error(self):
+        with self.assertRaises(gate.GateError) as cm:
+            gate.select_comparison("pull_request", pr_base="", push_before="def")
+        self.assertIn("no comparison base for event pull_request",
+                      str(cm.exception))
+
+    def test_push_selects_before(self):
+        self.assertEqual(gate.select_comparison(
+            "push", pr_base="abc", push_before="def"), ("def", "HEAD"))
+
+    def test_push_without_before_is_an_error(self):
+        with self.assertRaises(gate.GateError) as cm:
+            gate.select_comparison("push", pr_base="abc", push_before="")
+        self.assertIn("no comparison base for event push", str(cm.exception))
+
+    def test_unknown_event_is_an_error(self):
+        with self.assertRaises(gate.GateError):
+            gate.select_comparison("workflow_dispatch", pr_base="", push_before="")
+
+    def test_merge_group_selects_event_base_and_head(self):
+        self.assertEqual(gate.select_comparison(
+            "merge_group", mg_base="aaa", mg_head="bbb"), ("aaa", "bbb"))
+
+    def test_merge_group_without_base_is_an_error(self):
+        with self.assertRaises(gate.GateError) as cm:
+            gate.select_comparison("merge_group", mg_base="", mg_head="bbb")
+        self.assertIn("merge_group", str(cm.exception))
+
+    def test_merge_group_all_zero_base_is_an_error(self):
+        with self.assertRaises(gate.GateError) as cm:
+            gate.select_comparison("merge_group", mg_base="0" * 40, mg_head="bbb")
+        self.assertIn("merge_group", str(cm.exception))
+
+    def test_merge_group_without_head_is_an_error(self):
+        with self.assertRaises(gate.GateError) as cm:
+            gate.select_comparison("merge_group", mg_base="aaa", mg_head="")
+        self.assertIn("merge_group", str(cm.exception))
+
 
 class ScopeTest(unittest.TestCase):
     def test_protected_scope(self):
