@@ -38,13 +38,14 @@ Human-approved issues (`loom:issue`) ready for implementation — excluding held
 
 Issues currently being built (`loom:building`).
 
-_None._
+- **#416**: Merge queue: add the merge_group trigger and adapt the PR-metadata gates
 
 ## PRs Awaiting Review
 
 PRs waiting on Judge (`loom:review-requested`).
 
 - **#302**: docs: request EE and market key review of DR-0010
+- **#417**: ci: run the signoff gates on merge_group and select comparison commits in the checker
 
 ## Approved (Awaiting Merge)
 
@@ -64,6 +65,7 @@ Issues carrying `loom:curated`.
 - **#325**: sim: express the input-cmr (ICMR) bench as a klt sim request so the drawn-fingering re-run (#237) can run on the batch fleet *(curated)* *(held)*
 - **#332**: DR-0011: re-derive CMRR bound, re-check gain/swing vs market comps, restate swing headroom (PR #303 operator ruling) *(curated)*
 - **#342**: design: raise PSRR+ via bias/topology change, re-run 45 corners, carry bounds into spec (PR #303 operator ruling) *(curated)* *(held)*
+- **#416**: Merge queue: add the merge_group trigger and adapt the PR-metadata gates *(curated)*
 
 ## Proposed (Architect / Hermit)
 
@@ -81,10 +83,10 @@ _None._
 | Very important | 1 |
 | Important | 7 |
 | Ready (`loom:issue`, net of holds/building/merge-pending) | 2 |
-| In Progress (`loom:building`) | 0 |
-| PRs awaiting review | 1 |
+| In Progress (`loom:building`) | 1 |
+| PRs awaiting review | 2 |
 | Approved PRs awaiting merge | 1 |
-| Curated | 8 |
+| Curated | 9 |
 | Architect / Hermit proposals | 1 |
 | Active epics | 0 |
 <!-- guide:plan-body:end -->
