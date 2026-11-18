@@ -8,6 +8,8 @@
 
 ### 2026-11-18
 
+- **PR #421**: docs: name merge-group runs in signoff.yml trigger prose; re-pin hygiene evidence
+- **Issue #419** (closed): Docs: four sites describe signoff.yml as running "on every push and PR" — merge_group runs now missing
 - **PR #417**: ci: run the signoff gates on merge_group and select comparison commits in the checker
 - **Issue #416** (closed): Merge queue: add the merge_group trigger and adapt the PR-metadata gates
 
