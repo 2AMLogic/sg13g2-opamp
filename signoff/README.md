@@ -198,7 +198,7 @@ the offline half of the `signoff` job) reads the three inventories through a
 documented parseable subset of their existing format — `key: value` lines in
 `design-sources.txt` / `hygiene.txt`, `row | bench | command | record` lines
 in `testbenches.txt`; the grammar is in the script's docstring — and on every
-push and PR verifies:
+push, PR and merge-group (merge queue) run verifies:
 
 | Continuously checked (CI) | Inventory |
 |---|---|
@@ -573,7 +573,7 @@ offline build with a pointer to re-run `layout/opamp_core/run_erc.sh` and
 
 CI runs both halves
 ([`.github/workflows/signoff.yml`](../.github/workflows/signoff.yml)), on
-every push and every PR:
+every push, PR and merge-group (merge queue) run:
 
 | Check | Where | Needs |
 |---|---|---|

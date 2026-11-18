@@ -9,7 +9,8 @@ netlist's topology and wires them together.
 **What this is evidence for, and what it is not.** It is T1 item 2 (a
 committed GDS with documented provenance -- see "Determinism" in
 ``layout/README.md``: since #201 CI also runs this very ``--check``
-regeneration on every push and PR (the ``layout-regen`` job, at the
+regeneration on every push, PR and merge-group (merge queue) run (the
+``layout-regen`` job, at the
 ``layout/klt-pin.txt`` revision and the pinned PDK), so the documented
 provenance is additionally a continuously machine-checked
 "reproducibly generated" property; the earlier deferral is
