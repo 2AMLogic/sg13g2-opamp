@@ -14,8 +14,9 @@
 # immutable pin. CI installs exactly this revision into its own environment
 # (separate from the job interpreter, which carries the klayout release
 # builder.py was recorded against) and runs
-# `python3 layout/opamp_core/generate.py --check` with it on every push and
-# PR (.github/workflows/signoff.yml, layout-regen job).
+# `python3 layout/opamp_core/generate.py --check` with it on every push, PR
+# and merge-group (merge queue) run (.github/workflows/signoff.yml,
+# layout-regen job).
 #
 # Bumping this pin is a deliberate act: bump the rev, re-run --check
 # locally, and if the bytes move, refresh the committed GDS, DRC report,

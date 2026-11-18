@@ -750,7 +750,8 @@ not an obstacle.
 
 **The paragraphs above are all verified, and since #201 the regeneration
 itself is machine-checked.** `.github/workflows/signoff.yml` runs the
-following gates over the committed stream on **every push and PR** — the
+following gates over the committed stream on **every push, PR and
+merge-group (merge queue) run** — the
 positive checks and, since #384, the negative controls that prove each of
 them can still fail:
 
@@ -832,7 +833,8 @@ This repo's manifest cites `opamp_core/` for item 2. It rests on the
 `verify_deck_minima()` and `verify_against_netlist()` failing loudly on
 drift — and, since #201, the "reproducibly generated" half is *additionally*
 CI-enforced rather than only human-verified: the same pinned toolchain that
-produced the committed bytes re-derives them on every push.
+produced the committed bytes re-derives them on every push, PR and
+merge-group (merge queue) run.
 
 The `assert_common_centroid()` assumption — that `klt gen mos_array`'s unit
 ordering (`U2 U0 U1 U3`) is what makes the `B A A B` interdigitation
