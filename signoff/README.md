@@ -123,7 +123,8 @@ argument, here:
   `.github/workflows/signoff.yml`'s `layout-regen` job provisions the
   pinned PDK (shared `setup-sg13g2-pdk` composite action with the
   netlist-regen job) and runs `python3 layout/opamp_core/generate.py
-  --check` on every push and PR, installing `klt` at
+  --check` on every push, PR and merge-group (merge queue) run, installing
+  `klt` at
   `layout/klt-pin.txt`'s tag commit in its own environment — deliberately
   not this register's grading pin, `signoff/klt-pin.txt`, which governs how
   the checklist is parsed, not how the evidence is produced — plus
