@@ -8,6 +8,8 @@
 
 ### 2026-11-17
 
+- **PR #413**: ci: build xschem from the fleet-pinned 3.4.7 tag instead of apt
+- **Issue #412** (closed): xschem pin migration: migrate sg13g2-opamp to the fleet 3.4.7
 - **PR #410**: chore(loom): resync installed Loom to v0.19.1306
 
 ### 2026-11-16
