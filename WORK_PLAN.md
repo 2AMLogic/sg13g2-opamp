@@ -3,7 +3,7 @@
 This roadmap is generated from the repository's current GitHub label state.
 
 <!-- guide:plan-body:start -->
-_Generated: 2026-11-18T16:11:19Z (snapshot; compare against live labels)_
+_Generated: 2026-11-20T09:07:10Z (snapshot; compare against live labels)_
 ## Operator Attention: Merge-Risk-Hold Pileup
 
 Judge-approved PRs under a hold (`loom:blocked` or `loom:operator`) — only a human merge decision is missing.
@@ -15,6 +15,7 @@ Judge-approved PRs under a hold (`loom:blocked` or `loom:operator`) — only a h
 `loom:very-important` (one counts per workspace); every stage takes these first.
 
 - **#300**: Open the ratification PRs for DR-0011 (#101) and then DR-0010 (#108), with both key reviews *(held)*
+- **#332**: DR-0011: re-derive CMRR bound, re-check gain/swing vs market comps, restate swing headroom (PR #303 operator ruling)
 
 ## Important
 
@@ -26,7 +27,6 @@ Judge-approved PRs under a hold (`loom:blocked` or `loom:operator`) — only a h
 - **#237**: design: reconcile schematic device representation with drawn fingering before citing post-layout (T1 item 7) *(held)*
 - **#325**: sim: express the input-cmr (ICMR) bench as a klt sim request so the drawn-fingering re-run (#237) can run on the batch fleet *(held)*
 - **#326**: decision: how do the offset-MC and CMRR-mismatch-MC rows follow the drawn-fingering netlist change (#237) *(held)*
-- **#332**: DR-0011: re-derive CMRR bound, re-check gain/swing vs market comps, restate swing headroom (PR #303 operator ruling)
 
 ## Ready
 
@@ -79,8 +79,8 @@ _None._
 | Bucket | Count |
 |------|-------|
 | Operator merge-risk holds | 1 |
-| Very important | 1 |
-| Important | 7 |
+| Very important | 2 |
+| Important | 6 |
 | Ready (`loom:issue`, net of holds/building/merge-pending) | 2 |
 | In Progress (`loom:building`) | 0 |
 | PRs awaiting review | 1 |
