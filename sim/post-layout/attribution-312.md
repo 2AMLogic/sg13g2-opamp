@@ -9,26 +9,13 @@ fail at `mos_ff / vdd=1.32 / vinp=0.66 / 125 C` on the klt 0.9.0 extraction
 
 **Verdict up front.**
 
-1. The phase-margin miss is a **design finding**, not an extractor defect: the
-   extracted parasitics are credible and their version-to-version change is
-   negligible. A resistance-only control (leg E below: drawn devices and all
-   capacitors kept, every star resistor collapsed) still misses 60 degrees at
-   FF (59.7844 deg), so the lumped-star resistance model cannot be what
-   causes the miss. Routed to **#430** (compensation-margin follow-up, states
-   its relation to #332/#342). #312 is parked `Blocked by: #430`.
-2. The TT corner's non-convergence is **a DC-homotopy (solver-path) failure
-   whose trigger is not yet isolated**: dynamic-gmin and true-gmin stepping
-   fail and source stepping recovers to a well-regulated operating point (a
-   local probe). The single DC path to `vsubs` is a 1e12 ohm tie, so a
-   weakly-tied node is **not ruled out**; the one-variable batch probe that
-   would separate the two explanations (substrate tie 1e6 / 1e9 ohm, only that
-   value changed) is submitted but had not run when this was written (see
-   Step 4). klt's
-   fail-on-recovered-diagnostic semantics (#2492 upstream) grade the corner
-   inconclusive exactly as the request's policy asks. Nothing is changed in
-   this repo; the envelope-observability gap that forced a keep-artifacts re-run to
-   see the recovery is filed upstream as 2AMLogic/klayout-tools#6955.
-   `fail_on_diagnostic` is unchanged.
+1. **FF compensation margin is routed to #430.** With the same drawn devices
+   and extracted capacitors, PM is 59.7844° with the star resistors collapsed
+   and 59.8136° with their extracted values. Both endpoints miss 60°.
+   #312 is parked `Blocked by: #430`.
+2. **The cause of TT gmin failure remains open.** The 1 TΩ substrate-tie
+   control is inconclusive on the fleet. A local trace shows recovery by
+   source stepping. The 1 MΩ and 1 GΩ batch outcomes are unverified (Step 4).
 
 ## Inputs and reproduction pins
 
@@ -100,7 +87,7 @@ deltas cannot move phase margin by degrees.
 
 ## Step 2 (cont.) — controlled legs: representation vs parasitics
 
-Four legs on the identical bench and request form (one corner per request,
+Five legs on the identical bench and request form (one corner per request,
 batch fleet, runner klt 0.9.0). Leg B is the 0.9.0 netlist with every `R`/`C`
 parasitic card removed and terminal nodes `<net>__tN` collapsed onto the hub
 net (device cards, geometry terms `AS/AD/PS/PD` and the MIM device untouched).
@@ -126,16 +113,14 @@ Decomposition of the 2.17° schematic→extracted drop:
   confound (lumped `ng=1` vs drawn unit/finger devices) is what the schematic
   leg under-models; it also carries most of the av0 shift (+3.54 dB) seen in
   the committed 0.7.1-era deltas.
-- **Parasitics (C minus B): -0.5338°.** Real but secondary. The resistance-only
-  control splits it: capacitors alone (E minus B) are -0.5630°; adding the
-  star resistors back (C minus E) is +0.0292°. Resistance is not the source
-  of the miss: with every star resistor removed the FF corner is still 59.7844°
-  (margin -0.003763 rad, fail), and the resistors, at any value between zero
-  and the lumped value, move PM by at most 0.03°. The 60° line therefore
-  cannot be crossed back by correcting the lumped-star resistance (the
-  `--resistance-graph` run reports `legacy` for all nine nets, so no graph-aware
-  value exists for this block to substitute; see 2AMLogic/klayout-tools#5894).
-- **Extractor version (C minus D, new minus old): -0.0186°.** The committed 0.7.1 netlist misses
+- **Parasitics (C minus B): -0.5338°.** With the drawn devices held fixed,
+  the extracted capacitors alone lower PM by 0.5630° (E minus B). Adding the
+  extracted star resistors raises it by 0.0292° (C minus E). The comparison
+  measures only the collapsed and full-star endpoints. PM at intermediate
+  resistances or with a different resistor network is unmeasured.
+- **Complete netlists (C minus D, new minus old): -0.0186°.** This comparison
+  includes the GDS revision and dummy removal as well as the extractor change.
+  The committed 0.7.1 netlist misses
   the same bound on the corrected bench. The committed `pex_report.json`
   "pass" at this corner (extracted 75.19° vs schematic 76.36°) graded the
   superseded floating-inn bench (issue #241); on the corrected AC-grounded
@@ -159,21 +144,18 @@ resistors +0.0275°) — the same story as FF.
 
 ## Step 3 — routing
 
-*The parasitics are credible* (leg C ≈ leg D within 0.02°; the extractor's
-version-to-version change is negligible; no over-estimation mechanism in
-play — the branched-net series-R issue 2AMLogic/klayout-tools#5894 would
-inflate net resistance, and the 0.9.0 extraction's own `--resistance-graph`
-report shows all nine nets as `legacy` (d2 26.1374 Ω, out 24.0959 Ω), but the
-resistance-only control (leg E) shows the miss does not depend on it: with all
-star resistance removed PM is 59.7844°, below the 60° line). This is the
-design branch of the issue's routing: **#430** carries the attribution
+The FF miss persists with the extracted capacitance alone, which supports
+routing the compensation margin to design. The 0.9.0 `--resistance-graph`
+report classifies all nine nets as `legacy`, including d2 (26.1374 Ω) and out
+(24.0959 Ω). Legs C and E therefore leave the physical path resistances in
+2AMLogic/klayout-tools#5894 unvalidated. **#430** carries the attribution
 numbers and states its relation to #332/#342 (their new topology keeps the
 two-stage Miller path, and #342's ruling already requires PM to stay
 competitive on whatever lands, so the compensation re-derivation must absorb
 these numbers or sequence behind an interim fix — not be built twice).
 #312 is parked `Blocked by: #430`.
 
-## Step 4 — TT / 1.08 V / 27 C non-convergence: named cause
+## Step 4 — TT / 1.08 V / 27 C convergence investigation
 
 **Mechanism: ngspice DC-homotopy failure; trigger not isolated.** Evidence:
 
@@ -193,29 +175,33 @@ these numbers or sequence behind an interim fix — not be built twice).
   gmin homotopy can struggle with, so a weakly-tied `vsubs` remains a live
   explanation. The source-stepping trace above is from a **local** probe, not
   the batch fleet.
-- **Not the bench or the request generator:** legs B and D run the identical
-  bench and request at the same corner with no diagnostic; only leg C's
-  sub-fF/sub-Ω parasitic perturbation flips the homotopy trajectory.
+- Legs B, D and E pass on the same bench at TT. Collapsing the star
+  resistors in E changes the network at many nodes at once, so this comparison
+  cannot identify the node that triggered the warning in C.
 
-**One-variable batch probe (substrate tie only).** Leg C with only
-`Rvsubs_dctie` changed (1e6 and 1e9 ohm; all else byte-identical to leg C,
-same request, TT / 1.08 V / 27 C, batch backend, production
-`fail_on_diagnostic` untouched). Submitted as `klt-sim-dbec6a890e20` (1e6) and
-`klt-sim-cc7d8db86c3e` (1e9); both were still `pending` in the fleet queue
-about 40 minutes after submit, so **no result exists yet**. Reading: if the
-tied variants converge without the gmin diagnostic, the weak `vsubs` tie is
-the trigger (a netlist-generation / klt `--substrate-tie-ohms` matter); if
-they still report it, the weak-node explanation is excluded and the
-solver-path reading stands. **Remaining uncertainty: which of the two it is.**
+**Substrate-tie control.** The two batch probes vary only `Rvsubs_dctie` in
+leg C at TT / 1.08 V / 27 °C. All three requests grade `nonconvergence` under
+`options.fail_on_diagnostic`.
 
-Disposition: no testbench or netlist-generation defect has been demonstrated
-in this repo, so nothing is fixed here; `fail_on_diagnostic` keeps `nonconvergence` (the
-inconclusive grading is the #2492 semantics this request deliberately opts
-into). The corner re-grades when #430's compensation re-derivation re-runs
-the grid. The one real friction — the envelope records the failed homotopy's
-warning but nothing about the successful fallback, which forced the
-keep-artifacts re-run — is filed upstream and linked:
-**2AMLogic/klayout-tools#6955**.
+| Tie to ground | Batch job | Corner status | gmin diagnostic |
+|---|---|---|---|
+| 1 TΩ (leg C) | `klt-sim-6f36c264add6` | inconclusive | `nonconvergence` warning: `Dynamic gmin stepping failed` |
+| 1 MΩ | `klt-sim-dbec6a890e20` | unverified | unavailable |
+| 1 GΩ | `klt-sim-cc7d8db86c3e` | unverified | unavailable |
+
+On 2026-11-21, the pinned klt 0.9.0 client's `--job-status` lookup for
+each probe reported that the `batch-runner-submit` profile was unavailable.
+`--attach` returned `batch_unknown_job` in that same environment. Neither
+read establishes the current fleet state. The last reported queue observation
+was `pending` about 40 minutes after submission.
+
+A completed solve that clears the warning at a stronger tie would show
+sensitivity to that tie at this corner. If both probes reproduce the warning,
+neither tested tie value is a sufficient remedy. Other weak nodes and their
+effect on the solver trajectory would remain open. The trigger and its
+disposition under #429 step 4 are unresolved. Upstream
+[klayout-tools#6955](https://github.com/2AMLogic/klayout-tools/issues/6955)
+tracks the missing recovery information in the diagnostic envelope.
 
 ## Step 5 — handoff to #312
 
@@ -226,14 +212,14 @@ diff against the branch base).
 
 ## What was ruled out
 
-- Extractor version as the cause of the FF miss (C minus D: -0.0186°).
-- Lumped-star resistance as the cause of the FF miss (leg E: R removed, PM 59.7844°; resistors contribute +0.0292°).
-- Extractor parasitic over/under-estimation (per-net table above; #5894/#6899
-  mechanism absent at meaningful magnitude on this block).
+- A miss unique to the new extraction. Both complete FF netlists miss 60°
+  (C minus D, new minus old, is -0.0186°).
+- A requirement for the star resistors to produce the FF miss. Collapsing
+  them leaves leg E at 59.7844°.
 - Dummy removal touching the signal path (rails only).
 - Unbiased device bodies at TT (body_bias biased). A weakly-tied `vsubs` is NOT ruled out; see the Step 4 probe.
-- Bench or request-generator defect at TT (legs B/D converge, same bench).
-- Batch-vs-local divergence (local probe reproduces the fleet values exactly).
+- The common bench alone as a sufficient trigger at TT (legs B, D and E pass).
+- A discrepancy in the measured phase between the local and fleet leg C runs.
 
 ## Reproduction appendix
 
@@ -246,3 +232,27 @@ netlist minus `R`/`C` cards with `<net>__tN` collapsed to `<net>`.
 Extraction: the pinned recipe in issue #429's Curator Enhancement (verified
 this run: `klt pex … --extract-only` exits 4 with `status=not_checked`, and
 the three SHA-256s above reproduce).
+
+To collect the two Step 4 envelopes on a batch-enabled host, start with the
+verified 0.9.0 `opamp_core_pex.spice` in a scratch directory. Set `generator`
+to the absolute path of `sim/post-layout/klt_measure.py` in the `36596fc`
+checkout. The final command attaches to the existing job ID. A report with an
+inconclusive corner can have a nonzero exit code.
+
+```bash
+for entry in 1e6:klt-sim-dbec6a890e20 1e9:klt-sim-cc7d8db86c3e; do
+    tie=${entry%%:*}
+    job=${entry#*:}
+    sed "s/^Rvsubs_dctie vsubs 0 1e+12$/Rvsubs_dctie vsubs 0 $tie/" \
+        opamp_core_pex.spice > "$tie.spice"
+    SG13G2_PEX_POINTS=mos_tt:27:1.08 KLT_PEX_SIM_BACKEND=batch \
+        python3 "$generator" build "$tie.spice" "$tie" || exit 1
+    rc=0
+    klt sim "$tie/openloop_ac.request.json" --backend batch --attach "$job" \
+        --format json > "$tie/result.json" || rc=$?
+    echo "$tie ohm, $job, klt exit $rc"
+done
+```
+
+For each envelope, verify `environment.remote.job_id`, then record the single
+TT corner's `status` and any `diagnostics[]` entry for `nonconvergence`.
