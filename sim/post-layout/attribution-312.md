@@ -11,14 +11,22 @@ fail at `mos_ff / vdd=1.32 / vinp=0.66 / 125 C` on the klt 0.9.0 extraction
 
 1. The phase-margin miss is a **design finding**, not an extractor defect: the
    extracted parasitics are credible and their version-to-version change is
-   negligible. Routed to **#430** (compensation-margin follow-up, states its
-   relation to #332/#342). #312 is parked `Blocked by: #430`.
-2. The TT corner is a **solver-path (DC homotopy) sensitivity**, not a floating
-   or weakly-biased node: dynamic-gmin and true-gmin stepping fail, source
-   stepping converges to a well-regulated operating point, and klt's
+   negligible. A resistance-only control (leg E below: drawn devices and all
+   capacitors kept, every star resistor collapsed) still misses 60 degrees at
+   FF (59.7844 deg), so the lumped-star resistance model cannot be what
+   causes the miss. Routed to **#430** (compensation-margin follow-up, states
+   its relation to #332/#342). #312 is parked `Blocked by: #430`.
+2. The TT corner's non-convergence is **a DC-homotopy (solver-path) failure
+   whose trigger is not yet isolated**: dynamic-gmin and true-gmin stepping
+   fail and source stepping recovers to a well-regulated operating point (a
+   local probe). The single DC path to `vsubs` is a 1e12 ohm tie, so a
+   weakly-tied node is **not ruled out**; the one-variable batch probe that
+   would separate the two explanations (substrate tie 1e6 / 1e9 ohm, only that
+   value changed) is submitted but had not run when this was written (see
+   Step 4). klt's
    fail-on-recovered-diagnostic semantics (#2492 upstream) grade the corner
-   inconclusive exactly as the request's policy asks. Nothing to fix in this
-   repo; the envelope-observability gap that forced a keep-artifacts re-run to
+   inconclusive exactly as the request's policy asks. Nothing is changed in
+   this repo; the envelope-observability gap that forced a keep-artifacts re-run to
    see the recovery is filed upstream as 2AMLogic/klayout-tools#6955.
    `fail_on_diagnostic` is unchanged.
 
@@ -102,18 +110,32 @@ net (device cards, geometry terms `AS/AD/PS/PD` and the MIM device untouched).
 | leg | phase_at_ugf_rad | margin | PM | av0 (dB) | GBW (MHz) | job |
 |---|---|---|---|---|---|---|
 | A schematic lumped `ng=1` | -2.059712309425 | +0.034683 | 61.9872° | 42.2614 | 10.673 | `klt-sim-0d8650ae20cc` |
-| B drawn fingers, no parasitics | -2.088332597777 | +0.006063 | 60.3569° | 45.7971 | 10.945 | `klt-sim-52d304323333` |
-| C drawn + 0.9.0 parasitics | -2.097648803209 | **-0.003254** | 59.8149° | 45.7979 | 10.908 | `klt-sim-3e33c106fc7d` |
-| D drawn + 0.7.1 parasitics (committed 38-dev netlist) | -2.097323701316 | **-0.002929** | 59.8334° | 45.7980 | 10.900 | `klt-sim-3b1905a88ea0` |
+| B drawn fingers, no parasitics | -2.088332597777 | +0.006063 | 60.3474° | 45.7971 | 10.945 | `klt-sim-52d304323333` |
+| C drawn + 0.9.0 parasitics | -2.097648803209 | **-0.003254** | 59.8136° | 45.7979 | 10.908 | `klt-sim-3e33c106fc7d` |
+| D drawn + 0.7.1 parasitics (committed 38-dev netlist) | -2.097323701316 | **-0.002929** | 59.8322° | 45.7980 | 10.900 | `klt-sim-3b1905a88ea0` |
+| E drawn + 0.9.0 capacitors, all star R collapsed (resistance-only control) | -2.098158563064 | **-0.003763** | 59.7844° | 45.7971 | 10.910 | `klt-sim-825253be86cb` |
+
+PM is `180 + degrees(phase_at_ugf_rad)` (the repository formula in
+`sim/post-layout/klt_measure.py`), recomputed from the recorded radians. All
+deltas below are **later leg minus earlier leg** (negative = margin lost).
+Margins are `phase_at_ugf_rad + 2.0943951` (limit `-2*pi/3`).
 
 Decomposition of the 2.17° schematic→extracted drop:
 
-- **Device representation (A→B): -1.640°.** The dominant term. The #237
+- **Device representation (B minus A): -1.6398°.** The dominant term. The #237
   confound (lumped `ng=1` vs drawn unit/finger devices) is what the schematic
   leg under-models; it also carries most of the av0 shift (+3.54 dB) seen in
   the committed 0.7.1-era deltas.
-- **Parasitics (B→C): -0.534°.** Real but secondary.
-- **Extractor version (C vs D): +0.019°.** The committed 0.7.1 netlist misses
+- **Parasitics (C minus B): -0.5338°.** Real but secondary. The resistance-only
+  control splits it: capacitors alone (E minus B) are -0.5630°; adding the
+  star resistors back (C minus E) is +0.0292°. Resistance is not the source
+  of the miss: with every star resistor removed the FF corner is still 59.7844°
+  (margin -0.003763 rad, fail), and the resistors, at any value between zero
+  and the lumped value, move PM by at most 0.03°. The 60° line therefore
+  cannot be crossed back by correcting the lumped-star resistance (the
+  `--resistance-graph` run reports `legacy` for all nine nets, so no graph-aware
+  value exists for this block to substitute; see 2AMLogic/klayout-tools#5894).
+- **Extractor version (C minus D, new minus old): -0.0186°.** The committed 0.7.1 netlist misses
   the same bound on the corrected bench. The committed `pex_report.json`
   "pass" at this corner (extracted 75.19° vs schematic 76.36°) graded the
   superseded floating-inn bench (issue #241); on the corrected AC-grounded
@@ -125,21 +147,25 @@ Decomposition of the 2.17° schematic→extracted drop:
 | leg | status | phase_at_ugf_rad | margin | PM | job (ac) |
 |---|---|---|---|---|---|
 | A schematic lumped | pass | -1.972878688341 | +0.121516 | 66.9624° | `klt-sim-948a3ba54f78` |
-| B drawn, no parasitics | pass | -2.015401739781 | +0.078994 | 64.5225° | `klt-sim-4b783bcd1672` |
-| C drawn + 0.9.0 parasitics | **inconclusive** | -2.024018434830 | +0.070377 | 64.0311° | `klt-sim-6f36c264add6` |
-| D drawn + 0.7.1 parasitics | pass | -2.023699145293 | +0.070696 | 64.0494° | `klt-sim-be93d0cd9ad7` |
+| B drawn, no parasitics | pass | -2.015401739781 | +0.078993 | 64.5260° | `klt-sim-4b783bcd1672` |
+| C drawn + 0.9.0 parasitics | **inconclusive** | -2.024018434830 | +0.070377 | 64.0323° | `klt-sim-6f36c264add6` |
+| D drawn + 0.7.1 parasitics | pass | -2.023699145293 | +0.070696 | 64.0506° | `klt-sim-be93d0cd9ad7` |
+| E 0.9.0 capacitors only, star R collapsed | pass | -2.024498960725 | +0.069896 | 64.0048° | `klt-sim-f1718f9e56dc` |
 
 Leg C reproduces the historical grid (`klt-sim-89ae2e1c2ed4`) exactly:
 margin -0.0033 rad at FF, +0.07 rad at TT, same diagnostic. Representation at
-TT is -2.436°, parasitics -0.494° — the same story as FF.
+TT is -2.4364° (B minus A), parasitics -0.4937° (C minus B; capacitors -0.5212°,
+resistors +0.0275°) — the same story as FF.
 
 ## Step 3 — routing
 
 *The parasitics are credible* (leg C ≈ leg D within 0.02°; the extractor's
 version-to-version change is negligible; no over-estimation mechanism in
 play — the branched-net series-R issue 2AMLogic/klayout-tools#5894 would
-inflate net resistance, but this design's per-net R is 4–53 Ω and the C/D
-delta is +0.05 Ω worst case on the signal path, worth <<0.01°). This is the
+inflate net resistance, and the 0.9.0 extraction's own `--resistance-graph`
+report shows all nine nets as `legacy` (d2 26.1374 Ω, out 24.0959 Ω), but the
+resistance-only control (leg E) shows the miss does not depend on it: with all
+star resistance removed PM is 59.7844°, below the 60° line). This is the
 design branch of the issue's routing: **#430** carries the attribution
 numbers and states its relation to #332/#342 (their new topology keeps the
 two-stage Miller path, and #342's ruling already requires PM to stay
@@ -149,7 +175,7 @@ these numbers or sequence behind an interim fix — not be built twice).
 
 ## Step 4 — TT / 1.08 V / 27 C non-convergence: named cause
 
-**Cause: ngspice DC-homotopy (solver-path) sensitivity.** Evidence:
+**Mechanism: ngspice DC-homotopy failure; trigger not isolated.** Evidence:
 
 - Local single-corner probe of leg C with `keep_artifacts` (ngspice-47 log):
   `dynamic gmin stepping` fails, `true gmin stepping` fails, **`source
@@ -158,17 +184,32 @@ these numbers or sequence behind an interim fix — not be built twice).
 - The found operating point is well-regulated: `vout_dc_v` = 0.5399 V
   (= VDD/2 within 84 µV, OP job `klt-sim-e84f79fd991d`), `ivdd_total_a`
   78.88 µA — consistent with legs B (0.53991 V) and D (0.53991 V).
-- **Not a floating or weakly-biased node:** the extraction envelope reports
-  `body_bias.status = biased`, zero unbiased devices; every parasitic node is
-  a star-R member of a DC-connected net; `vsubs` carries the deck's
-  `Rvsubs_dctie vsubs 0 1e12`; the dropped dummies tied only to vdd/vss
-  (rails driven by the bench), so their removal cannot float anything.
+- **Body connectivity and the final operating point are fine, but neither
+  identifies why gmin stepping failed.** The envelope reports
+  `body_bias.status = biased`, zero unbiased devices, and the recovered
+  `vout` is regulated. Yet `vsubs` has exactly one DC connection,
+  `Rvsubs_dctie vsubs 0 1e12` (line 424 of the netlist); its other nine
+  connections are capacitors. A node with a 1e12 ohm DC path is the kind
+  gmin homotopy can struggle with, so a weakly-tied `vsubs` remains a live
+  explanation. The source-stepping trace above is from a **local** probe, not
+  the batch fleet.
 - **Not the bench or the request generator:** legs B and D run the identical
   bench and request at the same corner with no diagnostic; only leg C's
   sub-fF/sub-Ω parasitic perturbation flips the homotopy trajectory.
 
-Disposition: no testbench or netlist-generation defect exists in this repo, so
-nothing is fixed here; `fail_on_diagnostic` keeps `nonconvergence` (the
+**One-variable batch probe (substrate tie only).** Leg C with only
+`Rvsubs_dctie` changed (1e6 and 1e9 ohm; all else byte-identical to leg C,
+same request, TT / 1.08 V / 27 C, batch backend, production
+`fail_on_diagnostic` untouched). Submitted as `klt-sim-dbec6a890e20` (1e6) and
+`klt-sim-cc7d8db86c3e` (1e9); both were still `pending` in the fleet queue
+about 40 minutes after submit, so **no result exists yet**. Reading: if the
+tied variants converge without the gmin diagnostic, the weak `vsubs` tie is
+the trigger (a netlist-generation / klt `--substrate-tie-ohms` matter); if
+they still report it, the weak-node explanation is excluded and the
+solver-path reading stands. **Remaining uncertainty: which of the two it is.**
+
+Disposition: no testbench or netlist-generation defect has been demonstrated
+in this repo, so nothing is fixed here; `fail_on_diagnostic` keeps `nonconvergence` (the
 inconclusive grading is the #2492 semantics this request deliberately opts
 into). The corner re-grades when #430's compensation re-derivation re-runs
 the grid. The one real friction — the envelope records the failed homotopy's
@@ -185,11 +226,12 @@ diff against the branch base).
 
 ## What was ruled out
 
-- Extractor version as the cause of the FF miss (legs C vs D: +0.019°).
+- Extractor version as the cause of the FF miss (C minus D: -0.0186°).
+- Lumped-star resistance as the cause of the FF miss (leg E: R removed, PM 59.7844°; resistors contribute +0.0292°).
 - Extractor parasitic over/under-estimation (per-net table above; #5894/#6899
   mechanism absent at meaningful magnitude on this block).
 - Dummy removal touching the signal path (rails only).
-- Floating/weakly-biased node at TT (body_bias biased; dctie; OP regulated).
+- Unbiased device bodies at TT (body_bias biased). A weakly-tied `vsubs` is NOT ruled out; see the Step 4 probe.
 - Bench or request-generator defect at TT (legs B/D converge, same bench).
 - Batch-vs-local divergence (local probe reproduces the fleet values exactly).
 
