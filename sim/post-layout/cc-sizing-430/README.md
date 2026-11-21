@@ -1,13 +1,11 @@
-# Issue #430 — Miller-capacitor sizing trial: no capacitor-only size satisfies PM ≥ 60° and slew ≥ 7.51 V/µs
+# Issue #430 — Miller-capacitor sizing trial on DR-0001
 
-Capacitor-only trial on the DR-0001 layout, per this issue's implementation
-guidance: screen the square Miller capacitor's size against phase margin and
-slew on the drawn-device DUT, regenerate + re-extract a candidate, and record
-the trade. **Verdict up front: the trial is unsuccessful — the PM-passing and
-slew-passing size windows are disjoint, and the DRC window does not cover the
-gap. No geometry is accepted, the phase-margin finding stays open, and the
-measured numbers transfer to #332/#342 (disposition in §7). #312 keeps the
-current 25.7 µm geometry (§8).**
+**The trial rejected the 26.0 µm capacitor.** The re-extracted candidate
+meets the fast/hot phase-margin bound (60.2318°) and misses the slow/cold
+falling-slew bound (7.3067 V/µs against 7.51 V/µs). The screening models
+predict disjoint capacitor-size windows (§6). #430 tracks the open phase-margin
+finding for #332/#342. The 25.7 µm layout remains the reference for #312,
+which stays blocked on #430 (§8).
 
 All legs below run the committed open-loop AC / slew benches through the
 pinned `klt_measure.py` generator and runner (`klayout-tools==0.9.0`,
@@ -18,7 +16,7 @@ on every request), one corner per request unless stated.
 
 | Input | Value |
 |---|---|
-| Opamp source | `36596fcda50e5998a5088c56c7c9032a15a0b61b` (`feature/issue-312`, the #312 pinned source; its bench/requests/generator blobs are byte-identical to `main` @ `1ae310e`, verified by PR #431) |
+| Opamp source | `36596fcda50e5998a5088c56c7c9032a15a0b61b` (`feature/issue-312`, the #312 pinned source). Use the generator pinned below. Its SHA-256 at `main` revision `1ae310e` was `fbcccfd35f538ee98f037785e35a023b74509b1d808a90eb89d95174e8921e1f`. |
 | Baseline GDS (25.7 µm cap) | `ab2d926e1974e4e04f0c0363af5139b64034f544e4fdc192df3dd7a79830aa05` |
 | Baseline 0.9.0 extraction | `80cd19a17ee5d7e008efb662e322147e556598993f0d73c9ca16ba532019f1ea` (reproduced this run, byte-exact) |
 | Candidate GDS 25.8 µm | `5812666924b88a436cef1db3624b5b0c3f5fc37f4dfd749f89cf0d7214120a1c` |
@@ -42,8 +40,8 @@ measurements (`vd1_dc_v`, `vd2_dc_v`, `vtail_dc_v`, `op_vd1_rail_frac`,
 B-sources that feed them; both edge slew measurements, the linearity,
 pre-edge, drive-integrity and vout sanity checks are unchanged.
 
-Effective `cap_cmim` capacitance (model formula `C = 1.5e-3·w·l + 2(w+l)·40e-12` F,
-w/l in m, per `cap_cmim.sym`):
+For a square `cap_cmim` of side `s` in µm, the model in `cap_cmim.sym`
+gives `C(s) = 1.5s² + 0.16s` in fF, including the perimeter term.
 
 | side (µm) | C (fF) | Δ vs 25.7 |
 |---|---|---|
@@ -75,20 +73,20 @@ envelope under `records/`.)
 
 Readings:
 
-- **PM sensitivity: ≈ +0.176 ° per +1% Cc** (fit through the three FF points:
-  17.6–17.7 ° per natural-log unit, linear in ln C to better than 0.02 ° over
-  the 25.7→27.0 span).
-- **Slew scales as 1/Cc** on both edges (falling edge tracks `7.4786·(994.85/C)`
-  to within 0.15% at all three sizes), because the edge current is the
-  representation-shifted tail/mirror current, unchanged by the cap.
+- Drawn-DUT FF phase margin rises by about **0.176° per 1% increase in Cc**
+  over 25.7–27.0 µm (approximately 17.65° per unit of ln C).
+- Both slew edges decrease as Cc grows. The baseline inverse-C estimate for
+  falling slew is `7.4786 × 994.85 / C` V/µs, with C in fF. At 26.0 µm it
+  predicts 7.3074 V/µs against 7.3167 measured. At 27.0 µm it predicts
+  6.7771 V/µs against 6.8123 measured, 0.52% below the measurement.
 - **The falling slew edge already misses the ratified 7.51 V/µs bound at the
   baseline 25.7 µm size on the drawn DUT** — a *pre-existing* miss
   (representation: the schematic-leg record behind the 7.51 bound reads
   7.51441 V/µs falling at this corner; the drawn-device DUT reads 7.4786,
   −0.47%). This is a #237-family representation finding recorded here, not a
   sizing regression.
-- GBW at its ratified binding corner has ~2× margin on the drawn DUT and
-  stays > 9 MHz even at +10% Cc, so **GBW is not the binding trade** — slew is.
+- FS / 1.08 V / 125 °C GBW falls from 9.5057 MHz at 25.7 µm to
+  8.734156 MHz at 27.0 µm, still above the 4.74 MHz bound.
 - DC gain is untouched by the cap (45.797 dB at FF at every size).
 
 ## 3. Confirmation legs on real re-extractions (FF / 1.32 V / 125 °C)
@@ -101,13 +99,14 @@ measured through the same one-corner request form:
 | leg | phase at UGF (rad) | signed margin (rad) | PM (°) | verdict vs 60° | job |
 |---|---|---|---|---|---|
 | baseline 0.9.0 extraction (PR #431) | −2.097648803209 | −0.003254 | 59.8136 | fail | `klt-sim-3e33c106fc7d` |
-| **25.8 µm re-extraction (DRC-clean ceiling)** | −2.095208623385 | −0.000814 | **59.9534** | **fail by 0.047°** | `klt-sim-e7009efe0455` |
-| **26.0 µm re-extraction** | −2.090349614598 | +0.004046 | **60.2318** | **pass by 0.232°** | `klt-sim-09ad05540075` |
+| **25.8 µm re-extraction (largest side tested DRC-clean)** | −2.095208623385 | −0.000814 | **59.9534** | **fail by 0.047°** | `klt-sim-e7009efe0455` |
+| **26.0 µm re-extraction** | −2.090349614598 | +0.00404549 | **60.2318** | **pass by 0.232°** | `klt-sim-09ad05540075` |
 
 The parasitic penalty (leg-B → extraction) at the changed sizes is −0.524°
 (26.0 µm) vs −0.534° at 25.7 µm — the penalty is size-stable, so the
 screening fit transfers to extractions. PM = `180 + degrees(phase_at_ugf_rad)`,
-margin = phase − (−2.0943951023931953).
+margin = phase − (−2.0943951023931953). The baseline phase gives 59.8136°,
+correcting the 59.8149° originally quoted in #430.
 
 ## 4. Layout verdicts for the geometry change (pinned flow, local)
 
@@ -118,16 +117,13 @@ margin = phase − (−2.0943951023931953).
 | 25.9 | 1 × `metal5.space.1` (miller_cap) | not run |
 | 26.0 | 1 × `metal5.space.1` (miller_cap → d2 riser Metal5 pad) | match (cap geometry warning only) |
 
-The `metal5.space.1` violation appears the moment the plate grows past
-25.8 µm: the enlarged Metal5 bottom plate closes to within 0.07 µm of the
-Metal5 landing pad of the `d2` via stack that jumps over the cap (the
-generator comments place that stack "above the bottom plate's top edge"; the
-0.3 µm growth eats the margin). Growing the cap beyond 25.8 µm therefore also
-needs a routing-track move (`fp.TRACK_UM["d2_c4"]`) — beyond a
-constants-only change. The 25.8 µm LVS mismatch inside otherwise-identical
-flow (25.7 and 26.0 both match) is recorded as a `klt lvs` friction datapoint;
-no klayout-tools issue is filed from this run because the mechanism is not
-isolated here.
+The checks bracket the `metal5.space.1` transition between 25.8 µm
+(clean) and 25.9 µm (violation). The exact side at the spacing limit is
+undetermined. At 26.0 µm the enlarged Metal5 bottom plate comes within
+0.07 µm of the `d2` via stack's Metal5 landing pad. Keeping that candidate
+would require a routing change, such as moving `fp.TRACK_UM["d2_c4"]`.
+The same LVS flow reports a mismatch at 25.8 µm and matches at 25.7 and
+26.0 µm. The cause of the 25.8 µm mismatch remains open.
 
 ## 5. Full 45-point grid on the 26.0 µm re-extraction
 
@@ -140,79 +136,78 @@ re-submitted and finished in 10 s), slew grid `klt-sim-1d695edc4427`.
 Envelopes: `records/grid26.0_ac.json`, `records/grid26.0_op.json`,
 `records/grid26.0_slew.json`.
 
-| metric | worst value | corner | ratified limit | verdict |
+| metric | worst measured value | corner | ratified limit | verdict |
 |---|---|---|---|---|
-| PM (from `phase_at_ugf_rad` = −2.090349614598 rad) | 60.2318° | `mos_ff / 1.32 V / Vinp 0.66 V / 125 °C` | ≥ 60° | **pass** (+0.004046 rad) |
+| PM (from `phase_at_ugf_rad` = −2.090349614598 rad) | 60.2318° | `mos_ff / 1.32 V / Vinp 0.66 V / 125 °C` | ≥ 60° | **pass** (+0.00404549 rad) |
 | DC gain | 42.6763 dB | `mos_fs / 1.08 V / Vinp 0.54 V / 125 °C` | ≥ 37.8 dB | pass (+4.88 dB) |
 | GBW | 8.0019 MHz | `mos_ss / 1.08 V / Vinp 0.54 V / −40 °C` | ≥ 4.74 MHz | pass (+69%) |
 | Iq (`ivdd_total_a`) | 84.8472 µA | `mos_ff / 1.32 V / Vinp 0.66 V / 125 °C` | ≤ 119.7 µA | pass |
-| slew, rising edge | 7.6842 V/µs | `mos_ss / 1.08 V / Vinp 0.54 V / −40 °C` | ≥ 7.51 V/µs | pass (all 45) |
-| slew, falling edge | **7.3067 V/µs** | `mos_ss / 1.08 V / Vinp 0.54 V / −40 °C` | ≥ 7.51 V/µs | **fail** (1 of 45) |
+| slew, rising edge | 7.6842 V/µs | `mos_ss / 1.08 V / Vinp 0.54 V / −40 °C` | ≥ 7.51 V/µs | 44 pass, 1 error |
+| slew, falling edge | **7.3067 V/µs** | `mos_ss / 1.08 V / Vinp 0.54 V / −40 °C` | ≥ 7.51 V/µs | 43 pass, **1 fail**, 1 error |
 
 Grid statuses: AC 45/45 pass, zero diagnostics. OP 45/45 pass, zero
 diagnostics. Slew 43 pass / 1 fail / 1 error.
 
-- The single slew fail is the falling edge at the ratified slew binding
-  corner, exactly the sizing regression §2 predicts for +2.35% Cc (drawn-DUT
-  screen 7.3167; extraction reads 7.3067). Second-worst falling edge is
-  7.5595 V/µs at `mos_sf / 1.08 V / −40 °C` — the 26.0 µm candidate clears
-  the bound everywhere else.
-- The single slew error is `mos_sf / 1.08 V / Vinp 0.54 V / 27 °C`:
-  `timestep_too_small` at 5.33 ps on node `xdut.ibias__t0`, transient
-  aborted, all measurements empty (diagnostic verdict preserved verbatim in
-  the envelope; an engine-level solver failure, not a bound verdict).
+- At SS / 1.08 V / −40 °C, the 26.0 µm falling edge measured
+  7.3167 V/µs on the drawn DUT and 7.3067 V/µs on the extraction. The other
+  43 measured falling edges passed. The next lowest was 7.5595 V/µs at
+  `mos_sf / 1.08 V / −40 °C`.
+- At `mos_sf / 1.08 V / Vinp 0.54 V / 27 °C`, ngspice reported
+  `timestep_too_small` at 5.33 ps on node `xdut.ibias__t0`. Both slew
+  measurements are null and carry the error status.
 - The TT/1.08 V/27 °C corner — inconclusive in the #429-era diagnosis —
   **passes cleanly in all three grids on this extraction** (no diagnostics);
   the inconclusive result does not persist here.
 - Worst non-binding corners for reference: 2nd-worst PM 60.5122°
   (`mos_sf / 1.32 V / 125 °C`), max Iq 84.85 µA is 71% of the limit.
 
-Grid verdict: the 26.0 µm candidate passes PM, gain, GBW and Iq across all
-45 corners and fails only the falling-edge slew at SS/−40 °C/1.08 V — the
-§6 bound conflict, now measured on a full extraction rather than the
-screening DUT. Nothing here changes the §6 conclusion; it confirms it.
+The 26.0 µm candidate passes PM, gain, GBW and Iq across all 45 corners.
+The measured falling-edge failure at SS / 1.08 V / −40 °C rejects the
+candidate. Both edges remain ungraded at SF / 1.08 V / 27 °C.
 
-## 6. The bound conflict, measured
+## 6. Estimated size limits and measured checks
 
 Ratified bounds: PM ≥ 60° (`mos_ff/1.32/125 °C`), slew ≥ 7.51 V/µs
 (worse edge, worst corner `mos_ss/−40 °C/1.08 V`), GBW ≥ 4.74 MHz, DC gain
 ≥ 37.8 dB, Iq ≤ 119.7 µA (`spec/target-spec.md` §2 [DR-2]).
 
-- Slew (fall edge, drawn DUT) ≥ 7.51 V/µs requires Cc ≤ 994.85·(7.4786/7.51)
-  = **991.9 fF → side ≤ 25.67 µm** (and the baseline itself misses, so even
-  that only reaches exactly 7.51 at the pre-existing representation).
-- Extracted PM ≥ 60° requires leg-B PM ≥ 60.53° (parasitic penalty 0.53°)
-  → ΔPM ≥ +0.19° → Cc ≥ 994.85·exp(0.19/17.65) = **1005.6 fF → side ≥ 25.86 µm**
-  (measured directly: 25.8 µm extraction fails at 59.9534°, 26.0 µm passes at
-  60.2318°).
-- DRC-clean as-drawn requires **side ≤ 25.8 µm**; **side ≥ 25.9 µm violates
-  `metal5.space.1`** without a routing change.
+- The inverse-C falling-slew model crosses 7.51 V/µs at
+  `C = 994.85 × 7.4786 / 7.51` ≈ **990.69 fF**. Inverting the square-cap
+  formula in §1 gives **s ≈ 25.646 µm**. Smaller sides favor slew.
+- For extracted PM, starting from 59.8136° at 25.7 µm and using the drawn
+  sensitivity in §2 with the approximately constant parasitic penalty in §3,
+  the required increase is about 0.19°. The estimated crossing is
+  `C = 994.85 × exp(0.19 / 17.65)` ≈ **1005.6 fF**, or **s ≈ 25.839 µm**.
+  Larger sides favor PM. The measured extractions bracket 60° at
+  25.8 µm (59.9534°) and 26.0 µm (60.2318°).
+- The estimated crossings are about 0.19 µm apart. At 25.6 µm the models
+  predict 7.537 V/µs falling slew (margin +0.027 V/µs) and about 59.68°
+  extracted PM. DRC passed at 25.8 µm and failed at 25.9 µm, so the
+  checks leave DRC at the estimated PM crossing undetermined.
 
-The slew window (≤ 25.67 µm) and the PM window (≥ 25.86 µm) are disjoint by
-≈ 0.2 µm of plate side, and the DRC ceiling (25.8 µm) sits inside the gap but
-below the PM floor. **No square `cap_cmim` size on this topology satisfies
-PM ≥ 60° and slew ≥ 7.51 V/µs simultaneously.** A *smaller* cap only trades
-the other way (25.6 µm would clear slew by +0.15 V/µs and drop extracted PM
-to ≈ 59.6°); GBW, gain and Iq pass at every size tested.
+Gain and GBW passed at the screened AC points. Only the 26.0 µm extraction
+has an OP grid in these records. All 45 Iq values meet the 119.7 µA limit.
 
 ## 7. Disposition for #332 / #342
 
-The re-derivation on the new topology must absorb these measured numbers
-(the compensation budget moves with them):
+Use the DR-0001 measurements and local sizing estimates below as inputs to
+the compensation analysis on the new topology.
 
 - representation (lumped `ng=1` → drawn fingers): **−1.64°** PM at FF/125 °C
   (PR #431); drawn slew falling edge **−0.47%** vs the schematic record at
   SS/−40 °C/1.08 V (this run);
 - layout parasitics: **−0.53°** PM (size-stable across 995→1018 fF);
-- PM sensitivity: **+0.176° per +1% Cc**; slew ∝ **1/Cc** with
-  7.479 V/µs (falling, SS/−40 °C/1.08 V) at Cc = 994.85 fF;
+- Drawn-DUT PM sensitivity is approximately **+0.176° per +1% Cc**. The
+  inverse-C falling-slew model starts at 7.4786 V/µs (SS/−40 °C/1.08 V,
+  994.85 fF) and underestimates the 27.0 µm measurement by 0.52%.
 - slew binds before GBW: GBW margin at its binding corner is ≈ 2× on the
   drawn DUT, slew margin is −0.4% at baseline — a future PM-vs-slew trade
   should buy margin with edge *current* (bias/topology, #332/#342 scope) or a
   nulling resistor (§ design/opamp_sizing.md "Rz", candidate ≈ 1/gm6), not
   with Cc alone;
-- any cap-side growth past 25.8 µm needs the `d2` riser track moved
-  (`metal5.space.1`), a constants-only change is not enough.
+- DRC passed at 25.8 µm. The 25.9 and 26.0 µm plates violate
+  `metal5.space.1` at the `d2` riser. Check this spacing at the selected
+  side if the new layout uses the same track.
 
 Results needing re-measurement on a changed topology: everything in §2–§5
 (the representation and parasitic terms are this layout's), plus the FF/TT
@@ -220,16 +215,16 @@ schematic references of PR #431.
 
 ## 8. Handoff to #312
 
-#312's 0.9.0 regeneration should proceed on the **current 25.7 µm geometry**
-(pinned GDS `ab2d926e…`, extraction `80cd19a1…`): the PM miss at FF/125 °C
-(59.8136°) is recorded here and stays an open design finding routed to
-#332/#342 — it does not block the regeneration evidence move. The 26.0 µm
-candidate of §3 is a rejected trial (slew + DRC), not a design revision; its
-GDS/extraction hashes in §1 exist so the legs are reproducible.
+The reference for #312's klt 0.9.0 regeneration remains the **25.7 µm
+geometry** at `36596fcda50e5998a5088c56c7c9032a15a0b61b` (GDS
+`ab2d926e…`, extraction `80cd19a1…`, full hashes in §1). Its measured
+FF / 1.32 V / 125 °C phase margin is 59.8136°. **#312 remains blocked by
+#430** pending a disposition of that miss. #332/#342 carry the trade into
+the topology work (§7). The 26.0 µm trial failed falling slew and DRC.
 
 ## 9. Records
 
-Envelopes under `records/` (one JSON per leg, fleet job id inside each):
+The 14 JSON envelopes under `records/` each identify their fleet job. They cover
 screening AC legs (`screen_*ac*.json`, including the re-submitted FS 25.7
 leg `screen_fs_cc25.7.ac.json`), screening slew legs (`screen_*slew*.json`),
 confirmation legs (`confirm_*.json`), 26.0 µm grid AC/OP (`grid26.0_ac.json`,
