@@ -3,7 +3,7 @@
 This roadmap is generated from the repository's current GitHub label state.
 
 <!-- guide:plan-body:start -->
-_Generated: 2026-11-20T22:35:48Z (snapshot; compare against live labels)_
+_Generated: 2026-11-21T03:40:00Z (snapshot; compare against live labels)_
 ## Operator Attention: Merge-Risk-Hold Pileup
 
 Judge-approved PRs under a hold (`loom:blocked` or `loom:operator`) — only a human merge decision is missing.
@@ -38,21 +38,22 @@ Human-approved issues (`loom:issue`) ready for implementation — excluding held
 - **#3**: Track the gap to T1 sim-validated / bronze (klayout-tools design-evidence tiers)
 - **#332**: DR-0011: re-derive CMRR bound, re-check gain/swing vs market comps, restate swing headroom (PR #303 operator ruling)
 - **#428**: sim preflight: on batch-fleet runs take OSDI identity from the runner-reported digests, not a locally built .build-manifest, then write the #325 input-cmr record
-- **#430**: design: post-layout phase margin misses the 60 deg bound at mos_ff/1.32V/125C (extracted PM 59.81 deg; ng=1-vs-drawn representation -1.64 deg, parasitics -0.53 deg)
-- **#432**: Remove the circular dpkg-deb recovery instructions from the OSDI build
 
 ## In Progress
 
 Issues currently being built (`loom:building`).
 
 - **#429**: post-layout: attribute the klt 0.9.0 extracted phase-margin miss (ff / 1.32 V / 125 C) and the tt / 1.08 V / 27 C non-convergence, then route #312 to a design or klt follow-up
+- **#430**: design: post-layout phase margin misses the 60 deg bound at mos_ff/1.32V/125C (extracted PM 59.81 deg; ng=1-vs-drawn representation -1.64 deg, parasitics -0.53 deg)
+- **#432**: Remove the circular dpkg-deb recovery instructions from the OSDI build
+- **#435**: Collect the two substrate-tie batch results for PR #431 on a batch-enabled worker
 
 ## PRs Awaiting Review
 
 PRs waiting on Judge (`loom:review-requested`).
 
 - **#302**: docs: request EE and market key review of DR-0010
-- **#431**: sim: attribute the 0.9.0 post-layout PM miss (design finding) and TT gmin non-convergence (solver path)
+- **#434**: fix: replace circular dpkg-deb recovery recipe with install-and-retry hint
 
 ## Approved (Awaiting Merge)
 
@@ -74,6 +75,7 @@ Issues carrying `loom:curated`.
 - **#342**: design: raise PSRR+ via bias/topology change, re-run 45 corners, carry bounds into spec (PR #303 operator ruling) *(curated)* *(held)*
 - **#429**: post-layout: attribute the klt 0.9.0 extracted phase-margin miss (ff / 1.32 V / 125 C) and the tt / 1.08 V / 27 C non-convergence, then route #312 to a design or klt follow-up *(curated)*
 - **#430**: design: post-layout phase margin misses the 60 deg bound at mos_ff/1.32V/125C (extracted PM 59.81 deg; ng=1-vs-drawn representation -1.64 deg, parasitics -0.53 deg) *(curated)*
+- **#435**: Collect the two substrate-tie batch results for PR #431 on a batch-enabled worker *(curated)*
 
 ## Proposed (Architect / Hermit)
 
@@ -90,11 +92,11 @@ _None._
 | Operator merge-risk holds | 1 |
 | Very important | 2 |
 | Important | 9 |
-| Ready (`loom:issue`, net of holds/building/merge-pending) | 5 |
-| In Progress (`loom:building`) | 1 |
+| Ready (`loom:issue`, net of holds/building/merge-pending) | 3 |
+| In Progress (`loom:building`) | 4 |
 | PRs awaiting review | 2 |
 | Approved PRs awaiting merge | 1 |
-| Curated | 10 |
+| Curated | 11 |
 | Architect / Hermit proposals | 1 |
 | Active epics | 0 |
 <!-- guide:plan-body:end -->
