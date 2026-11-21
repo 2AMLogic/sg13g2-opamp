@@ -148,14 +148,9 @@ build-osdi.sh: openvaf-r (${OPENVAF_TAG}, linux-x86_64) needs libLLVM.so.21,
   which this host does not provide as a system package (no current Ubuntu LTS
   ships libllvm21; 24.04/noble tops out at libllvm20), and dpkg-deb -- needed
   to extract it from the official LLVM apt repo's .deb without root -- is not
-  on PATH. Install dpkg-deb (Debian/Ubuntu: already present; otherwise
-  'apt-get install dpkg') or apply the workaround manually:
-
-    curl -fsSL -o libllvm21.deb '${LIBLLVM21_DEB_URL}'
-    sha256sum libllvm21.deb   # expect ${LIBLLVM21_DEB_SHA256}
-    dpkg-deb -x libllvm21.deb /tmp/libllvm21
-    export LD_LIBRARY_PATH=/tmp/libllvm21/usr/lib/x86_64-linux-gnu
-    sim/tools/build-osdi.sh
+  on PATH. Install the package that provides dpkg-deb (Debian/Ubuntu: dpkg),
+  put the dpkg-deb executable on PATH, and rerun sim/tools/build-osdi.sh --
+  the build itself fetches, verifies, and unpacks libLLVM.
 EOF
       exit 3
     fi
