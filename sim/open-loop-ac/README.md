@@ -242,8 +242,9 @@ does and does not show.
 ### Grid encoding
 
 - Process: one `corners.process` bundle per `cornerMOSlv.lib` section
-  (`mos_tt/ss/ff/sf/fs`), each bundle also selecting `cornerCAP.lib`
-  `cap_typ`. That reproduces the template's fixed `cap_typ` line (the Miller
+  (`mos_tt/ss/ff/sf/fs`), each bundle also selecting
+  `cornerCAP.lib` `cap_typ` and `cornerRES.lib` `res_typ` (DR-0012). That
+  reproduces the template's fixed `cap_typ` and `res_typ` lines (the Miller
   capacitor is a `cap_cmim` device).
 - Supply: `corners.supply_v` sweeps `vdd` `{1.08, 1.20, 1.32}` and `vinp`
   `{0.54, 0.60, 0.66}` **together by index** (klt's semantics for multiple

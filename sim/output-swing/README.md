@@ -311,7 +311,7 @@ evidence, and `signoff/block-manifest.json` is unchanged.
 | File | Role |
 |---|---|
 | [`klt/tb_swing.body.spice`](klt/tb_swing.body.spice) | The test circuit of `testbench/tb_swing.spice.tmpl` as a `klt sim` circuit body (flat DUT include, `Vid` about `Vcm`, 10 µA `ibias`, `CL = 2 pF`, no resistive load, no feedback; exactly one `.include`). |
-| [`klt/swing.nominal.request.json`](klt/swing.nominal.request.json) | The request: `mos_tt` + `cornerCAP.lib cap_typ` / 27 °C / 1.20 V only (`vcm` swept with `vdd`), `dc Vid -0.01 0.04 10u`, local backend, OSDI preload, default solver tolerance (DR-0005). |
+| [`klt/swing.nominal.request.json`](klt/swing.nominal.request.json) | The request: `mos_tt` + `cornerCAP.lib cap_typ` + `cornerRES.lib res_typ` (DR-0012) / 27 °C / 1.20 V only (`vcm` swept with `vdd`), `dc Vid -0.01 0.04 10u`, local backend, OSDI preload, default solver tolerance (DR-0005). |
 | [`klt/run.sh`](klt/run.sh) | Runs the request (always `--backend local`), gates the envelope, writes it unmodified to `klt/records/<UTC>-<sha>.nominal.sim.json`, then the comparison `...nominal.compare.json`. |
 | [`klt/compare.py`](klt/compare.py), [`klt/test_compare.py`](klt/test_compare.py) | The validation gate and harness comparison (stdlib, offline) and its 44 focused tests. |
 
@@ -382,8 +382,9 @@ Run the tests (offline, no simulator):
 
 ### The 45-point envelope (grid result)
 
-`klt/run.sh grid` submits `klt/swing.request.json` (the nominal request with the
-ratified grid: `mos_tt/ss/ff/sf/fs` + `cornerCAP.lib cap_typ` x -40/27/125 C x
+`klt/run.sh grid` submits `klt/swing.request.json` (the nominal request with
+the ratified grid: `mos_tt/ss/ff/sf/fs` +
+`cornerCAP.lib cap_typ` + `cornerRES.lib res_typ` (DR-0012) x -40/27/125 C x
 VDD 1.08/1.20/1.32 V, `vcm` swept with `vdd`; same body, fixed `Vid` window,
 measurements and limits) on the batch backend only. Committed, unmodified:
 
