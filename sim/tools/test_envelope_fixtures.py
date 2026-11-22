@@ -87,6 +87,50 @@ class TestHarnessRows(unittest.TestCase):
         self.assertTrue(all(isinstance(v, str) for r in got for v in r.values()))
 
 
+class TestMalformedCsvPaths(unittest.TestCase):
+    """The shared short-or-malformed-row inputs (issues #181/#286), pinned so
+    a silent change here cannot weaken all six bench controls at once."""
+
+    def _record(self, d):
+        p = os.path.join(d, "h.csv")
+        with open(p, "w", newline="") as f:
+            w = csv.DictWriter(f, fieldnames=list(ROWS[0].keys()))
+            w.writeheader()
+            w.writerows(ROWS)
+        with open(p) as f:
+            return f.read().splitlines()
+
+    def test_both_mutations_hit_only_the_first_data_row(self):
+        with tempfile.TemporaryDirectory() as d:
+            lines = self._record(d)
+            with F.malformed_csv_paths(os.path.join(d, "h.csv")) as paths:
+                self.assertEqual(len(paths), 2)
+                got = []
+                for p in paths:
+                    with open(p) as f:
+                        got.append(f.read().splitlines())
+        # short: the first data row is only its first cell
+        self.assertEqual(got[0][0], lines[0])
+        self.assertEqual(got[0][1], lines[1].split(",")[0])
+        self.assertEqual(got[0][2:], lines[2:])
+        # malformed: that row's temp_c is `hot`, every other cell intact
+        self.assertEqual(got[1][0], lines[0])
+        self.assertEqual(got[1][2:], lines[2:])
+        i = lines[0].split(",").index("temp_c")
+        self.assertEqual(got[1][1].split(",")[i], "hot")
+        self.assertEqual(
+            [c for j, c in enumerate(got[1][1].split(",")) if j != i],
+            [c for j, c in enumerate(lines[1].split(",")) if j != i],
+        )
+
+    def test_paths_live_only_inside_the_with_block(self):
+        with tempfile.TemporaryDirectory() as d:
+            self._record(d)
+            with F.malformed_csv_paths(os.path.join(d, "h.csv")) as paths:
+                self.assertTrue(all(os.path.isfile(p) for p in paths))
+            self.assertTrue(all(not os.path.exists(p) for p in paths))
+
+
 class TestRequestLimits(unittest.TestCase):
     def test_limits_are_lifted_and_absent_means_none(self):
         req = {"measurements": [{"name": "a", "limits": {"max": 1.0}}, {"name": "b"}]}
@@ -252,7 +296,7 @@ class TestNonCircularity(unittest.TestCase):
                 imported.add(node.module.split(".")[0])
             elif isinstance(node, ast.ImportFrom):
                 self.fail(f"relative import in envelope_fixtures.py: {ast.dump(node)}")
-        self.assertEqual(imported, {"__future__", "csv", "json", "typing"})
+        self.assertEqual(imported, {"__future__", "contextlib", "csv", "json", "os", "tempfile", "typing"})
 
     def test_make_key_and_status_fn_are_parameters(self):
         self.assertIn("make_key", inspect.signature(F.build_envelope).parameters)
