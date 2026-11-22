@@ -1,0 +1,21 @@
+** sch_path: /home/ubuntu/GitHub/sg13g2-opamp/.loom/worktrees/issue-430/design/opamp_core.sch
+**.subckt opamp_core vdd vss inn inp out ibias
+
+*.iopin vdd
+*.iopin vss
+*.iopin inn
+*.iopin inp
+*.iopin out
+*.iopin ibias
+XM1 d1 inn tail vss sg13_lv_nmos w=3.2u l=0.13u ng=1 m=1
+XM2 d2 inp tail vss sg13_lv_nmos w=3.2u l=0.13u ng=1 m=1
+XM3 d1 d1 vdd vdd sg13_lv_pmos w=1.04u l=0.52u ng=1 m=1
+XM4 d2 d1 vdd vdd sg13_lv_pmos w=1.04u l=0.52u ng=1 m=1
+XM5 tail ibias vss vss sg13_lv_nmos w=2.2u l=0.52u ng=1 m=1
+XMbias ibias ibias vss vss sg13_lv_nmos w=2.2u l=0.52u ng=1 m=1
+XM6 out d2 vdd vdd sg13_lv_pmos w=33u l=1.04u ng=1 m=1
+XM7 out ibias vss vss sg13_lv_nmos w=11.9u l=0.52u ng=1 m=1
+XCc out cc_rz cap_cmim w=25.3u l=25.3u m=1
+XRz cc_rz d2 vss rppd w=1u l=7.47u m=1 b=0
+**.ends
+.end
