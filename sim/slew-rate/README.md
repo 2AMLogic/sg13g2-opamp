@@ -276,7 +276,8 @@ below for the result and how the run got unblocked.
 ### Grid encoding
 
 - Process: one `corners.process` bundle per `cornerMOSlv.lib` section
-  (`mos_tt/ss/ff/sf/fs`), each also selecting `cornerCAP.lib` `cap_typ`, as in
+  (`mos_tt/ss/ff/sf/fs`), each also selecting
+  `cornerCAP.lib` `cap_typ` and `cornerRES.lib` `res_typ` (DR-0012), as in
   the template.
 - Supply: `corners.supply_v` sweeps `vdd` `{1.08, 1.20, 1.32}` and `vinp`
   `{0.54, 0.60, 0.66}` together by index, so `Vcm = VDD/2` at every corner.

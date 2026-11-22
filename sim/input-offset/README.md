@@ -293,7 +293,8 @@ expressed here.
 ### Encoding
 
 - Grid: `mos_tt/ss/ff/sf/fs` x {-40, 27, 125} C x VDD {1.08, 1.20, 1.32} V,
-  each process corner a bundle with `cornerCAP.lib cap_typ`; the common-mode
+  each process corner a bundle with
+  `cornerCAP.lib cap_typ` and `cornerRES.lib res_typ` (DR-0012); the common-mode
   source is named `Vinp` so klt's `vinp` sweep sets `Vcm = VDD/2` by index.
 - Analysis `dc Vid 0.004 0.034 4u`: one 7501-point pass at the harness fine
   pass's 4 uV step. The harness runs a wide coarse locate pass and a narrow

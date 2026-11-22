@@ -301,7 +301,7 @@ ratified bound is applied by `compare.py`, not graded by the tool. The CMRR benc
 
 | File | Role |
 |---|---|
-| `klt/psrr.request.json` | 45-point grid (`mos_tt/ss/ff/sf/fs` × −40/27/125 °C × 1.08/1.20/1.32 V; each process corner a bundle with `cornerCAP.lib cap_typ`; `vinp` swept with `vdd` so Vcm = VDD/2), `ac dec 20 10m 1g`, OSDI preload + `stage_model_inputs` (the single-request form; the sharded form below replaces both), default solver tolerance (DR-0005) |
+| `klt/psrr.request.json` | 45-point grid (`mos_tt/ss/ff/sf/fs` × −40/27/125 °C × 1.08/1.20/1.32 V; each process corner a bundle with `cornerCAP.lib cap_typ` + `cornerRES.lib res_typ` (DR-0012); `vinp` swept with `vdd` so Vcm = VDD/2), `ac dec 20 10m 1g`, OSDI preload + `stage_model_inputs` (the single-request form; the sharded form below replaces both), default solver tolerance (DR-0005) |
 | `klt/tb_psrr.body.spice` | the template's circuit as a body: exactly one DUT `.include`, no `.control`; `Vdd` carries `ac 1`, `Vinp` carries none |
 | `klt/run.sh` | sources `sim/preflight.sh` (which sources `sim/env.sh`); submits to the batch backend (`PSRR_KLT_MODE=shard`, the default, or `single`); writes the envelope **unmodified** to `klt/records/<UTC>-<sha>.sim.json` only after `compare.py validate` passes (45 unique points, no errored/inconclusive corner, `coverage.nothing_checked` false, nothing skipped); in shard mode also keeps the raw per-shard requests, bodies and reports in `<id>.shards/` |
 | `klt/shard.py`, `klt/test_shard.py` | the per-process shard bridge for the klt 0.5.0 fleet runner, and its validation-gated merge; tests with negative controls (below) |
@@ -343,7 +343,8 @@ bound (≥ 1.87 dB, DC shelf) **offline**. Consequences, stated plainly:
 When the bridge was built, the fleet runner image pinned klt 0.5.0
 (2AMLogic/2am#2193, since closed). On that runner,
 `psrr.request.json` cannot run as one request: the `{"lib","section"}` object
-form of the per-process bundle (the fixed `cornerCAP.lib cap_typ` section),
+form of the per-process bundle (the fixed
+`cornerCAP.lib cap_typ` and `cornerRES.lib res_typ` sections, DR-0012),
 `options.osdi_preload`/`stage_model_inputs`, and `ngspice_init` are not
 carried (the runner drops or rejects them) and a 0.5.0 client has no `batch`
 backend. The fleet runner now runs klt 0.8.0 and gates on major.minor only, so
@@ -354,7 +355,7 @@ klayout-tools#4109) with one request per process corner.
 
 | Master request | Each shard (`mos_xx`, 9 corners) |
 |---|---|
-| `corners.process` bundle `[mos_xx, {cornerCAP.lib, cap_typ}]` | `models.lib` = `cornerMOSlv.lib`, `corners.process` = `["mos_xx"]`; the cap section becomes a body-level selection card `.lib ".../cornerCAP.lib" cap_typ` against the image's baked PDK root (`/opt/pdk`) |
+| `corners.process` bundle `[mos_xx, {cornerCAP.lib, cap_typ}, {cornerRES.lib, res_typ}]` (DR-0012) | `models.lib` = `cornerMOSlv.lib`, `corners.process` = `["mos_xx"]`; the cap and res sections become **two** body-level selection cards, `.lib ".../cornerCAP.lib" cap_typ` and `.lib ".../cornerRES.lib" res_typ`, against the image's baked PDK root (`/opt/pdk`) |
 | `options.osdi_preload`, `stage_model_inputs` | a body `.control` block of four `pre_osdi` cards (the documented deviation from the netlist-body contract) |
 | `options.ngspice_init` (`set measureprec/numdgt=12`) | the same two `set` cards in that `.control` block |
 | body `.include` of the DUT netlist | the DUT netlist inlined (its `.end` dropped); the 0.6.0 client uploads the body file only |
