@@ -1425,20 +1425,12 @@ class LoadCondition(unittest.TestCase):
         self.assertIn("descriptive", self.build_row("gbw")["conditions_provenance"])
 
 
-class NoiseRawAudit(unittest.TestCase):
-    """Issue #213: the input-noise summary is audited against hash-pinned raw
-    logs and in-band spectra; the logged integrated figure and the
-    spectrum-derived quantities are checked independently."""
-
-    RECORD = "input-noise"
-    POINT = "mos_tt_27C_1.20V"
-
-    def setUp(self) -> None:
-        self.fx = Fixture()
-        self.fx.keep_noise_audit = True
-
-    def tearDown(self) -> None:
-        self.fx.close()
+class RawAuditCase(unittest.TestCase):
+    """Shared error assertion for the raw-audit suites (noise, KLT, slew,
+    swing): `errors` collects report-level and row-level diagnostics, and
+    `assert_error` builds the report, requires the overall ERROR verdict,
+    checks each requested text fragment and returns the diagnostics for
+    further assertions."""
 
     def errors(self, content: dict) -> list:
         out = list(content["errors"])
@@ -1453,6 +1445,22 @@ class NoiseRawAudit(unittest.TestCase):
         for fragment in fragments:
             self.assertTrue(any(fragment in e for e in errors), (fragment, errors))
         return errors
+
+
+class NoiseRawAudit(RawAuditCase):
+    """Issue #213: the input-noise summary is audited against hash-pinned raw
+    logs and in-band spectra; the logged integrated figure and the
+    spectrum-derived quantities are checked independently."""
+
+    RECORD = "input-noise"
+    POINT = "mos_tt_27C_1.20V"
+
+    def setUp(self) -> None:
+        self.fx = Fixture()
+        self.fx.keep_noise_audit = True
+
+    def tearDown(self) -> None:
+        self.fx.close()
 
     def entry(self, kind, pid=None) -> dict:
         return self.fx.selection["records"][self.RECORD]["noise_raw"]["files"][pid or self.POINT][kind]
@@ -1712,7 +1720,7 @@ class NoiseRawAudit(unittest.TestCase):
         self.assertNotIn("PYEOF", runner.split("noise_post.py")[1].split("done")[0])
 
 
-class KltRawAudit(unittest.TestCase):
+class KltRawAudit(RawAuditCase):
     """Issue #101: the corrected open-loop record carries no `op_pass` /
     `gm_status` columns, so its four graded rows are audited against the
     hash-pinned `klt sim` envelopes (definition check open_loop_klt_audit).
@@ -1730,20 +1738,6 @@ class KltRawAudit(unittest.TestCase):
 
     def raw(self) -> dict:
         return self.fx.selection["records"][self.RECORD]["klt_raw"]
-
-    def errors(self, content: dict) -> list:
-        out = list(content["errors"])
-        for row in content["rows"]:
-            out.extend(row["errors"])
-        return out
-
-    def assert_error(self, *fragments: str) -> list:
-        content = self.fx.build()
-        errors = self.errors(content)
-        self.assertEqual(content["overall"]["verdict"], "ERROR", errors)
-        for fragment in fragments:
-            self.assertTrue(any(fragment in e for e in errors), (fragment, errors))
-        return errors
 
     def edit_json(self, kind, mutate, repin=True) -> None:
         pin = self.raw()["files"][kind]
@@ -1971,7 +1965,7 @@ class KltRawAudit(unittest.TestCase):
         self.assert_error("differs from the dc_continuity record")
 
 
-class SlewRawAudit(unittest.TestCase):
+class SlewRawAudit(RawAuditCase):
     """Issue #227: the slew-rate summary is audited against hash-pinned
     transient waveforms and rendered netlists with the SAME measurement the
     bench runs (sim/slew-rate/slew_post.py)."""
@@ -1991,20 +1985,6 @@ class SlewRawAudit(unittest.TestCase):
 
     def raw(self) -> dict:
         return self.fx.selection["records"][self.RECORD]["slew_raw"]
-
-    def errors(self, content: dict) -> list:
-        out = list(content["errors"])
-        for row in content["rows"]:
-            out.extend(row["errors"])
-        return out
-
-    def assert_error(self, *fragments: str) -> list:
-        content = self.fx.build()
-        errors = self.errors(content)
-        self.assertEqual(content["overall"]["verdict"], "ERROR", errors)
-        for fragment in fragments:
-            self.assertTrue(any(fragment in e for e in errors), (fragment, errors))
-        return errors
 
     def entry(self, kind, pid=None) -> dict:
         return self.raw()["files"][pid or self.POINT][kind]
@@ -2273,7 +2253,7 @@ class SlewRawAudit(unittest.TestCase):
         self.assertIn("non-finite", res.stderr)
 
 
-class SwingRawAudit(unittest.TestCase):
+class SwingRawAudit(RawAuditCase):
     """Issue #230: the output-swing summary is audited against hash-pinned
     coarse/fine DC transfer curves and rendered netlists with the SAME
     measurement the bench runs (sim/output-swing/swing_post.py)."""
@@ -2295,20 +2275,6 @@ class SwingRawAudit(unittest.TestCase):
 
     def raw(self) -> dict:
         return self.fx.selection["records"][self.RECORD]["swing_raw"]
-
-    def errors(self, content: dict) -> list:
-        out = list(content["errors"])
-        for row in content["rows"]:
-            out.extend(row["errors"])
-        return out
-
-    def assert_error(self, *fragments: str) -> list:
-        content = self.fx.build()
-        errors = self.errors(content)
-        self.assertEqual(content["overall"]["verdict"], "ERROR", errors)
-        for fragment in fragments:
-            self.assertTrue(any(fragment in e for e in errors), (fragment, errors))
-        return errors
 
     def entry(self, kind, pid=None) -> dict:
         return self.raw()["files"][pid or self.POINT][kind]
