@@ -11,6 +11,10 @@ skeleton, `_regrade` and `Base.find`. Those live here now.
 What lives here:
 
 * harness_rows  -- the csv.DictReader read of a committed harness record;
+* malformed_csv_paths -- the two malformed variants of a committed record
+                    (a row truncated to one cell, an unparsable temp_c) as
+                    short-lived paths, for every bench's
+                    short-or-malformed-row InputError control;
 * grade         -- the min/max limits grader the fixtures use to stamp status;
 * request_limits-- {measurement name: limits} lifted off a klt request;
 * build_envelope-- the per-corner dict and the schema_version 3 wrapper;
@@ -39,13 +43,45 @@ from __future__ import annotations
 
 import csv
 import json
-from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple
+import os
+import tempfile
+from contextlib import contextmanager
+from typing import Any, Callable, Dict, Iterator, List, Mapping, Optional, Sequence, Tuple
 
 
 def harness_rows(csv_path: str) -> List[Dict[str, str]]:
     """The committed harness record, as raw string rows in file order."""
     with open(csv_path, newline="") as f:
         return list(csv.DictReader(f))
+
+
+@contextmanager
+def malformed_csv_paths(csv_path: str) -> Iterator[List[str]]:
+    """Both malformed variants of the committed record at `csv_path`, as paths.
+
+    The two mutations every bench's short-or-malformed-row control stamps
+    (issues #181/#286): the first data row truncated to its first cell, and
+    that row's temp_c replaced with `hot`. Each bench keeps its own loader
+    call and error assertion -- this builds the inputs only, so a loader that
+    stops raising InputError still fails the bench's own test, not something
+    here. The paths live for the `with` block only.
+    """
+    with open(csv_path) as f:
+        lines = f.read().splitlines()
+    cells = lines[1].split(",")
+    cells[lines[0].split(",").index("temp_c")] = "hot"
+    texts = (
+        lines[0] + "\n" + lines[1].split(",")[0] + "\n" + "\n".join(lines[2:]) + "\n",
+        "\n".join([lines[0], ",".join(cells)] + lines[2:]) + "\n",
+    )
+    with tempfile.TemporaryDirectory() as d:
+        paths = []
+        for name, text in zip(("short_row.csv", "unparsable_temp_c.csv"), texts):
+            p = os.path.join(d, name)
+            with open(p, "w") as f:
+                f.write(text)
+            paths.append(p)
+        yield paths
 
 
 def grade(value: float, limits: Optional[Mapping[str, float]]) -> str:

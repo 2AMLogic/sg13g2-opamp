@@ -180,15 +180,8 @@ class TestHarnessInputs(Base):
     def test_short_or_malformed_row_is_input_error(self):
         """A truncated row or an unparsable temp_c is exit-2 material (an
         InputError), never a raw KeyError/ValueError/TypeError (issue #286)."""
-        lines = _read(HARNESS_CSV).splitlines()
-        short = lines[0] + "\n" + lines[1].split(",")[0] + "\n" + "\n".join(lines[2:]) + "\n"
-        cells = lines[1].split(",")
-        cells[lines[0].split(",").index("temp_c")] = "hot"
-        malformed = "\n".join([lines[0], ",".join(cells)] + lines[2:]) + "\n"
-        for text in (short, malformed):
-            with tempfile.TemporaryDirectory() as d:
-                p = os.path.join(d, "h.csv")
-                _write(p, text)
+        with F.malformed_csv_paths(HARNESS_CSV) as paths:
+            for p in paths:
                 with self.assertRaisesRegex(C.InputError, "unparsable row"):
                     C.load_harness_csv(p)
 
