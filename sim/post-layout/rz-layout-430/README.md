@@ -199,8 +199,7 @@ At `res_typ`, GBW at `cap_bcs` / `cap_typ` / `cap_wcs` is 12.1463 / 11.1455 /
 gain is 45.7976, 42.6760 and 46.7213 dB at the three points and does not
 move with either section.
 
- The
-lowest phase margin over all 27 legs is **63.4876°**, at `res_bcs` with
+The lowest phase margin over all 27 legs is **63.4876°**, at `res_bcs` with
 `cap_bcs` at the binding corner (job `klt-sim-c540813d0819`), 3.49° above
 the bound; the lowest GBW is 8.9224 MHz at `mos_fs / 1.08 V / 125 °C` with
 `res_bcs` and `cap_wcs` (`klt-sim-2ccd4af24278`), 1.88× the bound. The

@@ -193,7 +193,7 @@ class ControlTest(Scratch):
         with contextlib.redirect_stdout(io.StringIO()):
             return rc.control(self.dut, self.sch, out), out
 
-    def test_flags_every_control_leg_and_never_the_bench_form(self):
+    def test_control_comment_is_set_only_on_the_gear_ideal_and_schematic_single_legs(self):
         manifest, out = self.build()
         self.assertEqual(len(manifest), 35)
         names = [m["name"] for m in manifest]
