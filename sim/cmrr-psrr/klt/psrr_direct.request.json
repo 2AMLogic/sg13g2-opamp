@@ -3,7 +3,7 @@
     "sim/cmrr-psrr PSRR as ONE `klt sim` measurement (issue #307): psrr_db = Av0 - Avs0 in dB, graded against the ratified bound by the tool itself.",
     "Circuit: tb_psrr_direct.body.spice -- two independent copies of the DUT in one deck. Copy A (Vinp ac 1, Vdd quiet) gives Av0; copy B (series source Vsrip ac 1 on its rail, input AC-quiet) gives Avs. They share only quiet reference nodes, so one AC solve is exactly the two single-excitation solves psrr.request.json and the open-loop request run separately.",
     "Grid: cornerMOSlv.lib mos_tt/ss/ff/sf/fs [DR-1] x {-40, 27, 125} C x VDD {1.08, 1.20, 1.32} V = 45 corners, identical to psrr.request.json. vinp sweeps WITH vdd by index (Vcm = VDD/2); copy B's input is a VDD/2 divider off the quiet vdd node.",
-    "Each process corner is a bundle carrying the fixed cornerCAP.lib cap_typ section (the Miller cap is a cap_cmim MIM device), as in psrr.request.json.",
+    "Each MOS corner uses the fixed cap_typ and res_typ sections (DR-0012), as in psrr.request.json.",
     "Analysis: ac dec 20 10m 1g. The DC shelf is the first AC point (10 mHz), below the ~1.5 Hz supply zero, as in the harness.",
     "Ratified row: PSRR+ (DC shelf) >= 1.87 dB worst-case [DR-2] (spec/target-spec.md section 2). It is the `limits.min` of psrr_db, a derived expr measurement: (vdb(outa) - vdb(outb))[0].",
     "av0_db and avs0_db are the two operands read separately, ungraded, so compare_direct.py can check each against the committed single-excitation envelopes.",
@@ -30,6 +30,10 @@
           {
             "lib": "libs.tech/ngspice/models/cornerCAP.lib",
             "section": "cap_typ"
+          },
+          {
+            "lib": "libs.tech/ngspice/models/cornerRES.lib",
+            "section": "res_typ"
           }
         ]
       },
@@ -40,6 +44,10 @@
           {
             "lib": "libs.tech/ngspice/models/cornerCAP.lib",
             "section": "cap_typ"
+          },
+          {
+            "lib": "libs.tech/ngspice/models/cornerRES.lib",
+            "section": "res_typ"
           }
         ]
       },
@@ -50,6 +58,10 @@
           {
             "lib": "libs.tech/ngspice/models/cornerCAP.lib",
             "section": "cap_typ"
+          },
+          {
+            "lib": "libs.tech/ngspice/models/cornerRES.lib",
+            "section": "res_typ"
           }
         ]
       },
@@ -60,6 +72,10 @@
           {
             "lib": "libs.tech/ngspice/models/cornerCAP.lib",
             "section": "cap_typ"
+          },
+          {
+            "lib": "libs.tech/ngspice/models/cornerRES.lib",
+            "section": "res_typ"
           }
         ]
       },
@@ -70,6 +86,10 @@
           {
             "lib": "libs.tech/ngspice/models/cornerCAP.lib",
             "section": "cap_typ"
+          },
+          {
+            "lib": "libs.tech/ngspice/models/cornerRES.lib",
+            "section": "res_typ"
           }
         ]
       }

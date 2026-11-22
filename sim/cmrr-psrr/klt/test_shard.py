@@ -75,7 +75,7 @@ class TestGen(ShardBase):
                 self.assertNotIn(opt, req["options"])
             self.assertEqual(req["options"]["timeout_s"], master["options"]["timeout_s"])
 
-    def test_body_inlines_dut_and_selects_cap_corner(self):
+    def test_body_inlines_dut_and_selects_typical_passives(self):
         s = self.manifest["shards"][1]
         with open(os.path.join(self.dir.name, s["body"])) as f:
             lines = [ln.strip() for ln in f if not ln.startswith("*")]
@@ -83,6 +83,7 @@ class TestGen(ShardBase):
         self.assertNotIn(".end", [ln.lower() for ln in lines])
         self.assertEqual(sum(ln.startswith("XM") for ln in lines), 8)
         self.assertIn('.lib "/opt/pdk/ihp-sg13g2/libs.tech/ngspice/models/cornerCAP.lib" cap_typ', lines)
+        self.assertIn('.lib "/opt/pdk/ihp-sg13g2/libs.tech/ngspice/models/cornerRES.lib" res_typ', lines)
         self.assertEqual(sum(ln.startswith("pre_osdi /opt/pdk/ihp-sg13g2/libs.tech/ngspice/osdi/") for ln in lines), 4)
         self.assertEqual(sum(ln.lower() == ".control" for ln in lines), 1)
         self.assertTrue(any(ln.startswith("Vdd ") and " ac 1" in ln for ln in lines))
@@ -267,19 +268,21 @@ class TestCommittedRecord(unittest.TestCase):
                 # The master digest is historical (it moves when the master request's
                 # comment is edited); what must stay is every shard request.
                 old = json.load(f)["shards"]
-            # The live bench moved on after this record (issue #241 added the inn
-            # AC-ground cap), so the body hash is not comparable; the record's own
-            # body is pinned by its committed snapshot above. Everything else
-            # (requests, keys) must still be what gen produces.
+            # The record pins its original body above. Shard requests and keys
+            # still match even though the live bench acquired two cards since.
             strip = lambda shards: [{k: v for k, v in s.items() if k != "body_sha256"} for s in shards]
             self.assertEqual(strip(old), strip(man["shards"]))
-            # And the live body differs from the record's only by the #241 lines.
+            # Apply the DR-0012 addition to the expected body, preserving its
+            # position. The existing #241 AC-ground lines are handled below.
             for s in old:
                 with open(os.path.join(sd, s["body"])) as f:
-                    committed = f.read().splitlines()
+                    expected = f.read().splitlines()
+                models = "/opt/pdk/ihp-sg13g2/libs.tech/ngspice/models"
+                cap = expected.index(f'.lib "{models}/cornerCAP.lib" cap_typ')
+                expected.insert(cap + 1, f'.lib "{models}/cornerRES.lib" res_typ')
                 with open(os.path.join(d, s["body"])) as f:
                     live = [l for l in f.read().splitlines() if "Cinn_acgnd" not in l]
-                self.assertEqual(committed, live, s["process"])
+                self.assertEqual(expected, live, s["process"])
 
     def test_committed_comparison_is_clean_and_preserves_the_plateau_miss(self):
         with open(os.path.join(RECORDS, RECORD + ".compare.json")) as f:

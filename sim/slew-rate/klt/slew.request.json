@@ -4,7 +4,7 @@
     "Circuit: tb_slew.body.spice -- the same test circuit as ../testbench/tb_slew.spice.tmpl (one deliberate re-expression of the inp pwl drive; see the body's header).",
     "Grid: cornerMOSlv.lib mos_tt/ss/ff/sf/fs [DR-1] x {-40, 27, 125} C x VDD {1.08, 1.20, 1.32} V = 45 corners.",
     "vinp sweeps WITH vdd by index (klt's supply_v semantics), so Vcm = VDD/2 at every corner, as in the harness.",
-    "Each process corner is a bundle carrying the template's fixed cornerCAP.lib cap_typ section (the Miller cap is a cap_cmim MIM device).",
+    "Each MOS corner uses the fixed cap_typ and res_typ sections (DR-0012).",
     "Analysis: tran 1n 800n 0 0.05n = the template's T_PRINT, T_STOP, startup 0, T_MAX; `.options interp` is in the body, as in the template.",
     "Ratified row: slew rate into CL = 2 pF >= 7.51 V/us worst-case [DR-2], the WORSE of the rising and falling edge at each point (spec/target-spec.md section 2).",
     "Encoding of 'the worse of two edges': one measurement per edge, sr_rise_v_per_us and sr_fall_v_per_us, EACH carrying the same ratified bound min 7.51.",
@@ -42,6 +42,10 @@
           {
             "lib": "libs.tech/ngspice/models/cornerCAP.lib",
             "section": "cap_typ"
+          },
+          {
+            "lib": "libs.tech/ngspice/models/cornerRES.lib",
+            "section": "res_typ"
           }
         ]
       },
@@ -52,6 +56,10 @@
           {
             "lib": "libs.tech/ngspice/models/cornerCAP.lib",
             "section": "cap_typ"
+          },
+          {
+            "lib": "libs.tech/ngspice/models/cornerRES.lib",
+            "section": "res_typ"
           }
         ]
       },
@@ -62,6 +70,10 @@
           {
             "lib": "libs.tech/ngspice/models/cornerCAP.lib",
             "section": "cap_typ"
+          },
+          {
+            "lib": "libs.tech/ngspice/models/cornerRES.lib",
+            "section": "res_typ"
           }
         ]
       },
@@ -72,6 +84,10 @@
           {
             "lib": "libs.tech/ngspice/models/cornerCAP.lib",
             "section": "cap_typ"
+          },
+          {
+            "lib": "libs.tech/ngspice/models/cornerRES.lib",
+            "section": "res_typ"
           }
         ]
       },
@@ -82,6 +98,10 @@
           {
             "lib": "libs.tech/ngspice/models/cornerCAP.lib",
             "section": "cap_typ"
+          },
+          {
+            "lib": "libs.tech/ngspice/models/cornerRES.lib",
+            "section": "res_typ"
           }
         ]
       }

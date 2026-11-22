@@ -40,6 +40,9 @@ def make_install(root: Path, marker: str = "0.3.0", mos_body: str = "* mos tt\n"
     models.mkdir(parents=True)
     (models / "cornerMOSlv.lib").write_text('.lib mos_tt\n.include "sub/mos.inc"\n.endl\n', encoding="utf-8")
     (models / "cornerCAP.lib").write_text("* cap\n", encoding="utf-8")
+    (models / "cornerRES.lib").write_text(
+        '.lib res_typ\n.include "resistors_mod.lib"\n.endl res_typ\n', encoding="utf-8")
+    (models / "resistors_mod.lib").write_text("* resistor subcircuits\n", encoding="utf-8")
     (models / "sub").mkdir()
     (models / "sub" / "mos.inc").write_text(mos_body, encoding="utf-8")
     (inst / ".fetched-version").write_text(marker + "\n", encoding="utf-8")
@@ -70,7 +73,9 @@ class EnvIdentity(unittest.TestCase):
     def test_valid_sidecar_verifies_and_closure_follows_includes(self):
         s = self.sidecar()
         self.assertEqual(ei.verify(s, PIN, RID), [])
-        self.assertIn("libs.tech/ngspice/models/sub/mos.inc", [f["path"] for f in s["models"]["files"]])
+        paths = {f["path"] for f in s["models"]["files"]}
+        for name in ("sub/mos.inc", "cornerRES.lib", "resistors_mod.lib"):
+            self.assertIn(f"{ei.MODELS_SUBDIR}/{name}", paths)
         self.assertEqual(s["models"]["unresolved"], [])
 
     def test_same_release_marker_different_model_bytes_differ(self):

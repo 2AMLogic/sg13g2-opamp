@@ -7,14 +7,14 @@
 Why this exists. The fleet runner image pins klt 0.5.0 (2AMLogic/2am#2193).
 psrr.request.json needs three things that runner cannot carry in one request:
 per-section corner libraries of the `{"lib","section"}` object form (the
-fixed cornerCAP.lib cap_typ section of every process bundle),
+fixed cap_typ and res_typ sections of every process bundle),
 `options.osdi_preload`/`stage_model_inputs`, and (client side) the netlist's
 `.include` closure. This bridge splits the SAME 45-point grid into five
 per-process requests that the 0.5.0 runner does run:
 
 * `models.lib` = cornerMOSlv.lib, `corners.process` = [one bare section];
-* the cornerCAP.lib cap_typ selection becomes a body-level selection `.lib`
-  card against the image's baked PDK root;
+* the cap_typ and res_typ sections become body-level `.lib`
+  cards against the image's baked PDK root;
 * the OSDI libraries load from a body `.control` block's `pre_osdi` cards (the
   documented deviation from the netlist-body contract; sg13g2-bandgap's
   sim/harness proved it) because `osdi_preload` is dropped by the 0.5.0 runner;
@@ -72,7 +72,7 @@ def shard_keys(process: str) -> List[C.Key]:
 
 
 def build_body(body_text: str, dut_text: str, process: str, batch_pdk_root: str, init_cards: List[str]) -> str:
-    """Shard body: control block, inlined DUT, cap selection card, bench elements."""
+    """Shard body: control block, inlined DUT, passive library cards, bench elements."""
     inc = [ln for ln in body_text.splitlines() if INCLUDE_RE.match(ln)]
     if len(inc) != 1 or INCLUDE_RE.match(inc[0]).group(1) != DUT_INCLUDE:
         raise ShardError(f"body must carry exactly one include of {DUT_INCLUDE}, found {inc}")
@@ -95,6 +95,7 @@ def build_body(body_text: str, dut_text: str, process: str, batch_pdk_root: str,
             out.extend(dut_lines)
             out.append("* ---- end inlined design/netlist/opamp_core.spice ----")
             out.append(f'.lib "{models}/models/cornerCAP.lib" cap_typ')
+            out.append(f'.lib "{models}/models/cornerRES.lib" res_typ')
         else:
             out.append(ln)
     return "\n".join(out) + "\n"

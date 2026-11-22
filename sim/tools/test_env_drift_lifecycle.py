@@ -51,6 +51,7 @@ PIN_TEXT = (SIM_DIR / "pdk.json").read_text(encoding="utf-8")
 PIN = json.loads(PIN_TEXT)
 
 MOS_INC = f"{PDK}/{ei.MODELS_SUBDIR}/sub/mos.inc"
+RES_INC = f"{PDK}/{ei.MODELS_SUBDIR}/resistors_mod.lib"
 OSDI_MANIFEST = f"{PDK}/{ei.OSDI_MANIFEST_REL}"
 MARKER = f"{PDK}/.fetched-version"
 
@@ -75,6 +76,9 @@ def make_install(pdk_root: Path) -> None:
     (models / "cornerMOSlv.lib").write_text(
         '.lib mos_tt\n.include "sub/mos.inc"\n.endl mos_tt\n', encoding="utf-8")
     (models / "cornerCAP.lib").write_text("* cap\n", encoding="utf-8")
+    (models / "cornerRES.lib").write_text(
+        '.lib res_typ\n.include "resistors_mod.lib"\n.endl res_typ\n', encoding="utf-8")
+    (models / "resistors_mod.lib").write_text("* resistor subcircuits\n", encoding="utf-8")
     (models / "sub" / "mos.inc").write_text("* mos tt\n", encoding="utf-8")
     (inst / ".fetched-version").write_text("0.3.0\n", encoding="utf-8")
     osdi = inst / "libs.tech/ngspice/osdi"
@@ -282,6 +286,7 @@ def mutations(tree: Tree) -> dict:
     pin = dict(PIN, release_tag="v0.3.1")
     return {
         "used model include": (tree.live(MOS_INC), "* mos tt, edited mid-run\n", "sub/mos.inc"),
+        "resistor model include": (tree.live(RES_INC), "* resistor edited mid-run\n", "resistors_mod.lib"),
         "OSDI manifest": (tree.live(OSDI_MANIFEST), osdi_manifest("openvaf_tag=other\n"), "OSDI build-manifest"),
         "release marker": (tree.live(MARKER), "0.3.1\n", "release marker"),
         "configured pin": (tree.sim / "pdk.json", json.dumps(pin, indent=2) + "\n", "configured release_tag"),
