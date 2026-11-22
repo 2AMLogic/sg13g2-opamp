@@ -6,14 +6,14 @@
   supply / temperature; every row listed under "Rows not submitted as
   bounds", including open-loop gain, CMRR, swing headroom, noise, offset and
   tracking span, is a measured value with status only and is **not**
-  ratified) are
-  ratified when, and only when, the PR
-  that carries this status line has been ratified by **both keys** of the
+  ratified) await remeasurement on the replacement topology under #332
+  (r5-q96 and r5-q99). Ratification requires the revised head of PR #303
+  to receive approving verdicts from **both keys** of the
   two-key mechanism ([2AMLogic/2am#372](https://github.com/2AMLogic/2am/issues/372)):
   an EE key (`RATIFY-KEY: ee`) and a market key (`RATIFY-KEY: market`), each
-  posted as a PR review verdict, **neither key held by this PR's author or
-  the design's author**. The merge commit of that PR is then the ratification
-  record. This record supplies neither key. It changes **no** limit other
+  posted as a PR review verdict, **neither key held by the author of #303 or
+  the design's author**. The operator then ratifies. The merge commit of
+  #303 is the ratification record. This record supplies neither key. It changes **no** limit other
   than the Revision 3 PSRR+ restatement below (>= 26.9 dB, superseding the
   DR-0002 1.87 dB floor) and the Revision 4 withdrawal of six rows from
   submission, and changes no comparison rule, rounding
@@ -26,7 +26,7 @@
   >= 26.9 dB bound in this record once ratified**; those files are not edited
   here and keep grading the withdrawn floor until gap 6 carries them to
   26.9 dB, repoints `selection.json` to `f8ef0ba` and re-mints. Until both
-  keys are present and approving, the PR must not be merged and the limits
+  keys are present and approving, #303 must not be merged and the limits
   remain only the conservative working limits. (Previous status:
   `submitted for fresh ratification`, preparation only, PR #293.)
   **Revision 2** (operator send-back after the two-key review of head
@@ -49,23 +49,25 @@
   The PSRR+ supersession is stated in this Status clause (above), and the
   remaining "unchanged" wording is corrected. Both keys re-review, because
   the submitted rows changed.
-  **Revision 5** (issue #332, offline re-derivation, no simulation; report
-  `signoff/characterization/reports/20261104-190000-1907585.md`): the swing
-  row (withdrawn in Revision 4) is restated as a guaranteed output range from
-  the per-point `Vout` columns (1.08 V: 0.2068-0.7722 V; 1.20 V:
-  0.2150-0.8894 V; 1.32 V: 0.2231-1.0009 V; CL = 2 pF, unloaded; definition
-  flagged for the EE key; remains in "Rows not submitted as bounds"). The
-  per-rail headroom worst case is the largest value, 319.0598 mV (VDD) and
-  223.073866 mV (VSS) at `mos_ss_125C_1.32V`; 251 / 141 mV are the best-case
-  minima. The
-  CMRR (>= 26.68 dB) and gain (>= 37.8 dB) working bounds (also withdrawn in
-  Revision 4) are **not defensible against the carried comps** (50-63 dB and
-  ~83.5-104 dB, all unverified, none fetched). The mismatch-limited
-  hypothesis for CMRR is refuted by the record (3 sigma exceeds the
-  systematic term at 11/45 points; the binding point is mean-dominated), and
-  a resize cannot close a >= 23.3 dB gap in the DR-0001 topology. Both rows
-  go to the operator via a decision on #332. Both keys must re-review the
-  revised head.
+  **Revision 5** (issue #332). For the DR-0001 sizing, the output ranges
+  common to all measured corners are 0.2069–0.7722 V at 1.08 V (span 0.5653 V),
+  0.2151–0.8893 V at 1.20 V (0.6742 V) and 0.2231–1.0009 V at 1.32 V (0.7778 V).
+  The swing bench uses CL = 2 pF with no resistive load.
+  The endpoints are rounded inward. The EE key owns
+  the range definition. Swing remains in “Rows not submitted as bounds.”
+  The worst headroom is 319.0598 mV from VDD and 223.073866 mV from VSS,
+  both at `mos_ss_125C_1.32V`. The 251 and 141 mV figures describe the
+  best-case minima. [Corrected swing and CMRR report](../../signoff/characterization/reports/20261122-215711-d825300.md)
+
+  The withdrawn CMRR and gain bounds fall short of the carried, unverified
+  market figures. Three sigma exceeds systematic common-mode gain at 11 of
+  45 points. The binding point is mean-dominated. At the recorded Av0,
+  reducing mismatch alone leaves excessive systematic gain. The record
+  covers a single sizing and cannot predict Av0 or systematic gain for a
+  resized mirror. Ruling r5-q96 on #332 selected a replacement topology.
+  Under r5-q99 this swing evidence can land independently. Every DR-0011
+  row must be remeasured on the replacement before both keys re-review
+  the revised head of #303 for ratification.
 - **Date**: 2026-10-20
 - **Decided by**: operator direction (attended fleet-decide 2026-10-19,
   option 1: prepare a focused documentation-only fresh-ratification PR,
@@ -136,9 +138,9 @@ untouched.
 
 | Row | Measured worst case | Status |
 |---|---|---|
-| Open-loop DC gain | 38.2293 dB (`mos_fs_125C_1.08V`) | PASS against the 37.8 dB working limit; no bound submitted (restatement pending, #332) |
-| CMRR, mismatch-inclusive (+3 sigma of Acm, linear; DR-0004) | 26.6826 dB (`mos_ss_-40C_1.08V`) | meets the 26.68 dB working limit by 0.0026 dB; no bound submitted (derivation-or-design choice pending, #332) |
-| Output swing, headroom from VDD / VSS | 251.491128 mV / 141.167273 mV (`mos_fs_-40C_1.08V` / `mos_ff_-40C_1.08V`) | PASS against the 251 / 141 mV working limits; no bound submitted (restated as an output range in Revision 5, #333; definition flagged for the EE key) |
+| Open-loop DC gain | 38.2293 dB (`mos_fs_125C_1.08V`) | PASS against the 37.8 dB working limit. Bound withdrawn. Remeasure on the replacement topology (#332). |
+| CMRR, mismatch-inclusive (+3 sigma of Acm, linear; DR-0004) | 26.6826 dB (`mos_ss_-40C_1.08V`) | Meets the 26.68 dB working limit by 0.0026 dB. Bound withdrawn. Remeasure on the replacement topology (#332). |
+| Output swing, headroom from VDD / VSS | 319.0598 mV / 223.073866 mV (both at `mos_ss_125C_1.32V`) | The measured minima of 251.491128 mV (`mos_fs_-40C_1.08V`) and 141.167273 mV (`mos_ff_-40C_1.08V`) PASS the historical ≥ 251 / ≥ 141 mV working limits. Bounds withdrawn. Revision 5 gives the output ranges for EE review. |
 | Input-referred noise, 100 Hz - 1 MHz | 108.949 uVrms (`mos_fs_125C_1.08V`) | FAIL against the 108.9 uVrms working limit; no bound submitted |
 | Input offset, systematic | 21.9273527 mV (`mos_fs_125C_1.08V`) | FAIL against the 21.9 mV working limit; no bound submitted |
 | Output swing, tracking span | 0.570957773 V (`mos_ss_125C_1.08V`) | FAIL against the 0.571 V working limit; no bound submitted |
@@ -179,9 +181,8 @@ sg13g2 / gf180 / sky130 twin a like-for-like result set, with every number
 derived from this PDK's models. It is a low-power (<= 119.7 uA), 1.2 V core,
 2 pF-load embedded-style amplifier, not a precision or general catalog
 part, and its CMRR, PSRR+, noise, offset and swing figures should be read
-that way. Whether to accept the gaps as a canary, declare a non-precision
-class, or restate bounds is the operator tradeoff the market key asked for;
-this record does not pre-empt it.
+that way. On #332 the operator declined a non-precision catalog class and
+selected a replacement topology to address the market gaps (r5-q96).
 
 ## Disclosed failures (raw values against the literal limits)
 
@@ -249,8 +250,9 @@ These are stated so the reviewers do not mistake this request for closure:
 
 ## What the reviewers are asked to do
 
-Through the existing ratification protocol (`ratification/ee-key/` and
-`ratification/market-key/`), on this PR:
+After remeasurement on the replacement topology, both keys review the
+revised head of #303 through the existing ratification protocol
+(`ratification/ee-key/` and `ratification/market-key/`).
 
 - The **EE key** assesses whether the submitted requirements are supported
   by the cited evidence, including the corrected open-loop record and the
@@ -269,10 +271,10 @@ Through the existing ratification protocol (`ratification/ee-key/` and
 
 None. This record decides no number beyond the Revision 3 PSRR+ restatement
 (operator ruling r5-q75 option 3) and the Revision 4 withdrawal of six rows
-from submission (operator send-back r5-q89 option 2). The ratification event
-is a pair of real, non-author, approving key verdicts on the PR that carries
-the `submitted for ratification` status above (or on a successor the keys
-name); the operator then ratifies. Until those verdicts exist, status and
+from submission (operator send-back r5-q89 option 2). After remeasurement
+on the replacement topology, ratification requires two independent, non-author,
+approving key verdicts on the revised head of #303 (or on a successor the
+keys name). The operator then ratifies. Until ratification, status and
 provenance citations elsewhere must say "ratification pending" and must not
 mark the PR #27 gap closed.
 
