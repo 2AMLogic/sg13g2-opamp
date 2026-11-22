@@ -5,7 +5,8 @@
 * requires: a circuit body with no .control/.end of its own. klt generates
 * the per-corner wrapper deck around this file and adds, per corner: the
 * process `.lib` cards (cornerMOSlv.lib mos_<corner> plus cornerCAP.lib
-* cap_typ), `.temp`, `alter vdd=<V>` and `alter vinp=<V/2>` (swept together
+* cap_typ and cornerRES.lib res_typ, the DR-0012 passive corner pairing),
+* `.temp`, `alter vdd=<V>` and `alter vinp=<V/2>` (swept together
 * by index, so Vcm = VDD/2 exactly as the harness's `vcm = vdd/2`),
 * `pre_osdi` for the four OSDI libraries, and the one analysis the request
 * declares (`noise v(out) Vinp dec 20 100 1meg` -- the template's claimed

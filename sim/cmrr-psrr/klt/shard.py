@@ -85,8 +85,9 @@ def build_body(body_text: str, dut_text: str, process: str, batch_pdk_root: str,
         "* (2AMLogic/2am#2193), none changing the circuit or the measurement:",
         "*  - .control pre_osdi + print-precision cards replace options.osdi_preload/ngspice_init;",
         "*  - the DUT netlist is inlined in place of its .include (its .end line dropped);",
-        "*  - cornerCAP.lib cap_typ is selected by a body-level .lib card (the runner's",
-        "*    per-section corner libraries cannot carry the object form).",
+        "*  - cornerCAP.lib cap_typ and cornerRES.lib res_typ are selected by two",
+        "*    body-level .lib cards (the runner's per-section corner libraries",
+        "*    cannot carry the object form).",
         *ctrl,
     ]
     for ln in body_text.splitlines():

@@ -7,10 +7,11 @@
 * per-corner wrapper deck around this file and adds, per corner:
 *
 *   - the process `.lib` cards  (cornerMOSlv.lib mos_<corner>, plus
-*                                 cornerCAP.lib cap_typ -- the template's
-*                                 own fixed `.lib ... cornerCAP.lib cap_typ`
-*                                 line, carried as a second section of every
-*                                 process bundle in the request);
+*                                 cornerCAP.lib cap_typ and cornerRES.lib
+*                                 res_typ -- the template's own fixed
+*                                 `.lib ... cornerCAP/cornerRES` lines,
+*                                 carried as extra sections of every
+*                                 process bundle in the request, DR-0012);
 *   - `.temp <T>`               (the template's `.options temp=@@TEMP_C@@`);
 *   - `alter vdd=<V>` and `alter vinp=<V/2>` (the template's @@VDD_V@@ and
 *                                 @@VCM_V@@ = VDD/2, swept together by index
