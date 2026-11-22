@@ -958,7 +958,76 @@ class MintPublication(unittest.TestCase):
         self.assertEqual(generate.check(self.fx.root, self.fx.selection_path, None), 0)
 
 
-class OffsetMcStatistics(unittest.TestCase):
+class RawAuditCase(unittest.TestCase):
+    """Shared harness for the six raw-audit suites (offset MC statistics,
+    CMRR MC statistics, noise, KLT, slew, swing): the `Fixture` lifecycle
+    (`setUp`/`tearDown`/`fresh`, keeping this suite's population audit
+    attached via `KEEP_AUDIT`), the error assertion (`errors` collects
+    report-level and row-level diagnostics; `assert_error` builds the
+    report, requires the overall ERROR verdict, checks each requested text
+    fragment and returns the diagnostics for further assertions), and the
+    pinned-raw helpers (`raw`/`entry` selection lookups, `cell` CSV lookup,
+    `_edit_pinned_lines`/`edit_raw` read-transform-write-repin,
+    `definition_error`)."""
+
+    KEEP_AUDIT: str | None = None
+    RAW_KEY: str = ""
+    DEFINITION_CHECK: str = ""
+
+    def setUp(self) -> None:
+        self.fx = Fixture()
+        if self.KEEP_AUDIT:
+            setattr(self.fx, self.KEEP_AUDIT, True)
+
+    def tearDown(self) -> None:
+        self.fx.close()
+
+    def fresh(self) -> None:
+        self.fx.close()
+        self.fx = Fixture()
+        if self.KEEP_AUDIT:
+            setattr(self.fx, self.KEEP_AUDIT, True)
+
+    def errors(self, content: dict) -> list:
+        out = list(content["errors"])
+        for row in content["rows"]:
+            out.extend(row["errors"])
+        return out
+
+    def assert_error(self, *fragments: str) -> list:
+        content = self.fx.build()
+        errors = self.errors(content)
+        self.assertEqual(content["overall"]["verdict"], "ERROR", errors)
+        for fragment in fragments:
+            self.assertTrue(any(fragment in e for e in errors), (fragment, errors))
+        return errors
+
+    def definition_error(self) -> list:
+        return self.assert_error(f"point {self.POINT} fails definition check {self.DEFINITION_CHECK}")
+
+    def raw(self) -> dict:
+        return self.fx.selection["records"][self.RECORD][self.RAW_KEY]
+
+    def entry(self, kind, pid=None) -> dict:
+        return self.raw()["files"][pid or self.POINT][kind]
+
+    def cell(self, column, pid=None) -> str:
+        return next(r for r in generate.read_csv_rows(self.fx.csv_path(self.RECORD))[1]
+                    if r["point_id"] == (pid or self.POINT))[column]
+
+    def _edit_pinned_lines(self, entry, transform, repin=True) -> None:
+        path = self.fx.root / entry["path"]
+        lines = path.read_text(encoding="utf-8").splitlines()
+        path.write_text("\n".join(transform(lines)) + "\n", encoding="utf-8")
+        if repin:
+            entry["sha256"] = generate.sha256_file(path)
+            self.fx.save_selection()
+
+    def edit_raw(self, kind, transform, pid=None, repin=True) -> None:
+        self._edit_pinned_lines(self.entry(kind, pid), transform, repin)
+
+
+class OffsetMcStatistics(RawAuditCase):
     """Issue #199: the draws audit rejects fabricated statistics and broken
     draw populations, naming the point and offending field. The committed
     campaign is the positive control (CommittedEvidence); every control here
@@ -968,30 +1037,9 @@ class OffsetMcStatistics(unittest.TestCase):
     POINT = "mos_ss_mismatch_27C_1.20V"  # any ordinary mismatch point
     NEGCTRL = "mos_tt_negctrl_27C_1.20V"
 
-    def setUp(self) -> None:
-        self.fx = Fixture()
-
-    def tearDown(self) -> None:
-        self.fx.close()
-
-    def all_errors(self, content: dict) -> list:
-        # Record errors surface on every row that cites the record.
-        out = list(content["errors"])
-        for row in content["rows"]:
-            out.extend(row["errors"])
-        return out
-
-    def assert_audit_error(self, *fragments: str) -> None:
-        content = self.fx.build()
-        errors = self.all_errors(content)
-        self.assertEqual(content["overall"]["verdict"], "ERROR")
-        self.assertTrue(errors, "expected the audit to report a problem")
-        for fragment in fragments:
-            self.assertTrue(any(fragment in e for e in errors), errors)
-
     def test_baseline_has_no_audit_errors(self):
         content = self.fx.build()
-        self.assertEqual(self.all_errors(content), [])
+        self.assertEqual(self.errors(content), [])
         self.assertEqual(content["sources"][self.RECORD]["draws"]["status"], "verified")
 
     def test_altered_summary_statistic_is_rejected_field_by_field(self):
@@ -1016,9 +1064,9 @@ class OffsetMcStatistics(unittest.TestCase):
                     self.assertTrue(
                         any(
                             f"point {self.POINT} fails definition check offset_mc_statistics: {column}" in e
-                            for e in self.all_errors(content)
+                            for e in self.errors(content)
                         ),
-                        self.all_errors(content),
+                        self.errors(content),
                     )
                 finally:
                     fx.close()
@@ -1032,8 +1080,8 @@ class OffsetMcStatistics(unittest.TestCase):
                     content = fx.build()
                     self.assertEqual(content["overall"]["verdict"], "ERROR")
                     self.assertTrue(
-                        any(f"{column} -0.026870239 is negative" in e for e in self.all_errors(content)),
-                        self.all_errors(content),
+                        any(f"{column} -0.026870239 is negative" in e for e in self.errors(content)),
+                        self.errors(content),
                     )
                 finally:
                     fx.close()
@@ -1043,13 +1091,13 @@ class OffsetMcStatistics(unittest.TestCase):
         content = self.fx.build()
         self.assertEqual(content["overall"]["verdict"], "ERROR")
         self.assertTrue(
-            any("does not match its selection pin" in e for e in self.all_errors(content)),
-            self.all_errors(content),
+            any("does not match its selection pin" in e for e in self.errors(content)),
+            self.errors(content),
         )
 
     def test_missing_draws_file_is_error(self):
         self.fx.draws_path(self.RECORD).unlink()
-        self.assert_audit_error("missing draws population")
+        self.assert_error("missing draws population")
 
     def test_duplicate_draw_is_error(self):
         def duplicate_one(lines):
@@ -1057,22 +1105,22 @@ class OffsetMcStatistics(unittest.TestCase):
             return lines + [target]
 
         self.fx.rewrite_draws(self.RECORD, duplicate_one)
-        self.assert_audit_error("duplicate draw_index 5")
+        self.assert_error("duplicate draw_index 5")
 
     def test_missing_draw_is_error_not_a_quiet_population_reduction(self):
         def drop_one(lines):
             return [l for l in lines if not (l.startswith(f"{self.POINT},") and l.split(",")[6] == "5")]
 
         self.fx.rewrite_draws(self.RECORD, drop_one)
-        self.assert_audit_error("1 of 300 expected draws missing")
+        self.assert_error("1 of 300 expected draws missing")
 
     def test_non_finite_pass_draw_is_error(self):
         self.fx.set_draw_cell(self.RECORD, self.POINT, 5, "vos_v", "nan")
-        self.assert_audit_error("is not finite")
+        self.assert_error("is not finite")
 
     def test_draw_seed_conflicting_with_the_campaign_is_error(self):
         self.fx.set_draw_cell(self.RECORD, self.POINT, 5, "draw_seed", "99999999")
-        self.assert_audit_error("draw_seed 99999999")
+        self.assert_error("draw_seed 99999999")
 
     def test_negctrl_is_audited_on_its_own_population_only(self):
         # A perturbed negctrl draw breaks exactly the negctrl point's own
@@ -1081,7 +1129,7 @@ class OffsetMcStatistics(unittest.TestCase):
         # point and leaves this one alone).
         self.fx.set_draw_cell(self.RECORD, self.NEGCTRL, 5, "vos_v", "0.0160000000")
         content = self.fx.build()
-        errors = self.all_errors(content)
+        errors = self.errors(content)
         self.assertEqual(content["overall"]["verdict"], "ERROR")
         self.assertTrue(
             any(f"point {self.NEGCTRL} fails definition check offset_mc_statistics" in e for e in errors),
@@ -1103,44 +1151,19 @@ class OffsetMcStatistics(unittest.TestCase):
             self.fx.build()
 
 
-class CmrrMcStatistics(unittest.TestCase):
+class CmrrMcStatistics(RawAuditCase):
     """Issue #208: the CMRR summary is audited against hash-pinned raw sample
     files, not merely against its own mean/sigma/CMRR identity."""
 
     RECORD = "cmrr-mismatch"
     POINT = "mos_tt_27C_1.20V"
-
-    def setUp(self) -> None:
-        self.fx = Fixture()
-        self.fx.keep_cmrr_audit = True
-
-    def tearDown(self) -> None:
-        self.fx.close()
-
-    def errors(self, content: dict) -> list:
-        out = list(content["errors"])
-        for row in content["rows"]:
-            out.extend(row["errors"])
-        return out
-
-    def assert_error(self, *fragments: str) -> None:
-        content = self.fx.build()
-        errors = self.errors(content)
-        self.assertEqual(content["overall"]["verdict"], "ERROR", errors)
-        for fragment in fragments:
-            self.assertTrue(any(fragment in e for e in errors), errors)
+    KEEP_AUDIT = "keep_cmrr_audit"
 
     def entry(self, pid=None) -> dict:
         return self.fx.selection["records"][self.RECORD]["mc_samples"]["files"][pid or self.POINT]
 
     def edit_samples(self, transform, pid=None, repin=True) -> None:
-        entry = self.entry(pid)
-        path = self.fx.root / entry["path"]
-        lines = path.read_text(encoding="utf-8").splitlines()
-        path.write_text("\n".join(transform(lines)) + "\n", encoding="utf-8")
-        if repin:
-            entry["sha256"] = generate.sha256_file(path)
-            self.fx.save_selection()
+        self._edit_pinned_lines(self.entry(pid), transform, repin)
 
     def test_committed_campaign_reproduces_from_pinned_samples(self):
         content = self.fx.build()
@@ -1425,28 +1448,6 @@ class LoadCondition(unittest.TestCase):
         self.assertIn("descriptive", self.build_row("gbw")["conditions_provenance"])
 
 
-class RawAuditCase(unittest.TestCase):
-    """Shared error assertion for the raw-audit suites (noise, KLT, slew,
-    swing): `errors` collects report-level and row-level diagnostics, and
-    `assert_error` builds the report, requires the overall ERROR verdict,
-    checks each requested text fragment and returns the diagnostics for
-    further assertions."""
-
-    def errors(self, content: dict) -> list:
-        out = list(content["errors"])
-        for row in content["rows"]:
-            out.extend(row["errors"])
-        return out
-
-    def assert_error(self, *fragments: str) -> list:
-        content = self.fx.build()
-        errors = self.errors(content)
-        self.assertEqual(content["overall"]["verdict"], "ERROR", errors)
-        for fragment in fragments:
-            self.assertTrue(any(fragment in e for e in errors), (fragment, errors))
-        return errors
-
-
 class NoiseRawAudit(RawAuditCase):
     """Issue #213: the input-noise summary is audited against hash-pinned raw
     logs and in-band spectra; the logged integrated figure and the
@@ -1454,29 +1455,8 @@ class NoiseRawAudit(RawAuditCase):
 
     RECORD = "input-noise"
     POINT = "mos_tt_27C_1.20V"
-
-    def setUp(self) -> None:
-        self.fx = Fixture()
-        self.fx.keep_noise_audit = True
-
-    def tearDown(self) -> None:
-        self.fx.close()
-
-    def entry(self, kind, pid=None) -> dict:
-        return self.fx.selection["records"][self.RECORD]["noise_raw"]["files"][pid or self.POINT][kind]
-
-    def edit_raw(self, kind, transform, pid=None, repin=True) -> None:
-        entry = self.entry(kind, pid)
-        path = self.fx.root / entry["path"]
-        lines = path.read_text(encoding="utf-8").splitlines()
-        path.write_text("\n".join(transform(lines)) + "\n", encoding="utf-8")
-        if repin:
-            entry["sha256"] = generate.sha256_file(path)
-            self.fx.save_selection()
-
-    def cell(self, column, pid=None) -> str:
-        return next(r for r in generate.read_csv_rows(self.fx.csv_path(self.RECORD))[1]
-                    if r["point_id"] == (pid or self.POINT))[column]
+    KEEP_AUDIT = "keep_noise_audit"
+    RAW_KEY = "noise_raw"
 
     def only_problem(self, tag: str, other: str) -> None:
         """The point fails the audit on `tag` and NOT on `other`."""
@@ -1728,16 +1708,8 @@ class KltRawAudit(RawAuditCase):
 
     RECORD = "open-loop-ac"
     POINT = "mos_tt_27C_1.20V"
-
-    def setUp(self) -> None:
-        self.fx = Fixture()
-        self.fx.keep_klt_audit = True
-
-    def tearDown(self) -> None:
-        self.fx.close()
-
-    def raw(self) -> dict:
-        return self.fx.selection["records"][self.RECORD]["klt_raw"]
+    KEEP_AUDIT = "keep_klt_audit"
+    RAW_KEY = "klt_raw"
 
     def edit_json(self, kind, mutate, repin=True) -> None:
         pin = self.raw()["files"][kind]
@@ -1972,38 +1944,8 @@ class SlewRawAudit(RawAuditCase):
 
     RECORD = "slew-rate"
     POINT = "mos_tt_27C_1.20V"
-
-    def setUp(self) -> None:
-        self.fx = Fixture()
-
-    def tearDown(self) -> None:
-        self.fx.close()
-
-    def fresh(self) -> None:
-        self.fx.close()
-        self.fx = Fixture()
-
-    def raw(self) -> dict:
-        return self.fx.selection["records"][self.RECORD]["slew_raw"]
-
-    def entry(self, kind, pid=None) -> dict:
-        return self.raw()["files"][pid or self.POINT][kind]
-
-    def edit_raw(self, kind, transform, pid=None, repin=True) -> None:
-        entry = self.entry(kind, pid)
-        path = self.fx.root / entry["path"]
-        lines = path.read_text(encoding="utf-8").splitlines()
-        path.write_text("\n".join(transform(lines)) + "\n", encoding="utf-8")
-        if repin:
-            entry["sha256"] = generate.sha256_file(path)
-            self.fx.save_selection()
-
-    def cell(self, column, pid=None) -> str:
-        return next(r for r in generate.read_csv_rows(self.fx.csv_path(self.RECORD))[1]
-                    if r["point_id"] == (pid or self.POINT))[column]
-
-    def definition_error(self) -> list:
-        return self.assert_error(f"point {self.POINT} fails definition check slew_raw_audit")
+    RAW_KEY = "slew_raw"
+    DEFINITION_CHECK = "slew_raw_audit"
 
     # --- committed evidence -------------------------------------------------
 
@@ -2260,40 +2202,9 @@ class SwingRawAudit(RawAuditCase):
 
     RECORD = "output-swing"
     POINT = "mos_tt_27C_1.20V"
-
-    def setUp(self) -> None:
-        self.fx = Fixture()
-        self.fx.keep_swing_audit = True
-
-    def tearDown(self) -> None:
-        self.fx.close()
-
-    def fresh(self) -> None:
-        self.fx.close()
-        self.fx = Fixture()
-        self.fx.keep_swing_audit = True
-
-    def raw(self) -> dict:
-        return self.fx.selection["records"][self.RECORD]["swing_raw"]
-
-    def entry(self, kind, pid=None) -> dict:
-        return self.raw()["files"][pid or self.POINT][kind]
-
-    def edit_raw(self, kind, transform, pid=None, repin=True) -> None:
-        entry = self.entry(kind, pid)
-        path = self.fx.root / entry["path"]
-        lines = path.read_text(encoding="utf-8").splitlines()
-        path.write_text("\n".join(transform(lines)) + "\n", encoding="utf-8")
-        if repin:
-            entry["sha256"] = generate.sha256_file(path)
-            self.fx.save_selection()
-
-    def cell(self, column, pid=None) -> str:
-        return next(r for r in generate.read_csv_rows(self.fx.csv_path(self.RECORD))[1]
-                    if r["point_id"] == (pid or self.POINT))[column]
-
-    def definition_error(self) -> list:
-        return self.assert_error(f"point {self.POINT} fails definition check swing_raw_audit")
+    KEEP_AUDIT = "keep_swing_audit"
+    RAW_KEY = "swing_raw"
+    DEFINITION_CHECK = "swing_raw_audit"
 
     def recompute(self, pid=None):
         """The shared measurement, in-process, from the pinned artifacts."""
