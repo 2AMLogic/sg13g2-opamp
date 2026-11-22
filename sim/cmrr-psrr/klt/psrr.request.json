@@ -4,7 +4,7 @@
     "Circuit: tb_psrr.body.spice -- the same test circuit as ../testbench/tb_psrr.spice.tmpl (Vdd carries ac 1; the signal input is AC-quiet).",
     "Grid: cornerMOSlv.lib mos_tt/ss/ff/sf/fs [DR-1] x {-40, 27, 125} C x VDD {1.08, 1.20, 1.32} V = 45 corners.",
     "vinp sweeps WITH vdd by index (klt's supply_v semantics), so Vcm = VDD/2 at every corner, as in the harness.",
-    "Each process corner is a bundle carrying the template's fixed cornerCAP.lib cap_typ section (the Miller cap is a cap_cmim MIM device).",
+    "Each MOS corner uses the fixed cap_typ and res_typ sections (DR-0012).",
     "Analysis: ac dec 20 10m 1g = the template's sweep. The DC shelf is read at 10 mHz (below the ~1.5 Hz supply zero), as in the harness.",
     "Ratified row: PSRR+ (DC shelf) >= 1.87 dB worst-case [DR-2] (spec/target-spec.md section 2), PSRR = Av0 - Avs0 in dB at the same point.",
     "ENCODING OF THE BOUND: PSRR is a ratio of two different AC excitations (Av0: Vinp ac 1; Avs: Vdd ac 1). One AC solve cannot carry both, and `limits` are per measurement of THIS request, so the bound is NOT a `limits` entry here.",
@@ -33,6 +33,10 @@
           {
             "lib": "libs.tech/ngspice/models/cornerCAP.lib",
             "section": "cap_typ"
+          },
+          {
+            "lib": "libs.tech/ngspice/models/cornerRES.lib",
+            "section": "res_typ"
           }
         ]
       },
@@ -43,6 +47,10 @@
           {
             "lib": "libs.tech/ngspice/models/cornerCAP.lib",
             "section": "cap_typ"
+          },
+          {
+            "lib": "libs.tech/ngspice/models/cornerRES.lib",
+            "section": "res_typ"
           }
         ]
       },
@@ -53,6 +61,10 @@
           {
             "lib": "libs.tech/ngspice/models/cornerCAP.lib",
             "section": "cap_typ"
+          },
+          {
+            "lib": "libs.tech/ngspice/models/cornerRES.lib",
+            "section": "res_typ"
           }
         ]
       },
@@ -63,6 +75,10 @@
           {
             "lib": "libs.tech/ngspice/models/cornerCAP.lib",
             "section": "cap_typ"
+          },
+          {
+            "lib": "libs.tech/ngspice/models/cornerRES.lib",
+            "section": "res_typ"
           }
         ]
       },
@@ -73,6 +89,10 @@
           {
             "lib": "libs.tech/ngspice/models/cornerCAP.lib",
             "section": "cap_typ"
+          },
+          {
+            "lib": "libs.tech/ngspice/models/cornerRES.lib",
+            "section": "res_typ"
           }
         ]
       }

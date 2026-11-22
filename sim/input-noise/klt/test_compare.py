@@ -122,6 +122,7 @@ class TestRequest(Base):
         self.assertEqual([p["name"] for p in req["corners"]["process"]], list(C.PROCESSES))
         for p in req["corners"]["process"]:
             self.assertEqual(p["sections"][1], {"lib": "libs.tech/ngspice/models/cornerCAP.lib", "section": "cap_typ"})
+            self.assertEqual(p["sections"][2], {"lib": "libs.tech/ngspice/models/cornerRES.lib", "section": "res_typ"})
         self.assertEqual(req["corners"]["temperature_c"], list(C.TEMPERATURES))
         self.assertEqual(req["corners"]["supply_v"]["vdd"], list(C.SUPPLIES))
         self.assertEqual(req["corners"]["supply_v"]["vinp"], [v / 2 for v in C.SUPPLIES])

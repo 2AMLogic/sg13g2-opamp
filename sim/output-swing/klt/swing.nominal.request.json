@@ -1,7 +1,7 @@
 {
   "_comment": [
     "sim/output-swing as a `klt sim` request: ONE-POINT NATIVE-CAPABILITY PROTOTYPE (issue #100, startable subset). Not an envelope for T1 item 5.",
-    "Point: mos_tt (+ cornerCAP.lib cap_typ) / 27 C / VDD 1.20 V, Vcm = VDD/2 = 0.60 V. The 45-point grid is deliberately NOT declared here (deferred work, sim/output-swing/README.md).",
+    "Point: mos_tt (+ cap_typ and res_typ) / 27 C / VDD 1.20 V, Vcm = VDD/2 = 0.60 V. The 45-point grid is deliberately NOT declared here (deferred work, sim/output-swing/README.md).",
     "Circuit: tb_swing.body.spice, the same test circuit as ../testbench/tb_swing.spice.tmpl (one .include of design/netlist/opamp_core.spice).",
     "vcm sweeps WITH vdd by index (klt supply_v semantics), so Vcm = VDD/2 at every corner, as in the harness.",
     "Ratified row (spec/target-spec.md section 2, [DR-2]): headroom >= 251 mV from VDD, >= 141 mV from VSS, tracking span >= 0.571 V, -6 dB incremental-gain criterion, CL = 2 pF, unloaded.",
@@ -30,6 +30,10 @@
           {
             "lib": "libs.tech/ngspice/models/cornerCAP.lib",
             "section": "cap_typ"
+          },
+          {
+            "lib": "libs.tech/ngspice/models/cornerRES.lib",
+            "section": "res_typ"
           }
         ]
       }

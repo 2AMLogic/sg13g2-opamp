@@ -54,7 +54,7 @@ OSDI_DIR_REL = "libs.tech/ngspice/osdi"
 # MANIFEST_SCHEMA); test_env_identity.py asserts the two agree (#218).
 OSDI_MANIFEST_SCHEMA = "1"
 REQUIRED_OSDI_MODELS = ("psp103", "psp103_nqs", "r3_cmc", "mosvar")
-DEFAULT_MODELS = ("cornerMOSlv.lib", "cornerCAP.lib")
+DEFAULT_MODELS = ("cornerMOSlv.lib", "cornerCAP.lib", "cornerRES.lib")
 _DIRECTIVE_RE = re.compile(r'^\s*\.(lib|include|inc)\s+(?:"([^"]+)"|\'([^\']+)\'|(\S+))(\s+\S+)?', re.IGNORECASE)
 _SHA_RE = re.compile(r"^[0-9a-f]{64}$")
 _NGSPICE_RE = re.compile(r"^ngspice-(\d+)")

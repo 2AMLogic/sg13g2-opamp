@@ -1,7 +1,7 @@
 {
   "_comment": [
     "sim/output-swing as a `klt sim` request: the ratified 45-point grid (issue #100, T1 item 5 coverage for the output-swing row). Derived from swing.nominal.request.json; only the grid and backend differ.",
-    "Grid: cornerMOSlv.lib mos_tt/ss/ff/sf/fs (each with cornerCAP.lib cap_typ) x -40/27/125 C x VDD 1.08/1.20/1.32 V = 45 points; vcm sweeps WITH vdd by index (Vcm = VDD/2).",
+    "Grid: cornerMOSlv.lib mos_tt/ss/ff/sf/fs (each with cap_typ and res_typ) x -40/27/125 C x VDD 1.08/1.20/1.32 V = 45 points; vcm sweeps WITH vdd by index (Vcm = VDD/2).",
     "Circuit: tb_swing.body.spice, the same test circuit as ../testbench/tb_swing.spice.tmpl (one .include of design/netlist/opamp_core.spice).",
     "vcm sweeps WITH vdd by index (klt supply_v semantics), so Vcm = VDD/2 at every corner, as in the harness.",
     "Ratified row (spec/target-spec.md section 2, [DR-2]): headroom >= 251 mV from VDD, >= 141 mV from VSS, tracking span >= 0.571 V, -6 dB incremental-gain criterion, CL = 2 pF, unloaded.",
@@ -30,6 +30,10 @@
           {
             "lib": "libs.tech/ngspice/models/cornerCAP.lib",
             "section": "cap_typ"
+          },
+          {
+            "lib": "libs.tech/ngspice/models/cornerRES.lib",
+            "section": "res_typ"
           }
         ]
       },
@@ -40,6 +44,10 @@
           {
             "lib": "libs.tech/ngspice/models/cornerCAP.lib",
             "section": "cap_typ"
+          },
+          {
+            "lib": "libs.tech/ngspice/models/cornerRES.lib",
+            "section": "res_typ"
           }
         ]
       },
@@ -50,6 +58,10 @@
           {
             "lib": "libs.tech/ngspice/models/cornerCAP.lib",
             "section": "cap_typ"
+          },
+          {
+            "lib": "libs.tech/ngspice/models/cornerRES.lib",
+            "section": "res_typ"
           }
         ]
       },
@@ -60,6 +72,10 @@
           {
             "lib": "libs.tech/ngspice/models/cornerCAP.lib",
             "section": "cap_typ"
+          },
+          {
+            "lib": "libs.tech/ngspice/models/cornerRES.lib",
+            "section": "res_typ"
           }
         ]
       },
@@ -70,6 +86,10 @@
           {
             "lib": "libs.tech/ngspice/models/cornerCAP.lib",
             "section": "cap_typ"
+          },
+          {
+            "lib": "libs.tech/ngspice/models/cornerRES.lib",
+            "section": "res_typ"
           }
         ]
       }

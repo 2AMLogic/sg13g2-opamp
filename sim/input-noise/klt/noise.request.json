@@ -4,7 +4,7 @@
     "Circuit: tb_noise.body.spice -- the same test circuit as ../testbench/tb_noise.spice.tmpl (unity-gain follower via Vfb, CL = 2 pF, 10 uA ibias, ac 1 on Vinp).",
     "Grid: cornerMOSlv.lib mos_tt/ss/ff/sf/fs [DR-1] x {-40, 27, 125} C x VDD {1.08, 1.20, 1.32} V = 45 corners.",
     "vinp sweeps WITH vdd by index (klt's supply_v semantics), so Vcm = VDD/2 at every corner, as in the harness.",
-    "Each process corner is a bundle carrying the template's fixed cornerCAP.lib cap_typ section.",
+    "Each MOS corner uses the fixed cap_typ and res_typ sections (DR-0012).",
     "Analysis: noise v(out) Vinp dec 20 100 1meg = the template's claimed band, 100 Hz - 1 MHz, 81 points. The band is part of the ratified number and is not changed here.",
     "Ratified row: input-referred noise <= 108.9 uVrms worst-case [DR-2], integrated over 100 Hz - 1 MHz, CL = 2 pF (spec/target-spec.md section 2). Carried as inoise_int_vrms limits.max = 108.9e-6 V.",
     "Integrated figure: `noise2.inoise_total` -- ngspice's already-square-rooted RMS volts over the swept band, the vector the harness reads (setplot noise2). Reached with an `expr`; no `.meas` is needed.",
@@ -33,6 +33,10 @@
           {
             "lib": "libs.tech/ngspice/models/cornerCAP.lib",
             "section": "cap_typ"
+          },
+          {
+            "lib": "libs.tech/ngspice/models/cornerRES.lib",
+            "section": "res_typ"
           }
         ]
       },
@@ -43,6 +47,10 @@
           {
             "lib": "libs.tech/ngspice/models/cornerCAP.lib",
             "section": "cap_typ"
+          },
+          {
+            "lib": "libs.tech/ngspice/models/cornerRES.lib",
+            "section": "res_typ"
           }
         ]
       },
@@ -53,6 +61,10 @@
           {
             "lib": "libs.tech/ngspice/models/cornerCAP.lib",
             "section": "cap_typ"
+          },
+          {
+            "lib": "libs.tech/ngspice/models/cornerRES.lib",
+            "section": "res_typ"
           }
         ]
       },
@@ -63,6 +75,10 @@
           {
             "lib": "libs.tech/ngspice/models/cornerCAP.lib",
             "section": "cap_typ"
+          },
+          {
+            "lib": "libs.tech/ngspice/models/cornerRES.lib",
+            "section": "res_typ"
           }
         ]
       },
@@ -73,6 +89,10 @@
           {
             "lib": "libs.tech/ngspice/models/cornerCAP.lib",
             "section": "cap_typ"
+          },
+          {
+            "lib": "libs.tech/ngspice/models/cornerRES.lib",
+            "section": "res_typ"
           }
         ]
       }
