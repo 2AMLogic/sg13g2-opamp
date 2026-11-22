@@ -19,6 +19,12 @@ by name).
 - `check_bounds.py <pex_report.json>` -- grades extracted values against the
   ratified `spec/target-spec.md` Sec 2 bounds.
 - `test_post_layout.py` -- offline checks (no ngspice/PDK/klt).
+- `rz_candidate.py` -- builds the `klt sim` legs of a drawn-candidate record
+  (`bench`: the committed benches, with DR-0012's nine passive sections;
+  `control`: diagnostic controls) and grades a directory of envelopes.
+- `cc-sizing-430/`, `rz-nulling-430/`, `rz-layout-430/` -- the append-only
+  issue #430 records: the capacitor-sizing trial, the ideal-resistor
+  screening, and the drawn resistor's extraction and corner grids.
 - Driver: `layout/opamp_core/run_pex.sh`.
 
 Measurement method: Av0 = `vdb(out)` at 1 Hz, GBW = ngspice `.meas ... when

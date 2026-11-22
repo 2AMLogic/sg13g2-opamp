@@ -1,0 +1,35 @@
+{
+  "area_dbu2": 2811888000,
+  "area_mm2": "0.002811888",
+  "area_um2": "2811.888",
+  "bbox_dbu": {
+    "bottom": -700,
+    "height": 33120,
+    "left": -11500,
+    "right": 73400,
+    "top": 32420,
+    "width": 84900
+  },
+  "dbu_um": "0.001",
+  "definition": {
+    "id": "opamp-core-hier-bbox-v1",
+    "rules": [
+      "named cell only; sibling top cells and unreferenced cells excluded",
+      "recursive through instances incl. rotation, reflection and arrays",
+      "all layers/datatypes with geometry; boxes, polygons and paths count",
+      "text labels excluded; text-only layers contribute nothing",
+      "integer-DBU box; area = integer width * integer height",
+      "um^2 = DBU product * dbu_um^2 and mm^2 = um^2 / 1e6, exact decimal, unrounded"
+    ]
+  },
+  "geometry_layer_count": 23,
+  "height_um": "33.12",
+  "schema": "sg13g2-opamp/area-measurement/1",
+  "source": {
+    "cell": "opamp_core",
+    "gds_path": "layout/opamp_core/opamp_core.gds",
+    "gds_sha256": "8f5e66fd8914501f35291500913bbc87880500ec4fbcd564455f198eb0edf22f"
+  },
+  "status": "proposed -- not ratified (TBD-12 is unresolved)",
+  "width_um": "84.9"
+}
