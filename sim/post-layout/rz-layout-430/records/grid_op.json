@@ -1,0 +1,3792 @@
+{
+  "schema_version": 3,
+  "netlist": {
+    "path": null,
+    "scope": "external"
+  },
+  "status": "pass",
+  "corner_count": 45,
+  "passed": 45,
+  "failed": 0,
+  "errored": 0,
+  "inconclusive": 0,
+  "diagnostic_counts": {
+    "by_code": {},
+    "by_severity": {},
+    "corners_with_diagnostics": 0
+  },
+  "metrics": {
+    "sim__corner__count": 45,
+    "sim__corner__passed_count": 45,
+    "sim__corner__failed_count": 0,
+    "sim__corner__errored_count": 0,
+    "sim__corner__inconclusive_count": 0
+  },
+  "environment": {
+    "engine": "ngspice",
+    "engine_version": "47",
+    "ngspice_binary": "/usr/local/bin/ngspice",
+    "engine_build": {
+      "version_banner": "******\n** ngspice-47 : Circuit level simulation program\n** Compiled with KLU Direct Linear Solver\n** The U. C. Berkeley CAD Group\n** Copyright 1985-1994, Regents of the University of California.\n** Copyright 2001-2026, The ngspice team.\n** Please get your ngspice manual from https://ngspice.sourceforge.io/docs.html\n** Please file your bug-reports at http://ngspice.sourceforge.net/bugrep.html\n** Creation Date: Fri Nov 13 23:19:32 UTC 2026\n******",
+      "binary_sha256": "39ca1adb826660324c3626f72bd946ec40704f0f3fc8e243c623f76e24b3eee2",
+      "probe": "ok",
+      "reason": null
+    },
+    "models_lib": {
+      "path": null,
+      "scope": "external"
+    },
+    "models_lib_sha256": "03d505847c880d233b341be115a1e5460edf4d8e9b3e8a7df791a52fa4455d67",
+    "models_lib_sha256_scope": "client",
+    "netlist_sha256": "630f231c20928a2d6bf539ddb81d9af5f761abb402cb0980ac1bec8dea256408",
+    "netlist_closure": [
+      {
+        "path": null,
+        "scope": "external",
+        "sha256": "630f231c20928a2d6bf539ddb81d9af5f761abb402cb0980ac1bec8dea256408"
+      },
+      {
+        "path": null,
+        "scope": "external",
+        "sha256": "7acd312ef6e9496e26a2d1cab45de147d12a1a68c8a883e636a640f9b425f253"
+      }
+    ],
+    "netlist_identity": "sha256:92f6a1f61dc30f2cd358463afee52ad162c1530141c71b4190c16cd59678b656",
+    "netlist_source": "schematic",
+    "corner_section_libs": [
+      {
+        "name": "cornerCAP.lib",
+        "path": null,
+        "scope": "external",
+        "sha256": "4fc4a0f17ca2aef66ca38c2d2e7cead3307b69508d304ed073129565ec1c3e56"
+      },
+      {
+        "name": "cornerRES.lib",
+        "path": null,
+        "scope": "external",
+        "sha256": "2c18502104146804444a567abfe7d00520752bf75426809f9d79f40198fe9c1e"
+      }
+    ],
+    "osdi_preload_runner_resolved": [
+      {
+        "entry": "$PDK_ROOT/ihp-sg13g2/libs.tech/ngspice/osdi/psp103.osdi",
+        "reason": "env_var"
+      },
+      {
+        "entry": "$PDK_ROOT/ihp-sg13g2/libs.tech/ngspice/osdi/psp103_nqs.osdi",
+        "reason": "env_var"
+      },
+      {
+        "entry": "$PDK_ROOT/ihp-sg13g2/libs.tech/ngspice/osdi/mosvar.osdi",
+        "reason": "env_var"
+      },
+      {
+        "entry": "$PDK_ROOT/ihp-sg13g2/libs.tech/ngspice/osdi/r3_cmc.osdi",
+        "reason": "env_var"
+      }
+    ],
+    "staged_model_inputs": [
+      {
+        "name": "cornerMOSlv.lib",
+        "field": "models.lib",
+        "kind": "library",
+        "sha256": "07f15f24b990ab9eff8e1000457ad180a5199b48fc17217ac3572bdcdfbf5f72",
+        "rewritten": true,
+        "source_sha256": "03d505847c880d233b341be115a1e5460edf4d8e9b3e8a7df791a52fa4455d67"
+      },
+      {
+        "name": "cornerCAP.lib",
+        "field": "corners.process[0].sections[1].lib",
+        "kind": "library",
+        "sha256": "b4f1beef8a6723b1bea9866bfe96730d0e01660232a39ab3dd9c256df4116109",
+        "rewritten": true,
+        "source_sha256": "4fc4a0f17ca2aef66ca38c2d2e7cead3307b69508d304ed073129565ec1c3e56"
+      },
+      {
+        "name": "cornerRES.lib",
+        "field": "corners.process[0].sections[2].lib",
+        "kind": "library",
+        "sha256": "8c27e705a59d4221a5107b8fe95d388f3e166414d0fe214acfd2f07dcbb22b61",
+        "rewritten": true,
+        "source_sha256": "2c18502104146804444a567abfe7d00520752bf75426809f9d79f40198fe9c1e"
+      },
+      {
+        "name": "sg13g2_moslv_mod.lib",
+        "field": "models.lib",
+        "kind": "dependency",
+        "sha256": "0aa1a5630a7c8fb8ae896c57c475954ff5885c4831311f8cd9c9e64d6cbb8332",
+        "rewritten": true,
+        "source_sha256": "124c48af28aee8f4788170b50dbb4d798e7d830c6bb37516f749e16f676fa9db"
+      },
+      {
+        "name": "sg13g2_moslv_mismatch.lib",
+        "field": "models.lib",
+        "kind": "dependency",
+        "sha256": "2d3251e2d42eadb0f8af152a4915fdc60a68bceb95a2d17a52f90cfb34b7e63e",
+        "rewritten": false,
+        "source_sha256": "2d3251e2d42eadb0f8af152a4915fdc60a68bceb95a2d17a52f90cfb34b7e63e"
+      },
+      {
+        "name": "sg13g2_moslv_mod_mismatch.lib",
+        "field": "models.lib",
+        "kind": "dependency",
+        "sha256": "28f681005831113ad5377f1b867d8869b78f329a7f52aa821ff56aa1e648b68b",
+        "rewritten": true,
+        "source_sha256": "67672ffa1f224294a90270f687d11b804a24dbf268071c5cd98923ab1b3e2f84"
+      },
+      {
+        "name": "sg13g2_moslv_stat.lib",
+        "field": "models.lib",
+        "kind": "dependency",
+        "sha256": "7f4cf8df714e327348ba3975a2630e9d7dd7ae1a7a88817df4890e82745f0f52",
+        "rewritten": false,
+        "source_sha256": "7f4cf8df714e327348ba3975a2630e9d7dd7ae1a7a88817df4890e82745f0f52"
+      },
+      {
+        "name": "capacitors_mod.lib",
+        "field": "corners.process[0].sections[1].lib",
+        "kind": "dependency",
+        "sha256": "94b569e695fd8a223a5a49a5b5a6b0d8a62408820bf0c2ed9dbcb0a8ab7d957e",
+        "rewritten": false,
+        "source_sha256": "94b569e695fd8a223a5a49a5b5a6b0d8a62408820bf0c2ed9dbcb0a8ab7d957e"
+      },
+      {
+        "name": "capacitors_mod_mismatch.lib",
+        "field": "corners.process[0].sections[1].lib",
+        "kind": "dependency",
+        "sha256": "8ebc8369966951cfec0e91d603685f1975fbf9ceff2eef493a25357ce9ae5492",
+        "rewritten": false,
+        "source_sha256": "8ebc8369966951cfec0e91d603685f1975fbf9ceff2eef493a25357ce9ae5492"
+      },
+      {
+        "name": "capacitors_stat.lib",
+        "field": "corners.process[0].sections[1].lib",
+        "kind": "dependency",
+        "sha256": "68d2ef41174bcfae5997b355c4fd3dbe4f2b8ec4be30ff79d474052b3be1715a",
+        "rewritten": false,
+        "source_sha256": "68d2ef41174bcfae5997b355c4fd3dbe4f2b8ec4be30ff79d474052b3be1715a"
+      },
+      {
+        "name": "resistors_mod.lib",
+        "field": "corners.process[0].sections[2].lib",
+        "kind": "dependency",
+        "sha256": "c2329110bcb66894936e942d4cb73fc5eb9188c5230e1bebf18f60d9b00c5c7f",
+        "rewritten": false,
+        "source_sha256": "c2329110bcb66894936e942d4cb73fc5eb9188c5230e1bebf18f60d9b00c5c7f"
+      },
+      {
+        "name": "resistors_mod_mismatch.lib",
+        "field": "corners.process[0].sections[2].lib",
+        "kind": "dependency",
+        "sha256": "f0aa7d90b6489112ed256aaf4cb0a11b9ab17ebe0c3ce092f4f8c5ecb1fd1e15",
+        "rewritten": false,
+        "source_sha256": "f0aa7d90b6489112ed256aaf4cb0a11b9ab17ebe0c3ce092f4f8c5ecb1fd1e15"
+      },
+      {
+        "name": "resistors_stat.lib",
+        "field": "corners.process[0].sections[2].lib",
+        "kind": "dependency",
+        "sha256": "183eb9192bf711db991b8df87e031bab2ca5e559c73393edc756fa02a2720d40",
+        "rewritten": false,
+        "source_sha256": "183eb9192bf711db991b8df87e031bab2ca5e559c73393edc756fa02a2720d40"
+      },
+      {
+        "name": "sg13g2_moslv_parm.lib",
+        "field": "models.lib",
+        "kind": "dependency",
+        "sha256": "cbf10b8453a18bb70b8ad0d6e40faa0937338e699b5460947a94900db6c92a6e",
+        "rewritten": false,
+        "source_sha256": "cbf10b8453a18bb70b8ad0d6e40faa0937338e699b5460947a94900db6c92a6e"
+      }
+    ],
+    "remote": {
+      "provider": "aws-batch-fleet",
+      "job_id": "klt-sim-ebdc51dbffd3",
+      "region": "us-east-1",
+      "instance_id": "i-0ee48cba27a69aef9",
+      "instance_type": "c7i.4xlarge",
+      "availability_zone": "us-east-1f",
+      "ami_id": "ami-09c14f55df4958cbd",
+      "lifecycle": "spot",
+      "spot": true,
+      "state": "done",
+      "exit_code": "0",
+      "concurrency": "1",
+      "physical_cores": "8",
+      "elapsed_seconds": 10,
+      "client_submitted_at": null,
+      "client_launched_at": null,
+      "client_status_terminal_at": "2026-11-22T21:31:11.664353Z",
+      "client_collected_at": "2026-11-22T21:31:13.051410Z",
+      "runner_klt_version": "0.9.0",
+      "client_klt_version": "0.9.0",
+      "runner_compatibility": "match",
+      "runner_request_features": {
+        "required": [
+          "measurements[].expr",
+          "corners.process[].sections[]",
+          "options.ngspice_init",
+          "options.osdi_preload",
+          "options.stage_model_inputs"
+        ],
+        "missing": [],
+        "status": "supported"
+      },
+      "worker_environment": {
+        "capture": "ok",
+        "simulator": {
+          "requested_binary": "ngspice",
+          "binary_source": "PATH",
+          "selected_path": "/usr/local/bin/ngspice",
+          "version_banner": "******\n** ngspice-47 : Circuit level simulation program\n** Compiled with KLU Direct Linear Solver\n** The U. C. Berkeley CAD Group\n** Copyright 1985-1994, Regents of the University of California.\n** Copyright 2001-2026, The ngspice team.\n** Please get your ngspice manual from https://ngspice.sourceforge.io/docs.html\n** Please file your bug-reports at http://ngspice.sourceforge.net/bugrep.html\n** Creation Date: Fri Nov 13 23:19:32 UTC 2026\n******\n",
+          "version_probe": "ok"
+        },
+        "pdk": {
+          "variant": "ihp-sg13g2",
+          "root": "/opt/pdk",
+          "stamp_scheme": null,
+          "stamp_sha256": null,
+          "stamp_text": null,
+          "models_staged": true,
+          "stamp_scope": "image"
+        },
+        "cpu_model": "Intel(R) Xeon(R) Platinum 8488C",
+        "omp_num_threads": null,
+        "image_manifest": null,
+        "model_inputs": [
+          {
+            "name": "cornerMOSlv.lib",
+            "sha256": "07f15f24b990ab9eff8e1000457ad180a5199b48fc17217ac3572bdcdfbf5f72"
+          },
+          {
+            "name": "cornerCAP.lib",
+            "sha256": "b4f1beef8a6723b1bea9866bfe96730d0e01660232a39ab3dd9c256df4116109"
+          },
+          {
+            "name": "cornerRES.lib",
+            "sha256": "8c27e705a59d4221a5107b8fe95d388f3e166414d0fe214acfd2f07dcbb22b61"
+          },
+          {
+            "name": "sg13g2_moslv_mod.lib",
+            "sha256": "0aa1a5630a7c8fb8ae896c57c475954ff5885c4831311f8cd9c9e64d6cbb8332"
+          },
+          {
+            "name": "sg13g2_moslv_mismatch.lib",
+            "sha256": "2d3251e2d42eadb0f8af152a4915fdc60a68bceb95a2d17a52f90cfb34b7e63e"
+          },
+          {
+            "name": "sg13g2_moslv_mod_mismatch.lib",
+            "sha256": "28f681005831113ad5377f1b867d8869b78f329a7f52aa821ff56aa1e648b68b"
+          },
+          {
+            "name": "sg13g2_moslv_stat.lib",
+            "sha256": "7f4cf8df714e327348ba3975a2630e9d7dd7ae1a7a88817df4890e82745f0f52"
+          },
+          {
+            "name": "capacitors_mod.lib",
+            "sha256": "94b569e695fd8a223a5a49a5b5a6b0d8a62408820bf0c2ed9dbcb0a8ab7d957e"
+          },
+          {
+            "name": "capacitors_mod_mismatch.lib",
+            "sha256": "8ebc8369966951cfec0e91d603685f1975fbf9ceff2eef493a25357ce9ae5492"
+          },
+          {
+            "name": "capacitors_stat.lib",
+            "sha256": "68d2ef41174bcfae5997b355c4fd3dbe4f2b8ec4be30ff79d474052b3be1715a"
+          },
+          {
+            "name": "resistors_mod.lib",
+            "sha256": "c2329110bcb66894936e942d4cb73fc5eb9188c5230e1bebf18f60d9b00c5c7f"
+          },
+          {
+            "name": "resistors_mod_mismatch.lib",
+            "sha256": "f0aa7d90b6489112ed256aaf4cb0a11b9ab17ebe0c3ce092f4f8c5ecb1fd1e15"
+          },
+          {
+            "name": "resistors_stat.lib",
+            "sha256": "183eb9192bf711db991b8df87e031bab2ca5e559c73393edc756fa02a2720d40"
+          },
+          {
+            "name": "sg13g2_moslv_parm.lib",
+            "sha256": "cbf10b8453a18bb70b8ad0d6e40faa0937338e699b5460947a94900db6c92a6e"
+          }
+        ],
+        "diagnostics": [
+          "pdk stamp unreadable: FileNotFoundError"
+        ],
+        "pdk_stamp_comparison": {
+          "basis": "staged_model_inputs",
+          "status": "match"
+        },
+        "engine_build_comparison": {
+          "status": "match"
+        }
+      },
+      "runner_model_inputs": [
+        {
+          "name": "cornerMOSlv.lib",
+          "sha256": "07f15f24b990ab9eff8e1000457ad180a5199b48fc17217ac3572bdcdfbf5f72"
+        },
+        {
+          "name": "cornerCAP.lib",
+          "sha256": "b4f1beef8a6723b1bea9866bfe96730d0e01660232a39ab3dd9c256df4116109"
+        },
+        {
+          "name": "cornerRES.lib",
+          "sha256": "8c27e705a59d4221a5107b8fe95d388f3e166414d0fe214acfd2f07dcbb22b61"
+        },
+        {
+          "name": "sg13g2_moslv_mod.lib",
+          "sha256": "0aa1a5630a7c8fb8ae896c57c475954ff5885c4831311f8cd9c9e64d6cbb8332"
+        },
+        {
+          "name": "sg13g2_moslv_mismatch.lib",
+          "sha256": "2d3251e2d42eadb0f8af152a4915fdc60a68bceb95a2d17a52f90cfb34b7e63e"
+        },
+        {
+          "name": "sg13g2_moslv_mod_mismatch.lib",
+          "sha256": "28f681005831113ad5377f1b867d8869b78f329a7f52aa821ff56aa1e648b68b"
+        },
+        {
+          "name": "sg13g2_moslv_stat.lib",
+          "sha256": "7f4cf8df714e327348ba3975a2630e9d7dd7ae1a7a88817df4890e82745f0f52"
+        },
+        {
+          "name": "capacitors_mod.lib",
+          "sha256": "94b569e695fd8a223a5a49a5b5a6b0d8a62408820bf0c2ed9dbcb0a8ab7d957e"
+        },
+        {
+          "name": "capacitors_mod_mismatch.lib",
+          "sha256": "8ebc8369966951cfec0e91d603685f1975fbf9ceff2eef493a25357ce9ae5492"
+        },
+        {
+          "name": "capacitors_stat.lib",
+          "sha256": "68d2ef41174bcfae5997b355c4fd3dbe4f2b8ec4be30ff79d474052b3be1715a"
+        },
+        {
+          "name": "resistors_mod.lib",
+          "sha256": "c2329110bcb66894936e942d4cb73fc5eb9188c5230e1bebf18f60d9b00c5c7f"
+        },
+        {
+          "name": "resistors_mod_mismatch.lib",
+          "sha256": "f0aa7d90b6489112ed256aaf4cb0a11b9ab17ebe0c3ce092f4f8c5ecb1fd1e15"
+        },
+        {
+          "name": "resistors_stat.lib",
+          "sha256": "183eb9192bf711db991b8df87e031bab2ca5e559c73393edc756fa02a2720d40"
+        },
+        {
+          "name": "sg13g2_moslv_parm.lib",
+          "sha256": "cbf10b8453a18bb70b8ad0d6e40faa0937338e699b5460947a94900db6c92a6e"
+        }
+      ]
+    },
+    "engine_host": "worker",
+    "client_ngspice_binary": "/home/ubuntu/.local/bin/ngspice",
+    "backend": {
+      "resolved": "batch",
+      "source": "request",
+      "requested": "batch"
+    }
+  },
+  "coverage": {
+    "corners_simulated": 45,
+    "measurements_declared": 5,
+    "measurements_with_limits": 3,
+    "unrecognized_limit_keys": [],
+    "schema_version": 1,
+    "known": true,
+    "checked": [
+      "limit:[0,\"mos_tt/vdd=1.080_vinp=0.540V/-40C\",\"op_vcm_frac\",\"max\"]",
+      "limit:[0,\"mos_tt/vdd=1.080_vinp=0.540V/-40C\",\"op_vcm_frac\",\"min\"]",
+      "limit:[0,\"mos_tt/vdd=1.080_vinp=0.540V/-40C\",\"op_vout_offset_frac\",\"max\"]",
+      "limit:[0,\"mos_tt/vdd=1.080_vinp=0.540V/-40C\",\"op_vout_rail_frac\",\"max\"]",
+      "limit:[0,\"mos_tt/vdd=1.080_vinp=0.540V/-40C\",\"op_vout_rail_frac\",\"min\"]",
+      "limit:[1,\"mos_tt/vdd=1.080_vinp=0.540V/27C\",\"op_vcm_frac\",\"max\"]",
+      "limit:[1,\"mos_tt/vdd=1.080_vinp=0.540V/27C\",\"op_vcm_frac\",\"min\"]",
+      "limit:[1,\"mos_tt/vdd=1.080_vinp=0.540V/27C\",\"op_vout_offset_frac\",\"max\"]",
+      "limit:[1,\"mos_tt/vdd=1.080_vinp=0.540V/27C\",\"op_vout_rail_frac\",\"max\"]",
+      "limit:[1,\"mos_tt/vdd=1.080_vinp=0.540V/27C\",\"op_vout_rail_frac\",\"min\"]",
+      "limit:[10,\"mos_ss/vdd=1.080_vinp=0.540V/27C\",\"op_vcm_frac\",\"max\"]",
+      "limit:[10,\"mos_ss/vdd=1.080_vinp=0.540V/27C\",\"op_vcm_frac\",\"min\"]",
+      "limit:[10,\"mos_ss/vdd=1.080_vinp=0.540V/27C\",\"op_vout_offset_frac\",\"max\"]",
+      "limit:[10,\"mos_ss/vdd=1.080_vinp=0.540V/27C\",\"op_vout_rail_frac\",\"max\"]",
+      "limit:[10,\"mos_ss/vdd=1.080_vinp=0.540V/27C\",\"op_vout_rail_frac\",\"min\"]",
+      "limit:[11,\"mos_ss/vdd=1.080_vinp=0.540V/125C\",\"op_vcm_frac\",\"max\"]",
+      "limit:[11,\"mos_ss/vdd=1.080_vinp=0.540V/125C\",\"op_vcm_frac\",\"min\"]",
+      "limit:[11,\"mos_ss/vdd=1.080_vinp=0.540V/125C\",\"op_vout_offset_frac\",\"max\"]",
+      "limit:[11,\"mos_ss/vdd=1.080_vinp=0.540V/125C\",\"op_vout_rail_frac\",\"max\"]",
+      "limit:[11,\"mos_ss/vdd=1.080_vinp=0.540V/125C\",\"op_vout_rail_frac\",\"min\"]",
+      "limit:[12,\"mos_ss/vdd=1.200_vinp=0.600V/-40C\",\"op_vcm_frac\",\"max\"]",
+      "limit:[12,\"mos_ss/vdd=1.200_vinp=0.600V/-40C\",\"op_vcm_frac\",\"min\"]",
+      "limit:[12,\"mos_ss/vdd=1.200_vinp=0.600V/-40C\",\"op_vout_offset_frac\",\"max\"]",
+      "limit:[12,\"mos_ss/vdd=1.200_vinp=0.600V/-40C\",\"op_vout_rail_frac\",\"max\"]",
+      "limit:[12,\"mos_ss/vdd=1.200_vinp=0.600V/-40C\",\"op_vout_rail_frac\",\"min\"]",
+      "limit:[13,\"mos_ss/vdd=1.200_vinp=0.600V/27C\",\"op_vcm_frac\",\"max\"]",
+      "limit:[13,\"mos_ss/vdd=1.200_vinp=0.600V/27C\",\"op_vcm_frac\",\"min\"]",
+      "limit:[13,\"mos_ss/vdd=1.200_vinp=0.600V/27C\",\"op_vout_offset_frac\",\"max\"]",
+      "limit:[13,\"mos_ss/vdd=1.200_vinp=0.600V/27C\",\"op_vout_rail_frac\",\"max\"]",
+      "limit:[13,\"mos_ss/vdd=1.200_vinp=0.600V/27C\",\"op_vout_rail_frac\",\"min\"]",
+      "limit:[14,\"mos_ss/vdd=1.200_vinp=0.600V/125C\",\"op_vcm_frac\",\"max\"]",
+      "limit:[14,\"mos_ss/vdd=1.200_vinp=0.600V/125C\",\"op_vcm_frac\",\"min\"]",
+      "limit:[14,\"mos_ss/vdd=1.200_vinp=0.600V/125C\",\"op_vout_offset_frac\",\"max\"]",
+      "limit:[14,\"mos_ss/vdd=1.200_vinp=0.600V/125C\",\"op_vout_rail_frac\",\"max\"]",
+      "limit:[14,\"mos_ss/vdd=1.200_vinp=0.600V/125C\",\"op_vout_rail_frac\",\"min\"]",
+      "limit:[15,\"mos_ss/vdd=1.320_vinp=0.660V/-40C\",\"op_vcm_frac\",\"max\"]",
+      "limit:[15,\"mos_ss/vdd=1.320_vinp=0.660V/-40C\",\"op_vcm_frac\",\"min\"]",
+      "limit:[15,\"mos_ss/vdd=1.320_vinp=0.660V/-40C\",\"op_vout_offset_frac\",\"max\"]",
+      "limit:[15,\"mos_ss/vdd=1.320_vinp=0.660V/-40C\",\"op_vout_rail_frac\",\"max\"]",
+      "limit:[15,\"mos_ss/vdd=1.320_vinp=0.660V/-40C\",\"op_vout_rail_frac\",\"min\"]",
+      "limit:[16,\"mos_ss/vdd=1.320_vinp=0.660V/27C\",\"op_vcm_frac\",\"max\"]",
+      "limit:[16,\"mos_ss/vdd=1.320_vinp=0.660V/27C\",\"op_vcm_frac\",\"min\"]",
+      "limit:[16,\"mos_ss/vdd=1.320_vinp=0.660V/27C\",\"op_vout_offset_frac\",\"max\"]",
+      "limit:[16,\"mos_ss/vdd=1.320_vinp=0.660V/27C\",\"op_vout_rail_frac\",\"max\"]",
+      "limit:[16,\"mos_ss/vdd=1.320_vinp=0.660V/27C\",\"op_vout_rail_frac\",\"min\"]",
+      "limit:[17,\"mos_ss/vdd=1.320_vinp=0.660V/125C\",\"op_vcm_frac\",\"max\"]",
+      "limit:[17,\"mos_ss/vdd=1.320_vinp=0.660V/125C\",\"op_vcm_frac\",\"min\"]",
+      "limit:[17,\"mos_ss/vdd=1.320_vinp=0.660V/125C\",\"op_vout_offset_frac\",\"max\"]",
+      "limit:[17,\"mos_ss/vdd=1.320_vinp=0.660V/125C\",\"op_vout_rail_frac\",\"max\"]",
+      "limit:[17,\"mos_ss/vdd=1.320_vinp=0.660V/125C\",\"op_vout_rail_frac\",\"min\"]",
+      "limit:[18,\"mos_ff/vdd=1.080_vinp=0.540V/-40C\",\"op_vcm_frac\",\"max\"]",
+      "limit:[18,\"mos_ff/vdd=1.080_vinp=0.540V/-40C\",\"op_vcm_frac\",\"min\"]",
+      "limit:[18,\"mos_ff/vdd=1.080_vinp=0.540V/-40C\",\"op_vout_offset_frac\",\"max\"]",
+      "limit:[18,\"mos_ff/vdd=1.080_vinp=0.540V/-40C\",\"op_vout_rail_frac\",\"max\"]",
+      "limit:[18,\"mos_ff/vdd=1.080_vinp=0.540V/-40C\",\"op_vout_rail_frac\",\"min\"]",
+      "limit:[19,\"mos_ff/vdd=1.080_vinp=0.540V/27C\",\"op_vcm_frac\",\"max\"]",
+      "limit:[19,\"mos_ff/vdd=1.080_vinp=0.540V/27C\",\"op_vcm_frac\",\"min\"]",
+      "limit:[19,\"mos_ff/vdd=1.080_vinp=0.540V/27C\",\"op_vout_offset_frac\",\"max\"]",
+      "limit:[19,\"mos_ff/vdd=1.080_vinp=0.540V/27C\",\"op_vout_rail_frac\",\"max\"]",
+      "limit:[19,\"mos_ff/vdd=1.080_vinp=0.540V/27C\",\"op_vout_rail_frac\",\"min\"]",
+      "limit:[2,\"mos_tt/vdd=1.080_vinp=0.540V/125C\",\"op_vcm_frac\",\"max\"]",
+      "limit:[2,\"mos_tt/vdd=1.080_vinp=0.540V/125C\",\"op_vcm_frac\",\"min\"]",
+      "limit:[2,\"mos_tt/vdd=1.080_vinp=0.540V/125C\",\"op_vout_offset_frac\",\"max\"]",
+      "limit:[2,\"mos_tt/vdd=1.080_vinp=0.540V/125C\",\"op_vout_rail_frac\",\"max\"]",
+      "limit:[2,\"mos_tt/vdd=1.080_vinp=0.540V/125C\",\"op_vout_rail_frac\",\"min\"]",
+      "limit:[20,\"mos_ff/vdd=1.080_vinp=0.540V/125C\",\"op_vcm_frac\",\"max\"]",
+      "limit:[20,\"mos_ff/vdd=1.080_vinp=0.540V/125C\",\"op_vcm_frac\",\"min\"]",
+      "limit:[20,\"mos_ff/vdd=1.080_vinp=0.540V/125C\",\"op_vout_offset_frac\",\"max\"]",
+      "limit:[20,\"mos_ff/vdd=1.080_vinp=0.540V/125C\",\"op_vout_rail_frac\",\"max\"]",
+      "limit:[20,\"mos_ff/vdd=1.080_vinp=0.540V/125C\",\"op_vout_rail_frac\",\"min\"]",
+      "limit:[21,\"mos_ff/vdd=1.200_vinp=0.600V/-40C\",\"op_vcm_frac\",\"max\"]",
+      "limit:[21,\"mos_ff/vdd=1.200_vinp=0.600V/-40C\",\"op_vcm_frac\",\"min\"]",
+      "limit:[21,\"mos_ff/vdd=1.200_vinp=0.600V/-40C\",\"op_vout_offset_frac\",\"max\"]",
+      "limit:[21,\"mos_ff/vdd=1.200_vinp=0.600V/-40C\",\"op_vout_rail_frac\",\"max\"]",
+      "limit:[21,\"mos_ff/vdd=1.200_vinp=0.600V/-40C\",\"op_vout_rail_frac\",\"min\"]",
+      "limit:[22,\"mos_ff/vdd=1.200_vinp=0.600V/27C\",\"op_vcm_frac\",\"max\"]",
+      "limit:[22,\"mos_ff/vdd=1.200_vinp=0.600V/27C\",\"op_vcm_frac\",\"min\"]",
+      "limit:[22,\"mos_ff/vdd=1.200_vinp=0.600V/27C\",\"op_vout_offset_frac\",\"max\"]",
+      "limit:[22,\"mos_ff/vdd=1.200_vinp=0.600V/27C\",\"op_vout_rail_frac\",\"max\"]",
+      "limit:[22,\"mos_ff/vdd=1.200_vinp=0.600V/27C\",\"op_vout_rail_frac\",\"min\"]",
+      "limit:[23,\"mos_ff/vdd=1.200_vinp=0.600V/125C\",\"op_vcm_frac\",\"max\"]",
+      "limit:[23,\"mos_ff/vdd=1.200_vinp=0.600V/125C\",\"op_vcm_frac\",\"min\"]",
+      "limit:[23,\"mos_ff/vdd=1.200_vinp=0.600V/125C\",\"op_vout_offset_frac\",\"max\"]",
+      "limit:[23,\"mos_ff/vdd=1.200_vinp=0.600V/125C\",\"op_vout_rail_frac\",\"max\"]",
+      "limit:[23,\"mos_ff/vdd=1.200_vinp=0.600V/125C\",\"op_vout_rail_frac\",\"min\"]",
+      "limit:[24,\"mos_ff/vdd=1.320_vinp=0.660V/-40C\",\"op_vcm_frac\",\"max\"]",
+      "limit:[24,\"mos_ff/vdd=1.320_vinp=0.660V/-40C\",\"op_vcm_frac\",\"min\"]",
+      "limit:[24,\"mos_ff/vdd=1.320_vinp=0.660V/-40C\",\"op_vout_offset_frac\",\"max\"]",
+      "limit:[24,\"mos_ff/vdd=1.320_vinp=0.660V/-40C\",\"op_vout_rail_frac\",\"max\"]",
+      "limit:[24,\"mos_ff/vdd=1.320_vinp=0.660V/-40C\",\"op_vout_rail_frac\",\"min\"]",
+      "limit:[25,\"mos_ff/vdd=1.320_vinp=0.660V/27C\",\"op_vcm_frac\",\"max\"]",
+      "limit:[25,\"mos_ff/vdd=1.320_vinp=0.660V/27C\",\"op_vcm_frac\",\"min\"]",
+      "limit:[25,\"mos_ff/vdd=1.320_vinp=0.660V/27C\",\"op_vout_offset_frac\",\"max\"]",
+      "limit:[25,\"mos_ff/vdd=1.320_vinp=0.660V/27C\",\"op_vout_rail_frac\",\"max\"]",
+      "limit:[25,\"mos_ff/vdd=1.320_vinp=0.660V/27C\",\"op_vout_rail_frac\",\"min\"]",
+      "limit:[26,\"mos_ff/vdd=1.320_vinp=0.660V/125C\",\"op_vcm_frac\",\"max\"]",
+      "limit:[26,\"mos_ff/vdd=1.320_vinp=0.660V/125C\",\"op_vcm_frac\",\"min\"]",
+      "limit:[26,\"mos_ff/vdd=1.320_vinp=0.660V/125C\",\"op_vout_offset_frac\",\"max\"]",
+      "limit:[26,\"mos_ff/vdd=1.320_vinp=0.660V/125C\",\"op_vout_rail_frac\",\"max\"]",
+      "limit:[26,\"mos_ff/vdd=1.320_vinp=0.660V/125C\",\"op_vout_rail_frac\",\"min\"]",
+      "limit:[27,\"mos_sf/vdd=1.080_vinp=0.540V/-40C\",\"op_vcm_frac\",\"max\"]",
+      "limit:[27,\"mos_sf/vdd=1.080_vinp=0.540V/-40C\",\"op_vcm_frac\",\"min\"]",
+      "limit:[27,\"mos_sf/vdd=1.080_vinp=0.540V/-40C\",\"op_vout_offset_frac\",\"max\"]",
+      "limit:[27,\"mos_sf/vdd=1.080_vinp=0.540V/-40C\",\"op_vout_rail_frac\",\"max\"]",
+      "limit:[27,\"mos_sf/vdd=1.080_vinp=0.540V/-40C\",\"op_vout_rail_frac\",\"min\"]",
+      "limit:[28,\"mos_sf/vdd=1.080_vinp=0.540V/27C\",\"op_vcm_frac\",\"max\"]",
+      "limit:[28,\"mos_sf/vdd=1.080_vinp=0.540V/27C\",\"op_vcm_frac\",\"min\"]",
+      "limit:[28,\"mos_sf/vdd=1.080_vinp=0.540V/27C\",\"op_vout_offset_frac\",\"max\"]",
+      "limit:[28,\"mos_sf/vdd=1.080_vinp=0.540V/27C\",\"op_vout_rail_frac\",\"max\"]",
+      "limit:[28,\"mos_sf/vdd=1.080_vinp=0.540V/27C\",\"op_vout_rail_frac\",\"min\"]",
+      "limit:[29,\"mos_sf/vdd=1.080_vinp=0.540V/125C\",\"op_vcm_frac\",\"max\"]",
+      "limit:[29,\"mos_sf/vdd=1.080_vinp=0.540V/125C\",\"op_vcm_frac\",\"min\"]",
+      "limit:[29,\"mos_sf/vdd=1.080_vinp=0.540V/125C\",\"op_vout_offset_frac\",\"max\"]",
+      "limit:[29,\"mos_sf/vdd=1.080_vinp=0.540V/125C\",\"op_vout_rail_frac\",\"max\"]",
+      "limit:[29,\"mos_sf/vdd=1.080_vinp=0.540V/125C\",\"op_vout_rail_frac\",\"min\"]",
+      "limit:[3,\"mos_tt/vdd=1.200_vinp=0.600V/-40C\",\"op_vcm_frac\",\"max\"]",
+      "limit:[3,\"mos_tt/vdd=1.200_vinp=0.600V/-40C\",\"op_vcm_frac\",\"min\"]",
+      "limit:[3,\"mos_tt/vdd=1.200_vinp=0.600V/-40C\",\"op_vout_offset_frac\",\"max\"]",
+      "limit:[3,\"mos_tt/vdd=1.200_vinp=0.600V/-40C\",\"op_vout_rail_frac\",\"max\"]",
+      "limit:[3,\"mos_tt/vdd=1.200_vinp=0.600V/-40C\",\"op_vout_rail_frac\",\"min\"]",
+      "limit:[30,\"mos_sf/vdd=1.200_vinp=0.600V/-40C\",\"op_vcm_frac\",\"max\"]",
+      "limit:[30,\"mos_sf/vdd=1.200_vinp=0.600V/-40C\",\"op_vcm_frac\",\"min\"]",
+      "limit:[30,\"mos_sf/vdd=1.200_vinp=0.600V/-40C\",\"op_vout_offset_frac\",\"max\"]",
+      "limit:[30,\"mos_sf/vdd=1.200_vinp=0.600V/-40C\",\"op_vout_rail_frac\",\"max\"]",
+      "limit:[30,\"mos_sf/vdd=1.200_vinp=0.600V/-40C\",\"op_vout_rail_frac\",\"min\"]",
+      "limit:[31,\"mos_sf/vdd=1.200_vinp=0.600V/27C\",\"op_vcm_frac\",\"max\"]",
+      "limit:[31,\"mos_sf/vdd=1.200_vinp=0.600V/27C\",\"op_vcm_frac\",\"min\"]",
+      "limit:[31,\"mos_sf/vdd=1.200_vinp=0.600V/27C\",\"op_vout_offset_frac\",\"max\"]",
+      "limit:[31,\"mos_sf/vdd=1.200_vinp=0.600V/27C\",\"op_vout_rail_frac\",\"max\"]",
+      "limit:[31,\"mos_sf/vdd=1.200_vinp=0.600V/27C\",\"op_vout_rail_frac\",\"min\"]",
+      "limit:[32,\"mos_sf/vdd=1.200_vinp=0.600V/125C\",\"op_vcm_frac\",\"max\"]",
+      "limit:[32,\"mos_sf/vdd=1.200_vinp=0.600V/125C\",\"op_vcm_frac\",\"min\"]",
+      "limit:[32,\"mos_sf/vdd=1.200_vinp=0.600V/125C\",\"op_vout_offset_frac\",\"max\"]",
+      "limit:[32,\"mos_sf/vdd=1.200_vinp=0.600V/125C\",\"op_vout_rail_frac\",\"max\"]",
+      "limit:[32,\"mos_sf/vdd=1.200_vinp=0.600V/125C\",\"op_vout_rail_frac\",\"min\"]",
+      "limit:[33,\"mos_sf/vdd=1.320_vinp=0.660V/-40C\",\"op_vcm_frac\",\"max\"]",
+      "limit:[33,\"mos_sf/vdd=1.320_vinp=0.660V/-40C\",\"op_vcm_frac\",\"min\"]",
+      "limit:[33,\"mos_sf/vdd=1.320_vinp=0.660V/-40C\",\"op_vout_offset_frac\",\"max\"]",
+      "limit:[33,\"mos_sf/vdd=1.320_vinp=0.660V/-40C\",\"op_vout_rail_frac\",\"max\"]",
+      "limit:[33,\"mos_sf/vdd=1.320_vinp=0.660V/-40C\",\"op_vout_rail_frac\",\"min\"]",
+      "limit:[34,\"mos_sf/vdd=1.320_vinp=0.660V/27C\",\"op_vcm_frac\",\"max\"]",
+      "limit:[34,\"mos_sf/vdd=1.320_vinp=0.660V/27C\",\"op_vcm_frac\",\"min\"]",
+      "limit:[34,\"mos_sf/vdd=1.320_vinp=0.660V/27C\",\"op_vout_offset_frac\",\"max\"]",
+      "limit:[34,\"mos_sf/vdd=1.320_vinp=0.660V/27C\",\"op_vout_rail_frac\",\"max\"]",
+      "limit:[34,\"mos_sf/vdd=1.320_vinp=0.660V/27C\",\"op_vout_rail_frac\",\"min\"]",
+      "limit:[35,\"mos_sf/vdd=1.320_vinp=0.660V/125C\",\"op_vcm_frac\",\"max\"]",
+      "limit:[35,\"mos_sf/vdd=1.320_vinp=0.660V/125C\",\"op_vcm_frac\",\"min\"]",
+      "limit:[35,\"mos_sf/vdd=1.320_vinp=0.660V/125C\",\"op_vout_offset_frac\",\"max\"]",
+      "limit:[35,\"mos_sf/vdd=1.320_vinp=0.660V/125C\",\"op_vout_rail_frac\",\"max\"]",
+      "limit:[35,\"mos_sf/vdd=1.320_vinp=0.660V/125C\",\"op_vout_rail_frac\",\"min\"]",
+      "limit:[36,\"mos_fs/vdd=1.080_vinp=0.540V/-40C\",\"op_vcm_frac\",\"max\"]",
+      "limit:[36,\"mos_fs/vdd=1.080_vinp=0.540V/-40C\",\"op_vcm_frac\",\"min\"]",
+      "limit:[36,\"mos_fs/vdd=1.080_vinp=0.540V/-40C\",\"op_vout_offset_frac\",\"max\"]",
+      "limit:[36,\"mos_fs/vdd=1.080_vinp=0.540V/-40C\",\"op_vout_rail_frac\",\"max\"]",
+      "limit:[36,\"mos_fs/vdd=1.080_vinp=0.540V/-40C\",\"op_vout_rail_frac\",\"min\"]",
+      "limit:[37,\"mos_fs/vdd=1.080_vinp=0.540V/27C\",\"op_vcm_frac\",\"max\"]",
+      "limit:[37,\"mos_fs/vdd=1.080_vinp=0.540V/27C\",\"op_vcm_frac\",\"min\"]",
+      "limit:[37,\"mos_fs/vdd=1.080_vinp=0.540V/27C\",\"op_vout_offset_frac\",\"max\"]",
+      "limit:[37,\"mos_fs/vdd=1.080_vinp=0.540V/27C\",\"op_vout_rail_frac\",\"max\"]",
+      "limit:[37,\"mos_fs/vdd=1.080_vinp=0.540V/27C\",\"op_vout_rail_frac\",\"min\"]",
+      "limit:[38,\"mos_fs/vdd=1.080_vinp=0.540V/125C\",\"op_vcm_frac\",\"max\"]",
+      "limit:[38,\"mos_fs/vdd=1.080_vinp=0.540V/125C\",\"op_vcm_frac\",\"min\"]",
+      "limit:[38,\"mos_fs/vdd=1.080_vinp=0.540V/125C\",\"op_vout_offset_frac\",\"max\"]",
+      "limit:[38,\"mos_fs/vdd=1.080_vinp=0.540V/125C\",\"op_vout_rail_frac\",\"max\"]",
+      "limit:[38,\"mos_fs/vdd=1.080_vinp=0.540V/125C\",\"op_vout_rail_frac\",\"min\"]",
+      "limit:[39,\"mos_fs/vdd=1.200_vinp=0.600V/-40C\",\"op_vcm_frac\",\"max\"]",
+      "limit:[39,\"mos_fs/vdd=1.200_vinp=0.600V/-40C\",\"op_vcm_frac\",\"min\"]",
+      "limit:[39,\"mos_fs/vdd=1.200_vinp=0.600V/-40C\",\"op_vout_offset_frac\",\"max\"]",
+      "limit:[39,\"mos_fs/vdd=1.200_vinp=0.600V/-40C\",\"op_vout_rail_frac\",\"max\"]",
+      "limit:[39,\"mos_fs/vdd=1.200_vinp=0.600V/-40C\",\"op_vout_rail_frac\",\"min\"]",
+      "limit:[4,\"mos_tt/vdd=1.200_vinp=0.600V/27C\",\"op_vcm_frac\",\"max\"]",
+      "limit:[4,\"mos_tt/vdd=1.200_vinp=0.600V/27C\",\"op_vcm_frac\",\"min\"]",
+      "limit:[4,\"mos_tt/vdd=1.200_vinp=0.600V/27C\",\"op_vout_offset_frac\",\"max\"]",
+      "limit:[4,\"mos_tt/vdd=1.200_vinp=0.600V/27C\",\"op_vout_rail_frac\",\"max\"]",
+      "limit:[4,\"mos_tt/vdd=1.200_vinp=0.600V/27C\",\"op_vout_rail_frac\",\"min\"]",
+      "limit:[40,\"mos_fs/vdd=1.200_vinp=0.600V/27C\",\"op_vcm_frac\",\"max\"]",
+      "limit:[40,\"mos_fs/vdd=1.200_vinp=0.600V/27C\",\"op_vcm_frac\",\"min\"]",
+      "limit:[40,\"mos_fs/vdd=1.200_vinp=0.600V/27C\",\"op_vout_offset_frac\",\"max\"]",
+      "limit:[40,\"mos_fs/vdd=1.200_vinp=0.600V/27C\",\"op_vout_rail_frac\",\"max\"]",
+      "limit:[40,\"mos_fs/vdd=1.200_vinp=0.600V/27C\",\"op_vout_rail_frac\",\"min\"]",
+      "limit:[41,\"mos_fs/vdd=1.200_vinp=0.600V/125C\",\"op_vcm_frac\",\"max\"]",
+      "limit:[41,\"mos_fs/vdd=1.200_vinp=0.600V/125C\",\"op_vcm_frac\",\"min\"]",
+      "limit:[41,\"mos_fs/vdd=1.200_vinp=0.600V/125C\",\"op_vout_offset_frac\",\"max\"]",
+      "limit:[41,\"mos_fs/vdd=1.200_vinp=0.600V/125C\",\"op_vout_rail_frac\",\"max\"]",
+      "limit:[41,\"mos_fs/vdd=1.200_vinp=0.600V/125C\",\"op_vout_rail_frac\",\"min\"]",
+      "limit:[42,\"mos_fs/vdd=1.320_vinp=0.660V/-40C\",\"op_vcm_frac\",\"max\"]",
+      "limit:[42,\"mos_fs/vdd=1.320_vinp=0.660V/-40C\",\"op_vcm_frac\",\"min\"]",
+      "limit:[42,\"mos_fs/vdd=1.320_vinp=0.660V/-40C\",\"op_vout_offset_frac\",\"max\"]",
+      "limit:[42,\"mos_fs/vdd=1.320_vinp=0.660V/-40C\",\"op_vout_rail_frac\",\"max\"]",
+      "limit:[42,\"mos_fs/vdd=1.320_vinp=0.660V/-40C\",\"op_vout_rail_frac\",\"min\"]",
+      "limit:[43,\"mos_fs/vdd=1.320_vinp=0.660V/27C\",\"op_vcm_frac\",\"max\"]",
+      "limit:[43,\"mos_fs/vdd=1.320_vinp=0.660V/27C\",\"op_vcm_frac\",\"min\"]",
+      "limit:[43,\"mos_fs/vdd=1.320_vinp=0.660V/27C\",\"op_vout_offset_frac\",\"max\"]",
+      "limit:[43,\"mos_fs/vdd=1.320_vinp=0.660V/27C\",\"op_vout_rail_frac\",\"max\"]",
+      "limit:[43,\"mos_fs/vdd=1.320_vinp=0.660V/27C\",\"op_vout_rail_frac\",\"min\"]",
+      "limit:[44,\"mos_fs/vdd=1.320_vinp=0.660V/125C\",\"op_vcm_frac\",\"max\"]",
+      "limit:[44,\"mos_fs/vdd=1.320_vinp=0.660V/125C\",\"op_vcm_frac\",\"min\"]",
+      "limit:[44,\"mos_fs/vdd=1.320_vinp=0.660V/125C\",\"op_vout_offset_frac\",\"max\"]",
+      "limit:[44,\"mos_fs/vdd=1.320_vinp=0.660V/125C\",\"op_vout_rail_frac\",\"max\"]",
+      "limit:[44,\"mos_fs/vdd=1.320_vinp=0.660V/125C\",\"op_vout_rail_frac\",\"min\"]",
+      "limit:[5,\"mos_tt/vdd=1.200_vinp=0.600V/125C\",\"op_vcm_frac\",\"max\"]",
+      "limit:[5,\"mos_tt/vdd=1.200_vinp=0.600V/125C\",\"op_vcm_frac\",\"min\"]",
+      "limit:[5,\"mos_tt/vdd=1.200_vinp=0.600V/125C\",\"op_vout_offset_frac\",\"max\"]",
+      "limit:[5,\"mos_tt/vdd=1.200_vinp=0.600V/125C\",\"op_vout_rail_frac\",\"max\"]",
+      "limit:[5,\"mos_tt/vdd=1.200_vinp=0.600V/125C\",\"op_vout_rail_frac\",\"min\"]",
+      "limit:[6,\"mos_tt/vdd=1.320_vinp=0.660V/-40C\",\"op_vcm_frac\",\"max\"]",
+      "limit:[6,\"mos_tt/vdd=1.320_vinp=0.660V/-40C\",\"op_vcm_frac\",\"min\"]",
+      "limit:[6,\"mos_tt/vdd=1.320_vinp=0.660V/-40C\",\"op_vout_offset_frac\",\"max\"]",
+      "limit:[6,\"mos_tt/vdd=1.320_vinp=0.660V/-40C\",\"op_vout_rail_frac\",\"max\"]",
+      "limit:[6,\"mos_tt/vdd=1.320_vinp=0.660V/-40C\",\"op_vout_rail_frac\",\"min\"]",
+      "limit:[7,\"mos_tt/vdd=1.320_vinp=0.660V/27C\",\"op_vcm_frac\",\"max\"]",
+      "limit:[7,\"mos_tt/vdd=1.320_vinp=0.660V/27C\",\"op_vcm_frac\",\"min\"]",
+      "limit:[7,\"mos_tt/vdd=1.320_vinp=0.660V/27C\",\"op_vout_offset_frac\",\"max\"]",
+      "limit:[7,\"mos_tt/vdd=1.320_vinp=0.660V/27C\",\"op_vout_rail_frac\",\"max\"]",
+      "limit:[7,\"mos_tt/vdd=1.320_vinp=0.660V/27C\",\"op_vout_rail_frac\",\"min\"]",
+      "limit:[8,\"mos_tt/vdd=1.320_vinp=0.660V/125C\",\"op_vcm_frac\",\"max\"]",
+      "limit:[8,\"mos_tt/vdd=1.320_vinp=0.660V/125C\",\"op_vcm_frac\",\"min\"]",
+      "limit:[8,\"mos_tt/vdd=1.320_vinp=0.660V/125C\",\"op_vout_offset_frac\",\"max\"]",
+      "limit:[8,\"mos_tt/vdd=1.320_vinp=0.660V/125C\",\"op_vout_rail_frac\",\"max\"]",
+      "limit:[8,\"mos_tt/vdd=1.320_vinp=0.660V/125C\",\"op_vout_rail_frac\",\"min\"]",
+      "limit:[9,\"mos_ss/vdd=1.080_vinp=0.540V/-40C\",\"op_vcm_frac\",\"max\"]",
+      "limit:[9,\"mos_ss/vdd=1.080_vinp=0.540V/-40C\",\"op_vcm_frac\",\"min\"]",
+      "limit:[9,\"mos_ss/vdd=1.080_vinp=0.540V/-40C\",\"op_vout_offset_frac\",\"max\"]",
+      "limit:[9,\"mos_ss/vdd=1.080_vinp=0.540V/-40C\",\"op_vout_rail_frac\",\"max\"]",
+      "limit:[9,\"mos_ss/vdd=1.080_vinp=0.540V/-40C\",\"op_vout_rail_frac\",\"min\"]",
+      "measurement:[0,\"mos_tt/vdd=1.080_vinp=0.540V/-40C\",\"ivdd_total_a\"]/observation",
+      "measurement:[0,\"mos_tt/vdd=1.080_vinp=0.540V/-40C\",\"vout_dc_v\"]/observation",
+      "measurement:[1,\"mos_tt/vdd=1.080_vinp=0.540V/27C\",\"ivdd_total_a\"]/observation",
+      "measurement:[1,\"mos_tt/vdd=1.080_vinp=0.540V/27C\",\"vout_dc_v\"]/observation",
+      "measurement:[10,\"mos_ss/vdd=1.080_vinp=0.540V/27C\",\"ivdd_total_a\"]/observation",
+      "measurement:[10,\"mos_ss/vdd=1.080_vinp=0.540V/27C\",\"vout_dc_v\"]/observation",
+      "measurement:[11,\"mos_ss/vdd=1.080_vinp=0.540V/125C\",\"ivdd_total_a\"]/observation",
+      "measurement:[11,\"mos_ss/vdd=1.080_vinp=0.540V/125C\",\"vout_dc_v\"]/observation",
+      "measurement:[12,\"mos_ss/vdd=1.200_vinp=0.600V/-40C\",\"ivdd_total_a\"]/observation",
+      "measurement:[12,\"mos_ss/vdd=1.200_vinp=0.600V/-40C\",\"vout_dc_v\"]/observation",
+      "measurement:[13,\"mos_ss/vdd=1.200_vinp=0.600V/27C\",\"ivdd_total_a\"]/observation",
+      "measurement:[13,\"mos_ss/vdd=1.200_vinp=0.600V/27C\",\"vout_dc_v\"]/observation",
+      "measurement:[14,\"mos_ss/vdd=1.200_vinp=0.600V/125C\",\"ivdd_total_a\"]/observation",
+      "measurement:[14,\"mos_ss/vdd=1.200_vinp=0.600V/125C\",\"vout_dc_v\"]/observation",
+      "measurement:[15,\"mos_ss/vdd=1.320_vinp=0.660V/-40C\",\"ivdd_total_a\"]/observation",
+      "measurement:[15,\"mos_ss/vdd=1.320_vinp=0.660V/-40C\",\"vout_dc_v\"]/observation",
+      "measurement:[16,\"mos_ss/vdd=1.320_vinp=0.660V/27C\",\"ivdd_total_a\"]/observation",
+      "measurement:[16,\"mos_ss/vdd=1.320_vinp=0.660V/27C\",\"vout_dc_v\"]/observation",
+      "measurement:[17,\"mos_ss/vdd=1.320_vinp=0.660V/125C\",\"ivdd_total_a\"]/observation",
+      "measurement:[17,\"mos_ss/vdd=1.320_vinp=0.660V/125C\",\"vout_dc_v\"]/observation",
+      "measurement:[18,\"mos_ff/vdd=1.080_vinp=0.540V/-40C\",\"ivdd_total_a\"]/observation",
+      "measurement:[18,\"mos_ff/vdd=1.080_vinp=0.540V/-40C\",\"vout_dc_v\"]/observation",
+      "measurement:[19,\"mos_ff/vdd=1.080_vinp=0.540V/27C\",\"ivdd_total_a\"]/observation",
+      "measurement:[19,\"mos_ff/vdd=1.080_vinp=0.540V/27C\",\"vout_dc_v\"]/observation",
+      "measurement:[2,\"mos_tt/vdd=1.080_vinp=0.540V/125C\",\"ivdd_total_a\"]/observation",
+      "measurement:[2,\"mos_tt/vdd=1.080_vinp=0.540V/125C\",\"vout_dc_v\"]/observation",
+      "measurement:[20,\"mos_ff/vdd=1.080_vinp=0.540V/125C\",\"ivdd_total_a\"]/observation",
+      "measurement:[20,\"mos_ff/vdd=1.080_vinp=0.540V/125C\",\"vout_dc_v\"]/observation",
+      "measurement:[21,\"mos_ff/vdd=1.200_vinp=0.600V/-40C\",\"ivdd_total_a\"]/observation",
+      "measurement:[21,\"mos_ff/vdd=1.200_vinp=0.600V/-40C\",\"vout_dc_v\"]/observation",
+      "measurement:[22,\"mos_ff/vdd=1.200_vinp=0.600V/27C\",\"ivdd_total_a\"]/observation",
+      "measurement:[22,\"mos_ff/vdd=1.200_vinp=0.600V/27C\",\"vout_dc_v\"]/observation",
+      "measurement:[23,\"mos_ff/vdd=1.200_vinp=0.600V/125C\",\"ivdd_total_a\"]/observation",
+      "measurement:[23,\"mos_ff/vdd=1.200_vinp=0.600V/125C\",\"vout_dc_v\"]/observation",
+      "measurement:[24,\"mos_ff/vdd=1.320_vinp=0.660V/-40C\",\"ivdd_total_a\"]/observation",
+      "measurement:[24,\"mos_ff/vdd=1.320_vinp=0.660V/-40C\",\"vout_dc_v\"]/observation",
+      "measurement:[25,\"mos_ff/vdd=1.320_vinp=0.660V/27C\",\"ivdd_total_a\"]/observation",
+      "measurement:[25,\"mos_ff/vdd=1.320_vinp=0.660V/27C\",\"vout_dc_v\"]/observation",
+      "measurement:[26,\"mos_ff/vdd=1.320_vinp=0.660V/125C\",\"ivdd_total_a\"]/observation",
+      "measurement:[26,\"mos_ff/vdd=1.320_vinp=0.660V/125C\",\"vout_dc_v\"]/observation",
+      "measurement:[27,\"mos_sf/vdd=1.080_vinp=0.540V/-40C\",\"ivdd_total_a\"]/observation",
+      "measurement:[27,\"mos_sf/vdd=1.080_vinp=0.540V/-40C\",\"vout_dc_v\"]/observation",
+      "measurement:[28,\"mos_sf/vdd=1.080_vinp=0.540V/27C\",\"ivdd_total_a\"]/observation",
+      "measurement:[28,\"mos_sf/vdd=1.080_vinp=0.540V/27C\",\"vout_dc_v\"]/observation",
+      "measurement:[29,\"mos_sf/vdd=1.080_vinp=0.540V/125C\",\"ivdd_total_a\"]/observation",
+      "measurement:[29,\"mos_sf/vdd=1.080_vinp=0.540V/125C\",\"vout_dc_v\"]/observation",
+      "measurement:[3,\"mos_tt/vdd=1.200_vinp=0.600V/-40C\",\"ivdd_total_a\"]/observation",
+      "measurement:[3,\"mos_tt/vdd=1.200_vinp=0.600V/-40C\",\"vout_dc_v\"]/observation",
+      "measurement:[30,\"mos_sf/vdd=1.200_vinp=0.600V/-40C\",\"ivdd_total_a\"]/observation",
+      "measurement:[30,\"mos_sf/vdd=1.200_vinp=0.600V/-40C\",\"vout_dc_v\"]/observation",
+      "measurement:[31,\"mos_sf/vdd=1.200_vinp=0.600V/27C\",\"ivdd_total_a\"]/observation",
+      "measurement:[31,\"mos_sf/vdd=1.200_vinp=0.600V/27C\",\"vout_dc_v\"]/observation",
+      "measurement:[32,\"mos_sf/vdd=1.200_vinp=0.600V/125C\",\"ivdd_total_a\"]/observation",
+      "measurement:[32,\"mos_sf/vdd=1.200_vinp=0.600V/125C\",\"vout_dc_v\"]/observation",
+      "measurement:[33,\"mos_sf/vdd=1.320_vinp=0.660V/-40C\",\"ivdd_total_a\"]/observation",
+      "measurement:[33,\"mos_sf/vdd=1.320_vinp=0.660V/-40C\",\"vout_dc_v\"]/observation",
+      "measurement:[34,\"mos_sf/vdd=1.320_vinp=0.660V/27C\",\"ivdd_total_a\"]/observation",
+      "measurement:[34,\"mos_sf/vdd=1.320_vinp=0.660V/27C\",\"vout_dc_v\"]/observation",
+      "measurement:[35,\"mos_sf/vdd=1.320_vinp=0.660V/125C\",\"ivdd_total_a\"]/observation",
+      "measurement:[35,\"mos_sf/vdd=1.320_vinp=0.660V/125C\",\"vout_dc_v\"]/observation",
+      "measurement:[36,\"mos_fs/vdd=1.080_vinp=0.540V/-40C\",\"ivdd_total_a\"]/observation",
+      "measurement:[36,\"mos_fs/vdd=1.080_vinp=0.540V/-40C\",\"vout_dc_v\"]/observation",
+      "measurement:[37,\"mos_fs/vdd=1.080_vinp=0.540V/27C\",\"ivdd_total_a\"]/observation",
+      "measurement:[37,\"mos_fs/vdd=1.080_vinp=0.540V/27C\",\"vout_dc_v\"]/observation",
+      "measurement:[38,\"mos_fs/vdd=1.080_vinp=0.540V/125C\",\"ivdd_total_a\"]/observation",
+      "measurement:[38,\"mos_fs/vdd=1.080_vinp=0.540V/125C\",\"vout_dc_v\"]/observation",
+      "measurement:[39,\"mos_fs/vdd=1.200_vinp=0.600V/-40C\",\"ivdd_total_a\"]/observation",
+      "measurement:[39,\"mos_fs/vdd=1.200_vinp=0.600V/-40C\",\"vout_dc_v\"]/observation",
+      "measurement:[4,\"mos_tt/vdd=1.200_vinp=0.600V/27C\",\"ivdd_total_a\"]/observation",
+      "measurement:[4,\"mos_tt/vdd=1.200_vinp=0.600V/27C\",\"vout_dc_v\"]/observation",
+      "measurement:[40,\"mos_fs/vdd=1.200_vinp=0.600V/27C\",\"ivdd_total_a\"]/observation",
+      "measurement:[40,\"mos_fs/vdd=1.200_vinp=0.600V/27C\",\"vout_dc_v\"]/observation",
+      "measurement:[41,\"mos_fs/vdd=1.200_vinp=0.600V/125C\",\"ivdd_total_a\"]/observation",
+      "measurement:[41,\"mos_fs/vdd=1.200_vinp=0.600V/125C\",\"vout_dc_v\"]/observation",
+      "measurement:[42,\"mos_fs/vdd=1.320_vinp=0.660V/-40C\",\"ivdd_total_a\"]/observation",
+      "measurement:[42,\"mos_fs/vdd=1.320_vinp=0.660V/-40C\",\"vout_dc_v\"]/observation",
+      "measurement:[43,\"mos_fs/vdd=1.320_vinp=0.660V/27C\",\"ivdd_total_a\"]/observation",
+      "measurement:[43,\"mos_fs/vdd=1.320_vinp=0.660V/27C\",\"vout_dc_v\"]/observation",
+      "measurement:[44,\"mos_fs/vdd=1.320_vinp=0.660V/125C\",\"ivdd_total_a\"]/observation",
+      "measurement:[44,\"mos_fs/vdd=1.320_vinp=0.660V/125C\",\"vout_dc_v\"]/observation",
+      "measurement:[5,\"mos_tt/vdd=1.200_vinp=0.600V/125C\",\"ivdd_total_a\"]/observation",
+      "measurement:[5,\"mos_tt/vdd=1.200_vinp=0.600V/125C\",\"vout_dc_v\"]/observation",
+      "measurement:[6,\"mos_tt/vdd=1.320_vinp=0.660V/-40C\",\"ivdd_total_a\"]/observation",
+      "measurement:[6,\"mos_tt/vdd=1.320_vinp=0.660V/-40C\",\"vout_dc_v\"]/observation",
+      "measurement:[7,\"mos_tt/vdd=1.320_vinp=0.660V/27C\",\"ivdd_total_a\"]/observation",
+      "measurement:[7,\"mos_tt/vdd=1.320_vinp=0.660V/27C\",\"vout_dc_v\"]/observation",
+      "measurement:[8,\"mos_tt/vdd=1.320_vinp=0.660V/125C\",\"ivdd_total_a\"]/observation",
+      "measurement:[8,\"mos_tt/vdd=1.320_vinp=0.660V/125C\",\"vout_dc_v\"]/observation",
+      "measurement:[9,\"mos_ss/vdd=1.080_vinp=0.540V/-40C\",\"ivdd_total_a\"]/observation",
+      "measurement:[9,\"mos_ss/vdd=1.080_vinp=0.540V/-40C\",\"vout_dc_v\"]/observation"
+    ],
+    "skipped": [],
+    "inapplicable": [
+      {
+        "id": "measurement:[0,\"mos_tt/vdd=1.080_vinp=0.540V/-40C\",\"ivdd_total_a\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[0,\"mos_tt/vdd=1.080_vinp=0.540V/-40C\",\"vout_dc_v\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[1,\"mos_tt/vdd=1.080_vinp=0.540V/27C\",\"ivdd_total_a\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[1,\"mos_tt/vdd=1.080_vinp=0.540V/27C\",\"vout_dc_v\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[10,\"mos_ss/vdd=1.080_vinp=0.540V/27C\",\"ivdd_total_a\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[10,\"mos_ss/vdd=1.080_vinp=0.540V/27C\",\"vout_dc_v\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[11,\"mos_ss/vdd=1.080_vinp=0.540V/125C\",\"ivdd_total_a\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[11,\"mos_ss/vdd=1.080_vinp=0.540V/125C\",\"vout_dc_v\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[12,\"mos_ss/vdd=1.200_vinp=0.600V/-40C\",\"ivdd_total_a\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[12,\"mos_ss/vdd=1.200_vinp=0.600V/-40C\",\"vout_dc_v\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[13,\"mos_ss/vdd=1.200_vinp=0.600V/27C\",\"ivdd_total_a\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[13,\"mos_ss/vdd=1.200_vinp=0.600V/27C\",\"vout_dc_v\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[14,\"mos_ss/vdd=1.200_vinp=0.600V/125C\",\"ivdd_total_a\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[14,\"mos_ss/vdd=1.200_vinp=0.600V/125C\",\"vout_dc_v\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[15,\"mos_ss/vdd=1.320_vinp=0.660V/-40C\",\"ivdd_total_a\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[15,\"mos_ss/vdd=1.320_vinp=0.660V/-40C\",\"vout_dc_v\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[16,\"mos_ss/vdd=1.320_vinp=0.660V/27C\",\"ivdd_total_a\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[16,\"mos_ss/vdd=1.320_vinp=0.660V/27C\",\"vout_dc_v\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[17,\"mos_ss/vdd=1.320_vinp=0.660V/125C\",\"ivdd_total_a\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[17,\"mos_ss/vdd=1.320_vinp=0.660V/125C\",\"vout_dc_v\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[18,\"mos_ff/vdd=1.080_vinp=0.540V/-40C\",\"ivdd_total_a\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[18,\"mos_ff/vdd=1.080_vinp=0.540V/-40C\",\"vout_dc_v\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[19,\"mos_ff/vdd=1.080_vinp=0.540V/27C\",\"ivdd_total_a\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[19,\"mos_ff/vdd=1.080_vinp=0.540V/27C\",\"vout_dc_v\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[2,\"mos_tt/vdd=1.080_vinp=0.540V/125C\",\"ivdd_total_a\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[2,\"mos_tt/vdd=1.080_vinp=0.540V/125C\",\"vout_dc_v\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[20,\"mos_ff/vdd=1.080_vinp=0.540V/125C\",\"ivdd_total_a\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[20,\"mos_ff/vdd=1.080_vinp=0.540V/125C\",\"vout_dc_v\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[21,\"mos_ff/vdd=1.200_vinp=0.600V/-40C\",\"ivdd_total_a\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[21,\"mos_ff/vdd=1.200_vinp=0.600V/-40C\",\"vout_dc_v\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[22,\"mos_ff/vdd=1.200_vinp=0.600V/27C\",\"ivdd_total_a\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[22,\"mos_ff/vdd=1.200_vinp=0.600V/27C\",\"vout_dc_v\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[23,\"mos_ff/vdd=1.200_vinp=0.600V/125C\",\"ivdd_total_a\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[23,\"mos_ff/vdd=1.200_vinp=0.600V/125C\",\"vout_dc_v\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[24,\"mos_ff/vdd=1.320_vinp=0.660V/-40C\",\"ivdd_total_a\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[24,\"mos_ff/vdd=1.320_vinp=0.660V/-40C\",\"vout_dc_v\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[25,\"mos_ff/vdd=1.320_vinp=0.660V/27C\",\"ivdd_total_a\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[25,\"mos_ff/vdd=1.320_vinp=0.660V/27C\",\"vout_dc_v\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[26,\"mos_ff/vdd=1.320_vinp=0.660V/125C\",\"ivdd_total_a\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[26,\"mos_ff/vdd=1.320_vinp=0.660V/125C\",\"vout_dc_v\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[27,\"mos_sf/vdd=1.080_vinp=0.540V/-40C\",\"ivdd_total_a\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[27,\"mos_sf/vdd=1.080_vinp=0.540V/-40C\",\"vout_dc_v\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[28,\"mos_sf/vdd=1.080_vinp=0.540V/27C\",\"ivdd_total_a\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[28,\"mos_sf/vdd=1.080_vinp=0.540V/27C\",\"vout_dc_v\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[29,\"mos_sf/vdd=1.080_vinp=0.540V/125C\",\"ivdd_total_a\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[29,\"mos_sf/vdd=1.080_vinp=0.540V/125C\",\"vout_dc_v\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[3,\"mos_tt/vdd=1.200_vinp=0.600V/-40C\",\"ivdd_total_a\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[3,\"mos_tt/vdd=1.200_vinp=0.600V/-40C\",\"vout_dc_v\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[30,\"mos_sf/vdd=1.200_vinp=0.600V/-40C\",\"ivdd_total_a\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[30,\"mos_sf/vdd=1.200_vinp=0.600V/-40C\",\"vout_dc_v\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[31,\"mos_sf/vdd=1.200_vinp=0.600V/27C\",\"ivdd_total_a\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[31,\"mos_sf/vdd=1.200_vinp=0.600V/27C\",\"vout_dc_v\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[32,\"mos_sf/vdd=1.200_vinp=0.600V/125C\",\"ivdd_total_a\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[32,\"mos_sf/vdd=1.200_vinp=0.600V/125C\",\"vout_dc_v\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[33,\"mos_sf/vdd=1.320_vinp=0.660V/-40C\",\"ivdd_total_a\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[33,\"mos_sf/vdd=1.320_vinp=0.660V/-40C\",\"vout_dc_v\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[34,\"mos_sf/vdd=1.320_vinp=0.660V/27C\",\"ivdd_total_a\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[34,\"mos_sf/vdd=1.320_vinp=0.660V/27C\",\"vout_dc_v\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[35,\"mos_sf/vdd=1.320_vinp=0.660V/125C\",\"ivdd_total_a\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[35,\"mos_sf/vdd=1.320_vinp=0.660V/125C\",\"vout_dc_v\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[36,\"mos_fs/vdd=1.080_vinp=0.540V/-40C\",\"ivdd_total_a\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[36,\"mos_fs/vdd=1.080_vinp=0.540V/-40C\",\"vout_dc_v\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[37,\"mos_fs/vdd=1.080_vinp=0.540V/27C\",\"ivdd_total_a\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[37,\"mos_fs/vdd=1.080_vinp=0.540V/27C\",\"vout_dc_v\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[38,\"mos_fs/vdd=1.080_vinp=0.540V/125C\",\"ivdd_total_a\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[38,\"mos_fs/vdd=1.080_vinp=0.540V/125C\",\"vout_dc_v\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[39,\"mos_fs/vdd=1.200_vinp=0.600V/-40C\",\"ivdd_total_a\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[39,\"mos_fs/vdd=1.200_vinp=0.600V/-40C\",\"vout_dc_v\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[4,\"mos_tt/vdd=1.200_vinp=0.600V/27C\",\"ivdd_total_a\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[4,\"mos_tt/vdd=1.200_vinp=0.600V/27C\",\"vout_dc_v\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[40,\"mos_fs/vdd=1.200_vinp=0.600V/27C\",\"ivdd_total_a\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[40,\"mos_fs/vdd=1.200_vinp=0.600V/27C\",\"vout_dc_v\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[41,\"mos_fs/vdd=1.200_vinp=0.600V/125C\",\"ivdd_total_a\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[41,\"mos_fs/vdd=1.200_vinp=0.600V/125C\",\"vout_dc_v\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[42,\"mos_fs/vdd=1.320_vinp=0.660V/-40C\",\"ivdd_total_a\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[42,\"mos_fs/vdd=1.320_vinp=0.660V/-40C\",\"vout_dc_v\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[43,\"mos_fs/vdd=1.320_vinp=0.660V/27C\",\"ivdd_total_a\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[43,\"mos_fs/vdd=1.320_vinp=0.660V/27C\",\"vout_dc_v\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[44,\"mos_fs/vdd=1.320_vinp=0.660V/125C\",\"ivdd_total_a\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[44,\"mos_fs/vdd=1.320_vinp=0.660V/125C\",\"vout_dc_v\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[5,\"mos_tt/vdd=1.200_vinp=0.600V/125C\",\"ivdd_total_a\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[5,\"mos_tt/vdd=1.200_vinp=0.600V/125C\",\"vout_dc_v\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[6,\"mos_tt/vdd=1.320_vinp=0.660V/-40C\",\"ivdd_total_a\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[6,\"mos_tt/vdd=1.320_vinp=0.660V/-40C\",\"vout_dc_v\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[7,\"mos_tt/vdd=1.320_vinp=0.660V/27C\",\"ivdd_total_a\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[7,\"mos_tt/vdd=1.320_vinp=0.660V/27C\",\"vout_dc_v\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[8,\"mos_tt/vdd=1.320_vinp=0.660V/125C\",\"ivdd_total_a\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[8,\"mos_tt/vdd=1.320_vinp=0.660V/125C\",\"vout_dc_v\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[9,\"mos_ss/vdd=1.080_vinp=0.540V/-40C\",\"ivdd_total_a\"]/limits",
+        "reason": "characterization_without_limits"
+      },
+      {
+        "id": "measurement:[9,\"mos_ss/vdd=1.080_vinp=0.540V/-40C\",\"vout_dc_v\"]/limits",
+        "reason": "characterization_without_limits"
+      }
+    ],
+    "unknown": [],
+    "nothing_checked": false,
+    "nothing_checked_reasons": []
+  },
+  "provenance": {
+    "klt_version": "0.9.0",
+    "klt_git_commit": "5dbbad05ff42265c92a6f3d2f20d1bbcd2957d49",
+    "klt_reinstall_spec": "klayout-tools==0.9.0",
+    "klayout_version": "0.30.13",
+    "pdk": {
+      "name": "ihp-sg13g2",
+      "source": "PDK_ROOT environment variable",
+      "version": "fetched:0.3.0"
+    },
+    "deck": {
+      "name": "cornerMOSlv.lib",
+      "content_hash": "sha256:03d505847c880d233b341be115a1e5460edf4d8e9b3e8a7df791a52fa4455d67",
+      "released": false
+    },
+    "input": {
+      "content_hash": "sha256:630f231c20928a2d6bf539ddb81d9af5f761abb402cb0980ac1bec8dea256408",
+      "role": "netlist"
+    }
+  },
+  "measurements": [
+    {
+      "name": "ivdd_total_a",
+      "unit": "A",
+      "limits": null,
+      "status": "pass",
+      "worst_case": {
+        "corner_id": "mos_tt/vdd=1.080_vinp=0.540V/-40C",
+        "value": 7.809348147425e-05,
+        "margin": null
+      }
+    },
+    {
+      "name": "vout_dc_v",
+      "unit": "V",
+      "limits": null,
+      "status": "pass",
+      "worst_case": {
+        "corner_id": "mos_tt/vdd=1.080_vinp=0.540V/-40C",
+        "value": 0.5392929050997,
+        "margin": null
+      },
+      "plausible_range": {
+        "min": -0.1,
+        "max": 1.42
+      }
+    },
+    {
+      "name": "op_vcm_frac",
+      "unit": null,
+      "limits": {
+        "min": 0.4999,
+        "max": 0.5001
+      },
+      "status": "pass",
+      "worst_case": {
+        "corner_id": "mos_tt/vdd=1.080_vinp=0.540V/-40C",
+        "value": 0.5,
+        "margin": 9.999999999998899e-05
+      }
+    },
+    {
+      "name": "op_vout_offset_frac",
+      "unit": null,
+      "limits": {
+        "max": 0.15
+      },
+      "status": "pass",
+      "worst_case": {
+        "corner_id": "mos_ss/vdd=1.080_vinp=0.540V/-40C",
+        "value": 0.002649431311641,
+        "margin": 0.147350568688359
+      }
+    },
+    {
+      "name": "op_vout_rail_frac",
+      "unit": null,
+      "limits": {
+        "min": 0.02,
+        "max": 0.98
+      },
+      "status": "pass",
+      "worst_case": {
+        "corner_id": "mos_ss/vdd=1.080_vinp=0.540V/-40C",
+        "value": 0.4973505686884,
+        "margin": 0.4773505686884
+      }
+    }
+  ],
+  "corners": [
+    {
+      "corner_id": "mos_tt/vdd=1.080_vinp=0.540V/-40C",
+      "process": "mos_tt",
+      "supply_v": {
+        "vdd": 1.08,
+        "vinp": 0.54
+      },
+      "temperature_c": -40,
+      "status": "pass",
+      "runtime_s": 0.382,
+      "peak_rss_bytes": 50446336,
+      "engine_exit_code": 0,
+      "engine_killed_by_signal": null,
+      "measurements": [
+        {
+          "name": "ivdd_total_a",
+          "value": 7.809348147425e-05,
+          "unit": "A",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "vout_dc_v",
+          "value": 0.5392929050997,
+          "unit": "V",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "op_vcm_frac",
+          "value": 0.5,
+          "unit": null,
+          "status": "pass",
+          "margin": 9.999999999998899e-05
+        },
+        {
+          "name": "op_vout_offset_frac",
+          "value": 0.0006547175002986,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.1493452824997014
+        },
+        {
+          "name": "op_vout_rail_frac",
+          "value": 0.4993452824997,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.4793452824997
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_tt/vdd=1.080_vinp=0.540V/27C",
+      "process": "mos_tt",
+      "supply_v": {
+        "vdd": 1.08,
+        "vinp": 0.54
+      },
+      "temperature_c": 27,
+      "status": "pass",
+      "runtime_s": 0.376,
+      "peak_rss_bytes": 50446336,
+      "engine_exit_code": 0,
+      "engine_killed_by_signal": null,
+      "measurements": [
+        {
+          "name": "ivdd_total_a",
+          "value": 7.887569379517e-05,
+          "unit": "A",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "vout_dc_v",
+          "value": 0.5399088404938,
+          "unit": "V",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "op_vcm_frac",
+          "value": 0.5,
+          "unit": null,
+          "status": "pass",
+          "margin": 9.999999999998899e-05
+        },
+        {
+          "name": "op_vout_offset_frac",
+          "value": 8.440695018516e-05,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.14991559304981483
+        },
+        {
+          "name": "op_vout_rail_frac",
+          "value": 0.4999155930498,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.47991559304979997
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_tt/vdd=1.080_vinp=0.540V/125C",
+      "process": "mos_tt",
+      "supply_v": {
+        "vdd": 1.08,
+        "vinp": 0.54
+      },
+      "temperature_c": 125,
+      "status": "pass",
+      "runtime_s": 0.395,
+      "peak_rss_bytes": 50446336,
+      "engine_exit_code": 0,
+      "engine_killed_by_signal": null,
+      "measurements": [
+        {
+          "name": "ivdd_total_a",
+          "value": 7.990500781696e-05,
+          "unit": "A",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "vout_dc_v",
+          "value": 0.5411704342412,
+          "unit": "V",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "op_vcm_frac",
+          "value": 0.5,
+          "unit": null,
+          "status": "pass",
+          "margin": 9.999999999998899e-05
+        },
+        {
+          "name": "op_vout_offset_frac",
+          "value": 0.00108373540856,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.14891626459144
+        },
+        {
+          "name": "op_vout_rail_frac",
+          "value": 0.5010837354086,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.4789162645914
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_tt/vdd=1.200_vinp=0.600V/-40C",
+      "process": "mos_tt",
+      "supply_v": {
+        "vdd": 1.2,
+        "vinp": 0.6
+      },
+      "temperature_c": -40,
+      "status": "pass",
+      "runtime_s": 0.374,
+      "peak_rss_bytes": 50446336,
+      "engine_exit_code": 0,
+      "engine_killed_by_signal": null,
+      "measurements": [
+        {
+          "name": "ivdd_total_a",
+          "value": 8.126681626797e-05,
+          "unit": "A",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "vout_dc_v",
+          "value": 0.6001514119744,
+          "unit": "V",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "op_vcm_frac",
+          "value": 0.5,
+          "unit": null,
+          "status": "pass",
+          "margin": 9.999999999998899e-05
+        },
+        {
+          "name": "op_vout_offset_frac",
+          "value": 0.0001261766452972,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.14987382335470278
+        },
+        {
+          "name": "op_vout_rail_frac",
+          "value": 0.5001261766453,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.47987382335469997
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_tt/vdd=1.200_vinp=0.600V/27C",
+      "process": "mos_tt",
+      "supply_v": {
+        "vdd": 1.2,
+        "vinp": 0.6
+      },
+      "temperature_c": 27,
+      "status": "pass",
+      "runtime_s": 0.374,
+      "peak_rss_bytes": 50446336,
+      "engine_exit_code": 0,
+      "engine_killed_by_signal": null,
+      "measurements": [
+        {
+          "name": "ivdd_total_a",
+          "value": 8.148466149183e-05,
+          "unit": "A",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "vout_dc_v",
+          "value": 0.6005323602761,
+          "unit": "V",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "op_vcm_frac",
+          "value": 0.5,
+          "unit": null,
+          "status": "pass",
+          "margin": 9.999999999998899e-05
+        },
+        {
+          "name": "op_vout_offset_frac",
+          "value": 0.0004436335634118,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.1495563664365882
+        },
+        {
+          "name": "op_vout_rail_frac",
+          "value": 0.5004436335634,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.47955636643659993
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_tt/vdd=1.200_vinp=0.600V/125C",
+      "process": "mos_tt",
+      "supply_v": {
+        "vdd": 1.2,
+        "vinp": 0.6
+      },
+      "temperature_c": 125,
+      "status": "pass",
+      "runtime_s": 0.374,
+      "peak_rss_bytes": 50446336,
+      "engine_exit_code": 0,
+      "engine_killed_by_signal": null,
+      "measurements": [
+        {
+          "name": "ivdd_total_a",
+          "value": 8.20346123076e-05,
+          "unit": "A",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "vout_dc_v",
+          "value": 0.6015938274367,
+          "unit": "V",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "op_vcm_frac",
+          "value": 0.5,
+          "unit": null,
+          "status": "pass",
+          "margin": 9.999999999998899e-05
+        },
+        {
+          "name": "op_vout_offset_frac",
+          "value": 0.001328189530572,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.14867181046942798
+        },
+        {
+          "name": "op_vout_rail_frac",
+          "value": 0.5013281895306,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.4786718104694
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_tt/vdd=1.320_vinp=0.660V/-40C",
+      "process": "mos_tt",
+      "supply_v": {
+        "vdd": 1.32,
+        "vinp": 0.66
+      },
+      "temperature_c": -40,
+      "status": "pass",
+      "runtime_s": 0.378,
+      "peak_rss_bytes": 50446336,
+      "engine_exit_code": 0,
+      "engine_killed_by_signal": null,
+      "measurements": [
+        {
+          "name": "ivdd_total_a",
+          "value": 8.363418903778e-05,
+          "unit": "A",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "vout_dc_v",
+          "value": 0.6603505697465,
+          "unit": "V",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "op_vcm_frac",
+          "value": 0.5,
+          "unit": null,
+          "status": "pass",
+          "margin": 9.999999999998899e-05
+        },
+        {
+          "name": "op_vout_offset_frac",
+          "value": 0.0002655831413213,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.1497344168586787
+        },
+        {
+          "name": "op_vout_rail_frac",
+          "value": 0.5002655831413,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.4797344168587
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_tt/vdd=1.320_vinp=0.660V/27C",
+      "process": "mos_tt",
+      "supply_v": {
+        "vdd": 1.32,
+        "vinp": 0.66
+      },
+      "temperature_c": 27,
+      "status": "pass",
+      "runtime_s": 0.378,
+      "peak_rss_bytes": 50446336,
+      "engine_exit_code": 0,
+      "engine_killed_by_signal": null,
+      "measurements": [
+        {
+          "name": "ivdd_total_a",
+          "value": 8.365610784988e-05,
+          "unit": "A",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "vout_dc_v",
+          "value": 0.6607223187797,
+          "unit": "V",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "op_vcm_frac",
+          "value": 0.5,
+          "unit": null,
+          "status": "pass",
+          "margin": 9.999999999998899e-05
+        },
+        {
+          "name": "op_vout_offset_frac",
+          "value": 0.0005472111967724,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.1494527888032276
+        },
+        {
+          "name": "op_vout_rail_frac",
+          "value": 0.5005472111968,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.47945278880319997
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_tt/vdd=1.320_vinp=0.660V/125C",
+      "process": "mos_tt",
+      "supply_v": {
+        "vdd": 1.32,
+        "vinp": 0.66
+      },
+      "temperature_c": 125,
+      "status": "pass",
+      "runtime_s": 0.179,
+      "engine_exit_code": 0,
+      "engine_killed_by_signal": null,
+      "measurements": [
+        {
+          "name": "ivdd_total_a",
+          "value": 8.393309267452e-05,
+          "unit": "A",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "vout_dc_v",
+          "value": 0.6617388040965,
+          "unit": "V",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "op_vcm_frac",
+          "value": 0.5,
+          "unit": null,
+          "status": "pass",
+          "margin": 9.999999999998899e-05
+        },
+        {
+          "name": "op_vout_offset_frac",
+          "value": 0.001317275830708,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.14868272416929199
+        },
+        {
+          "name": "op_vout_rail_frac",
+          "value": 0.5013172758307,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.4786827241693
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_ss/vdd=1.080_vinp=0.540V/-40C",
+      "process": "mos_ss",
+      "supply_v": {
+        "vdd": 1.08,
+        "vinp": 0.54
+      },
+      "temperature_c": -40,
+      "status": "pass",
+      "runtime_s": 0.172,
+      "engine_exit_code": 0,
+      "engine_killed_by_signal": null,
+      "measurements": [
+        {
+          "name": "ivdd_total_a",
+          "value": 7.550260464084e-05,
+          "unit": "A",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "vout_dc_v",
+          "value": 0.5371386141834,
+          "unit": "V",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "op_vcm_frac",
+          "value": 0.5,
+          "unit": null,
+          "status": "pass",
+          "margin": 9.999999999998899e-05
+        },
+        {
+          "name": "op_vout_offset_frac",
+          "value": 0.002649431311641,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.147350568688359
+        },
+        {
+          "name": "op_vout_rail_frac",
+          "value": 0.4973505686884,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.4773505686884
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_ss/vdd=1.080_vinp=0.540V/27C",
+      "process": "mos_ss",
+      "supply_v": {
+        "vdd": 1.08,
+        "vinp": 0.54
+      },
+      "temperature_c": 27,
+      "status": "pass",
+      "runtime_s": 0.172,
+      "engine_exit_code": 0,
+      "engine_killed_by_signal": null,
+      "measurements": [
+        {
+          "name": "ivdd_total_a",
+          "value": 7.673439691636e-05,
+          "unit": "A",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "vout_dc_v",
+          "value": 0.5379568232592,
+          "unit": "V",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "op_vcm_frac",
+          "value": 0.5,
+          "unit": null,
+          "status": "pass",
+          "margin": 9.999999999998899e-05
+        },
+        {
+          "name": "op_vout_offset_frac",
+          "value": 0.001891830315592,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.148108169684408
+        },
+        {
+          "name": "op_vout_rail_frac",
+          "value": 0.4981081696844,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.4781081696844
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_ss/vdd=1.080_vinp=0.540V/125C",
+      "process": "mos_ss",
+      "supply_v": {
+        "vdd": 1.08,
+        "vinp": 0.54
+      },
+      "temperature_c": 125,
+      "status": "pass",
+      "runtime_s": 0.167,
+      "engine_exit_code": 0,
+      "engine_killed_by_signal": null,
+      "measurements": [
+        {
+          "name": "ivdd_total_a",
+          "value": 7.823265364859e-05,
+          "unit": "A",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "vout_dc_v",
+          "value": 0.5395660458556,
+          "unit": "V",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "op_vcm_frac",
+          "value": 0.5,
+          "unit": null,
+          "status": "pass",
+          "margin": 9.999999999998899e-05
+        },
+        {
+          "name": "op_vout_offset_frac",
+          "value": 0.0004018093929222,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.1495981906070778
+        },
+        {
+          "name": "op_vout_rail_frac",
+          "value": 0.4995981906071,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.47959819060709996
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_ss/vdd=1.200_vinp=0.600V/-40C",
+      "process": "mos_ss",
+      "supply_v": {
+        "vdd": 1.2,
+        "vinp": 0.6
+      },
+      "temperature_c": -40,
+      "status": "pass",
+      "runtime_s": 0.176,
+      "engine_exit_code": 0,
+      "engine_killed_by_signal": null,
+      "measurements": [
+        {
+          "name": "ivdd_total_a",
+          "value": 8.014806631929e-05,
+          "unit": "A",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "vout_dc_v",
+          "value": 0.5993563161129,
+          "unit": "V",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "op_vcm_frac",
+          "value": 0.5,
+          "unit": null,
+          "status": "pass",
+          "margin": 9.999999999998899e-05
+        },
+        {
+          "name": "op_vout_offset_frac",
+          "value": 0.0005364032392435,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.1494635967607565
+        },
+        {
+          "name": "op_vout_rail_frac",
+          "value": 0.4994635967608,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.47946359676079997
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_ss/vdd=1.200_vinp=0.600V/27C",
+      "process": "mos_ss",
+      "supply_v": {
+        "vdd": 1.2,
+        "vinp": 0.6
+      },
+      "temperature_c": 27,
+      "status": "pass",
+      "runtime_s": 0.223,
+      "engine_exit_code": 0,
+      "engine_killed_by_signal": null,
+      "measurements": [
+        {
+          "name": "ivdd_total_a",
+          "value": 8.037812777362e-05,
+          "unit": "A",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "vout_dc_v",
+          "value": 0.5997614154874,
+          "unit": "V",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "op_vcm_frac",
+          "value": 0.5,
+          "unit": null,
+          "status": "pass",
+          "margin": 9.999999999998899e-05
+        },
+        {
+          "name": "op_vout_offset_frac",
+          "value": 0.0001988204271664,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.1498011795728336
+        },
+        {
+          "name": "op_vout_rail_frac",
+          "value": 0.4998011795728,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.4798011795728
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_ss/vdd=1.200_vinp=0.600V/125C",
+      "process": "mos_ss",
+      "supply_v": {
+        "vdd": 1.2,
+        "vinp": 0.6
+      },
+      "temperature_c": 125,
+      "status": "pass",
+      "runtime_s": 0.216,
+      "engine_exit_code": 0,
+      "engine_killed_by_signal": null,
+      "measurements": [
+        {
+          "name": "ivdd_total_a",
+          "value": 8.084959019405e-05,
+          "unit": "A",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "vout_dc_v",
+          "value": 0.600764299233,
+          "unit": "V",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "op_vcm_frac",
+          "value": 0.5,
+          "unit": null,
+          "status": "pass",
+          "margin": 9.999999999998899e-05
+        },
+        {
+          "name": "op_vout_offset_frac",
+          "value": 0.0006369160274614,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.14936308397253859
+        },
+        {
+          "name": "op_vout_rail_frac",
+          "value": 0.5006369160275,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.47936308397249994
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_ss/vdd=1.320_vinp=0.660V/-40C",
+      "process": "mos_ss",
+      "supply_v": {
+        "vdd": 1.32,
+        "vinp": 0.66
+      },
+      "temperature_c": -40,
+      "status": "pass",
+      "runtime_s": 0.177,
+      "engine_exit_code": 0,
+      "engine_killed_by_signal": null,
+      "measurements": [
+        {
+          "name": "ivdd_total_a",
+          "value": 8.306590255325e-05,
+          "unit": "A",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "vout_dc_v",
+          "value": 0.6599694251583,
+          "unit": "V",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "op_vcm_frac",
+          "value": 0.5,
+          "unit": null,
+          "status": "pass",
+          "margin": 9.999999999998899e-05
+        },
+        {
+          "name": "op_vout_offset_frac",
+          "value": 2.316275885783e-05,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.14997683724114216
+        },
+        {
+          "name": "op_vout_rail_frac",
+          "value": 0.4999768372411,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.47997683724109996
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_ss/vdd=1.320_vinp=0.660V/27C",
+      "process": "mos_ss",
+      "supply_v": {
+        "vdd": 1.32,
+        "vinp": 0.66
+      },
+      "temperature_c": 27,
+      "status": "pass",
+      "runtime_s": 0.226,
+      "engine_exit_code": 0,
+      "engine_killed_by_signal": null,
+      "measurements": [
+        {
+          "name": "ivdd_total_a",
+          "value": 8.28456755344e-05,
+          "unit": "A",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "vout_dc_v",
+          "value": 0.6602578568391,
+          "unit": "V",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "op_vcm_frac",
+          "value": 0.5,
+          "unit": null,
+          "status": "pass",
+          "margin": 9.999999999998899e-05
+        },
+        {
+          "name": "op_vout_offset_frac",
+          "value": 0.0001953460902251,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.1498046539097749
+        },
+        {
+          "name": "op_vout_rail_frac",
+          "value": 0.5001953460902,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.4798046539098
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_ss/vdd=1.320_vinp=0.660V/125C",
+      "process": "mos_ss",
+      "supply_v": {
+        "vdd": 1.32,
+        "vinp": 0.66
+      },
+      "temperature_c": 125,
+      "status": "pass",
+      "runtime_s": 0.222,
+      "engine_exit_code": 0,
+      "engine_killed_by_signal": null,
+      "measurements": [
+        {
+          "name": "ivdd_total_a",
+          "value": 8.289085352775e-05,
+          "unit": "A",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "vout_dc_v",
+          "value": 0.6611397567155,
+          "unit": "V",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "op_vcm_frac",
+          "value": 0.5,
+          "unit": null,
+          "status": "pass",
+          "margin": 9.999999999998899e-05
+        },
+        {
+          "name": "op_vout_offset_frac",
+          "value": 0.0008634520572163,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.1491365479427837
+        },
+        {
+          "name": "op_vout_rail_frac",
+          "value": 0.5008634520572,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.47913654794280003
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_ff/vdd=1.080_vinp=0.540V/-40C",
+      "process": "mos_ff",
+      "supply_v": {
+        "vdd": 1.08,
+        "vinp": 0.54
+      },
+      "temperature_c": -40,
+      "status": "pass",
+      "runtime_s": 0.173,
+      "engine_exit_code": 0,
+      "engine_killed_by_signal": null,
+      "measurements": [
+        {
+          "name": "ivdd_total_a",
+          "value": 7.93830399225e-05,
+          "unit": "A",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "vout_dc_v",
+          "value": 0.5401855757442,
+          "unit": "V",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "op_vcm_frac",
+          "value": 0.5,
+          "unit": null,
+          "status": "pass",
+          "margin": 9.999999999998899e-05
+        },
+        {
+          "name": "op_vout_offset_frac",
+          "value": 0.0001718293928127,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.14982817060718728
+        },
+        {
+          "name": "op_vout_rail_frac",
+          "value": 0.5001718293928,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.47982817060719996
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_ff/vdd=1.080_vinp=0.540V/27C",
+      "process": "mos_ff",
+      "supply_v": {
+        "vdd": 1.08,
+        "vinp": 0.54
+      },
+      "temperature_c": 27,
+      "status": "pass",
+      "runtime_s": 0.171,
+      "engine_exit_code": 0,
+      "engine_killed_by_signal": null,
+      "measurements": [
+        {
+          "name": "ivdd_total_a",
+          "value": 7.998397586328e-05,
+          "unit": "A",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "vout_dc_v",
+          "value": 0.540594049788,
+          "unit": "V",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "op_vcm_frac",
+          "value": 0.5,
+          "unit": null,
+          "status": "pass",
+          "margin": 9.999999999998899e-05
+        },
+        {
+          "name": "op_vout_offset_frac",
+          "value": 0.0005500461000294,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.1494499538999706
+        },
+        {
+          "name": "op_vout_rail_frac",
+          "value": 0.5005500461,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.4794499539
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_ff/vdd=1.080_vinp=0.540V/125C",
+      "process": "mos_ff",
+      "supply_v": {
+        "vdd": 1.08,
+        "vinp": 0.54
+      },
+      "temperature_c": 125,
+      "status": "pass",
+      "runtime_s": 0.169,
+      "engine_exit_code": 0,
+      "engine_killed_by_signal": null,
+      "measurements": [
+        {
+          "name": "ivdd_total_a",
+          "value": 8.103325725228e-05,
+          "unit": "A",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "vout_dc_v",
+          "value": 0.5417037268827,
+          "unit": "V",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "op_vcm_frac",
+          "value": 0.5,
+          "unit": null,
+          "status": "pass",
+          "margin": 9.999999999998899e-05
+        },
+        {
+          "name": "op_vout_offset_frac",
+          "value": 0.001577524891359,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.14842247510864098
+        },
+        {
+          "name": "op_vout_rail_frac",
+          "value": 0.5015775248914,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.47842247510860003
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_ff/vdd=1.200_vinp=0.600V/-40C",
+      "process": "mos_ff",
+      "supply_v": {
+        "vdd": 1.2,
+        "vinp": 0.6
+      },
+      "temperature_c": -40,
+      "status": "pass",
+      "runtime_s": 0.177,
+      "engine_exit_code": 0,
+      "engine_killed_by_signal": null,
+      "measurements": [
+        {
+          "name": "ivdd_total_a",
+          "value": 8.18588258038e-05,
+          "unit": "A",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "vout_dc_v",
+          "value": 0.6004228715854,
+          "unit": "V",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "op_vcm_frac",
+          "value": 0.5,
+          "unit": null,
+          "status": "pass",
+          "margin": 9.999999999998899e-05
+        },
+        {
+          "name": "op_vout_offset_frac",
+          "value": 0.0003523929877938,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.1496476070122062
+        },
+        {
+          "name": "op_vout_rail_frac",
+          "value": 0.5003523929878,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.4796476070122
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_ff/vdd=1.200_vinp=0.600V/27C",
+      "process": "mos_ff",
+      "supply_v": {
+        "vdd": 1.2,
+        "vinp": 0.6
+      },
+      "temperature_c": 27,
+      "status": "pass",
+      "runtime_s": 0.175,
+      "engine_exit_code": 0,
+      "engine_killed_by_signal": null,
+      "measurements": [
+        {
+          "name": "ivdd_total_a",
+          "value": 8.224017639269e-05,
+          "unit": "A",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "vout_dc_v",
+          "value": 0.6008109789515,
+          "unit": "V",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "op_vcm_frac",
+          "value": 0.5,
+          "unit": null,
+          "status": "pass",
+          "margin": 9.999999999998899e-05
+        },
+        {
+          "name": "op_vout_offset_frac",
+          "value": 0.0006758157929174,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.1493241842070826
+        },
+        {
+          "name": "op_vout_rail_frac",
+          "value": 0.5006758157929,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.4793241842071
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_ff/vdd=1.200_vinp=0.600V/125C",
+      "process": "mos_ff",
+      "supply_v": {
+        "vdd": 1.2,
+        "vinp": 0.6
+      },
+      "temperature_c": 125,
+      "status": "pass",
+      "runtime_s": 0.173,
+      "engine_exit_code": 0,
+      "engine_killed_by_signal": null,
+      "measurements": [
+        {
+          "name": "ivdd_total_a",
+          "value": 8.300086717372e-05,
+          "unit": "A",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "vout_dc_v",
+          "value": 0.6018672002186,
+          "unit": "V",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "op_vcm_frac",
+          "value": 0.5,
+          "unit": null,
+          "status": "pass",
+          "margin": 9.999999999998899e-05
+        },
+        {
+          "name": "op_vout_offset_frac",
+          "value": 0.001556000182155,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.148443999817845
+        },
+        {
+          "name": "op_vout_rail_frac",
+          "value": 0.5015560001822,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.47844399981779995
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_ff/vdd=1.320_vinp=0.660V/-40C",
+      "process": "mos_ff",
+      "supply_v": {
+        "vdd": 1.32,
+        "vinp": 0.66
+      },
+      "temperature_c": -40,
+      "status": "pass",
+      "runtime_s": 0.175,
+      "engine_exit_code": 0,
+      "engine_killed_by_signal": null,
+      "measurements": [
+        {
+          "name": "ivdd_total_a",
+          "value": 8.413821657727e-05,
+          "unit": "A",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "vout_dc_v",
+          "value": 0.6605403460048,
+          "unit": "V",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "op_vcm_frac",
+          "value": 0.5,
+          "unit": null,
+          "status": "pass",
+          "margin": 9.999999999998899e-05
+        },
+        {
+          "name": "op_vout_offset_frac",
+          "value": 0.0004093530339455,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.1495906469660545
+        },
+        {
+          "name": "op_vout_rail_frac",
+          "value": 0.5004093530339,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.4795906469661
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_ff/vdd=1.320_vinp=0.660V/27C",
+      "process": "mos_ff",
+      "supply_v": {
+        "vdd": 1.32,
+        "vinp": 0.66
+      },
+      "temperature_c": 27,
+      "status": "pass",
+      "runtime_s": 0.17,
+      "engine_exit_code": 0,
+      "engine_killed_by_signal": null,
+      "measurements": [
+        {
+          "name": "ivdd_total_a",
+          "value": 8.434520164791e-05,
+          "unit": "A",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "vout_dc_v",
+          "value": 0.6609221769468,
+          "unit": "V",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "op_vcm_frac",
+          "value": 0.5,
+          "unit": null,
+          "status": "pass",
+          "margin": 9.999999999998899e-05
+        },
+        {
+          "name": "op_vout_offset_frac",
+          "value": 0.0006986188990961,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.1493013811009039
+        },
+        {
+          "name": "op_vout_rail_frac",
+          "value": 0.5006986188991,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.47930138110090004
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_ff/vdd=1.320_vinp=0.660V/125C",
+      "process": "mos_ff",
+      "supply_v": {
+        "vdd": 1.32,
+        "vinp": 0.66
+      },
+      "temperature_c": 125,
+      "status": "pass",
+      "runtime_s": 0.171,
+      "engine_exit_code": 0,
+      "engine_killed_by_signal": null,
+      "measurements": [
+        {
+          "name": "ivdd_total_a",
+          "value": 8.484634446071e-05,
+          "unit": "A",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "vout_dc_v",
+          "value": 0.6619315834117,
+          "unit": "V",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "op_vcm_frac",
+          "value": 0.5,
+          "unit": null,
+          "status": "pass",
+          "margin": 9.999999999998899e-05
+        },
+        {
+          "name": "op_vout_offset_frac",
+          "value": 0.001463320766441,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.14853667923355898
+        },
+        {
+          "name": "op_vout_rail_frac",
+          "value": 0.5014633207664,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.4785366792336
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_sf/vdd=1.080_vinp=0.540V/-40C",
+      "process": "mos_sf",
+      "supply_v": {
+        "vdd": 1.08,
+        "vinp": 0.54
+      },
+      "temperature_c": -40,
+      "status": "pass",
+      "runtime_s": 0.169,
+      "engine_exit_code": 0,
+      "engine_killed_by_signal": null,
+      "measurements": [
+        {
+          "name": "ivdd_total_a",
+          "value": 7.703455956154e-05,
+          "unit": "A",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "vout_dc_v",
+          "value": 0.5383284787443,
+          "unit": "V",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "op_vcm_frac",
+          "value": 0.5,
+          "unit": null,
+          "status": "pass",
+          "margin": 9.999999999998899e-05
+        },
+        {
+          "name": "op_vout_offset_frac",
+          "value": 0.001547704866349,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.148452295133651
+        },
+        {
+          "name": "op_vout_rail_frac",
+          "value": 0.4984522951337,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.47845229513369997
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_sf/vdd=1.080_vinp=0.540V/27C",
+      "process": "mos_sf",
+      "supply_v": {
+        "vdd": 1.08,
+        "vinp": 0.54
+      },
+      "temperature_c": 27,
+      "status": "pass",
+      "runtime_s": 0.166,
+      "engine_exit_code": 0,
+      "engine_killed_by_signal": null,
+      "measurements": [
+        {
+          "name": "ivdd_total_a",
+          "value": 7.803213020041e-05,
+          "unit": "A",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "vout_dc_v",
+          "value": 0.538969762386,
+          "unit": "V",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "op_vcm_frac",
+          "value": 0.5,
+          "unit": null,
+          "status": "pass",
+          "margin": 9.999999999998899e-05
+        },
+        {
+          "name": "op_vout_offset_frac",
+          "value": 0.0009539237166863,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.1490460762833137
+        },
+        {
+          "name": "op_vout_rail_frac",
+          "value": 0.4990460762833,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.4790460762833
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_sf/vdd=1.080_vinp=0.540V/125C",
+      "process": "mos_sf",
+      "supply_v": {
+        "vdd": 1.08,
+        "vinp": 0.54
+      },
+      "temperature_c": 125,
+      "status": "pass",
+      "runtime_s": 0.172,
+      "engine_exit_code": 0,
+      "engine_killed_by_signal": null,
+      "measurements": [
+        {
+          "name": "ivdd_total_a",
+          "value": 7.919783464083e-05,
+          "unit": "A",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "vout_dc_v",
+          "value": 0.5401542772081,
+          "unit": "V",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "op_vcm_frac",
+          "value": 0.5,
+          "unit": null,
+          "status": "pass",
+          "margin": 9.999999999998899e-05
+        },
+        {
+          "name": "op_vout_offset_frac",
+          "value": 0.0001428492667344,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.14985715073326558
+        },
+        {
+          "name": "op_vout_rail_frac",
+          "value": 0.5001428492667,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.47985715073329993
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_sf/vdd=1.200_vinp=0.600V/-40C",
+      "process": "mos_sf",
+      "supply_v": {
+        "vdd": 1.2,
+        "vinp": 0.6
+      },
+      "temperature_c": -40,
+      "status": "pass",
+      "runtime_s": 0.172,
+      "engine_exit_code": 0,
+      "engine_killed_by_signal": null,
+      "measurements": [
+        {
+          "name": "ivdd_total_a",
+          "value": 8.085457236096e-05,
+          "unit": "A",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "vout_dc_v",
+          "value": 0.5996675227419,
+          "unit": "V",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "op_vcm_frac",
+          "value": 0.5,
+          "unit": null,
+          "status": "pass",
+          "margin": 9.999999999998899e-05
+        },
+        {
+          "name": "op_vout_offset_frac",
+          "value": 0.0002770643817267,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.1497229356182733
+        },
+        {
+          "name": "op_vout_rail_frac",
+          "value": 0.4997229356183,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.4797229356183
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_sf/vdd=1.200_vinp=0.600V/27C",
+      "process": "mos_sf",
+      "supply_v": {
+        "vdd": 1.2,
+        "vinp": 0.6
+      },
+      "temperature_c": 27,
+      "status": "pass",
+      "runtime_s": 0.17,
+      "engine_exit_code": 0,
+      "engine_killed_by_signal": null,
+      "measurements": [
+        {
+          "name": "ivdd_total_a",
+          "value": 8.101444512354e-05,
+          "unit": "A",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "vout_dc_v",
+          "value": 0.5999507324027,
+          "unit": "V",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "op_vcm_frac",
+          "value": 0.5,
+          "unit": null,
+          "status": "pass",
+          "margin": 9.999999999998899e-05
+        },
+        {
+          "name": "op_vout_offset_frac",
+          "value": 4.105633105063e-05,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.14995894366894935
+        },
+        {
+          "name": "op_vout_rail_frac",
+          "value": 0.4999589436689,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.47995894366889996
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_sf/vdd=1.200_vinp=0.600V/125C",
+      "process": "mos_sf",
+      "supply_v": {
+        "vdd": 1.2,
+        "vinp": 0.6
+      },
+      "temperature_c": 125,
+      "status": "pass",
+      "runtime_s": 0.168,
+      "engine_exit_code": 0,
+      "engine_killed_by_signal": null,
+      "measurements": [
+        {
+          "name": "ivdd_total_a",
+          "value": 8.147966638949e-05,
+          "unit": "A",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "vout_dc_v",
+          "value": 0.6007944207284,
+          "unit": "V",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "op_vcm_frac",
+          "value": 0.5,
+          "unit": null,
+          "status": "pass",
+          "margin": 9.999999999998899e-05
+        },
+        {
+          "name": "op_vout_offset_frac",
+          "value": 0.0006620172736454,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.1493379827263546
+        },
+        {
+          "name": "op_vout_rail_frac",
+          "value": 0.5006620172736,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.47933798272639994
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_sf/vdd=1.320_vinp=0.660V/-40C",
+      "process": "mos_sf",
+      "supply_v": {
+        "vdd": 1.32,
+        "vinp": 0.66
+      },
+      "temperature_c": -40,
+      "status": "pass",
+      "runtime_s": 0.173,
+      "engine_exit_code": 0,
+      "engine_killed_by_signal": null,
+      "measurements": [
+        {
+          "name": "ivdd_total_a",
+          "value": 8.336329704139e-05,
+          "unit": "A",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "vout_dc_v",
+          "value": 0.6599705727797,
+          "unit": "V",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "op_vcm_frac",
+          "value": 0.5,
+          "unit": null,
+          "status": "pass",
+          "margin": 9.999999999998899e-05
+        },
+        {
+          "name": "op_vout_offset_frac",
+          "value": 2.229334867947e-05,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.1499777066513205
+        },
+        {
+          "name": "op_vout_rail_frac",
+          "value": 0.4999777066513,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.47997770665129996
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_sf/vdd=1.320_vinp=0.660V/27C",
+      "process": "mos_sf",
+      "supply_v": {
+        "vdd": 1.32,
+        "vinp": 0.66
+      },
+      "temperature_c": 27,
+      "status": "pass",
+      "runtime_s": 0.171,
+      "engine_exit_code": 0,
+      "engine_killed_by_signal": null,
+      "measurements": [
+        {
+          "name": "ivdd_total_a",
+          "value": 8.326130637171e-05,
+          "unit": "A",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "vout_dc_v",
+          "value": 0.6602228260554,
+          "unit": "V",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "op_vcm_frac",
+          "value": 0.5,
+          "unit": null,
+          "status": "pass",
+          "margin": 9.999999999998899e-05
+        },
+        {
+          "name": "op_vout_offset_frac",
+          "value": 0.0001688076177186,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.1498311923822814
+        },
+        {
+          "name": "op_vout_rail_frac",
+          "value": 0.5001688076177,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.4798311923823
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_sf/vdd=1.320_vinp=0.660V/125C",
+      "process": "mos_sf",
+      "supply_v": {
+        "vdd": 1.32,
+        "vinp": 0.66
+      },
+      "temperature_c": 125,
+      "status": "pass",
+      "runtime_s": 0.167,
+      "engine_exit_code": 0,
+      "engine_killed_by_signal": null,
+      "measurements": [
+        {
+          "name": "ivdd_total_a",
+          "value": 8.341845164272e-05,
+          "unit": "A",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "vout_dc_v",
+          "value": 0.6610189943375,
+          "unit": "V",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "op_vcm_frac",
+          "value": 0.5,
+          "unit": null,
+          "status": "pass",
+          "margin": 9.999999999998899e-05
+        },
+        {
+          "name": "op_vout_offset_frac",
+          "value": 0.0007719654072166,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.1492280345927834
+        },
+        {
+          "name": "op_vout_rail_frac",
+          "value": 0.5007719654072,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.47922803459279995
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_fs/vdd=1.080_vinp=0.540V/-40C",
+      "process": "mos_fs",
+      "supply_v": {
+        "vdd": 1.08,
+        "vinp": 0.54
+      },
+      "temperature_c": -40,
+      "status": "pass",
+      "runtime_s": 0.216,
+      "engine_exit_code": 0,
+      "engine_killed_by_signal": null,
+      "measurements": [
+        {
+          "name": "ivdd_total_a",
+          "value": 7.882107257362e-05,
+          "unit": "A",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "vout_dc_v",
+          "value": 0.5400660467267,
+          "unit": "V",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "op_vcm_frac",
+          "value": 0.5,
+          "unit": null,
+          "status": "pass",
+          "margin": 9.999999999998899e-05
+        },
+        {
+          "name": "op_vout_offset_frac",
+          "value": 6.115437658566e-05,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.14993884562341434
+        },
+        {
+          "name": "op_vout_rail_frac",
+          "value": 0.5000611543766,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.47993884562339995
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_fs/vdd=1.080_vinp=0.540V/27C",
+      "process": "mos_fs",
+      "supply_v": {
+        "vdd": 1.08,
+        "vinp": 0.54
+      },
+      "temperature_c": 27,
+      "status": "pass",
+      "runtime_s": 0.175,
+      "engine_exit_code": 0,
+      "engine_killed_by_signal": null,
+      "measurements": [
+        {
+          "name": "ivdd_total_a",
+          "value": 7.945741934767e-05,
+          "unit": "A",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "vout_dc_v",
+          "value": 0.5406528509249,
+          "unit": "V",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "op_vcm_frac",
+          "value": 0.5,
+          "unit": null,
+          "status": "pass",
+          "margin": 9.999999999998899e-05
+        },
+        {
+          "name": "op_vout_offset_frac",
+          "value": 0.0006044915971452,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.1493955084028548
+        },
+        {
+          "name": "op_vout_rail_frac",
+          "value": 0.5006044915971,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.4793955084029
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_fs/vdd=1.080_vinp=0.540V/125C",
+      "process": "mos_fs",
+      "supply_v": {
+        "vdd": 1.08,
+        "vinp": 0.54
+      },
+      "temperature_c": 125,
+      "status": "pass",
+      "runtime_s": 0.171,
+      "engine_exit_code": 0,
+      "engine_killed_by_signal": null,
+      "measurements": [
+        {
+          "name": "ivdd_total_a",
+          "value": 8.045866987094e-05,
+          "unit": "A",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "vout_dc_v",
+          "value": 0.5420213091658,
+          "unit": "V",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "op_vcm_frac",
+          "value": 0.5,
+          "unit": null,
+          "status": "pass",
+          "margin": 9.999999999998899e-05
+        },
+        {
+          "name": "op_vout_offset_frac",
+          "value": 0.001871582560928,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.14812841743907199
+        },
+        {
+          "name": "op_vout_rail_frac",
+          "value": 0.5018715825609,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.47812841743909995
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_fs/vdd=1.200_vinp=0.600V/-40C",
+      "process": "mos_fs",
+      "supply_v": {
+        "vdd": 1.2,
+        "vinp": 0.6
+      },
+      "temperature_c": -40,
+      "status": "pass",
+      "runtime_s": 0.227,
+      "engine_exit_code": 0,
+      "engine_killed_by_signal": null,
+      "measurements": [
+        {
+          "name": "ivdd_total_a",
+          "value": 8.156099259815e-05,
+          "unit": "A",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "vout_dc_v",
+          "value": 0.6005518966323,
+          "unit": "V",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "op_vcm_frac",
+          "value": 0.5,
+          "unit": null,
+          "status": "pass",
+          "margin": 9.999999999998899e-05
+        },
+        {
+          "name": "op_vout_offset_frac",
+          "value": 0.000459913860221,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.14954008613977898
+        },
+        {
+          "name": "op_vout_rail_frac",
+          "value": 0.5004599138602,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.47954008613980004
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_fs/vdd=1.200_vinp=0.600V/27C",
+      "process": "mos_fs",
+      "supply_v": {
+        "vdd": 1.2,
+        "vinp": 0.6
+      },
+      "temperature_c": 27,
+      "status": "pass",
+      "runtime_s": 0.167,
+      "engine_exit_code": 0,
+      "engine_killed_by_signal": null,
+      "measurements": [
+        {
+          "name": "ivdd_total_a",
+          "value": 8.185322409271e-05,
+          "unit": "A",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "vout_dc_v",
+          "value": 0.60103917061,
+          "unit": "V",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "op_vcm_frac",
+          "value": 0.5,
+          "unit": null,
+          "status": "pass",
+          "margin": 9.999999999998899e-05
+        },
+        {
+          "name": "op_vout_offset_frac",
+          "value": 0.0008659755083317,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.1491340244916683
+        },
+        {
+          "name": "op_vout_rail_frac",
+          "value": 0.5008659755083,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.47913402449169995
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_fs/vdd=1.200_vinp=0.600V/125C",
+      "process": "mos_fs",
+      "supply_v": {
+        "vdd": 1.2,
+        "vinp": 0.6
+      },
+      "temperature_c": 125,
+      "status": "pass",
+      "runtime_s": 0.174,
+      "engine_exit_code": 0,
+      "engine_killed_by_signal": null,
+      "measurements": [
+        {
+          "name": "ivdd_total_a",
+          "value": 8.249952225015e-05,
+          "unit": "A",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "vout_dc_v",
+          "value": 0.6022975287797,
+          "unit": "V",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "op_vcm_frac",
+          "value": 0.5,
+          "unit": null,
+          "status": "pass",
+          "margin": 9.999999999998899e-05
+        },
+        {
+          "name": "op_vout_offset_frac",
+          "value": 0.00191460731639,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.14808539268360998
+        },
+        {
+          "name": "op_vout_rail_frac",
+          "value": 0.5019146073164,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.47808539268359995
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_fs/vdd=1.320_vinp=0.660V/-40C",
+      "process": "mos_fs",
+      "supply_v": {
+        "vdd": 1.32,
+        "vinp": 0.66
+      },
+      "temperature_c": -40,
+      "status": "pass",
+      "runtime_s": 0.175,
+      "engine_exit_code": 0,
+      "engine_killed_by_signal": null,
+      "measurements": [
+        {
+          "name": "ivdd_total_a",
+          "value": 8.387048400427e-05,
+          "unit": "A",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "vout_dc_v",
+          "value": 0.6606953323181,
+          "unit": "V",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "op_vcm_frac",
+          "value": 0.5,
+          "unit": null,
+          "status": "pass",
+          "margin": 9.999999999998899e-05
+        },
+        {
+          "name": "op_vout_offset_frac",
+          "value": 0.0005267669076194,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.1494732330923806
+        },
+        {
+          "name": "op_vout_rail_frac",
+          "value": 0.5005267669076,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.4794732330924
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_fs/vdd=1.320_vinp=0.660V/27C",
+      "process": "mos_fs",
+      "supply_v": {
+        "vdd": 1.32,
+        "vinp": 0.66
+      },
+      "temperature_c": 27,
+      "status": "pass",
+      "runtime_s": 0.168,
+      "engine_exit_code": 0,
+      "engine_killed_by_signal": null,
+      "measurements": [
+        {
+          "name": "ivdd_total_a",
+          "value": 8.398615655025e-05,
+          "unit": "A",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "vout_dc_v",
+          "value": 0.6611756993613,
+          "unit": "V",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "op_vcm_frac",
+          "value": 0.5,
+          "unit": null,
+          "status": "pass",
+          "margin": 9.999999999998899e-05
+        },
+        {
+          "name": "op_vout_offset_frac",
+          "value": 0.0008906813342937,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.1491093186657063
+        },
+        {
+          "name": "op_vout_rail_frac",
+          "value": 0.5008906813343,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.47910931866569995
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    },
+    {
+      "corner_id": "mos_fs/vdd=1.320_vinp=0.660V/125C",
+      "process": "mos_fs",
+      "supply_v": {
+        "vdd": 1.32,
+        "vinp": 0.66
+      },
+      "temperature_c": 125,
+      "status": "pass",
+      "runtime_s": 0.173,
+      "engine_exit_code": 0,
+      "engine_killed_by_signal": null,
+      "measurements": [
+        {
+          "name": "ivdd_total_a",
+          "value": 8.437062313371e-05,
+          "unit": "A",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "vout_dc_v",
+          "value": 0.6623810536829,
+          "unit": "V",
+          "status": "pass",
+          "margin": null
+        },
+        {
+          "name": "op_vcm_frac",
+          "value": 0.5,
+          "unit": null,
+          "status": "pass",
+          "margin": 9.999999999998899e-05
+        },
+        {
+          "name": "op_vout_offset_frac",
+          "value": 0.00180382854765,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.14819617145235
+        },
+        {
+          "name": "op_vout_rail_frac",
+          "value": 0.5018038285476,
+          "unit": null,
+          "status": "pass",
+          "margin": 0.4781961714524
+        }
+      ],
+      "diagnostics": [],
+      "artifacts": {
+        "log": null,
+        "raw": null,
+        "waveform": null,
+        "deck": null
+      },
+      "monte_carlo": null
+    }
+  ]
+}
