@@ -28,11 +28,11 @@ design/
   first-order expected `Av0`/GBW/SR/`Iq`. Read this first — the schematic
   below implements exactly what it derives.
 - **`opamp_core.sch`** — the schematic itself: `sg13_lv_nmos`/`sg13_lv_pmos`
-  input pair, mirror, tail, output stage, and a `cap_cmim` Miller cap (CMOS
-  only, per `CLAUDE.md`; no nulling `Rz` in this first pass — see
-  `opamp_sizing.md`'s "Rz" section for why). Pins: `vdd`, `vss`, `inn`,
-  `inp`, `out`, `ibias`. Full topology and polarity rationale is in the
-  schematic's own header comment.
+  input pair, mirror, tail, output stage, a `cap_cmim` Miller cap and, since
+  #430, an `rppd` nulling resistor `Rz` in series with it on the `d2` side
+  (CMOS plus PDK passives only, per `CLAUDE.md`; see `opamp_sizing.md`'s
+  "Rz" section). Pins: `vdd`, `vss`, `inn`, `inp`, `out`, `ibias`. Full
+  topology and polarity rationale is in the schematic's own header comment.
 - **`opamp_core.sym`** — hierarchical-instantiation symbol, pin order
   matching the schematic's own `iopin` list exactly.
 - **`netlist/opamp_core.spice`** — the netlist this schematic regenerates
@@ -82,7 +82,9 @@ itself.
   d1 d1 vdd vdd sg13_lv_pmos ...` (diode-connected), confirming the
   schematic is syntactically valid and wired exactly as documented, using
   only `sg13_lv_nmos`/`sg13_lv_pmos`/`cap_cmim` devices and the stated
-  ports.
+  ports. #430 added the fourth device flavour, `XRz` (`rppd`, nodes
+  `cc_rz d2 vss`), between `Cc`'s top plate and `d2`; `cc_rz` is the only
+  net added since, and the port list is unchanged.
 - **Full-circuit simulation**: unlike `sg13g2-bandgap`'s original issue #9
   (whose HBT-only op-point check could not exercise the PSP103 MOS models
   because no OSDI build existed in that environment), **this** repo's
