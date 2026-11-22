@@ -273,13 +273,30 @@ class TestCommittedRecord(unittest.TestCase):
             strip = lambda shards: [{k: v for k, v in s.items() if k != "body_sha256"} for s in shards]
             self.assertEqual(strip(old), strip(man["shards"]))
             # Apply the DR-0012 addition to the expected body, preserving its
-            # position. The existing #241 AC-ground lines are handled below.
+            # position. The DR-0012 narration rewording of the tb_psrr and
+            # emitted headers (#454) and the existing #241 AC-ground lines are
+            # handled below.
             for s in old:
                 with open(os.path.join(sd, s["body"])) as f:
                     expected = f.read().splitlines()
                 models = "/opt/pdk/ihp-sg13g2/libs.tech/ngspice/models"
                 cap = expected.index(f'.lib "{models}/cornerCAP.lib" cap_typ')
                 expected.insert(cap + 1, f'.lib "{models}/cornerRES.lib" res_typ')
+                i = expected.index(
+                    "* cards (cornerMOSlv.lib mos_<corner> plus cornerCAP.lib cap_typ), `.temp`,"
+                )
+                expected[i : i + 1] = [
+                    "* cards (cornerMOSlv.lib mos_<corner> plus cornerCAP.lib cap_typ and",
+                    "* cornerRES.lib res_typ, the DR-0012 passive corner pairing), `.temp`,",
+                ]
+                i = expected.index(
+                    "*  - cornerCAP.lib cap_typ is selected by a body-level .lib card (the runner's"
+                )
+                expected[i : i + 2] = [
+                    "*  - cornerCAP.lib cap_typ and cornerRES.lib res_typ are selected by two",
+                    "*    body-level .lib cards (the runner's per-section corner libraries",
+                    "*    cannot carry the object form).",
+                ]
                 with open(os.path.join(d, s["body"])) as f:
                     live = [l for l in f.read().splitlines() if "Cinn_acgnd" not in l]
                 self.assertEqual(expected, live, s["process"])
