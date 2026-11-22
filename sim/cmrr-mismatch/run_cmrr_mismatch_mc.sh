@@ -16,87 +16,17 @@
 # surprising. Pinned PDK revision in sim/pdk.json.
 #
 # Mismatch Monte Carlo CMRR for design/opamp_core.spice across the full
-# cornerMOSlv.lib process x temperature x supply grid (mos_tt/ss/ff/sf/fs
-# x -40/27/125 C x 1.08/1.20/1.32 V = 45 points, issue #26), the
-# mismatch-inclusive companion to sim/cmrr-psrr/'s systematic CMRR bench
-# (issue #14, PR #25): same testbench topology (tb_cmrr_mc.spice.tmpl is
-# tb_cmrr.spice.tmpl plus a Monte Carlo loop), but every grid point runs
-# the PDK's own per-corner mismatch section (cornerMOSlv.lib
-# <corner>_mismatch -> sg13g2_moslv_mismatch.lib +
-# sg13g2_moslv_mod_mismatch.lib, the agauss() per-instance wrappers on
-# w/l/delvto/factuo). Per sample: one reset (fresh independent
-# per-instance draws for all eight MOSFETs) + op + a 6-point AC sweep
-# (10 mHz shelf / 0.1 Hz plateau-guard partner / 1 kHz), per-sample DC
-# sanity per issue #14's rule.
-#
-# CMRR per sample = the SAME grid point's av0_db from the committed
-# sim/open-loop-ac/ record (joined, not re-measured -- issue #26's own
-# harness-reuse wording) minus the sample's Acm(10 mHz). Per-point
-# statistics: mean, sigma, mean-3*sigma (the dB-domain 3 sigma basis the
-# offset row's statistical-basis column commits to, applied to CMRR),
-# empirical 1st percentile and worst observed sample, plus the 1 kHz
-# in-band variant. The quoted mismatch-inclusive worst-case CMRR is the
-# grid-minimum of cmrr_db_minus_3sigma.
-#
-# Controls run by this script and required before any record is written:
-#   - N derivation: pilot at the nominal point and at sim/cmrr-psrr/'s
-#     measured binding corner (mos_fs_125C_1.08V), MC_N_FLOOR default 300
-#     samples per the spec row's wording; N chosen so the sampling error
-#     of the linear-domain mismatch sigma stays below MC_TARGET_SIGMA_RE
-#     (default 0.05, SE(sigma_hat)/sigma ~ 1/sqrt(2N)).
-#   - Negative control: every grid point also runs N=MC_NEGCTL_N (default
-#     3) iterations against the PLAIN <corner> section (the exact
-#     systematic configuration sim/cmrr-psrr/ ran -- same self-biased
-#     netlist, no agauss() anywhere, hence a zero-mismatch deck). Asserted
-#     per point: all iterations identical AND equal to #25's committed
-#     per-point record (acm0_db / vout_dc_v / vibias_dc_v / cmrr_db,
-#     tolerances NEGCTL_TOL_DB default 5e-3 and NEGCTL_TOL_V default
-#     5e-4) -- i.e. the zero-mismatch deck reproduces #25's systematic
-#     CMRR through the full Monte Carlo machinery.
-#   - Reproducibility: the nominal point is re-run with the same seed
-#     (asserted byte-identical sample sequence to the grid run's nominal
-#     sample file) and with MC_SEED_ALT (default 990000, asserted a
-#     different draw sequence). This pair is the machine check of "same
-#     seed -> same result, different seed -> different draw" from issue
-#     #26's Test Plan.
-#
-# Seeds: the base MC_SEED_BASE (default 260000) plus the grid index
-# (corner-major, the loop order below) selects the deterministic per-point
-# seed for the Monte Carlo stream: point i of 45 runs setseed
-# $((MC_SEED_BASE + i)). Committed seeds are printed in every rendered
-# netlist header and in the record .md; everything about a point's sample
-# sequence is a pure function of (corner, temp, vdd, section, seed, N).
-#
-# Writes append-only evidence under netlist-snapshots/<record-id>/,
-# corners/<record-id>/ and records/<record-id>.{csv,md,-draws.csv} -- same fleet
-# convention as sim/open-loop-ac/, sim/cmrr-psrr/ and the other benches
-# in this tree. Raw per-point solver stdout (corners/<id>/<point>_*.log)
-# is retained only for points that failed a check; passing points keep
-# their extracted sample files (the OP/AC echo lines) as the committed
-# artifact, so the record stays reviewable without 13,500 solver banners.
-#
-# Resume: replay the same RECORD_ID (env RECORD_ID=<id> re-set on the next
-# invocation) and already-completed points (sample file present with the
-# exact expected line count) are skipped, so a killed run can be
-# continued instead of restarted. A fresh invocation with no RECORD_ID
-# mints a new one and starts clean; a resumed run truncates only its own
-# record-id's partial sample files, never another record's evidence.
-# Only an INCOMPLETE campaign can be resumed: once records/<id>.csv or
-# records/<id>.md exists the record is finalized and a resume refuses
-# (exit 3) rather than rewriting it; a fresh id that collides with an
-# existing one refuses too (issue #140, see sim/record-paths.sh).
-#
-# Resume is bound to the campaign's original inputs (issue #163): a fresh
-# run publishes the immutable corners/<id>/campaign.manifest (DUT and
-# snapshot bytes, template bytes, joined-record paths + bytes, grid, load,
-# seeds, sampling knobs, tolerances, ngspice version, PDK model-library
-# digest) before its first simulation, and a resume re-renders it from the
-# current inputs and refuses (exit 3, naming every differing key) before
-# any sample, the snapshot or the pilot is touched. A resume joins the
-# records the manifest names, not the newest ones, and restores the saved
-# pilot sigma into the final report. A campaign without a manifest
-# (begun before #163) is refused with instructions to start a new id.
-# See campaign-guard.sh / campaign_manifest.py and README.md "Resuming".
+# cornerMOSlv.lib process x temperature x supply grid (45 points, issue
+# #26): per grid point, N independently drawn per-instance mismatch
+# samples through the PDK's <corner>_mismatch agauss() wrappers measure
+# the common-mode gain, and each sample's CMRR joins the SAME grid
+# point's committed sim/open-loop-ac/ av0_db. The quoted per-point bound
+# is the +3 sigma part of the linear-domain Acm distribution, mapped to
+# dB once (cmrr_3sigma_db = av0_db - 20*log10(acm_lin_mean +
+# 3*acm_lin_sigma)). The statistics-domain rationale is this directory's
+# README.md "Choosing the 3σ domain"; the method, the controls, the seed
+# discipline, the resume rules and the append-only evidence layout are
+# documented there too -- one place, not duplicated here.
 set -euo pipefail
 
 ALLOW_LOCAL_GRID=0
