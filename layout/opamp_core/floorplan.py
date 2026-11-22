@@ -72,7 +72,9 @@ VIA_OVERTRAVEL_UM = 0.20
 #                  signal order: tail/bias pair, input pair, mirror load.
 #   2. x ~ 21..42  stage 2: output tail below, the wide gain device above.
 #   3. x ~ 46..73  the Miller capacitor, which is larger than the whole
-#                  amplifier and therefore gets its own column.
+#                  amplifier and therefore gets its own column, with the
+#                  nulling resistor laid along its top edge, right of the
+#                  capacitor's TopMetal1 strap.
 # --------------------------------------------------------------------------- #
 PLACE_UM: dict[str, tuple[float, float]] = {
     "tail_pair": (0.0, 4.0),  # XM5 + XMbias
@@ -81,6 +83,7 @@ PLACE_UM: dict[str, tuple[float, float]] = {
     "out_tail": (21.0, 4.0),  # XM7
     "gain": (21.0, 21.0),  # XM6
     "miller_cap": (46.0, 2.0),  # XCc
+    "nulling_res": (60.5, 28.9),  # XRz
 }
 
 # --------------------------------------------------------------------------- #
@@ -118,7 +121,8 @@ TRACK_UM: dict[str, float] = {
     "d1_c2": 21.00,  # XM3 drains
     "d2_c2": 21.80,  # XM4 drains
     "d1_c3": 27.00,  # mirror gates (rising) -- XM3 is diode-connected
-    "d2_c4": 29.60,  # XM6 gate up to the capacitor's top plate
+    "d2_c4": 29.60,  # XM6 gate up to the nulling resistor's `d2` end
+    "cc_c4": 30.60,  # nulling resistor's cap end across to the capacitor's strap
 }
 
 #: Tracks drawn at :data:`W_RAIL_UM` instead of :data:`W_WIRE_UM`.

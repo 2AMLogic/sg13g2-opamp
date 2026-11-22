@@ -1,13 +1,14 @@
-"""Device primitives for this block's three shapes, as ``klt gen`` wrappers.
+"""Device primitives for this block's four device flavours, as ``klt gen`` wrappers.
 
-``design/netlist/opamp_core.spice`` instantiates exactly three device
-flavours -- ``sg13_lv_nmos``, ``sg13_lv_pmos`` and ``cap_cmim`` -- and this
-module is the one place that turns each into drawn geometry. It does so by
-invoking ``klt gen`` rather than drawing the devices by hand:
+``design/netlist/opamp_core.spice`` instantiates exactly four device
+flavours -- ``sg13_lv_nmos``, ``sg13_lv_pmos``, ``cap_cmim`` and ``rppd`` --
+and this module is the one place that turns each into drawn geometry. It
+does so by invoking ``klt gen`` rather than drawing the devices by hand:
 
 * ``sg13_lv_nmos`` / ``sg13_lv_pmos`` -> ``klt gen mos_array`` with
   ``flavor="nfet"`` / ``"pfet"``;
-* ``cap_cmim`` -> ``klt gen cap_array``.
+* ``cap_cmim`` -> ``klt gen cap_array``;
+* ``rppd`` -> ``klt gen res_array`` with ``flavor="rppd"``.
 
 **Why generators and not hand-drawn primitives.** Verified on this host
 against ``klt 0.6.0+g9c11986ad447`` on 2026-09-28: all three of those
@@ -88,8 +89,8 @@ class GeneratedDevice:
     """One ``klt gen`` invocation's result: the stream plus its report."""
 
     kind: str
-    """Netlist device flavour drawn: ``sg13_lv_nmos``, ``sg13_lv_pmos`` or
-    ``cap_cmim``."""
+    """Netlist device flavour drawn: ``sg13_lv_nmos``, ``sg13_lv_pmos``,
+    ``cap_cmim`` or ``rppd``."""
 
     generator: str
     """``klt gen`` generator name (``mos_array`` / ``cap_array``)."""
@@ -300,7 +301,7 @@ def cmim_cap(
 ) -> GeneratedDevice:
     """``cap_cmim``: one ``MIM`` (36/0) plate over ``Metal5`` (67/0).
 
-    The netlist gives ``XCc`` as ``w=25.7u l=25.7u``; ``cap_array``'s params
+    The netlist gives ``XCc`` as ``w=25.3u l=25.3u``; ``cap_array``'s params
     call the same two dimensions ``plate_w_um``/``plate_h_um``, and ``num=1``
     because ``XCc`` is a single unit cap, not a matched bank.
     """
@@ -314,6 +315,38 @@ def cmim_cap(
     return GeneratedDevice(
         kind="cap_cmim",
         generator="cap_array",
+        params=params,
+        gds_path=gds,
+        cell_name=cell_name,
+        report=report,
+    )
+
+
+def rppd_res(
+    w_um: float, l_um: float, cell_name: str, out_dir: Path, klt: str = "klt"
+) -> GeneratedDevice:
+    """``rppd``: one straight poly resistor body with contacted end pads.
+
+    ``XRz`` is a single unit resistor, so ``num=1`` and no dummy elements.
+    ``flavor="rppd"`` selects the 260 ohm/sq poly flavour (klayout-tools
+    issues #463/#1451/#1550): the body draws ``GatPoly`` under ``pSD`` with
+    the deck's resistor-identification markers, and ends in ``Metal1`` pads
+    reported as ``R0_A``/``R0_B``. Its nominal resistance is the PDK
+    symbol's own expression at ``res_typ``:
+    ``70e-6 / w + 260 * l / (w + 6e-9)`` ohm.
+    """
+    params: dict[str, object] = {
+        "width_um": w_um,
+        "length_um": l_um,
+        "num": 1,
+        "dummy": 0,
+        "flavor": "rppd",
+    }
+    gds = out_dir / f"{cell_name}.gds"
+    report = run_gen("res_array", params, gds, cell_name, klt=klt)
+    return GeneratedDevice(
+        kind="rppd",
+        generator="res_array",
         params=params,
         gds_path=gds,
         cell_name=cell_name,
