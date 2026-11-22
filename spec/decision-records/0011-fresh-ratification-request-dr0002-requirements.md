@@ -55,6 +55,9 @@
   the per-point `Vout` columns (1.08 V: 0.2068-0.7722 V; 1.20 V:
   0.2150-0.8894 V; 1.32 V: 0.2231-1.0009 V; CL = 2 pF, unloaded; definition
   flagged for the EE key; remains in "Rows not submitted as bounds"). The
+  per-rail headroom worst case is the largest value, 319.0598 mV (VDD) and
+  223.073866 mV (VSS) at `mos_ss_125C_1.32V`; 251 / 141 mV are the best-case
+  minima. The
   CMRR (>= 26.68 dB) and gain (>= 37.8 dB) working bounds (also withdrawn in
   Revision 4) are **not defensible against the carried comps** (50-63 dB and
   ~83.5-104 dB, all unverified, none fetched). The mismatch-limited
