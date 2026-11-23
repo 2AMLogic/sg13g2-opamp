@@ -33,7 +33,6 @@ it reproduces only from the checkout that built it), `deck_content_sha256` is
 the path-independent digest of the same deck (issue #460).
 """
 import argparse
-import hashlib
 import json
 import math
 import os
@@ -44,6 +43,10 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 if HERE not in sys.path:
     sys.path.insert(0, HERE)
 import klt_measure as km  # noqa: E402
+
+#: The one definition lives in klt_measure (issue #468); re-exported so this
+#: module's callers and tests keep `rz_screen.sha256_file`.
+sha256_file = km.sha256_file
 
 CAP_MODEL = "cap_cmim"
 OUT_PIN = "out"
@@ -57,11 +60,6 @@ INTERNAL_SOURCES = ("Bfd1", "Bfd2", "Bftail")
 DROPPED_MEASUREMENTS = 6
 MIN_OHMS = 0.01
 SLEW_DIR = os.path.join(HERE, "..", "slew-rate", "klt")
-
-
-def sha256_file(path):
-    with open(path, "rb") as f:
-        return hashlib.sha256(f.read()).hexdigest()
 
 
 def hub(node):
@@ -145,17 +143,7 @@ def dut(src, dst, ohms, is_bare, side=None):
 
 def restrict(req, spec):
     """Keep only the grid axes SG13G2_PEX_POINTS names; return the corner count."""
-    pts = km.parse_points(spec)
-    cs = req["corners"]
-    vdds, vinps = cs["supply_v"]["vdd"], cs["supply_v"]["vinp"]
-    keep_v = [i for i, v in enumerate(vdds) if any(round(v, 4) == p[2] for p in pts)]
-    keep_t = [t for t in cs["temperature_c"] if any(float(t) == p[1] for p in pts)]
-    keep_p = [p for p in cs["process"] if any(p["name"] == q[0] for q in pts)]
-    if not (keep_v and keep_t and keep_p):
-        sys.exit(f"rz_screen: SG13G2_PEX_POINTS={spec!r} matches no grid axis")
-    cs["supply_v"] = {"vdd": [vdds[i] for i in keep_v], "vinp": [vinps[i] for i in keep_v]}
-    cs["temperature_c"], cs["process"] = keep_t, keep_p
-    return len(keep_p) * len(keep_t) * len(keep_v)
+    return km.restrict_corners(req, spec, caller="rz_screen")
 
 
 def reads_internal(spice):
