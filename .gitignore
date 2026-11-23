@@ -103,3 +103,5 @@ node_modules/
 .loom/gh-config-by-owner-*/
 /.loom-local/
 # <<< loom-managed <<<
+# fleet-dispatcher account-ranking state (repo-local until Loom's default ignore set covers it)
+.loom/account-ranking.*
