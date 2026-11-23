@@ -154,14 +154,10 @@ def ideal_swap(text, ohms=IDEAL_OHMS):
 
     Loud: anything but exactly one `rppd` card exits 1 and writes nothing.
     """
-    lines = text.split("\n")
-    hits = [i for i, line in enumerate(lines) if RPPD_CARD.match(line)]
-    if len(hits) != 1:
-        sys.exit(f"rz_candidate: expected exactly one rppd card, found {len(hits)}")
-    i = hits[0]
-    toks = lines[i].split()
-    lines[i] = f"Rz_cc {toks[1]} {toks[2]} {ohms:g}"
-    return "\n".join(lines)
+    def swap(m):
+        toks = m.group(0).split()
+        return f"Rz_cc {toks[1]} {toks[2]} {ohms:g}"
+    return rewrite_rppd(text, swap)
 
 
 def _write_req(req, path):
