@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
-"""The mixin's contract, proved on a minimal synthetic bench (issue #370).
+"""The mixins' contracts, proved on minimal synthetic benches (issues #370, #470).
 
 A two-point fake bench implementing the EnvelopeControlMixin contract runs
-all thirteen controls through klt_envelope.index_envelope itself; if the
-mixin's derived refusal fragments ever drift from the shared gate's messages
-or a control stops raising, this runs red.
+all thirteen controls through klt_envelope.index_envelope itself, and a
+two-row fake harness record implementing the HarnessCsvControlMixin contract
+runs all four controls through klt_envelope.load_harness_csv_rows itself; if
+a mixin's derived refusal fragments ever drift from the shared gate's or
+loader's messages, or a control stops raising, this runs red.
 """
 
 from __future__ import annotations
@@ -12,15 +14,24 @@ from __future__ import annotations
 import io
 import os
 import sys
+import tempfile
 import unittest
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import klt_envelope as K  # noqa: E402
-from envelope_control_mixin import EnvelopeControlMixin  # noqa: E402
+from envelope_control_mixin import EnvelopeControlMixin, HarnessCsvControlMixin  # noqa: E402
 
 MS = ("m_one", "m_two")
 KEYS = (("mos_tt", 27, 1.2), ("mos_ff", 125, 1.32))
+
+
+def _harness_csv_text():
+    """A two-row harness record for KEYS, spelled as the committed ones are."""
+    lines = [",".join(("corner", "temp_c", "vdd_v", "point_id") + MS)]
+    for k in KEYS:
+        lines.append(",".join((k[0], str(k[1]), str(k[2]), K.key_str(k)) + ("1.0",) * len(MS)))
+    return "\n".join(lines) + "\n"
 
 
 def _env():
@@ -60,6 +71,35 @@ class TestMixinContract(unittest.TestCase):
         result = unittest.TextTestRunner(stream=io.StringIO(), verbosity=0).run(
             unittest.TestSuite(FakeBench(n) for n in names))
         self.assertEqual(result.testsRun, 13)
+        self.assertEqual(result.failures, [])
+        self.assertEqual(result.errors, [])
+
+
+class FakeHarnessCsvBench(HarnessCsvControlMixin, unittest.TestCase):
+    """A minimal conforming harness-CSV bench: two rows over a requested
+    point set, loaded through klt_envelope.load_harness_csv_rows itself."""
+
+    nonfinite_col = "m_one"
+
+    @classmethod
+    def setUpClass(cls):
+        d = tempfile.TemporaryDirectory()
+        cls.addClassCleanup(d.cleanup)
+        cls.harness_csv = os.path.join(d.name, "harness.csv")
+        with open(cls.harness_csv, "w") as f:
+            f.write(_harness_csv_text())
+
+    def load_csv(self, path):
+        return K.load_harness_csv_rows(path, MS, "harness CSV", points=KEYS)
+
+
+class TestHarnessCsvMixinContract(unittest.TestCase):
+    def test_all_four_controls_run_and_refuse_through_the_shared_loader(self):
+        names = sorted(n for n in dir(FakeHarnessCsvBench) if n.startswith("test_"))
+        self.assertEqual(len(names), 4, names)
+        result = unittest.TextTestRunner(stream=io.StringIO(), verbosity=0).run(
+            unittest.TestSuite(FakeHarnessCsvBench(n) for n in names))
+        self.assertEqual(result.testsRun, 4)
         self.assertEqual(result.failures, [])
         self.assertEqual(result.errors, [])
 
