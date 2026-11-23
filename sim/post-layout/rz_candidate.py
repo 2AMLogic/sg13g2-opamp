@@ -237,7 +237,17 @@ def bench(dut, out):
 
 
 def control(dut, schematic, out):
-    """The diagnostic controls. Returns the manifest list."""
+    """The diagnostic controls. Returns the manifest list.
+
+    The uppercase `_comment` is written only on the gear legs and the ideal
+    and single schematic legs because that is exactly the set that carried
+    it in the requests submitted for the #430 record; the two probes carry
+    their own lowercase comment (see `probe`) and the other 20 legs carry
+    none. The split is deliberate and must stay as submitted: widening it
+    would change the generated request bytes and break the record's
+    byte-for-byte regeneration of the 35 committed controls
+    (rz-layout-430 README section 2).
+    """
     dut = os.path.abspath(dut)
     os.makedirs(out, exist_ok=True)
     point = SLEW_POINTS["ss"]
@@ -324,11 +334,6 @@ def probe(out):
 
 def _manifest(manifest, out):
     json.dump(manifest, open(os.path.join(out, "manifest.json"), "w"), indent=1)
-
-
-def _worst(kind, name):
-    return {"ivdd_total_a": max, "vout_dc_v": max, "op_vout_offset_frac": max, "op_vout_rail_frac": max}.get(
-        name, min) if kind != "max" else max
 
 
 def grade(directory):
