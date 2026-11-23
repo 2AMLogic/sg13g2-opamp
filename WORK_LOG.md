@@ -8,6 +8,10 @@
 
 ### 2026-11-23
 
+- **Issue #459** (closed): test flake (instrumented, two owners decisive): test_overlapping_starts_give_exactly_one_owner fails on T1 signoff register
+- **PR #463**: test: give the reservation race diagnostic inode/ctime and a clock probe
+- **Issue #470** (closed): Deduplicate generic harness-CSV negative controls across all six sim/*/klt/test_compare.py suites
+- **PR #474**: test(sim): deduplicate harness-CSV negative controls into HarnessCsvControlMixin
 - **Issue #466** (closed): sim: rz_solver.py manifest entries record no deck_content_sha256, so #451 legs still commit only a path-dependent body digest
 - **PR #467**: feat(sim): record deck_content_sha256 in rz_solver manifest entries
 - **Issue #432** (closed): Remove the circular dpkg-deb recovery instructions from the OSDI build
