@@ -301,10 +301,10 @@ ratified bound is applied by `compare.py`, not graded by the tool. The CMRR benc
 
 | File | Role |
 |---|---|
-| `klt/psrr.request.json` | 45-point grid (`mos_tt/ss/ff/sf/fs` × −40/27/125 °C × 1.08/1.20/1.32 V; each process corner a bundle with `cornerCAP.lib cap_typ` + `cornerRES.lib res_typ` (DR-0012); `vinp` swept with `vdd` so Vcm = VDD/2), `ac dec 20 10m 1g`, OSDI preload + `stage_model_inputs` (the single-request form; the sharded form below replaces both), default solver tolerance (DR-0005) |
+| `klt/psrr.request.json` | 45-point grid (`mos_tt/ss/ff/sf/fs` × −40/27/125 °C × 1.08/1.20/1.32 V; each process corner a bundle with `cornerCAP.lib cap_typ` + `cornerRES.lib res_typ` (DR-0012); `vinp` swept with `vdd` so Vcm = VDD/2), `ac dec 20 10m 1g`, OSDI preload + `stage_model_inputs` (the single-request form `run.sh` submits; the historical sharded form below replaced both), default solver tolerance (DR-0005) |
 | `klt/tb_psrr.body.spice` | the template's circuit as a body: exactly one DUT `.include`, no `.control`; `Vdd` carries `ac 1`, `Vinp` carries none |
-| `klt/run.sh` | sources `sim/preflight.sh` (which sources `sim/env.sh`); submits to the batch backend (`PSRR_KLT_MODE=shard`, the default, or `single`); writes the envelope **unmodified** to `klt/records/<UTC>-<sha>.sim.json` only after `compare.py validate` passes (45 unique points, no errored/inconclusive corner, `coverage.nothing_checked` false, nothing skipped); in shard mode also keeps the raw per-shard requests, bodies and reports in `<id>.shards/` |
-| `klt/shard.py`, `klt/test_shard.py` | the per-process shard bridge for the klt 0.5.0 fleet runner, and its validation-gated merge; tests with negative controls (below) |
+| `klt/run.sh` | sources `sim/preflight.sh` (which sources `sim/env.sh`); submits `psrr.request.json` to the batch backend as ONE `klt sim` call (`submit_mode=single`; the five-job shard bridge was retired 2026-11-23, operator ruling #444); writes the envelope **unmodified** to `klt/records/<UTC>-<sha>.sim.json` only after `compare.py validate` passes (45 unique points, no errored/inconclusive corner, `coverage.nothing_checked` false, nothing skipped) |
+| `klt/shard.py`, `klt/test_shard.py` | the retired per-process shard bridge and its validation-gated merge, kept only to replay/verify the historical `klt/records/20261010-094256-469573d` record (below); tests with negative controls (below) |
 | `klt/psrr_direct.request.json`, `klt/tb_psrr_direct.body.spice`, `klt/run_direct.sh` | the direct single-measurement PSRR request, its two-copy body and runner (below) |
 | `klt/compare_direct.py`, `klt/test_compare_direct.py` | cross-check of the direct envelope against the join record; tests with negative controls |
 | `klt/compare.py`, `klt/test_compare.py` | grid join and tolerance report; offline stdlib-only; tests with negative controls |
@@ -338,7 +338,7 @@ bound (≥ 1.87 dB, DC shelf) **offline**. Consequences, stated plainly:
   tool/harness verdict difference at that corner is therefore reported as
   "explained by tolerance", and must not be read as agreement.
 
-### The shard bridge (why the committed envelope was not one request)
+### The shard bridge (historical: why the 2026-10-10 envelope was not one request)
 
 When the bridge was built, the fleet runner image pinned klt 0.5.0
 (2AMLogic/2am#2193, since closed). On that runner,
@@ -347,11 +347,12 @@ form of the per-process bundle (the fixed
 `cornerCAP.lib cap_typ` and `cornerRES.lib res_typ` sections, DR-0012),
 `options.osdi_preload`/`stage_model_inputs`, and `ngspice_init` are not
 carried (the runner drops or rejects them) and a 0.5.0 client has no `batch`
-backend. The fleet runner now runs klt 0.8.0 and gates on major.minor only, so
-the current client is `klayout-tools==0.8.0`
-(`KLT="uvx --from klayout-tools==0.8.0 klt"`; `runner_compatibility: match`,
-klayout-tools#4109) with one request per process corner.
-`klt/shard.py gen` derives the five requests from the master request:
+backend. The runner images since (0.8.0, now 0.9.0) carry all of it and gate
+on major.minor only, so the bridge's per-process submission is no longer
+needed; it was retired from `run.sh` on 2026-11-23 (operator ruling, #444,
+after the single-request confirmation below). `klt/shard.py` and its records
+remain for historical replay/verification of the `20261010-094256-469573d`
+record only. `klt/shard.py gen` derives the five requests from the master request:
 
 | Master request | Each shard (`mos_xx`, 9 corners) |
 |---|---|
@@ -377,20 +378,31 @@ errored corner survives the merge and is then refused by the gate. The five shar
 are proved to partition the grid by `check_manifest`, which `gen` and `merge`
 both run.
 
-The committed envelope was minted by `run.sh` (shard mode) across several
-invocations, because the fleet was repeatedly full (`no capacity in any of
-the 30 pools`, `8 instance(s) already running ... exceeds
-BATCH_MAX_CONCURRENT_INSTANCES=8`): `PSRR_KLT_RESUME_DIR` reuses a prior shard
-report only when its request is byte-identical to the one just generated, and
-`PSRR_KLT_SUBMIT_TRIES` re-submits a capacity refusal a bounded number of
-times (never locally). The five shard requests, bodies and reports are kept
+The committed envelope was minted by `run.sh` (then in shard mode) across
+several invocations, because the fleet was repeatedly full (`no capacity in
+any of the 30 pools`, `8 instance(s) already running ... exceeds
+BATCH_MAX_CONCURRENT_INSTANCES=8`): `PSRR_KLT_RESUME_DIR` reused a prior shard
+report when its request was byte-identical to the one just generated, and
+`PSRR_KLT_SUBMIT_TRIES` re-submitted a capacity refusal a bounded number of
+times (never locally) -- both knobs are gone with the bridge. The five shard
+requests, bodies and reports are kept
 beside the envelope in `klt/records/20261010-094256-469573d.shards/`; the five
 fleet jobs are `klt-sim-8b0cf80b0eea` (`mos_tt`), `klt-sim-a5c104a8e55f`
 (`mos_ss`), `klt-sim-a03984cc4e7f` (`mos_ff`), `klt-sim-eba6cbaf121d`
 (`mos_sf`) and `klt-sim-7a549124cc61` (`mos_fs`), all on the baked image
-`ami-0e40e3245f1923ac8` (ngspice 46). When the runner image is bumped, use
-`PSRR_KLT_MODE=single` with a client whose `klt --version` equals the
-runner's.
+`ami-0e40e3245f1923ac8` (ngspice 46).
+
+Single-request confirmation on the current runner image (2026-11-23, #444):
+`psrr.request.json` ran as ONE fleet job, `klt-sim-6dbc23122f96` (AMI
+`ami-09c14f55df4958cbd`, ngspice 47, runner klt `0.9.0`, client
+`0.9.3.dev3808+g1ad4a837f657`, `runner_compatibility: match`): 45/45 corners
+in one job (~10 s), `compare.py validate` ok, `av0_join.status: agree` over
+all 45 points (max |ΔAv0| vs the open-loop envelope cross-check 4.95e-5 dB),
+tool values identical to `20261015-103521-0f41068`'s at every point; the
+top-level `disagree` against the superseded harness CSV is the expected
+re-derivation result, as in that record. No envelope bytes from the
+confirmation run were committed (`manifests/README.md`); `run.sh` now
+submits this single request unconditionally.
 
 ### Direct PSRR: one measurement, two DUT copies (issue #307)
 
@@ -528,12 +540,13 @@ the body-level `pre_osdi`/`.lib` and the inlined DUT change no number.
 
 ### Running it
 
-`klt/run.sh` submits the grid to the batch fleet; **never** run the grid
-locally on a shared dispatch host (`PSRR_KLT_BACKEND=local` is refused in shard
-mode). Before submitting, `sim/preflight.sh` and `sim/tools/build-osdi.sh
---check` must pass. Shard mode needs a client that has the batch backend and
-that the runner accepts (the fleet runner now carries klt 0.8.0, so
-`KLT="uvx --from klayout-tools==0.8.0 klt"`); single mode needs a client whose
-`klt --version` matches the runner's major.minor. Tests:
+`klt/run.sh` submits the whole grid to the batch fleet as ONE request;
+**never** run the grid locally on a shared dispatch host
+(`PSRR_KLT_BACKEND=local` is for a machine where running the grid locally is
+appropriate, and is passed to klt as `--backend`). Before submitting,
+`sim/preflight.sh` and `sim/tools/build-osdi.sh --check` must pass. The
+client's `klt --version` must match the runner's major.minor
+(single-request support confirmed 2026-11-23 with client `0.9.3.dev` on
+runner `0.9.0`, #444). Tests:
 
     python3 -m unittest discover -s sim/cmrr-psrr/klt -p 'test_*.py'
