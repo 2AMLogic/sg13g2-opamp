@@ -1027,6 +1027,89 @@ class RawAuditCase(unittest.TestCase):
         self._edit_pinned_lines(self.entry(kind, pid), transform, repin)
 
 
+class PointRawPinControlMixin:
+    """The seven generic per-point raw-pin negative controls shared by the
+    three two-level `*_raw` families (`noise_raw`, `slew_raw`, `swing_raw`),
+    whose production pin shape, grid/ownership rules, and hash/existence checks
+    all live in `selection._validate_raw_pins`, `records._check_raw_pins`,
+    `records._read_pinned_raw`, and `selection.load_selection` (issue #256).
+
+    Mixed into `RawAuditCase` subclasses that set `RAW_NOUN` (`"noise"`,
+    `"slew"`, `"swing"`) and `MISSING_PHRASE` (`"log/spectrum"`,
+    `"waveform/netlist"`, `"curves/netlists"`). Per-kind controls restore the
+    mutated bytes or pin in `finally` so every artifact kind in the family is
+    exercised without extra `Fixture` copies.
+    """
+
+    RAW_NOUN: str = ""
+    MISSING_PHRASE: str = ""
+
+    def _pin_kinds(self) -> tuple:
+        kinds = tuple(self.raw()["files"][self.POINT])
+        self.assertTrue(kinds)
+        return kinds
+
+    def test_changed_raw_pin_without_repin_fails(self):
+        for kind in self._pin_kinds():
+            with self.subTest(kind=kind):
+                rel = self.entry(kind)["path"]
+                path = self.fx.root / rel
+                orig = path.read_bytes()
+                try:
+                    path.write_bytes(orig + b"\n")
+                    self.assert_error(f"point {self.POINT}: {rel} does not match its selection pin")
+                finally:
+                    path.write_bytes(orig)
+
+    def test_missing_raw_file_fails(self):
+        for kind in self._pin_kinds():
+            with self.subTest(kind=kind):
+                rel = self.entry(kind)["path"]
+                path = self.fx.root / rel
+                orig = path.read_bytes()
+                try:
+                    path.unlink()
+                    self.assert_error(f"point {self.POINT}: missing raw {self.RAW_NOUN} {kind} {rel}")
+                finally:
+                    path.write_bytes(orig)
+
+    def test_missing_point_association_fails(self):
+        del self.raw()["files"][self.POINT]
+        self.fx.save_selection()
+        self.assert_error(f"point {self.POINT}: no pinned raw {self.RAW_NOUN} {self.MISSING_PHRASE}")
+
+    def test_pin_outside_the_grid_fails(self):
+        self.raw()["files"]["mos_tt_99C_1.20V"] = self.raw()["files"][self.POINT]
+        self.fx.save_selection()
+        self.assert_error(f"raw {self.RAW_NOUN} artifacts pinned for 'mos_tt_99C_1.20V', which is outside the expected grid")
+
+    def test_duplicate_assignment_fails(self):
+        other = "mos_tt_27C_1.32V"
+        self.raw()["files"][other] = json.loads(json.dumps(self.raw()["files"][self.POINT]))
+        self.fx.save_selection()
+        errors = self.assert_error("is pinned twice", "belongs to another point")
+        self.assertTrue(any(other in e for e in errors), errors)
+
+    def test_unpinned_artifact_entry_is_rejected(self):
+        for kind in self._pin_kinds():
+            with self.subTest(kind=kind):
+                pin = self.entry(kind)
+                sha = pin.pop("sha256")
+                try:
+                    self.fx.save_selection()
+                    with self.assertRaisesRegex(generate.SelectionError, rf"\.{kind} needs string `path` and `sha256`"):
+                        self.fx.build()
+                finally:
+                    pin["sha256"] = sha
+                    self.fx.save_selection()
+
+    def test_audit_without_pins_is_rejected(self):
+        del self.fx.selection["records"][self.RECORD][self.RAW_KEY]
+        self.fx.save_selection()
+        with self.assertRaisesRegex(generate.SelectionError, self.RAW_KEY):
+            self.fx.build()
+
+
 class OffsetMcStatistics(RawAuditCase):
     """Issue #199: the draws audit rejects fabricated statistics and broken
     draw populations, naming the point and offending field. The committed
@@ -1056,44 +1139,20 @@ class OffsetMcStatistics(RawAuditCase):
             ("vos_total_wc_det_plus_3sigma_v", "0.042223313"),
         ):
             with self.subTest(field=column):
-                fx = Fixture()
-                try:
-                    fx.set_cell(self.RECORD, self.POINT, column, fabricated)
-                    content = fx.build()
-                    self.assertEqual(content["overall"]["verdict"], "ERROR")
-                    self.assertTrue(
-                        any(
-                            f"point {self.POINT} fails definition check offset_mc_statistics: {column}" in e
-                            for e in self.errors(content)
-                        ),
-                        self.errors(content),
-                    )
-                finally:
-                    fx.close()
+                self.fresh()
+                self.fx.set_cell(self.RECORD, self.POINT, column, fabricated)
+                self.assert_error(f"point {self.POINT} fails definition check offset_mc_statistics: {column}")
 
     def test_negative_spread_magnitude_is_rejected(self):
         for column in ("sigma_vos_v", "three_sigma_v", "vos_total_wc_det_plus_3sigma_v"):
             with self.subTest(field=column):
-                fx = Fixture()
-                try:
-                    fx.set_cell(self.RECORD, self.POINT, column, "-0.026870239")
-                    content = fx.build()
-                    self.assertEqual(content["overall"]["verdict"], "ERROR")
-                    self.assertTrue(
-                        any(f"{column} -0.026870239 is negative" in e for e in self.errors(content)),
-                        self.errors(content),
-                    )
-                finally:
-                    fx.close()
+                self.fresh()
+                self.fx.set_cell(self.RECORD, self.POINT, column, "-0.026870239")
+                self.assert_error(f"{column} -0.026870239 is negative")
 
     def test_drifted_draws_file_is_error_even_unrepinned(self):
         self.fx.set_draw_cell(self.RECORD, self.POINT, 5, "vos_v", "0.0099999999", repin=False)
-        content = self.fx.build()
-        self.assertEqual(content["overall"]["verdict"], "ERROR")
-        self.assertTrue(
-            any("does not match its selection pin" in e for e in self.errors(content)),
-            self.errors(content),
-        )
+        self.assert_error("does not match its selection pin")
 
     def test_missing_draws_file_is_error(self):
         self.fx.draws_path(self.RECORD).unlink()
@@ -1128,13 +1187,7 @@ class OffsetMcStatistics(RawAuditCase):
         # versa -- the field-by-field control above perturbs a mismatch
         # point and leaves this one alone).
         self.fx.set_draw_cell(self.RECORD, self.NEGCTRL, 5, "vos_v", "0.0160000000")
-        content = self.fx.build()
-        errors = self.errors(content)
-        self.assertEqual(content["overall"]["verdict"], "ERROR")
-        self.assertTrue(
-            any(f"point {self.NEGCTRL} fails definition check offset_mc_statistics" in e for e in errors),
-            errors,
-        )
+        errors = self.assert_error(f"point {self.NEGCTRL} fails definition check offset_mc_statistics")
         self.assertFalse(any(self.POINT in e for e in errors), errors)
 
     def test_draws_file_may_not_be_named_without_its_hash_pin(self):
@@ -1192,15 +1245,12 @@ class CmrrMcStatistics(RawAuditCase):
         for field in ("acm_lin_sigma", "acm_plus_3sigma_db", "cmrr_db_mean", "cmrr_db_p01",
                       "cmrr_db_min", "cmrr_1khz_3sigma_db", "plateau_max_db"):
             with self.subTest(field=field):
-                fx = Fixture()
-                try:
-                    old = Decimal(rows[self.POINT][field])
-                    bumped = old + Decimal("0.0001") if old != 0 else Decimal("0.001")
-                    fx.set_cell(self.RECORD, self.POINT, field, str(bumped))
-                    errors = [e for e in fx.build()["errors"] + [x for r in fx.build()["rows"] for x in r["errors"]]]
-                    self.assertTrue(any(field in e and self.POINT in e for e in errors), errors)
-                finally:
-                    fx.close()
+                self.fresh()
+                old = Decimal(rows[self.POINT][field])
+                bumped = old + Decimal("0.0001") if old != 0 else Decimal("0.001")
+                self.fx.set_cell(self.RECORD, self.POINT, field, str(bumped))
+                errors = self.assert_error()
+                self.assertTrue(any(field in e and self.POINT in e for e in errors), errors)
 
     def test_equal_value_in_another_notation_is_accepted(self):
         old = generate.read_csv_rows(self.fx.csv_path(self.RECORD))[1]
@@ -1448,7 +1498,7 @@ class LoadCondition(unittest.TestCase):
         self.assertIn("descriptive", self.build_row("gbw")["conditions_provenance"])
 
 
-class NoiseRawAudit(RawAuditCase):
+class NoiseRawAudit(PointRawPinControlMixin, RawAuditCase):
     """Issue #213: the input-noise summary is audited against hash-pinned raw
     logs and in-band spectra; the logged integrated figure and the
     spectrum-derived quantities are checked independently."""
@@ -1457,12 +1507,16 @@ class NoiseRawAudit(RawAuditCase):
     POINT = "mos_tt_27C_1.20V"
     KEEP_AUDIT = "keep_noise_audit"
     RAW_KEY = "noise_raw"
+    RAW_NOUN = "noise"
+    MISSING_PHRASE = "log/spectrum"
+    DEFINITION_CHECK = "noise_raw_audit"
 
-    def only_problem(self, tag: str, other: str) -> None:
+    def only_problem(self, tag: str, other: str) -> list:
         """The point fails the audit on `tag` and NOT on `other`."""
-        errors = [e for e in self.assert_error(f"point {self.POINT} fails definition check noise_raw_audit")]
+        errors = self.definition_error()
         self.assertTrue(any(f"[{tag}]" in e for e in errors), errors)
         self.assertFalse(any(f"[{other}]" in e for e in errors), errors)
+        return errors
 
     # --- committed evidence -------------------------------------------------
 
@@ -1502,17 +1556,10 @@ class NoiseRawAudit(RawAuditCase):
         for field in ("vni_1khz_v_rthz", "flicker_coeff_v2", "thermal_floor_v_rthz",
                       "flicker_corner_hz", "flicker_frac_of_msq", "vni_int_crosscheck_ratio"):
             with self.subTest(field=field):
-                fx = Fixture()
-                fx.keep_noise_audit = True
-                try:
-                    fx.set_cell(self.RECORD, self.POINT, field, "1.5")
-                    self.fx, keep = fx, self.fx
-                    self.only_problem("spectrum", "integrated-log")
-                    errors = self.errors(fx.build())
-                    self.assertTrue(any(field in e and self.POINT in e for e in errors), errors)
-                    self.fx = keep
-                finally:
-                    fx.close()
+                self.fresh()
+                self.fx.set_cell(self.RECORD, self.POINT, field, "1.5")
+                errors = self.only_problem("spectrum", "integrated-log")
+                self.assertTrue(any(field in e and self.POINT in e for e in errors), errors)
 
     def test_changed_log_value_fails_the_log_check_not_the_spectrum_derivation(self):
         # the raw log is re-pinned (deliberate re-selection) but disagrees with
@@ -1571,37 +1618,6 @@ class NoiseRawAudit(RawAuditCase):
 
     # --- raw artifact problems (all point-specific) -------------------------
 
-    def test_changed_raw_pins_fail(self):
-        for kind in ("log", "spectrum"):
-            with self.subTest(kind=kind):
-                fx = Fixture()
-                try:
-                    path = fx.root / fx.selection["records"][self.RECORD]["noise_raw"]["files"][self.POINT][kind]["path"]
-                    path.write_text(path.read_text(encoding="utf-8") + "\n\n", encoding="utf-8")
-                    errors = fx.build()["errors"] + [x for r in fx.build()["rows"] for x in r["errors"]]
-                    self.assertTrue(any(self.POINT in e and "does not match its selection pin" in e for e in errors), errors)
-                finally:
-                    fx.close()
-
-    def test_missing_point_association_fails(self):
-        del self.fx.selection["records"][self.RECORD]["noise_raw"]["files"][self.POINT]
-        self.fx.save_selection()
-        self.assert_error(f"point {self.POINT}: no pinned raw noise log/spectrum")
-
-    def test_pin_outside_the_grid_fails(self):
-        files = self.fx.selection["records"][self.RECORD]["noise_raw"]["files"]
-        files["mos_tt_99C_1.20V"] = files[self.POINT]
-        self.fx.save_selection()
-        self.assert_error("'mos_tt_99C_1.20V', which is outside the expected grid")
-
-    def test_duplicate_association_fails(self):
-        files = self.fx.selection["records"][self.RECORD]["noise_raw"]["files"]
-        other = "mos_tt_27C_1.32V"
-        files[other] = json.loads(json.dumps(files[self.POINT]))
-        self.fx.save_selection()
-        errors = self.assert_error("is pinned twice", "belongs to another point")
-        self.assertTrue(any(other in e for e in errors), errors)
-
     def test_duplicate_json_key_is_a_selection_error(self):
         text = self.fx.selection_path.read_text(encoding="utf-8")
         needle = f'"{self.POINT}": {{"log"'
@@ -1612,10 +1628,6 @@ class NoiseRawAudit(RawAuditCase):
         self.fx.selection_path.write_text(broken, encoding="utf-8")
         with self.assertRaises(generate.SelectionError):
             self.fx.build()
-
-    def test_missing_raw_file_fails(self):
-        (self.fx.root / self.entry("spectrum")["path"]).unlink()
-        self.assert_error(f"point {self.POINT}: missing raw noise spectrum")
 
     def test_duplicate_log_total_line_fails(self):
         self.edit_raw("log", lambda ls: ls + ["NOISE_INOISE_TOTAL 1.0E-04"])
@@ -1628,30 +1640,20 @@ class NoiseRawAudit(RawAuditCase):
     def test_non_finite_log_total_fails(self):
         for bad in ("nan", "inf", "1e999", "-1.0E-05", "0"):
             with self.subTest(bad=bad):
-                fx = Fixture()
-                self.fx, keep = fx, self.fx
-                try:
-                    self.edit_raw("log", lambda ls: [("NOISE_INOISE_TOTAL " + bad) if l.startswith("NOISE_INOISE_TOTAL") else l for l in ls])
-                    self.assert_error(f"point {self.POINT}: invalid noise log")
-                finally:
-                    self.fx = keep
-                    fx.close()
+                self.fresh()
+                self.edit_raw("log", lambda ls, bad=bad: [("NOISE_INOISE_TOTAL " + bad) if l.startswith("NOISE_INOISE_TOTAL") else l for l in ls])
+                self.assert_error(f"point {self.POINT}: invalid noise log")
 
     def test_non_finite_spectrum_sample_fails(self):
         for bad in ("nan", "inf", "1e999", "-1e-6", "0"):
             with self.subTest(bad=bad):
-                fx = Fixture()
-                self.fx, keep = fx, self.fx
-                try:
-                    def poison(ls):
-                        parts = ls[10].split()
-                        parts[1] = bad
-                        return ls[:10] + [" ".join(parts)] + ls[11:]
-                    self.edit_raw("spectrum", poison)
-                    self.assert_error(f"point {self.POINT}: invalid noise spectrum")
-                finally:
-                    self.fx = keep
-                    fx.close()
+                self.fresh()
+                def poison(ls, bad=bad):
+                    parts = ls[10].split()
+                    parts[1] = bad
+                    return ls[:10] + [" ".join(parts)] + ls[11:]
+                self.edit_raw("spectrum", poison)
+                self.assert_error(f"point {self.POINT}: invalid noise spectrum")
 
     def test_truncated_spectrum_fails(self):
         self.edit_raw("spectrum", lambda ls: ls[:-1])
@@ -1676,20 +1678,8 @@ class NoiseRawAudit(RawAuditCase):
         self.edit_raw("spectrum", stretch)
         self.assert_error(f"point {self.POINT}: invalid noise spectrum", "grid point 0 is")
 
-    def test_audit_requires_pinned_raw_artifacts(self):
-        del self.fx.selection["records"][self.RECORD]["noise_raw"]
-        self.fx.save_selection()
-        with self.assertRaises(generate.SelectionError):
-            self.fx.build()
-
     def test_band_must_match_the_documented_band(self):
         self.fx.selection["records"][self.RECORD]["noise_raw"]["band"]["points"] = 41
-        self.fx.save_selection()
-        with self.assertRaises(generate.SelectionError):
-            self.fx.build()
-
-    def test_unpinned_artifact_entry_is_rejected(self):
-        del self.entry("log")["sha256"]
         self.fx.save_selection()
         with self.assertRaises(generate.SelectionError):
             self.fx.build()
@@ -1775,9 +1765,7 @@ class KltRawAudit(RawAuditCase):
     def test_summary_cells_follow_the_envelopes(self):
         for column, value in (("av0_db", "41.0"), ("gbw_hz", "1.0e7"), ("pm_deg", "70.0"), ("iq_a", "0.0001")):
             with self.subTest(column=column):
-                self.fx.close()
-                self.fx = Fixture()
-                self.fx.keep_klt_audit = True
+                self.fresh()
                 self.fx.set_cell(self.RECORD, self.POINT, column, value)
                 self.assert_error(f"point {self.POINT} fails definition check open_loop_klt_audit", column)
 
@@ -1798,8 +1786,7 @@ class KltRawAudit(RawAuditCase):
     def test_every_artifact_must_be_pinned(self):
         for kind in generate.KLT_RAW_KINDS:
             with self.subTest(kind=kind):
-                self.fx.close()
-                self.fx = Fixture()
+                self.fresh()
                 del self.raw()["files"][kind]
                 self.fx.save_selection()
                 with self.assertRaises(generate.SelectionError):
@@ -1818,8 +1805,7 @@ class KltRawAudit(RawAuditCase):
     def test_stale_pin_is_rejected_for_every_artifact(self):
         for kind in generate.KLT_RAW_KINDS:
             with self.subTest(kind=kind):
-                self.fx.close()
-                self.fx = Fixture()
+                self.fresh()
                 path = self.fx.root / self.raw()["files"][kind]["path"]
                 path.write_text(path.read_text(encoding="utf-8") + "\n", encoding="utf-8")
                 self.assert_error("does not match its selection pin")
@@ -1937,7 +1923,7 @@ class KltRawAudit(RawAuditCase):
         self.assert_error("differs from the dc_continuity record")
 
 
-class SlewRawAudit(RawAuditCase):
+class SlewRawAudit(PointRawPinControlMixin, RawAuditCase):
     """Issue #227: the slew-rate summary is audited against hash-pinned
     transient waveforms and rendered netlists with the SAME measurement the
     bench runs (sim/slew-rate/slew_post.py)."""
@@ -1945,6 +1931,8 @@ class SlewRawAudit(RawAuditCase):
     RECORD = "slew-rate"
     POINT = "mos_tt_27C_1.20V"
     RAW_KEY = "slew_raw"
+    RAW_NOUN = "slew"
+    MISSING_PHRASE = "waveform/netlist"
     DEFINITION_CHECK = "slew_raw_audit"
 
     # --- committed evidence -------------------------------------------------
@@ -2011,10 +1999,6 @@ class SlewRawAudit(RawAuditCase):
 
     # --- waveform evidence ---------------------------------------------------
 
-    def test_changed_waveform_without_repin_fails(self):
-        self.edit_raw("tran", lambda ls: ls[:-1] + [" 7.99e-07 0.0 "], repin=False)
-        self.assert_error(f"point {self.POINT}: {self.entry('tran')['path']} does not match its selection pin")
-
     def test_changed_waveform_repinned_disagrees_with_summary(self):
         # a slower rising edge: delay the output ramp by stretching v around the window
         def slow(lines):
@@ -2025,31 +2009,6 @@ class SlewRawAudit(RawAuditCase):
             return out
         self.edit_raw("tran", slow)
         self.definition_error()
-
-    def test_missing_waveform_fails(self):
-        (self.fx.root / self.entry("tran")["path"]).unlink()
-        self.assert_error(f"point {self.POINT}: missing raw slew tran {self.entry('tran')['path']}")
-
-    def test_missing_netlist_fails(self):
-        (self.fx.root / self.entry("netlist")["path"]).unlink()
-        self.assert_error(f"point {self.POINT}: missing raw slew netlist")
-
-    def test_missing_point_association_fails(self):
-        del self.raw()["files"][self.POINT]
-        self.fx.save_selection()
-        self.assert_error(f"point {self.POINT}: no pinned raw slew waveform/netlist")
-
-    def test_pin_outside_the_grid_fails(self):
-        self.raw()["files"]["mos_tt_99C_1.20V"] = self.raw()["files"][self.POINT]
-        self.fx.save_selection()
-        self.assert_error("'mos_tt_99C_1.20V', which is outside the expected grid")
-
-    def test_duplicate_assignment_fails(self):
-        other = "mos_tt_27C_1.32V"
-        self.raw()["files"][other] = json.loads(json.dumps(self.raw()["files"][self.POINT]))
-        self.fx.save_selection()
-        errors = self.assert_error("is pinned twice", "belongs to another point")
-        self.assertTrue(any(other in e for e in errors), errors)
 
     def test_non_finite_and_malformed_samples_fail(self):
         for bad in (" 1.0e-07 nan ", " 1.0e-07 inf ", " nan 0.5 ", " 1.0e-07 -Infinity ", " 1.0e-07 abc ", " 1.0e-07 "):
@@ -2146,18 +2105,6 @@ class SlewRawAudit(RawAuditCase):
         self.edit_raw("netlist", lambda ls: [l for l in ls if not l.startswith("Vinp")])
         self.assert_error(f"point {self.POINT}: invalid rendered netlist")
 
-    def test_unpinned_artifact_entry_is_rejected(self):
-        del self.entry("tran")["sha256"]
-        self.fx.save_selection()
-        with self.assertRaises(generate.SelectionError):
-            self.fx.build()
-
-    def test_audit_without_pins_is_rejected(self):
-        del self.fx.selection["records"][self.RECORD]["slew_raw"]
-        self.fx.save_selection()
-        with self.assertRaises(generate.SelectionError):
-            self.fx.build()
-
     # --- the shared module -----------------------------------------------------
 
     def test_measure_is_nan_without_crossings_and_worst_edge_ignores_one_nan(self):
@@ -2195,7 +2142,7 @@ class SlewRawAudit(RawAuditCase):
         self.assertIn("non-finite", res.stderr)
 
 
-class SwingRawAudit(RawAuditCase):
+class SwingRawAudit(PointRawPinControlMixin, RawAuditCase):
     """Issue #230: the output-swing summary is audited against hash-pinned
     coarse/fine DC transfer curves and rendered netlists with the SAME
     measurement the bench runs (sim/output-swing/swing_post.py)."""
@@ -2204,6 +2151,8 @@ class SwingRawAudit(RawAuditCase):
     POINT = "mos_tt_27C_1.20V"
     KEEP_AUDIT = "keep_swing_audit"
     RAW_KEY = "swing_raw"
+    RAW_NOUN = "swing"
+    MISSING_PHRASE = "curves/netlists"
     DEFINITION_CHECK = "swing_raw_audit"
 
     def recompute(self, pid=None):
@@ -2322,10 +2271,6 @@ class SwingRawAudit(RawAuditCase):
 
     # --- curve evidence -------------------------------------------------------
 
-    def test_changed_curve_without_repin_fails(self):
-        self.edit_raw("fine_csv", lambda ls: ls[:-1], repin=False)
-        self.assert_error(f"point {self.POINT}: {self.entry('fine_csv')['path']} does not match its selection pin")
-
     def test_changed_curve_repinned_disagrees_with_summary(self):
         # compress the curve's output deviation around Vcm by 2%: the crossing
         # (and so the fine window centring) is preserved, the tracking bounds
@@ -2335,31 +2280,6 @@ class SwingRawAudit(RawAuditCase):
             " ".join([ls_part for ls_part in [p[0], repr(vcm + (float(p[1]) - vcm) * 0.98)] + p[2:]])
             for p in (l.split() for l in ls)])
         self.definition_error()
-
-    def test_missing_curve_fails(self):
-        (self.fx.root / self.entry("fine_csv")["path"]).unlink()
-        self.assert_error(f"point {self.POINT}: missing raw swing fine_csv {self.entry('fine_csv')['path']}")
-
-    def test_missing_netlist_fails(self):
-        (self.fx.root / self.entry("coarse_netlist")["path"]).unlink()
-        self.assert_error(f"point {self.POINT}: missing raw swing coarse_netlist {self.entry('coarse_netlist')['path']}")
-
-    def test_missing_point_association_fails(self):
-        del self.raw()["files"][self.POINT]
-        self.fx.save_selection()
-        self.assert_error(f"point {self.POINT}: no pinned raw swing curves/netlists")
-
-    def test_pin_outside_the_grid_fails(self):
-        self.raw()["files"]["mos_tt_99C_1.20V"] = self.raw()["files"][self.POINT]
-        self.fx.save_selection()
-        self.assert_error("'mos_tt_99C_1.20V', which is outside the expected grid")
-
-    def test_duplicate_assignment_fails(self):
-        other = "mos_tt_27C_1.32V"
-        self.raw()["files"][other] = json.loads(json.dumps(self.raw()["files"][self.POINT]))
-        self.fx.save_selection()
-        errors = self.assert_error("is pinned twice", "belongs to another point")
-        self.assertTrue(any(other in e for e in errors), errors)
 
     def test_non_finite_and_malformed_samples_fail(self):
         for bad in (" 1.0e-02 nan 1.0e-02 -1.8e-05 ", " 1.0e-02 inf 1.0e-02 -1.8e-05 ",
@@ -2502,18 +2422,6 @@ class SwingRawAudit(RawAuditCase):
     def test_malformed_netlist_fails(self):
         self.edit_raw("coarse_netlist", lambda ls: [l for l in ls if not l.startswith("Vdd")])
         self.assert_error(f"point {self.POINT}: invalid rendered netlist")
-
-    def test_unpinned_artifact_entry_is_rejected(self):
-        del self.entry("fine_csv")["sha256"]
-        self.fx.save_selection()
-        with self.assertRaises(generate.SelectionError):
-            self.fx.build()
-
-    def test_audit_without_pins_is_rejected(self):
-        del self.fx.selection["records"][self.RECORD]["swing_raw"]
-        self.fx.save_selection()
-        with self.assertRaises(generate.SelectionError):
-            self.fx.build()
 
     # --- the shared module and runner ------------------------------------------
 
