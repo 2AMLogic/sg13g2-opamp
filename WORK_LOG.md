@@ -8,6 +8,16 @@
 
 ### 2026-11-23
 
+- **PR #483**: Retire five-job shard submission from the PSRR supply-gain runner (single request only)
+- **Issue #444** (closed): Retire five-job submission from the PSRR supply-gain runner
+- **PR #482**: refactor(sim): delegate ideal_swap's rppd rewrite to rewrite_rppd
+- **Issue #479** (closed): sim/post-layout: ideal_swap still hand-rolls the rppd-card scan that rewrite_rppd now owns
+- **PR #481**: test(signoff): share raw-pin controls via PointRawPinControlMixin
+- **Issue #477** (closed): Deduplicate generic per-point raw-pin negative controls and leftover Fixture() loops in signoff
+- **PR #476**: chore: gitignore .loom/account-ranking.* dispatcher state
+- **Issue #464** (closed): .loom/account-ranking.codex (dispatcher-written) is untracked and not gitignored
+- **PR #473**: refactor(sim): dedupe request/deck/hash helpers across post-layout generators
+- **Issue #468** (closed): Consolidate duplicated request, deck-rewrite, and hashing helpers in sim/post-layout/
 - **Issue #459** (closed): test flake (instrumented, two owners decisive): test_overlapping_starts_give_exactly_one_owner fails on T1 signoff register
 - **PR #463**: test: give the reservation race diagnostic inode/ctime and a clock probe
 - **Issue #470** (closed): Deduplicate generic harness-CSV negative controls across all six sim/*/klt/test_compare.py suites
