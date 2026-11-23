@@ -3,6 +3,7 @@
   python3 -m unittest sim/post-layout/test_rz_solver.py   (or run directly)
 """
 import contextlib
+import hashlib
 import importlib.util
 import io
 import json
@@ -27,6 +28,17 @@ rs = load("rz_solver")
 def load_json(path):
     with open(path) as f:
         return json.load(f)
+
+
+def deck_body_path(entry):
+    return os.path.join(os.path.dirname(entry["request"]), "tb_slew.body.spice")
+
+
+def canonical_deck_digest(body, dut):
+    with open(dut, "rb") as f:
+        dut_sha256 = hashlib.sha256(f.read()).hexdigest()
+    token = f'.include "<DUT:{dut_sha256}>"'
+    return hashlib.sha256(body.replace(f'.include "{dut}"', token).encode("utf-8")).hexdigest()
 
 
 # The shape of the klt 0.9.0 extraction of the drawn candidate, cut down to
@@ -250,11 +262,33 @@ class ControlsBuild(Scratch):
         for name in CONTROL_NAMES:
             entry = by_name[name]
             if entry["kind"] == "probe":
+                self.assertNotIn("deck_content_sha256", entry, name)
                 continue
             self.assertTrue(os.path.exists(entry["dut"]), name)
             self.assertEqual(entry["dut_sha256"], rs.sha256_file(entry["dut"]), name)
             if entry["kind"] == "slew":
                 self.assertTrue(entry["body_sha256"], name)
+            body = open(deck_body_path(entry)).read()
+            self.assertEqual(len(entry["deck_content_sha256"]), 64, name)
+            self.assertEqual(entry["deck_content_sha256"],
+                             canonical_deck_digest(body, os.path.abspath(entry["dut"])), name)
+            self.assertEqual(entry["deck_content_sha256"],
+                             rs.km.deck_content_sha256(body, os.path.abspath(entry["dut"])), name)
+
+    def test_options_legs_digest_the_rewritten_deck_not_the_pre_rewrite_one(self):
+        _, by_name = self.build()
+        plain = by_name["c451_ss_slew"]["deck_content_sha256"]
+        for tag, option in rs.SOLVER_LADDER:
+            name = f"c451_ss_slew_{tag}"
+            entry = by_name[name]
+            rewritten = open(deck_body_path(entry)).read()
+            self.assertEqual(rewritten.count("\n.options " + option + "\n"), 1, name)
+            self.assertEqual(entry["deck_content_sha256"],
+                             canonical_deck_digest(rewritten, self.dut), name)
+            unrewritten = canonical_deck_digest(
+                rewritten.replace(".options " + option + "\n", "", 1), self.dut)
+            self.assertEqual(unrewritten, plain, name)
+            self.assertNotEqual(entry["deck_content_sha256"], plain, name)
 
 
 if __name__ == "__main__":

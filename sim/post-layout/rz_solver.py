@@ -19,6 +19,12 @@ slew row would read once the extraction-side cause is fixed.
 `grade` is rz_candidate.py's grade: the worst value of every graded
 measurement in a directory of envelopes.
 
+Every entry built from a DUT (kinds `slew` and `slew-grid`) records
+`deck_content_sha256`, klt_measure.py's path-independent digest of the deck
+(issue #460), taken from the builder's summary; an `options` leg's is
+recomputed from the deck after its rewrite. The `probe` leg includes no DUT
+and records none.
+
 A batch request gets `batch.capacity_wait_s = 600` unless it already sets
 one. SG13G2_PEX_POINTS and KLT_PEX_SIM_BACKEND are read exactly as
 klt_measure.py reads them.
@@ -34,6 +40,7 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 if HERE not in sys.path:
     sys.path.insert(0, HERE)
+import klt_measure as km  # noqa: E402
 import rz_candidate as rzc  # noqa: E402
 import rz_screen as rz  # noqa: E402
 
@@ -206,16 +213,19 @@ def _leg(dut, out, name, point, options=None, note=""):
     body = os.path.join(art, "tb_slew.body.spice")
     path = os.path.join(art, f"{name}.request.json")
     os.replace(os.path.join(art, "slew.request.json"), path)
+    deck_content_sha256 = b["deck_content_sha256"]
     if options:
-        sourced = open(body).read()
-        open(body, "w").write(insert_options(sourced, options))
+        rewritten = insert_options(open(body).read(), options)
+        open(body, "w").write(rewritten)
+        deck_content_sha256 = km.deck_content_sha256(rewritten, b["dut"])
     req = json.load(open(path))
     req.pop("_comment", None)
     req["_comment"] = ("issue #451 CONTROL, not the committed bench: " + note
                        + "; otherwise sim/slew-rate/klt/slew.request.json unchanged")
     entry = dict(name=name, kind="slew", point=point, options=options, note=note,
                  measurements=b["measurements"], dut=os.path.abspath(dut),
-                 dut_sha256=sha256_file(dut), body_sha256=sha256_file(body))
+                 dut_sha256=sha256_file(dut), body_sha256=sha256_file(body),
+                 deck_content_sha256=deck_content_sha256)
     entry.update(_write_req(req, path))
     entry["corners"] = b["corners"] if b["corners"] else len(req["corners"]["process"]) * len(
         req["corners"]["temperature_c"]) * len(req["corners"]["supply_v"]["vdd"])
@@ -234,7 +244,7 @@ def _grid(dut, out, name, note):
                        + "; otherwise sim/slew-rate/klt/slew.request.json unchanged")
     entry = dict(name=name, kind="slew-grid", point=None, options=None, note=note,
                  measurements=b["measurements"], dut=os.path.abspath(dut),
-                 dut_sha256=sha256_file(dut))
+                 dut_sha256=sha256_file(dut), deck_content_sha256=b["deck_content_sha256"])
     entry.update(_write_req(req, path))
     cs = req["corners"]
     entry["corners"] = len(cs["process"]) * len(cs["temperature_c"]) * len(cs["supply_v"]["vdd"])
