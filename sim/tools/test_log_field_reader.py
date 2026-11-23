@@ -45,7 +45,7 @@ SIM_DIR = TOOLS_DIR.parent
 # The throwaway-tree fixture, stub binaries and deterministic record-id
 # constants are shared with the #209 lifecycle controls: same fake PDK
 # install shape, same stub-solver conventions.
-from test_env_drift_lifecycle import RID, SHA, TS, Tree, _write_exec  # noqa: E402
+from test_env_drift_lifecycle import RID, SHA, STUB_NGSPICE, TS, Tree, _write_exec  # noqa: E402
 
 PREFLIGHT = SIM_DIR / "preflight.sh"
 
@@ -159,6 +159,10 @@ MANIFEST="$2"
 SIM_DIR="${REPO}/sim"
 REPO_ROOT="${REPO}"
 export PDK PDK_ROOT
+[[ "$(command -v ngspice || true)" == "${REPO}/bin/ngspice" ]] || {
+  echo "read-fields.sh: expected stub ${REPO}/bin/ngspice first on PATH" >&2
+  exit 3
+}
 # shellcheck source=/dev/null
 source "${SIM_DIR}/preflight.sh"
 declare -A fld
@@ -186,6 +190,7 @@ class ReaderFixture:
         for name in ("preflight.sh", "env.sh", "record-paths.sh", "env-identity.sh", "ac-join.sh"):
             shutil.copy2(SIM_DIR / name, self.t.sim / name)
         _write_exec(self.t.sim / "tools" / "build-osdi.sh", "#!/usr/bin/env bash\nexit 0\n")
+        _write_exec(self.t.bin / "ngspice", STUB_NGSPICE)
         self.driver = self.t.root / "read-fields.sh"
         self.driver.write_text(DRIVER, encoding="utf-8")
 
@@ -291,10 +296,12 @@ class MissingMarkerControl(unittest.TestCase):
         self._tmp = tempfile.TemporaryDirectory()
         self.fx = ReaderFixture(self._tmp.name)
         self.log = Path(self._tmp.name) / "broken-copy.log"
+        self.after = Path(self._tmp.name) / "broken-after-complete.log"
         src = point_logs(newest_corners("open-loop-ac"), ".log")[0]
-        lines = [l for l in src.read_text(encoding="utf-8").splitlines(True)
-                 if not l.startswith("OP_VD1 ")]
-        self.log.write_text("".join(lines), encoding="utf-8")
+        lines = "".join(l for l in src.read_text(encoding="utf-8").splitlines(True)
+                        if not l.startswith("OP_VD1 "))
+        self.log.write_text(lines, encoding="utf-8")
+        self.after.write_text(lines, encoding="utf-8")
         self.complete = src
 
     def tearDown(self) -> None:
@@ -303,13 +310,14 @@ class MissingMarkerControl(unittest.TestCase):
     def test_deleted_marker_fails_and_names_only_that_field(self):
         markers = ["OP_VOUT", "OP_VD1", "OP_VD2", "OP_VTAIL", "OP_VIBIAS", "OP_IVDD"]
         got = self.fx.read([f"{self.log}\t{','.join(markers)}",
-                            f"{self.complete}\t{','.join(markers)}"])
-        broken, whole = got[str(self.log)], got[str(self.complete)]
-        self.assertEqual(broken["status"], 1)
-        self.assertEqual(broken["fields"]["OP_VD1"], "")
-        for marker in ("OP_VOUT", "OP_VD2", "OP_VTAIL", "OP_VIBIAS", "OP_IVDD"):
-            self.assertEqual(broken["fields"][marker], old_pipeline(self.complete, marker))
-        self.assertEqual(whole["status"], 0)
+                            f"{self.complete}\t{','.join(markers)}",
+                            f"{self.after}\t{','.join(markers)}"])
+        for broken in (got[str(self.log)], got[str(self.after)]):
+            self.assertEqual(broken["status"], 1)
+            self.assertEqual(broken["fields"]["OP_VD1"], "")
+            for marker in ("OP_VOUT", "OP_VD2", "OP_VTAIL", "OP_VIBIAS", "OP_IVDD"):
+                self.assertEqual(broken["fields"][marker], old_pipeline(self.complete, marker))
+        self.assertEqual(got[str(self.complete)]["status"], 0)
 
 
 # The stub solver: the #209 lifecycle shape (markers from the rendered deck's

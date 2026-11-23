@@ -281,9 +281,10 @@ sg13g2_read_log_fields() {
   shift 2
   local marks=("$@")
   local out mark val ok=0
+  __fields=()
   out="$(awk -v want="${marks[*]}" '
     BEGIN { n = split(want, w, " "); for (i = 1; i <= n; i++) wanted[w[i]] = 1 }
-    $1 in wanted && !($1 in seen) { seen[$1] = 1; print $1 "\t" $2 }
+    !/^[[:space:]]/ && ($1 in wanted) && !($1 in seen) { seen[$1] = 1; print $1 "\t" $2 }
   ' "${log}")" || out=""
   if [[ -n "${out}" ]]; then
     while IFS=$'\t' read -r mark val; do
