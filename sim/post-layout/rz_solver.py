@@ -252,7 +252,7 @@ def _grid(dut, out, name, note):
 
 
 def controls(dut, schematic, out):
-    """The 18 issue-#451 legs. Returns the manifest list."""
+    """The 17 issue-#451 legs. Returns the manifest list."""
     dut = os.path.abspath(dut)
     schematic = os.path.abspath(schematic)
     os.makedirs(out, exist_ok=True)

@@ -93,7 +93,8 @@ mismatch reads exactly like tampering.
   and the DUT bytes alone -- equal from any checkout and any artifacts
   directory, different when either changes. Record it next to
   `netlist_sha256` with a new leg. A leg that rewrites the deck after the
-  build (`rz_candidate.py`'s `gear` legs) has to hash the final deck instead;
+  build (`rz_candidate.py`'s `gear` legs, `rz_solver.py`'s `options` legs)
+  has to hash the final deck instead;
   from the repository root, with the DUT passed exactly as the deck's include
   line carries it (absolute):
 
