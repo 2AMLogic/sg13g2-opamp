@@ -26,7 +26,11 @@ measurements and their ratified limits -- is the committed bench.
 SG13G2_PEX_POINTS and KLT_PEX_SIM_BACKEND are read exactly as klt_measure.py
 reads them. A batch request gets `batch.capacity_wait_s = 600` unless it
 already sets one: the fleet is vCPU-budgeted, so a submit waits with backoff
-instead of failing on batch_no_capacity.
+instead of failing on batch_no_capacity. Prints a JSON summary on stdout:
+`netlist_sha256` is the deck digest klt records as
+`provenance.input.content_hash` (the deck embeds the DUT's absolute path, so
+it reproduces only from the checkout that built it), `deck_content_sha256` is
+the path-independent digest of the same deck (issue #460).
 """
 import argparse
 import hashlib
@@ -174,7 +178,8 @@ def slew_build(dut_path, art):
         (dropped if line.split(" ")[0] in INTERNAL_SOURCES else kept).append(line)
     if len(dropped) != len(INTERNAL_SOURCES):
         sys.exit(f"rz_screen: expected {len(INTERNAL_SOURCES)} internal-node B-sources, dropped {len(dropped)}")
-    open(body_path, "w").write("\n".join(kept))
+    deck = "\n".join(kept)
+    open(body_path, "w").write(deck)
 
     req = json.load(open(os.path.join(SLEW_DIR, "slew.request.json")))
     req.pop("_comment", None)
@@ -191,7 +196,8 @@ def slew_build(dut_path, art):
     corners = restrict(req, os.environ["SG13G2_PEX_POINTS"]) if os.environ.get("SG13G2_PEX_POINTS") else None
     req_path = os.path.join(art, "slew.request.json")
     json.dump(req, open(req_path, "w"), indent=1)
-    return {"netlist": body_path, "netlist_sha256": sha256_file(body_path), "request": req_path,
+    return {"netlist": body_path, "netlist_sha256": sha256_file(body_path),
+            "deck_content_sha256": km.deck_content_sha256(deck, dut_path), "request": req_path,
             "dut": dut_path, "dut_sha256": sha256_file(dut_path), "backend": req.get("backend"),
             "corners": corners, "measurements": len(req["measurements"])}
 

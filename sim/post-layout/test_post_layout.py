@@ -2,13 +2,16 @@
 
   python3 -m unittest sim/post-layout/test_post_layout.py   (or run directly)
 """
+import hashlib
 import importlib.util
 import io
 import json
 import math
 import os
+import shutil
 import tempfile
 import unittest
+from unittest import mock
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -109,6 +112,91 @@ class KltMeasure(unittest.TestCase):
             open(sub, "w").write(".SUBCKT opamp_core VDD VSS INN INP OUT\n.ENDS\n")
             with self.assertRaises(SystemExit):
                 km.build(sub, os.path.join(d, "s"))
+
+    def test_build_reports_a_path_independent_deck_digest_and_unchanged_files(self):
+        """klt's content_hash embeds the DUT path, so it differs per checkout;
+        deck_content_sha256 must not, and the written files must not change.
+        One DUT path carries regex metacharacters on purpose."""
+        subckt = ".SUBCKT opamp_core VDD VSS INN INP OUT IBIAS\nM1 a b c d x\n.ENDS\n"
+        reqs = ("openloop_ac.request.json", "openloop_op.request.json")
+        with tempfile.TemporaryDirectory() as a, tempfile.TemporaryDirectory() as b, \
+                mock.patch.dict(os.environ):
+            os.environ.pop("SG13G2_PEX_POINTS", None)
+            os.environ.pop("KLT_PEX_SIM_BACKEND", None)
+            dut_a = os.path.join(a, "pex[1](v2).spice")
+            dut_b = os.path.join(b, "nested", "deeper", "pex.spice")
+            os.makedirs(os.path.dirname(dut_b))
+            for dut in (dut_a, dut_b):
+                open(dut, "w").write(subckt)
+            s_a = km.build(dut_a, os.path.join(a, "art"))
+            s_b = km.build(dut_b, os.path.join(b, "elsewhere", "art"))
+            for fname in reqs:
+                self.assertEqual(open(os.path.join(a, "art", fname), "rb").read(),
+                                 open(os.path.join(b, "elsewhere", "art", fname), "rb").read())
+            committed = json.load(open(os.path.join(km.KLT_DIR, "openloop_ac.request.json")))
+            committed.pop("_comment")
+            committed["netlist"] = "tb_openloop_ac.body.spice"
+            self.assertEqual(json.load(open(os.path.join(a, "art", reqs[0]))), committed)
+
+            self.assertEqual(set(s_a), {"netlist", "netlist_sha256", "deck_content_sha256",
+                                        "dut", "dut_sha256", "requests"})
+            self.assertEqual(s_a["requests"], [os.path.join(a, "art", f) for f in reqs])
+            self.assertEqual((s_a["netlist"], s_a["dut"]),
+                             (os.path.join(a, "art", "tb_openloop_ac.body.spice"), dut_a))
+            self.assertEqual(s_a["deck_content_sha256"], s_b["deck_content_sha256"])
+            self.assertNotEqual(s_a["netlist_sha256"], s_b["netlist_sha256"])
+            self.assertEqual(s_a["dut_sha256"], s_b["dut_sha256"])
+            body_a, body_b = open(s_a["netlist"]).read(), open(s_b["netlist"]).read()
+            for s, body in ((s_a, body_a), (s_b, body_b)):
+                self.assertIn(f'\n.include "{s["dut"]}"\nXdut vdd vss inn inp out ibias opamp_core\n',
+                              body)
+                self.assertEqual(s["netlist_sha256"],
+                                 hashlib.sha256(open(s["netlist"], "rb").read()).hexdigest())
+                self.assertEqual(s["dut_sha256"],
+                                 hashlib.sha256(open(s["dut"], "rb").read()).hexdigest())
+                self.assertEqual(s["deck_content_sha256"], km.deck_content_sha256(body, s["dut"]))
+                token = f'.include "<DUT:{s["dut_sha256"]}>"'
+                self.assertEqual(s["deck_content_sha256"], hashlib.sha256(
+                    body.replace(f'.include "{s["dut"]}"', token).encode()).hexdigest())
+            self.assertEqual(body_a.replace(f'.include "{dut_a}"', ".include DUT"),
+                             body_b.replace(f'.include "{dut_b}"', ".include DUT"))
+
+    def test_deck_content_sha256_covers_a_flat_dut_and_tracks_content(self):
+        flat = "* flat\nM1 a b c d x\n"
+        with tempfile.TemporaryDirectory() as d:
+            dut = os.path.join(d, "flat.spice")
+            open(dut, "w").write(flat)
+            s = km.build(dut, os.path.join(d, "art"))
+            body = open(s["netlist"]).read()
+            self.assertNotIn("Xdut", body)
+            self.assertEqual(s["deck_content_sha256"], km.deck_content_sha256(body, dut))
+            open(dut, "a").write("M2 a b c d x\n")
+            s_dut = km.build(dut, os.path.join(d, "art-dut"))
+            bench = tempfile.mkdtemp()
+            try:
+                shutil.copytree(km.KLT_DIR, bench, dirs_exist_ok=True)
+                path = os.path.join(bench, "tb_openloop_ac.body.spice")
+                text = open(path).read()
+                open(path, "w").write(text.replace("Cload out vss 2e-12", "Cload out vss 1e-12"))
+                saved = km.KLT_DIR
+                km.KLT_DIR = bench
+                try:
+                    s_bench = km.build(dut, os.path.join(d, "art-bench"))
+                finally:
+                    km.KLT_DIR = saved
+            finally:
+                shutil.rmtree(bench)
+        self.assertEqual(len({s["deck_content_sha256"], s_dut["deck_content_sha256"],
+                              s_bench["deck_content_sha256"]}), 3)
+
+    def test_deck_content_sha256_is_loud_without_exactly_one_dut_include(self):
+        with tempfile.TemporaryDirectory() as d:
+            dut = os.path.join(d, "dut.spice")
+            open(dut, "w").write("M1 a b c d x\n")
+            inc = f'.include "{dut}"'
+            for text in ("* no include\n", f"{inc}\n{inc}\n", f'.include "{dut}.bak"\n', f"  {inc}\n"):
+                with self.assertRaises(SystemExit, msg=text):
+                    km.deck_content_sha256(text, dut)
 
 
 def report(over=None):

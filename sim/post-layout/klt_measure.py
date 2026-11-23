@@ -10,7 +10,11 @@ re-pointed at <dut-netlist>) and the AC and OP `klt sim` requests next to it.
 A flat DUT is included as-is; a `.SUBCKT` DUT (the netlist `klt pex` extracts)
 is included and instantiated as `Xdut` with pins matched BY NAME to the bench
 nodes (vdd vss inn inp out ibias). Internal-node measurements (d1/d2/tail) are
-dropped from the OP request so BOTH legs run the identical bench.
+dropped from the OP request so BOTH legs run the identical bench. Returns a
+summary: `netlist_sha256` is the deck digest klt records as
+`provenance.input.content_hash` (the deck embeds the DUT's absolute path, so
+it reproduces only from the checkout that built it), `deck_content_sha256` is
+the path-independent digest of the same deck (issue #460).
 
 `convert` joins the two envelopes on (process, vdd, temperature) and prints the
 measurement document `klt pex --measure-command` expects. Loud, never partial:
@@ -21,6 +25,7 @@ Environment (optional): SG13G2_PEX_POINTS="mos_tt:27:1.20" restricts the grid to
 those points (debug probe). KLT_PEX_SIM_BACKEND overrides the requests' own
 `"backend": "batch"` (the shared-host rule is that grids go to the batch fleet).
 """
+import hashlib
 import json
 import math
 import os
@@ -48,11 +53,20 @@ def parse_points(spec):
     return pts
 
 
+def sha256_file(path):
+    with open(path, "rb") as f:
+        return hashlib.sha256(f.read()).hexdigest()
+
+
+def dut_include(dut):
+    return f'.include "{dut}"'
+
+
 def dut_lines(dut):
     """Return (include+instance lines, pin list or None)."""
     text = open(dut).read()
     m = re.search(r"^\s*\.subckt\s+(\S+)\s+(.*)$", text, re.I | re.M)
-    inc = f'.include "{dut}"'
+    inc = dut_include(dut)
     if not m:
         return [inc]
     name, pins = m.group(1), m.group(2).split()
@@ -61,6 +75,26 @@ def dut_lines(dut):
     if missing:
         sys.exit(f"klt_measure: .SUBCKT {name} has no pin(s) {missing} (pins: {pins})")
     return [inc, "Xdut " + " ".join(low) + " " + name]
+
+
+def deck_content_sha256(body_text, dut):
+    """Return the sha256 of a built deck with its DUT include path replaced by
+    `<DUT:sha256(dut)>`.
+
+    klt records the sha256 of the deck as written (`provenance.input.
+    content_hash`), and that deck carries the DUT's absolute path, so the
+    digest reproduces only from the checkout that built the deck. With the
+    path replaced by a digest of the DUT's bytes this is a function of the
+    bench and the DUT content alone. `dut` is the path exactly as the deck's
+    include line carries it (the generators write it absolute). Loud: the
+    deck must carry exactly the one include line `dut_lines` wrote for `dut`.
+    """
+    lines = body_text.split("\n")
+    hits = [i for i, line in enumerate(lines) if line == dut_include(dut)]
+    if len(hits) != 1:
+        sys.exit(f"klt_measure: deck has {len(hits)} DUT .include lines for {dut}, expected 1")
+    lines[hits[0]] = f'.include "<DUT:{sha256_file(dut)}>"'
+    return hashlib.sha256("\n".join(lines).encode("utf-8")).hexdigest()
 
 
 def build(dut, art):
@@ -73,7 +107,8 @@ def build(dut, art):
                      "\n".join(dut_lines(dut)), body, flags=re.M)
     if n != 1:
         sys.exit("klt_measure: bench body has no single DUT .include line")
-    open(os.path.join(art, "tb_openloop_ac.body.spice"), "w").write(new)
+    body_path = os.path.join(art, "tb_openloop_ac.body.spice")
+    open(body_path, "w").write(new)
 
     pts = parse_points(os.environ["SG13G2_PEX_POINTS"]) if os.environ.get("SG13G2_PEX_POINTS") else None
     for fname in ("openloop_ac.request.json", "openloop_op.request.json"):
@@ -102,6 +137,10 @@ def build(dut, art):
             cs["supply_v"] = {"vdd": [vdds[i] for i in keep_v], "vinp": [vinps[i] for i in keep_v]}
             cs["temperature_c"], cs["process"] = keep_t, keep_p
         json.dump(req, open(os.path.join(art, fname), "w"), indent=1)
+    reqs = ("openloop_ac.request.json", "openloop_op.request.json")
+    return {"netlist": body_path, "netlist_sha256": sha256_file(body_path),
+            "deck_content_sha256": deck_content_sha256(new, dut), "dut": dut,
+            "dut_sha256": sha256_file(dut), "requests": [os.path.join(art, f) for f in reqs]}
 
 
 def _corners(path, what):
