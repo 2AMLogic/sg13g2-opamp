@@ -21,6 +21,12 @@ never for a bound.
 under a directory and prints the worst value of each graded measurement with
 its corner, status and fleet job.
 
+Every entry built from a DUT (kinds `ac`, `op` and `slew`) records
+`deck_content_sha256`, klt_measure.py's path-independent digest of the deck
+(issue #460), taken from the builder's summary; a `gear` leg's is recomputed
+from the deck after its rewrite. The `probe` legs include no DUT and record
+none.
+
 A batch request gets `batch.capacity_wait_s = 600` unless it already sets
 one, so a submit waits with backoff instead of failing on batch_no_capacity.
 SG13G2_PEX_POINTS and KLT_PEX_SIM_BACKEND are read exactly as
@@ -143,14 +149,15 @@ def _write_req(req, path):
 def _ac(dut, out, name, point, res=None, cap=None):
     art = os.path.join(out, name)
     os.environ["SG13G2_PEX_POINTS"] = point
-    km.build(dut, art)
+    b = km.build(dut, art)
     path = os.path.join(art, f"{name}.request.json")
     os.replace(os.path.join(art, "openloop_ac.request.json"), path)
     os.remove(os.path.join(art, "openloop_op.request.json"))
     req = json.load(open(path))
     req.pop("_comment", None)
     rewritten = set_passives(req, res, cap) if res else 0
-    entry = dict(name=name, kind="ac", point=point, res=res, cap=cap, passive_sections_rewritten=rewritten)
+    entry = dict(name=name, kind="ac", point=point, res=res, cap=cap, passive_sections_rewritten=rewritten,
+                 deck_content_sha256=b["deck_content_sha256"])
     entry.update(_write_req(req, path))
     cs = req["corners"]
     entry["corners"] = len(cs["process"]) * len(cs["temperature_c"]) * len(cs["supply_v"]["vdd"])
@@ -167,7 +174,7 @@ def _grid(dut, out, kind):
         os.replace(os.path.join(art, "slew.request.json"), path)
         measurements = b["measurements"]
     else:
-        km.build(dut, art)
+        b = km.build(dut, art)
         path = os.path.join(art, f"{name}.request.json")
         os.replace(os.path.join(art, f"openloop_{kind}.request.json"), path)
         other = os.path.join(art, f"openloop_{'op' if kind == 'ac' else 'ac'}.request.json")
@@ -176,7 +183,8 @@ def _grid(dut, out, kind):
         measurements = None
     req = json.load(open(path))
     req.pop("_comment", None)
-    entry = dict(name=name, kind=kind, point=None, res=None, cap=None, passive_sections_rewritten=0, measurements=measurements)
+    entry = dict(name=name, kind=kind, point=None, res=None, cap=None, passive_sections_rewritten=0, measurements=measurements,
+                 deck_content_sha256=b["deck_content_sha256"])
     entry.update(_write_req(req, path))
     cs = req["corners"]
     entry["corners"] = len(cs["process"]) * len(cs["temperature_c"]) * len(cs["supply_v"]["vdd"])
@@ -193,9 +201,11 @@ def _slew(dut, out, name, point, res=None, cap=None, gear=False, control=False, 
     body = os.path.join(art, "tb_slew.body.spice")
     path = os.path.join(art, f"{name}.request.json")
     os.replace(os.path.join(art, "slew.request.json"), path)
+    deck_content_sha256 = b["deck_content_sha256"]
     if gear:
         geared = insert_gear(open(body).read())
         open(body, "w").write(geared)
+        deck_content_sha256 = km.deck_content_sha256(geared, b["dut"])
     req = json.load(open(path))
     rewritten = set_passives(req, res, cap) if res else 0
     if control:
@@ -206,7 +216,8 @@ def _slew(dut, out, name, point, res=None, cap=None, gear=False, control=False, 
                            + "otherwise sim/slew-rate/klt/slew.request.json unchanged")
     entry = dict(name=name, kind="slew", point=point, res=res, cap=cap, gear=bool(gear),
                  passive_sections_rewritten=rewritten, measurements=b["measurements"],
-                 dut=dut, dut_sha256=sha256_file(dut), body_sha256=sha256_file(body))
+                 dut=dut, dut_sha256=sha256_file(dut), body_sha256=sha256_file(body),
+                 deck_content_sha256=deck_content_sha256)
     entry.update(_write_req(req, path))
     entry["corners"] = b["corners"] if b["corners"] else len(req["corners"]["process"]) * len(
         req["corners"]["temperature_c"]) * len(req["corners"]["supply_v"]["vdd"])
