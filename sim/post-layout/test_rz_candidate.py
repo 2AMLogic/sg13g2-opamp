@@ -3,6 +3,7 @@
   python3 -m unittest sim/post-layout/test_rz_candidate.py   (or run directly)
 """
 import contextlib
+import hashlib
 import importlib.util
 import io
 import json
@@ -27,6 +28,18 @@ rc = load("rz_candidate")
 def load_json(path):
     with open(path) as f:
         return json.load(f)
+
+
+def deck_body_path(entry):
+    name = "tb_slew.body.spice" if entry["kind"] == "slew" else "tb_openloop_ac.body.spice"
+    return os.path.join(os.path.dirname(entry["request"]), name)
+
+
+def canonical_deck_digest(body, dut):
+    with open(dut, "rb") as f:
+        dut_sha256 = hashlib.sha256(f.read()).hexdigest()
+    token = f'.include "<DUT:{dut_sha256}>"'
+    return hashlib.sha256(body.replace(f'.include "{dut}"', token).encode("utf-8")).hexdigest()
 
 
 # The shape of the klt 0.9.0 extraction of the drawn candidate, cut down to
@@ -186,6 +199,41 @@ class BenchTest(Scratch):
                          {(rc.CAP_LIB, "cap_typ"), (rc.RES_LIB, "res_typ")})
         self.assertEqual(len(req["measurements"]), 20)
 
+    def test_every_leg_records_the_digest_of_the_deck_it_built(self):
+        out = os.path.join(self.tmp, "bench")
+        with contextlib.redirect_stdout(io.StringIO()):
+            manifest = rc.bench(self.dut, out)
+        for entry in manifest:
+            body = open(deck_body_path(entry)).read()
+            self.assertEqual(len(entry["deck_content_sha256"]), 64, entry["name"])
+            self.assertEqual(entry["deck_content_sha256"], canonical_deck_digest(body, self.dut), entry["name"])
+            self.assertEqual(entry["deck_content_sha256"], rc.km.deck_content_sha256(body, self.dut), entry["name"])
+
+    def test_digest_tracks_the_deck_and_not_the_request(self):
+        out = os.path.join(self.tmp, "bench")
+        with contextlib.redirect_stdout(io.StringIO()):
+            manifest = rc.bench(self.dut, out)
+        open_loop = {e["deck_content_sha256"] for e in manifest if e["kind"] in ("ac", "op")}
+        slew = {e["deck_content_sha256"] for e in manifest if e["kind"] == "slew"}
+        self.assertEqual((len(open_loop), len(slew)), (1, 1))
+        self.assertNotEqual(open_loop, slew)
+        self.assertGreater(len({e["request_sha256"] for e in manifest}), 2)
+
+    def test_digest_is_path_independent_while_body_sha256_is_not(self):
+        elsewhere = os.path.join(self.tmp, "elsewhere", "nested", "pex.spice")
+        os.makedirs(os.path.dirname(elsewhere))
+        shutil.copy(self.dut, elsewhere)
+        with contextlib.redirect_stdout(io.StringIO()):
+            here = {e["name"]: e for e in rc.bench(self.dut, os.path.join(self.tmp, "a"))}
+            there = {e["name"]: e for e in rc.bench(elsewhere, os.path.join(self.tmp, "b"))}
+        self.assertEqual(sorted(here), sorted(there))
+        for name, entry in here.items():
+            self.assertEqual(entry["deck_content_sha256"], there[name]["deck_content_sha256"], name)
+            self.assertEqual(entry["request_sha256"], there[name]["request_sha256"], name)
+            if "body_sha256" in entry:
+                self.assertEqual(entry["dut_sha256"], there[name]["dut_sha256"], name)
+                self.assertNotEqual(entry["body_sha256"], there[name]["body_sha256"], name)
+
 
 class ControlTest(Scratch):
     def build(self):
@@ -250,6 +298,41 @@ class ControlTest(Scratch):
             body = open(os.path.join(os.path.dirname(by[name]["request"]), "probe.body.spice")).read()
             self.assertIn("XR1 in out 0 rppd l=7.47u w=1u", body)
             self.assertEqual((rc.GEAR + "\n") in body, gear)
+
+    def test_every_dut_leg_records_a_digest_and_the_probes_record_none(self):
+        manifest, out = self.build()
+        for entry in manifest:
+            if entry["kind"] == "probe":
+                self.assertNotIn("deck_content_sha256", entry, entry["name"])
+                continue
+            dut = os.path.abspath(entry["dut"])
+            body = open(deck_body_path(entry)).read()
+            self.assertEqual(entry["deck_content_sha256"], canonical_deck_digest(body, dut), entry["name"])
+            self.assertEqual(entry["deck_content_sha256"], rc.km.deck_content_sha256(body, dut), entry["name"])
+            self.assertEqual(entry["dut_sha256"], rc.sha256_file(dut), entry["name"])
+            self.assertEqual(entry["body_sha256"], rc.sha256_file(deck_body_path(entry)), entry["name"])
+        by = {m["name"]: m for m in manifest}
+        same_point = [by[n] for n in ("ctl_ideal_ss_slew", "ctl_sch_ss_slew",
+                                      "ctl_swet1_ss_res_typ_cap_typ_slew", "ctl_bodyhub_ss_res_typ_cap_typ_slew")]
+        self.assertEqual(len({e["deck_content_sha256"] for e in same_point}), 4)
+
+    def test_gear_legs_digest_the_rewritten_deck_not_the_pre_gear_one(self):
+        manifest, out = self.build()
+        with contextlib.redirect_stdout(io.StringIO()):
+            plain = {e["name"]: e for e in rc.bench(self.dut, os.path.join(self.tmp, "bench"))}
+        by = {m["name"]: m for m in manifest}
+        pairs = [("ctl_gear_ss_slew", "cand_ss_slew"), ("ctl_gear_grid_slew", "grid_slew")]
+        pairs += [(f"ctl_gear_ss_{r}_{c}_slew", f"pass_ss_{r}_{c}_slew")
+                  for r in rc.RES_SECTIONS for c in rc.CAP_SECTIONS]
+        for geared_name, plain_name in pairs:
+            geared = open(deck_body_path(by[geared_name])).read()
+            self.assertEqual(geared.count("\n" + rc.GEAR + "\n"), 1, geared_name)
+            self.assertEqual(by[geared_name]["deck_content_sha256"], canonical_deck_digest(geared, self.dut),
+                             geared_name)
+            ungeared = canonical_deck_digest(geared.replace(rc.GEAR + "\n", "", 1), self.dut)
+            self.assertEqual(ungeared, plain[plain_name]["deck_content_sha256"], geared_name)
+            self.assertNotEqual(ungeared, by[geared_name]["deck_content_sha256"], geared_name)
+            self.assertEqual(by[geared_name]["body_sha256"], rc.sha256_file(deck_body_path(by[geared_name])), geared_name)
 
 
 class GradeTest(unittest.TestCase):
