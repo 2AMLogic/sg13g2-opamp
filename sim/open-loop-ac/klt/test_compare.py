@@ -130,7 +130,13 @@ class Base(unittest.TestCase):
         return C.compare(ac, op, harness or self.harness, self.bias, ac_env, op_env)
 
 
-class TestHarnessInputs(Base):
+class TestHarnessInputs(M.HarnessCsvControlMixin, Base):
+    harness_csv = HARNESS_CSV
+    nonfinite_col = "av0_db"
+
+    def load_csv(self, path):
+        return C.load_harness_csv(path)
+
     def test_committed_record_is_the_full_grid(self):
         self.assertEqual(sorted(self.harness), sorted(C.expected_keys()))
         self.assertEqual(len(self.harness), 45)
@@ -156,43 +162,6 @@ class TestHarnessInputs(Base):
             frac = db[i - 1] / (db[i - 1] - db[i])
             g = 10 ** (math.log10(fr[i - 1]) + frac * (math.log10(fr[i]) - math.log10(fr[i - 1])))
             self.assertAlmostEqual(g / self.harness[k]["gbw_hz"], 1.0, delta=1e-5, msg=C.key_str(k))
-
-    def test_duplicate_harness_row_rejected(self):
-        with tempfile.TemporaryDirectory() as d:
-            p = os.path.join(d, "dup.csv")
-            lines = _read(HARNESS_CSV).splitlines()
-            _write(p, "\n".join(lines + [lines[5]]) + "\n")
-            with self.assertRaisesRegex(C.InputError, r"duplicate row"):
-                C.load_harness_csv(p)
-
-    def test_nonfinite_harness_value_rejected(self):
-        with tempfile.TemporaryDirectory() as d:
-            p = os.path.join(d, "nan.csv")
-            rows = copy.deepcopy(self.rows)
-            rows[3]["av0_db"] = "nan"
-            with open(p, "w", newline="") as f:
-                w = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
-                w.writeheader()
-                w.writerows(rows)
-            with self.assertRaisesRegex(C.InputError, rf"{rows[3]['point_id']}: harness CSV av0_db"):
-                C.load_harness_csv(p)
-
-    def test_short_or_malformed_row_is_input_error(self):
-        """A truncated row or an unparsable temp_c is exit-2 material (an
-        InputError), never a raw KeyError/ValueError/TypeError (issue #286)."""
-        with F.malformed_csv_paths(HARNESS_CSV) as paths:
-            for p in paths:
-                with self.assertRaisesRegex(C.InputError, "unparsable row"):
-                    C.load_harness_csv(p)
-
-    def test_missing_harness_row_rejected(self):
-        with tempfile.TemporaryDirectory() as d:
-            p = os.path.join(d, "short.csv")
-            lines = _read(HARNESS_CSV).splitlines()
-            dropped = lines.pop(10).split(",")[0]
-            _write(p, "\n".join(lines) + "\n")
-            with self.assertRaisesRegex(C.InputError, rf"{dropped}: missing from harness CSV"):
-                C.load_harness_csv(p)
 
 
 class TestBaselineControl(Base):

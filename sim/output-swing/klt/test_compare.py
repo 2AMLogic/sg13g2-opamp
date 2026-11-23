@@ -33,7 +33,6 @@ sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.normpath(os.path.join(HERE, "..", "..", "tools")))
 import compare as C  # noqa: E402
 import envelope_control_mixin as M  # noqa: E402
-import envelope_fixtures as F  # noqa: E402
 
 BENCH = os.path.dirname(HERE)
 HARNESS_ID = "20260921-151759-707b34c"
@@ -368,7 +367,13 @@ class TestEnvelopeNegativeControls(M.EnvelopeControlMixin, Base):
         self.assertRejects(env, "missing process or supply_v", NOM)
 
 
-class TestHarnessCsv(Base):
+class TestHarnessCsv(M.HarnessCsvControlMixin, Base):
+    harness_csv = HARNESS_CSV
+    nonfinite_col = "swing_span_v"
+
+    def load_csv(self, path):
+        return C.load_harness_csv(path)
+
     def write(self, rows, header=None):
         header = header or list(rows[0].keys())
         f = tempfile.NamedTemporaryFile("w", suffix=".csv", delete=False, newline="")
@@ -379,19 +384,6 @@ class TestHarnessCsv(Base):
         f.close()
         return f.name
 
-    def test_missing_row(self):
-        rows = _rows()[:-1]
-        with self.assertRaises(C.InputError) as cm:
-            C.load_harness_csv(self.write(rows))
-        self.assertIn("missing from harness CSV", str(cm.exception))
-
-    def test_duplicate_row(self):
-        rows = _rows()
-        rows[1] = dict(rows[0])
-        with self.assertRaises(C.InputError) as cm:
-            C.load_harness_csv(self.write(rows))
-        self.assertIn("duplicate row", str(cm.exception))
-
     def test_extra_row_for_grid(self):
         rows = _rows()
         extra = dict(rows[0])
@@ -400,27 +392,11 @@ class TestHarnessCsv(Base):
             C.load_harness_csv(self.write(rows + [extra]))
         self.assertIn("not a point of the ratified grid", str(cm.exception))
 
-    def test_nonfinite_and_blank(self):
-        for bad in ("nan", "inf", ""):
-            rows = _rows()
-            rows[0]["swing_span_v"] = bad
-            with self.assertRaises(C.InputError):
-                C.load_harness_csv(self.write(rows))
-
     def test_absent_column(self):
         rows = [{k: v for k, v in r.items() if k != "headroom_lo_v"} for r in _rows()]
         with self.assertRaises(C.InputError) as cm:
             C.load_harness_csv(self.write(rows))
         self.assertIn("headroom_lo_v", str(cm.exception))
-
-    def test_short_or_malformed_row_is_input_error(self):
-        """A truncated row or an unparsable temp_c is exit-2 material (an
-        InputError), never a raw KeyError/ValueError (issue #181)."""
-        with F.malformed_csv_paths(HARNESS_CSV) as paths:
-            for p in paths:
-                with self.assertRaises(C.InputError):
-                    C.load_harness_csv(p)
-
 
     def test_nominal_ignores_other_rows(self):
         h = C.load_harness_csv(HARNESS_CSV, NOM)

@@ -155,7 +155,13 @@ class TestRequest(Base):
         self.assertEqual(C.PSRR_BOUND_DB, 1.87)
 
 
-class TestHarnessInputs(Base):
+class TestHarnessInputs(M.HarnessCsvControlMixin, Base):
+    harness_csv = HARNESS_CSV
+    nonfinite_col = "psrr_db"
+
+    def load_csv(self, path):
+        return C.load_harness_csv(path)
+
     def test_committed_records_are_the_full_grid(self):
         self.assertEqual(len(self.harness), 45)
         self.assertEqual(len(self.openloop), 45)
@@ -173,11 +179,6 @@ class TestHarnessInputs(Base):
         self.addCleanup(os.unlink, path)
         return path
 
-    def test_duplicate_harness_row_rejected(self):
-        p = self._write(self.h_rows + [self.h_rows[0]], list(self.h_rows[0]))
-        with self.assertRaisesRegex(C.InputError, "duplicate row"):
-            C.load_harness_csv(p)
-
     def test_missing_openloop_row_rejected(self):
         rows = _rows(OPENLOOP_CSV)[1:]
         p = self._write(rows, list(rows[0]))
@@ -190,14 +191,6 @@ class TestHarnessInputs(Base):
         p = self._write(rows, list(rows[0]))
         with self.assertRaisesRegex(C.InputError, "av0_db 'nan'"):
             C.load_openloop_csv(p)
-
-    def test_short_or_malformed_row_is_input_error(self):
-        """A truncated row or an unparsable temp_c is exit-2 material (an
-        InputError), never a raw KeyError/ValueError (issue #181)."""
-        with F.malformed_csv_paths(HARNESS_CSV) as paths:
-            for p in paths:
-                with self.assertRaises(C.InputError):
-                    C.load_harness_csv(p)
 
     def test_openloop_short_or_malformed_row_is_input_error(self):
         """A truncated row or an unparsable temp_c is exit-2 material (an
