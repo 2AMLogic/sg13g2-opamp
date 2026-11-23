@@ -30,8 +30,6 @@ one. SG13G2_PEX_POINTS and KLT_PEX_SIM_BACKEND are read exactly as
 klt_measure.py reads them.
 """
 import argparse
-import glob
-import hashlib
 import json
 import os
 import re
@@ -42,7 +40,13 @@ if HERE not in sys.path:
     sys.path.insert(0, HERE)
 import klt_measure as km  # noqa: E402
 import rz_candidate as rzc  # noqa: E402
-import rz_screen as rz  # noqa: E402
+
+#: Shared helpers, single-defined in klt_measure / rz_candidate (issue #468);
+#: re-exported so this module's callers and tests keep the names.
+sha256_file = km.sha256_file
+_write_req = rzc._write_req
+insert_options = rzc.insert_options
+body_on_hub = rzc.body_on_hub
 
 #: The binding slew corner (spec/target-spec.md section 2): where the
 #: committed bench aborts on the extraction (issue #430 record, section 5).
@@ -76,7 +80,6 @@ SOLVER_LADDER = (
     ("noopiter", "noopiter"),
 )
 
-RPPD_CARD = rzc.RPPD_CARD
 STAR_R = re.compile(r"^R(\S+?)_t(\d+)\s+(\S+?)__t\d+\s+(\S+)\s+(\S+)\s*$")
 SCH_CARD = re.compile(r"^(X\S+\s+\S+\s+\S+\s+)vss(\s+rppd\s+.*)$", re.M)
 
@@ -112,7 +115,6 @@ def merge_leaves(text, pairs):
         if _net_key(leaf.split("__t")[0]) != _net_key(net):
             sys.exit(f"rz_solver: leaf {leaf!r} is not a leaf of net {net!r}")
         want[leaf] = None
-    hubs = {}
     for line in text.split("\n"):
         m = STAR_R.match(line)
         if m and m.group(3) + "__t" + m.group(2) in want:
@@ -136,11 +138,6 @@ def merge_leaves(text, pairs):
     return "\n".join(out), dropped
 
 
-def sha256_file(path):
-    with open(path, "rb") as f:
-        return hashlib.sha256(f.read()).hexdigest()
-
-
 def set_leaf_resistance(text, leaf, ohms):
     """Rewrite the star resistor of `leaf` (`NET__tK`) to `ohms`."""
     net = _net_key(leaf.split("__t")[0])
@@ -152,19 +149,6 @@ def set_leaf_resistance(text, leaf, ohms):
     return new
 
 
-def body_on_hub(text):
-    """Move the `rppd` card's body terminal onto the `vss` hub (the #430
-    `bodyhub` control's edit, applied to the extraction)."""
-    lines = text.split("\n")
-    hits = [i for i, line in enumerate(lines) if RPPD_CARD.match(line)]
-    if len(hits) != 1:
-        sys.exit(f"rz_solver: expected exactly one rppd card, found {len(hits)}")
-    i = hits[0]
-    card = RPPD_CARD.match(lines[i])
-    lines[i] = " ".join(card.group(1).split()[:3] + ["vss", "rppd"]) + card.group(2)
-    return "\n".join(lines)
-
-
 def sch_body_resistor(text, ohms=BODY_LEAF_OHMS):
     """The schematic netlist with the `rppd` body terminal behind the
     extraction's body-star resistance: `XRz ... vss rppd` becomes
@@ -174,14 +158,6 @@ def sch_body_resistor(text, ohms=BODY_LEAF_OHMS):
     if n != 1:
         sys.exit("rz_solver: schematic netlist has no single `... vss rppd` card")
     return new
-
-
-def insert_options(body, option):
-    """Return `body` with `.options <option>` after its last .options line."""
-    lines = body.split("\n")
-    last = max(i for i, line in enumerate(lines) if line.lower().startswith(".options"))
-    lines.insert(last + 1, ".options " + option)
-    return "\n".join(lines)
 
 
 def probe_body(ohms=BODY_LEAF_OHMS):
@@ -196,58 +172,28 @@ def probe_body(ohms=BODY_LEAF_OHMS):
             ".options tnom=27 interp\n")
 
 
-def _write_req(req, path):
-    req.setdefault("batch", {}).setdefault("capacity_wait_s", 600)
-    json.dump(req, open(path, "w"), indent=1)
-    return dict(request=path, request_sha256=sha256_file(path))
-
-
-def _leg(dut, out, name, point, options=None, note=""):
+def _leg(dut, out, name, point, options=None, note="", grid=False):
     """One slew leg of the investigation on `dut`; `options` names a solver
-    `.options` line to insert into the bench body after its last .options."""
-    art = os.path.join(out, name)
-    os.environ["SG13G2_PEX_POINTS"] = point if point else ""
-    if not point:
-        os.environ.pop("SG13G2_PEX_POINTS", None)
-    b = rz.slew_build(dut, art)
-    body = os.path.join(art, "tb_slew.body.spice")
-    path = os.path.join(art, f"{name}.request.json")
-    os.replace(os.path.join(art, "slew.request.json"), path)
-    deck_content_sha256 = b["deck_content_sha256"]
-    if options:
-        rewritten = insert_options(open(body).read(), options)
-        open(body, "w").write(rewritten)
-        deck_content_sha256 = km.deck_content_sha256(rewritten, b["dut"])
-    req = json.load(open(path))
+    `.options` line to insert into the bench body after its last .options.
+    `grid` builds the 45-corner variant instead (kind `slew-grid`, no body
+    digest in the entry)."""
+    b, req, path, body, deck_content_sha256 = rzc.slew_leg(dut, out, name, point, options=options)
     req.pop("_comment", None)
     req["_comment"] = ("issue #451 CONTROL, not the committed bench: " + note
                        + "; otherwise sim/slew-rate/klt/slew.request.json unchanged")
-    entry = dict(name=name, kind="slew", point=point, options=options, note=note,
-                 measurements=b["measurements"], dut=os.path.abspath(dut),
-                 dut_sha256=sha256_file(dut), body_sha256=sha256_file(body),
-                 deck_content_sha256=deck_content_sha256)
+    entry = dict(name=name, kind="slew-grid" if grid else "slew", point=point,
+                 options=options, note=note, measurements=b["measurements"],
+                 dut=os.path.abspath(dut), dut_sha256=sha256_file(dut))
+    if not grid:
+        entry["body_sha256"] = sha256_file(body)
+    entry["deck_content_sha256"] = deck_content_sha256
     entry.update(_write_req(req, path))
-    entry["corners"] = b["corners"] if b["corners"] else len(req["corners"]["process"]) * len(
-        req["corners"]["temperature_c"]) * len(req["corners"]["supply_v"]["vdd"])
-    return entry
-
-
-def _grid(dut, out, name, note):
-    art = os.path.join(out, name)
-    os.environ.pop("SG13G2_PEX_POINTS", None)
-    b = rz.slew_build(dut, art)
-    path = os.path.join(art, f"{name}.request.json")
-    os.replace(os.path.join(art, "slew.request.json"), path)
-    req = json.load(open(path))
-    req.pop("_comment", None)
-    req["_comment"] = ("issue #451 CONTROL, not the committed bench: " + note
-                       + "; otherwise sim/slew-rate/klt/slew.request.json unchanged")
-    entry = dict(name=name, kind="slew-grid", point=None, options=None, note=note,
-                 measurements=b["measurements"], dut=os.path.abspath(dut),
-                 dut_sha256=sha256_file(dut), deck_content_sha256=b["deck_content_sha256"])
-    entry.update(_write_req(req, path))
-    cs = req["corners"]
-    entry["corners"] = len(cs["process"]) * len(cs["temperature_c"]) * len(cs["supply_v"]["vdd"])
+    if grid:
+        cs = req["corners"]
+        entry["corners"] = len(cs["process"]) * len(cs["temperature_c"]) * len(cs["supply_v"]["vdd"])
+    else:
+        entry["corners"] = b["corners"] if b["corners"] else len(req["corners"]["process"]) * len(
+            req["corners"]["temperature_c"]) * len(req["corners"]["supply_v"]["vdd"])
     return entry
 
 
@@ -309,12 +255,7 @@ def controls(dut, schematic, out):
     art = os.path.join(out, "c451_probe_r_bodyR")
     os.makedirs(art, exist_ok=True)
     open(os.path.join(art, "probe.body.spice"), "w").write(probe_body())
-    slew_req = json.load(open(os.path.join(rz.SLEW_DIR, "slew.request.json")))
-    req = {k: v for k, v in slew_req.items() if k != "_comment"}
-    req["netlist"] = "probe.body.spice"
-    ss = next(p for p in slew_req["corners"]["process"] if p["name"] == "mos_ss")
-    req["corners"] = {"process": [ss], "supply_v": {"vdd": [1.08]}, "temperature_c": [-40]}
-    req["measurements"] = [dict(m) for m in rzc.PROBE_MEASUREMENTS]
+    req = rzc.probe_request()
     req["_comment"] = ("issue #451 CONTROL, not the committed bench: the rppd model "
                        "alone in a transient, body behind its extraction star "
                        "resistance, same analysis/options/osdi preload as the slew bench")
@@ -325,13 +266,13 @@ def controls(dut, schematic, out):
     entry["corners"] = 1
     manifest.append(entry)
 
-    manifest.append(_grid(dut, out, "c451_grid_slew",
-                          note="the committed bench, the #430 extraction, unchanged (45 corners)"))
-    manifest.append(_grid(write_variant("bodyhub", body_on_hub(text)), out,
-                          "c451_bodyhub_grid_slew",
-                          note="the rppd card's body terminal moved onto the vss hub"))
-    manifest.append(_grid(schematic, out, "c451_sch_grid_slew",
-                          note="the schematic netlist with its rppd card"))
+    manifest.append(_leg(dut, out, "c451_grid_slew", None,
+                          note="the committed bench, the #430 extraction, unchanged (45 corners)", grid=True))
+    manifest.append(_leg(write_variant("bodyhub", body_on_hub(text)), out,
+                          "c451_bodyhub_grid_slew", None,
+                          note="the rppd card's body terminal moved onto the vss hub", grid=True))
+    manifest.append(_leg(schematic, out, "c451_sch_grid_slew", None,
+                          note="the schematic netlist with its rppd card", grid=True))
 
     json.dump(manifest, open(os.path.join(out, "manifest.json"), "w"), indent=1)
     return manifest

@@ -106,6 +106,20 @@ class KltMeasure(unittest.TestCase):
             self.assertEqual(len(ac["corners"]["process"]) * len(ac["corners"]["temperature_c"])
                              * len(ac["corners"]["supply_v"]["vdd"]), 45)
 
+    @mock.patch.dict(os.environ, {"SG13G2_PEX_POINTS": ""})
+    def test_build_empty_points_keeps_full_grid(self):
+        with tempfile.TemporaryDirectory() as d:
+            dut = os.path.join(d, "flat.spice")
+            with open(dut, "w") as f:
+                f.write("* flat\nM1 a b c d x\n")
+            km.build(dut, d)
+            for name in ("openloop_ac.request.json", "openloop_op.request.json"):
+                with self.subTest(request=name), open(os.path.join(d, name)) as f:
+                    corners = json.load(f)["corners"]
+                    count = (len(corners["process"]) * len(corners["temperature_c"])
+                             * len(corners["supply_v"]["vdd"]))
+                    self.assertEqual(count, 45)
+
     def test_subckt_missing_pin_is_loud(self):
         with tempfile.TemporaryDirectory() as d:
             sub = os.path.join(d, "sub.spice")
