@@ -183,17 +183,23 @@ these numbers or sequence behind an interim fix — not be built twice).
 leg C at TT / 1.08 V / 27 °C. All three requests grade `nonconvergence` under
 `options.fail_on_diagnostic`.
 
-| Tie to ground | Batch job | Corner status | gmin diagnostic |
-|---|---|---|---|
-| 1 TΩ (leg C) | `klt-sim-6f36c264add6` | inconclusive | `nonconvergence` warning: `Dynamic gmin stepping failed` |
-| 1 MΩ | `klt-sim-dbec6a890e20` | unverified | unavailable |
-| 1 GΩ | `klt-sim-cc7d8db86c3e` | unverified | unavailable |
+| Tie to ground | Original batch job | Replacement ID (2026-11-23) | TT corner status | `Dynamic gmin stepping failed` |
+|---|---|---|---|---|
+| 1 TΩ (leg C) | `klt-sim-6f36c264add6` | Existing control reused | inconclusive | present (`nonconvergence` warning) |
+| 1 MΩ | `klt-sim-dbec6a890e20` | None issued | unavailable | unavailable |
+| 1 GΩ | `klt-sim-cc7d8db86c3e` | None issued | unavailable | unavailable |
 
-On 2026-11-21, the pinned klt 0.9.0 client's `--job-status` lookup for
-each probe reported that the `batch-runner-submit` profile was unavailable.
-`--attach` returned `batch_unknown_job` in that same environment. Neither
-read establishes the current fleet state. The last reported queue observation
-was `pending` about 40 minutes after submission.
+At 07:00 UTC on November 21, the batch worker found both originals
+`pending` with no instance about six hours after submission. The control
+envelope reported the warning at `mos_tt/vdd=1.080_vinp=0.540V/27C`.
+[Fleet lookup and control envelope](https://github.com/2AMLogic/sg13g2-opamp/pull/431#issuecomment-7059134949)
+
+On November 23, #435 authorized one replacement per stronger tie. The
+worker reproduced the pinned leg-C netlist and both single-corner requests.
+Both status lookups returned `The config profile (batch-runner-submit) could
+not be found`. Submission still requires a batch-enabled worker. Both
+measurements remain open for #429 and #312.
+[Probe checks and lookup errors](https://github.com/2AMLogic/sg13g2-opamp/pull/431#issuecomment-7112547530)
 
 A completed solve that clears the warning at a stronger tie would show
 sensitivity to that tie at this corner. If both probes reproduce the warning,
@@ -236,23 +242,37 @@ the three SHA-256s above reproduce).
 To collect the two Step 4 envelopes on a batch-enabled host, start with the
 verified 0.9.0 `opamp_core_pex.spice` in a scratch directory. Set `generator`
 to the absolute path of `sim/post-layout/klt_measure.py` in the `36596fc`
-checkout. The final command attaches to the existing job ID. A report with an
-inconclusive corner can have a nonzero exit code.
+checkout.
 
 ```bash
-for entry in 1e6:klt-sim-dbec6a890e20 1e9:klt-sim-cc7d8db86c3e; do
-    tie=${entry%%:*}
-    job=${entry#*:}
+for tie in 1e6 1e9; do
     sed "s/^Rvsubs_dctie vsubs 0 1e+12$/Rvsubs_dctie vsubs 0 $tie/" \
         opamp_core_pex.spice > "$tie.spice"
     SG13G2_PEX_POINTS=mos_tt:27:1.08 KLT_PEX_SIM_BACKEND=batch \
         python3 "$generator" build "$tie.spice" "$tie" || exit 1
-    rc=0
-    klt sim "$tie/openloop_ac.request.json" --backend batch --attach "$job" \
-        --format json > "$tie/result.json" || rc=$?
-    echo "$tie ohm, $job, klt exit $rc"
 done
 ```
 
-For each envelope, verify `environment.remote.job_id`, then record the single
-TT corner's `status` and any `diagnostics[]` entry for `nonconvergence`.
+Set `tie` to the resistance being collected (`1e6` or `1e9`). Check
+#435, #431 and any saved `$tie/submission.json` for its replacement ID.
+If an ID exists, go straight to collection. Otherwise, submit once on a
+worker with the `batch-runner-submit` profile. Record the returned
+`job_id` beside the original ID on #431 before continuing.
+
+```bash
+klt sim "$tie/openloop_ac.request.json" --backend batch --submit-only \
+    --wait-for-capacity 600 --format json > "$tie/submission.json"
+```
+
+Set `job` to the recorded replacement ID for that tie and collect its envelope.
+
+```bash
+klt sim "$tie/openloop_ac.request.json" --backend batch --attach "$job" \
+    --format json > "$tie/result.json"
+```
+
+An inconclusive result can return a nonzero exit. Match
+`environment.remote.job_id` to the replacement and verify the single TT
+corner before reading its `status` and `diagnostics[]`. Record the warning
+as absent only after inspecting those diagnostics. If there is no usable
+envelope, record the ID and fleet diagnostic on #431 and leave the row open.
