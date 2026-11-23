@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
-"""The generic `klt sim` envelope-refusal controls, written once (issue #370).
+"""The generic `klt sim` refusal controls, written once (issues #370, #470).
 
 Every sim/*/klt/test_compare.py carried its own transcription of the same
-thirteen negative controls -- refusals that all live in the SHARED gate
-klt_envelope.index_envelope, not in any bench. This mixin holds the thirteen
-bodies once; each bench's negative-control class mixes it in and still runs
-every control through ITS OWN comparator gate, so per-bench coverage and the
-per-bench test count are unchanged (a reworded refusal or a new `coverage`
-key now lands here instead of being chased through six files).
+thirteen envelope negative controls -- refusals that all live in the SHARED
+gate klt_envelope.index_envelope, not in any bench -- and of the same four
+harness-CSV negative controls, refusals that all live in the SHARED loader
+klt_envelope.load_harness_csv_rows (issue #181). Two mixins hold the bodies
+once; each bench's negative-control class mixes them in and still runs every
+control through ITS OWN comparator gate or loader, so per-bench coverage is
+unchanged or widened (a reworded refusal now lands here instead of being
+chased through six files).
 
 Contract with the bench class that mixes this in (its Base supplies most of
 it; see test_envelope_control_mixin.py beside this file for a minimal
@@ -39,13 +41,29 @@ The expected-refusal fragments are derived from klt_envelope's message
 formats plus the tampered key/name, so every assertion is at least as
 specific as the per-bench transcriptions were (and stricter where those
 named only a substring).
+
+HarnessCsvControlMixin (issue #470) holds the four generic harness-CSV
+refusals every bench's loader inherits from
+klt_envelope.load_harness_csv_rows. Its contract with the bench class:
+
+* harness_csv   -- path to that bench's committed harness record CSV.
+* nonfinite_col -- a required numeric column of that record to poison.
+* load_csv(path)-- the bench's harness-CSV loader (its C.load_harness_csv);
+                   must raise klt_envelope.InputError on refusal.
+* csv_label     -- the label the bench's loader passes load_harness_csv_rows
+                   ("harness CSV" for every bench today).
 """
 
 from __future__ import annotations
 
 import copy
-from typing import Callable, Dict, Optional, Sequence, Tuple
+import csv
+import os
+import re
+import tempfile
+from typing import Callable, Dict, List, Optional, Sequence, Tuple
 
+import envelope_fixtures as F
 import klt_envelope as K
 
 
@@ -176,3 +194,62 @@ class EnvelopeControlMixin:
         _, gate = self.control("test_klt_error_envelope")
         with self.assertRaisesRegex(K.InputError, r"klt error envelope"):
             gate({"error": {"code": "negative_control"}})
+
+
+class HarnessCsvControlMixin:
+    """The four generic harness-CSV refusals; see the module docstring."""
+
+    # -- contract (set by the bench class) --------------------------------
+    harness_csv: str                  # the bench's committed harness record
+    nonfinite_col: str                # a required numeric column to poison
+    csv_label: str = "harness CSV"    # the label its loader names the file by
+
+    def load_csv(self, path: str):
+        """The bench's harness-CSV loader; raises klt_envelope.InputError."""
+        raise NotImplementedError("the bench class must supply load_csv")
+
+    # -- helpers -----------------------------------------------------------
+    def _write_rows(self, rows: List[Dict[str, str]]) -> str:
+        """`rows` as a short-lived CSV file to point the bench's loader at."""
+        fd, p = tempfile.mkstemp(suffix=".csv")
+        with os.fdopen(fd, "w", newline="") as f:
+            w = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
+            w.writeheader()
+            w.writerows(rows)
+        self.addCleanup(os.unlink, p)
+        return p
+
+    # -- the four controls -------------------------------------------------
+    def test_duplicate_harness_row_rejected(self):
+        rows = F.harness_rows(self.harness_csv)
+        twin = rows[len(rows) // 2]
+        with self.assertRaisesRegex(
+                K.InputError, rf"{re.escape(twin['point_id'])}: duplicate row"):
+            self.load_csv(self._write_rows(rows + [twin]))
+
+    def test_missing_harness_row_rejected(self):
+        rows = F.harness_rows(self.harness_csv)
+        dropped = rows.pop(len(rows) // 2)["point_id"]
+        with self.assertRaisesRegex(
+                K.InputError, rf"{re.escape(dropped)}: missing from {self.csv_label}"):
+            self.load_csv(self._write_rows(rows))
+
+    def test_nonfinite_harness_value_rejected(self):
+        rows = F.harness_rows(self.harness_csv)
+        i = len(rows) // 2
+        for bad in ("nan", "inf", ""):
+            poisoned = [dict(r) for r in rows]
+            poisoned[i][self.nonfinite_col] = bad
+            with self.assertRaisesRegex(
+                    K.InputError,
+                    rf"{re.escape(rows[i]['point_id'])}: {re.escape(self.csv_label)} "
+                    rf"{self.nonfinite_col} {bad!r} is missing or non-finite"):
+                self.load_csv(self._write_rows(poisoned))
+
+    def test_short_or_malformed_row_is_input_error(self):
+        """A truncated row or an unparsable temp_c is exit-2 material (an
+        InputError), never a raw KeyError/ValueError (issues #181/#286)."""
+        with F.malformed_csv_paths(self.harness_csv) as paths:
+            for p in paths:
+                with self.assertRaisesRegex(K.InputError, "unparsable row"):
+                    self.load_csv(p)
