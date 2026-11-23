@@ -4,6 +4,7 @@
 """
 import contextlib
 import copy
+import hashlib
 import importlib.util
 import io
 import json
@@ -286,6 +287,47 @@ class SlewBuild(unittest.TestCase):
             finally:
                 rz.SLEW_DIR = saved
         self.assertIn("Bftail ftail 0 v=v(tail)/v(vdd)", read(os.path.join(saved, "tb_slew.body.spice")))
+
+    def build_kept(self, text):
+        """slew_build from a fresh directory that outlives the assertions."""
+        d = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, d)
+        dut = os.path.join(d, "dut.spice")
+        open(dut, "w").write(text)
+        with Env(None, None):
+            summary = rz.slew_build(dut, os.path.join(d, "art"))
+        return summary, read(summary["netlist"])
+
+    def test_slew_build_reports_a_path_independent_deck_digest(self):
+        """klt's content_hash embeds the DUT path, so it differs per checkout;
+        deck_content_sha256 must not, and the written request must not change."""
+        (sa, body_a), (sb, body_b) = self.build_kept(EXTRACTED), self.build_kept(EXTRACTED)
+        self.assertEqual(set(sa), {"netlist", "netlist_sha256", "deck_content_sha256", "request", "dut",
+                                   "dut_sha256", "backend", "corners", "measurements"})
+        self.assertNotEqual(sa["dut"], sb["dut"])
+        self.assertEqual(sa["deck_content_sha256"], sb["deck_content_sha256"])
+        self.assertNotEqual(sa["netlist_sha256"], sb["netlist_sha256"])
+        self.assertEqual(open(sa["request"], "rb").read(), open(sb["request"], "rb").read())
+        for summary, body in ((sa, body_a), (sb, body_b)):
+            self.assertIn(f'\n.include "{summary["dut"]}"\nXdut ibias inn inp out vdd vss opamp_core\n', body)
+            self.assertEqual(summary["netlist_sha256"], rz.sha256_file(summary["netlist"]))
+            self.assertEqual(summary["deck_content_sha256"], km.deck_content_sha256(body, summary["dut"]))
+            token = f'.include "<DUT:{summary["dut_sha256"]}>"'
+            self.assertEqual(summary["deck_content_sha256"],
+                             hashlib.sha256(
+                                 body.replace(f'.include "{summary["dut"]}"', token).encode()).hexdigest())
+        self.assertEqual(body_a.replace(sa["dut"], "DUT"), body_b.replace(sb["dut"], "DUT"))
+
+    def test_deck_content_sha256_tracks_the_dut_content_and_covers_a_flat_dut(self):
+        base, _ = self.build_kept(EXTRACTED)
+        other, _ = self.build_kept(EXTRACTED.replace("l=25.7U w=25.7U", "l=25.3U w=25.3U"))
+        self.assertNotEqual(base["deck_content_sha256"], other["deck_content_sha256"])
+        self.assertNotEqual(base["dut_sha256"], other["dut_sha256"])
+        flat, body = self.build_kept("* flat\nM1 a b c d x\n")
+        self.assertNotIn("Xdut", body)
+        self.assertIn(f'\n.include "{flat["dut"]}"\n', body)
+        self.assertEqual(flat["deck_content_sha256"], km.deck_content_sha256(body, flat["dut"]))
+        self.assertNotEqual(flat["deck_content_sha256"], base["deck_content_sha256"])
 
 
 class Restrict(unittest.TestCase):

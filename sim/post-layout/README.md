@@ -66,3 +66,53 @@ klt's `outdir_locked`: `klt pex` locks the tree holding `KLT_PEX_ARTIFACTS_DIR`,
 and `klt sim` defaulted its `.klt/sim` output next to the request inside it.
 `measure_openloop_ac.sh` now passes `-o` to a scratch directory outside that
 tree.
+
+## Verifying a committed envelope's deck (issue #460)
+
+A `klt sim` envelope records `provenance.input.content_hash` (the same value
+as `environment.netlist_sha256`): the SHA-256 of the deck it ran. For these
+benches that deck is the committed bench body with its one DUT `.include`
+re-pointed by `klt_measure.dut_lines` -- at the DUT's **absolute** path. The
+hash therefore reproduces only from the checkout that built the deck, and a
+mismatch reads exactly like tampering.
+
+- `environment.netlist_closure` lists the deck's SHA-256 first, then the
+  SHA-256 of each included file as klt staged it. For these benches that is
+  the DUT, and it is path-free: compare `sha256sum <dut>` with the entry
+  after the deck's to prove which DUT bytes ran.
+- `klt_measure.build` and `rz_screen.slew_build` report
+  `deck_content_sha256`: the deck's SHA-256 with the DUT include line replaced
+  by `.include "<DUT:<SHA-256 of the DUT>>"`. It is a function of the bench
+  and the DUT bytes alone -- equal from any checkout and any artifacts
+  directory, different when either changes. Record it next to
+  `netlist_sha256` with a new leg. A leg that rewrites the deck after the
+  build (`rz_candidate.py`'s `gear` legs) has to hash the final deck instead;
+  from the repository root, with the DUT passed exactly as the deck's include
+  line carries it (absolute):
+
+      python3 -c 'import sys; sys.path.insert(0, "sim/post-layout"); \
+        import klt_measure as km; \
+        print(km.deck_content_sha256(open(sys.argv[1]).read(), sys.argv[2]))' \
+        <deck.body.spice> "$PWD/<dut>"
+
+  Today's generators, at `edd2a0f`, built from
+  `rz-layout-430/candidate/opamp_core_pex.spice`, give
+  `091ec7819d36df81b542954a1d8106ccf97df0be14025da18dc15a83b24f91a4` for the
+  committed open-loop bench and
+  `62601233d11f93d980ee10b976e1fdeca5cebfdc5f8090173ac4b29c0e3f4245` for the
+  committed slew bench: what they build now, not what an earlier leg ran.
+- No envelope under `rz-layout-430/` records a `deck_content_sha256`. The only
+  way to check one against its `content_hash` is to regenerate the deck,
+  substitute the author's absolute DUT path for yours, and compare. The
+  envelope does not record that path. Measured on `rz-layout-430/records/`
+  at `edd2a0f`: neither of its two decks (AC `630f231c...`, slew
+  `36493e6b...`) regenerates to the committed hash from another checkout,
+  and 42 plausible author paths reproduce neither.
+- A leg whose DUT was written to a scratch directory stays unverifiable by
+  that route even given the author's checkout root, because its include
+  points into a directory the caller chose. Eleven envelopes under
+  `rz-layout-430/controls/` are of this kind (`ctl_ideal_ss_slew`,
+  `ctl_bodyhub_ss_res_typ_cap_typ_slew`, the nine `ctl_swet1_*`): their DUTs
+  match no committed file, though `rz_candidate.py control` regenerates each
+  byte-for-byte from the committed extraction, as their `netlist_closure`
+  hashes confirm.
