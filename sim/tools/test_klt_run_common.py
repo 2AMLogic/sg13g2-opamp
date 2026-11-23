@@ -53,6 +53,21 @@ SCRIPT_DIR="$1"; REPO_ROOT="$2"; SUFFIX="${3:-}"
 SIM_DIR="${REPO_ROOT}/sim"
 date() { echo "${FAKE_TS}"; }
 git() { echo "${FAKE_SHA}"; }
+# #488: capture the reserving mkdir's own exit status and the reservation
+# path's stat without touching klt_begin_record: a test-only wrapper that
+# delegates to the real mkdir and, for .reserve- paths only, records the
+# literal rc plus `stat -c '%h %i'` taken immediately after the call. The
+# wrapper's return value is the real rc, so owner/loser branching (and the
+# loser's exit 3) is byte-identical to an unwrapped mkdir.
+mkdir() {
+  command mkdir "$@"
+  local rc=$?
+  if [[ "$*" == *.reserve-* ]]; then
+    RESERVE_MKDIR_RC="${rc}"
+    RESERVE_MKDIR_STAT="$(stat -c '%h %i' "$@" 2>/dev/null || echo stat-failed)"
+  fi
+  return "${rc}"
+}
 export NGSPICE_VERSION=stub PDK=pdk PDK_ROOT="${REPO_ROOT}/nopdk"
 # shellcheck source=/dev/null
 source "${COMMON}"
@@ -68,7 +83,10 @@ KLT="${STUB_KLT}"
 klt_check_client
 klt_begin_record stub "${SUFFIX}"
 ino_ctime="$(stat -c '%i %z' "${KLT_RESERVATION}" 2>/dev/null || echo stat-failed)"
-echo "BEGUN ${RECORD_ID} pid=$$ t=${EPOCHREALTIME:-0} reserve=${KLT_RESERVATION} inode_ctime=${ino_ctime}"
+# #488: mkdir_rc/mkdir_stat come from the wrapper above: two owners both
+# rc=0 on one inode is a mkdir(2) atomicity failure on the runner; a nonzero
+# rc on this owner branch is a shell success-test bug in klt_begin_record.
+echo "BEGUN ${RECORD_ID} pid=$$ t=${EPOCHREALTIME:-0} reserve=${KLT_RESERVATION} mkdir_rc=${RESERVE_MKDIR_RC:-unrecorded} mkdir_stat=${RESERVE_MKDIR_STAT:-unrecorded} inode_ctime=${ino_ctime}"
 if [[ -n "${HOLD:-}" ]]; then
   while [[ ! -e "${HOLD}" ]]; do sleep 0.005; done
 fi
@@ -176,13 +194,17 @@ class Reservation(unittest.TestCase):
                 # runner's bash keeps EPOCHREALTIME live (identical t=
                 # across children is then real near-simultaneity); equal
                 # reads mean t= is frozen there and orders nothing.
+                # #488: also record the filesystem type of TMPDIR, the fs
+                # the reservation directory lives on.
                 try:
                     probe = subprocess.run(
                         ["bash", "-c",
                          'a="${EPOCHREALTIME:-0}"; sleep 0.2; '
                          'b="${EPOCHREALTIME:-0}"; '
-                         'printf "BASH_VERSION=%s t1=%s t2=%s" '
-                         '"${BASH_VERSION:-unknown}" "$a" "$b"'],
+                         'printf "BASH_VERSION=%s t1=%s t2=%s fstype=%s" '
+                         '"${BASH_VERSION:-unknown}" "$a" "$b" '
+                         '"$(stat -f -c %T "${TMPDIR:-/tmp}" 2>/dev/null '
+                         '|| echo stat-failed)"'],
                         capture_output=True, text=True, timeout=30)
                     runner = (f"runner probe ({probe.stdout.strip()}); "
                               f"rc={probe.returncode} "
@@ -204,6 +226,13 @@ class Reservation(unittest.TestCase):
             for (out, err), _ in losers:
                 self.assertNotIn("BEGUN", out)
                 self.assertIn("reserved by another run", err)
+            # #488: the diagnostic fields must be live on every run, not
+            # only in the (rare) failure message: the owner's BEGUN carries
+            # the reserving mkdir's rc (0 on the success path) and its
+            # link-count/inode stat.
+            for (out, _), _ in owners:
+                self.assertIn("mkdir_rc=0", out)
+                self.assertRegex(out, r"mkdir_stat=[0-9]+ [0-9]+")
             self.assertEqual(fx.klt_calls(), 1)
 
     def test_existing_envelope_refused_bytes_unchanged(self):
