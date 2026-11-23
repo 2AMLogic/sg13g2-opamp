@@ -22,9 +22,16 @@ by name).
 - `rz_candidate.py` -- builds the `klt sim` legs of a drawn-candidate record
   (`bench`: the committed benches, with DR-0012's nine passive sections;
   `control`: diagnostic controls) and grades a directory of envelopes.
+- `rz_solver.py` -- builds the `klt sim` legs of the issue #451 solver
+  investigation (star surgery, body-resistance ladder, solver-option ladder,
+  the model-alone probe, and three 45-corner grids) from the #430 candidate;
+  `grade` is `rz_candidate.py`'s.
 - `cc-sizing-430/`, `rz-nulling-430/`, `rz-layout-430/` -- the append-only
   issue #430 records: the capacitor-sizing trial, the ideal-resistor
   screening, and the drawn resistor's extraction and corner grids.
+- `rz-solver-451/` -- the append-only issue #451 record: the extracted-leg
+  slew abort named (the `rppd` body terminal's star leaf; Newton
+  non-convergence), its controls and grids. Decision: DR-0013.
 - Driver: `layout/opamp_core/run_pex.sh`.
 
 Measurement method: Av0 = `vdb(out)` at 1 Hz, GBW = ngspice `.meas ... when
