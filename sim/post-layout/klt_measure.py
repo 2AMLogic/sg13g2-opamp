@@ -142,7 +142,7 @@ def build(dut, art):
             for m in req["measurements"]:
                 if m["name"] == "ivdd_total_a":
                     m.pop("limits", None)
-        if pts_spec is not None:
+        if pts_spec:
             restrict_corners(req, pts_spec)
         json.dump(req, open(os.path.join(art, fname), "w"), indent=1)
     reqs = ("openloop_ac.request.json", "openloop_op.request.json")
