@@ -67,7 +67,8 @@ sg13g2_env_identity_finalize() {
 KLT="${STUB_KLT}"
 klt_check_client
 klt_begin_record stub "${SUFFIX}"
-echo "BEGUN ${RECORD_ID} pid=$$ t=${EPOCHREALTIME:-0} reserve=${KLT_RESERVATION}"
+ino_ctime="$(stat -c '%i %z' "${KLT_RESERVATION}" 2>/dev/null || echo stat-failed)"
+echo "BEGUN ${RECORD_ID} pid=$$ t=${EPOCHREALTIME:-0} reserve=${KLT_RESERVATION} inode_ctime=${ino_ctime}"
 if [[ -n "${HOLD:-}" ]]; then
   while [[ ! -e "${HOLD}" ]]; do sleep 0.005; done
 fi
@@ -169,9 +170,28 @@ class Reservation(unittest.TestCase):
                 diag = [f"child {i} stdout={out!r} stderr={err!r}"
                         for i, (out, err) in enumerate(outs)]
                 owners = sum("BEGUN" in out for out, _ in outs)
+                # #459: settle the identical-t= question in the failure
+                # message itself. One child reads EPOCHREALTIME twice around
+                # a sleep, in the same process: distinct reads mean the
+                # runner's bash keeps EPOCHREALTIME live (identical t=
+                # across children is then real near-simultaneity); equal
+                # reads mean t= is frozen there and orders nothing.
+                try:
+                    probe = subprocess.run(
+                        ["bash", "-c",
+                         'a="${EPOCHREALTIME:-0}"; sleep 0.2; '
+                         'b="${EPOCHREALTIME:-0}"; '
+                         'printf "BASH_VERSION=%s t1=%s t2=%s" '
+                         '"${BASH_VERSION:-unknown}" "$a" "$b"'],
+                        capture_output=True, text=True, timeout=30)
+                    runner = (f"runner probe ({probe.stdout.strip()}); "
+                              f"rc={probe.returncode} "
+                              f"stderr={probe.stderr.strip()!r}")
+                except Exception as e:
+                    runner = f"runner probe failed: {e!r}"
                 self.fail(f"{exited} != 5 children exited after "
                           f"{time.monotonic() - t0:.1f}s of a 30s deadline; "
-                          f"BEGUN owners={owners}; "
+                          f"BEGUN owners={owners}; {runner}; "
                           + "; ".join(states) + "\n" + "\n".join(diag))
             self.assertEqual(fx.klt_calls(), 0)  # nobody ran klt yet
             hold.write_text("go")
