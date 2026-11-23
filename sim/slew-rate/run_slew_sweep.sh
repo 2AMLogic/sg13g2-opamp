@@ -91,6 +91,7 @@ passed=0
 op_fail_points=()
 check_fail_points=()
 sim_fail_points=()
+declare -A log_fields
 
 for corner in "${CORNERS[@]}"; do
   for temp in "${TEMPS[@]}"; do
@@ -135,20 +136,23 @@ for corner in "${CORNERS[@]}"; do
         continue
       fi
 
-      vout="$(grep '^OP_VOUT ' "${log}" | awk '{print $2}')"
-      vd1="$(grep '^OP_VD1 ' "${log}" | awk '{print $2}')"
-      vd2="$(grep '^OP_VD2 ' "${log}" | awk '{print $2}')"
-      vtail="$(grep '^OP_VTAIL ' "${log}" | awk '{print $2}')"
-      vibias="$(grep '^OP_VIBIAS ' "${log}" | awk '{print $2}')"
-      ivdd="$(grep '^OP_IVDD ' "${log}" | awk '{print $2}')"
-      vinn_max="$(grep '^TR_VINN_MAX ' "${log}" | awk '{print $2}')"
-      vinn_min="$(grep '^TR_VINN_MIN ' "${log}" | awk '{print $2}')"
-
-      if [[ -z "${vout}" || -z "${vd1}" || -z "${vd2}" || -z "${vtail}" || -z "${ivdd}" || -z "${vinn_max}" || -z "${vinn_min}" ]]; then
+      # One scan of the log for every OP_*/TR_* field this bench records
+      # (the shared reader, issue #471): a marker missing from a point's log
+      # reports through the status and lands in the per-point failure
+      # accounting, instead of exiting the sweep under set -e.
+      if ! sg13g2_read_log_fields log_fields "${log}" OP_VOUT OP_VD1 OP_VD2 OP_VTAIL OP_VIBIAS OP_IVDD TR_VINN_MAX TR_VINN_MIN; then
         echo "run_slew_sweep.sh: SIM FAILED ${point_id} -- missing OP_*/TR_* line(s), see ${log}" >&2
         sim_fail_points+=("${point_id}")
         continue
       fi
+      vout="${log_fields[OP_VOUT]}"
+      vd1="${log_fields[OP_VD1]}"
+      vd2="${log_fields[OP_VD2]}"
+      vtail="${log_fields[OP_VTAIL]}"
+      vibias="${log_fields[OP_VIBIAS]}"
+      ivdd="${log_fields[OP_IVDD]}"
+      vinn_max="${log_fields[TR_VINN_MAX]}"
+      vinn_min="${log_fields[TR_VINN_MIN]}"
 
       # --- Per-point DC sanity check: shared sg13g2_op_sanity rule
       # (sim/preflight.sh -- output within 15% of VDD of mid-rail, no

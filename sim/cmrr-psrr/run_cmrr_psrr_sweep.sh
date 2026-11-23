@@ -118,6 +118,8 @@ sim_fail_points=()
 plateau_fail_points=()
 psrr_xcheck_fail_points=()
 ol_xcheck_fail_points=()
+declare -A op_fields
+declare -A psrr_fields
 
 read_ac_shelf() {
   # Parse a wrdata AC CSV (freq, db, freq, ph columns); print:
@@ -201,20 +203,27 @@ PYEOF
 
       # OP_* lines: the two harnesses are DC-identical by construction;
       # the CMRR harness's op is the point of record, the PSRR harness's
-      # is a structural-equivalence cross-check.
-      vout="$(grep '^OP_VOUT ' "${CORNERS_OUT}/${point_id}_cmrr.log" | awk '{print $2}')"
-      vd1="$(grep '^OP_VD1 ' "${CORNERS_OUT}/${point_id}_cmrr.log" | awk '{print $2}')"
-      vd2="$(grep '^OP_VD2 ' "${CORNERS_OUT}/${point_id}_cmrr.log" | awk '{print $2}')"
-      vtail="$(grep '^OP_VTAIL ' "${CORNERS_OUT}/${point_id}_cmrr.log" | awk '{print $2}')"
-      vibias="$(grep '^OP_VIBIAS ' "${CORNERS_OUT}/${point_id}_cmrr.log" | awk '{print $2}')"
-      ivdd="$(grep '^OP_IVDD ' "${CORNERS_OUT}/${point_id}_cmrr.log" | awk '{print $2}')"
-      vout_psrr="$(grep '^OP_VOUT ' "${CORNERS_OUT}/${point_id}_psrr.log" | awk '{print $2}')"
-
-      if [[ -z "${vout}" || -z "${vd1}" || -z "${vd2}" || -z "${vtail}" || -z "${ivdd}" || -z "${vout_psrr}" ]]; then
+      # is a structural-equivalence cross-check. Two reads of the shared
+      # reader (issue #471), one per log, so a marker missing from either
+      # lands in the per-point failure accounting instead of exiting the
+      # sweep under set -e; the PSRR cross-check stays tied to its own log.
+      if ! sg13g2_read_log_fields op_fields "${CORNERS_OUT}/${point_id}_cmrr.log" OP_VOUT OP_VD1 OP_VD2 OP_VTAIL OP_VIBIAS OP_IVDD; then
         echo "run_cmrr_psrr_sweep.sh: SIM FAILED ${point_id} -- missing OP_* line(s), see ${CORNERS_OUT}/${point_id}_{cmrr,psrr}.log" >&2
         sim_fail_points+=("${point_id}")
         continue
       fi
+      if ! sg13g2_read_log_fields psrr_fields "${CORNERS_OUT}/${point_id}_psrr.log" OP_VOUT; then
+        echo "run_cmrr_psrr_sweep.sh: SIM FAILED ${point_id} -- missing OP_* line(s), see ${CORNERS_OUT}/${point_id}_{cmrr,psrr}.log" >&2
+        sim_fail_points+=("${point_id}")
+        continue
+      fi
+      vout="${op_fields[OP_VOUT]}"
+      vd1="${op_fields[OP_VD1]}"
+      vd2="${op_fields[OP_VD2]}"
+      vtail="${op_fields[OP_VTAIL]}"
+      vibias="${op_fields[OP_VIBIAS]}"
+      ivdd="${op_fields[OP_IVDD]}"
+      vout_psrr="${psrr_fields[OP_VOUT]}"
 
       # --- Per-point DC sanity check, shared sg13g2_op_sanity rule
       # (sim/preflight.sh, same gate as sim/open-loop-ac/): output within
