@@ -58,6 +58,22 @@ def sha256_file(path):
         return hashlib.sha256(f.read()).hexdigest()
 
 
+def restrict_corners(req, spec, caller="klt_measure"):
+    """Keep only the grid axes SG13G2_PEX_POINTS names, in place; return the
+    corner count. Loud: a spec that matches no axis of the grid exits."""
+    pts = parse_points(spec)
+    cs = req["corners"]
+    vdds, vinps = cs["supply_v"]["vdd"], cs["supply_v"]["vinp"]
+    keep_v = [i for i, v in enumerate(vdds) if any(round(v, 4) == p[2] for p in pts)]
+    keep_t = [t for t in cs["temperature_c"] if any(float(t) == p[1] for p in pts)]
+    keep_p = [p for p in cs["process"] if any(p["name"] == q[0] for q in pts)]
+    if not (keep_v and keep_t and keep_p):
+        sys.exit(f"{caller}: SG13G2_PEX_POINTS={spec!r} matches no grid axis")
+    cs["supply_v"] = {"vdd": [vdds[i] for i in keep_v], "vinp": [vinps[i] for i in keep_v]}
+    cs["temperature_c"], cs["process"] = keep_t, keep_p
+    return len(keep_p) * len(keep_t) * len(keep_v)
+
+
 def dut_include(dut):
     return f'.include "{dut}"'
 
@@ -110,7 +126,7 @@ def build(dut, art):
     body_path = os.path.join(art, "tb_openloop_ac.body.spice")
     open(body_path, "w").write(new)
 
-    pts = parse_points(os.environ["SG13G2_PEX_POINTS"]) if os.environ.get("SG13G2_PEX_POINTS") else None
+    pts_spec = os.environ.get("SG13G2_PEX_POINTS")
     for fname in ("openloop_ac.request.json", "openloop_op.request.json"):
         req = json.load(open(os.path.join(KLT_DIR, fname)))
         req.pop("_comment", None)
@@ -126,16 +142,8 @@ def build(dut, art):
             for m in req["measurements"]:
                 if m["name"] == "ivdd_total_a":
                     m.pop("limits", None)
-        if pts is not None:
-            cs = req["corners"]
-            vdds, vinps = cs["supply_v"]["vdd"], cs["supply_v"]["vinp"]
-            keep_v = [i for i, v in enumerate(vdds) if any(round(v, 4) == p[2] for p in pts)]
-            keep_t = [t for t in cs["temperature_c"] if any(float(t) == p[1] for p in pts)]
-            keep_p = [p for p in cs["process"] if any(p["name"] == q[0] for q in pts)]
-            if not (keep_v and keep_t and keep_p):
-                sys.exit(f"klt_measure: SG13G2_PEX_POINTS={os.environ['SG13G2_PEX_POINTS']!r} matches no grid axis")
-            cs["supply_v"] = {"vdd": [vdds[i] for i in keep_v], "vinp": [vinps[i] for i in keep_v]}
-            cs["temperature_c"], cs["process"] = keep_t, keep_p
+        if pts_spec is not None:
+            restrict_corners(req, pts_spec)
         json.dump(req, open(os.path.join(art, fname), "w"), indent=1)
     reqs = ("openloop_ac.request.json", "openloop_op.request.json")
     return {"netlist": body_path, "netlist_sha256": sha256_file(body_path),
