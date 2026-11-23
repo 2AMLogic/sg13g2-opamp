@@ -28,6 +28,10 @@
 #                                             solver runs)
 #   klt_run_request <req> <out> <err> [<klt sim args>...]
 #                                          -> runs `klt sim`; sets `incomplete`
+#                                             (new batch submissions add
+#                                             --wait-for-capacity
+#                                             ${KLT_CAPACITY_WAIT_S:-600},
+#                                             issue #484)
 #   klt_validate_envelope <out> [<validate args>...]
 #   klt_require_complete                   -> exit 4 if `incomplete` is set
 #   klt_write_envelope <out> [<ext>]       -> rechecks the model identity
@@ -180,12 +184,41 @@ klt_release_reservation() {
   fi
 }
 
+# Capacity wait (issue #484): the fleet is vCPU-budgeted, so a burst submit
+# can be refused with batch_no_capacity / batch_concurrency_cap; the client
+# retries the submit with backoff when --wait-for-capacity is passed (host
+# rule 2am#6872; sim/post-layout/*.py already default capacity_wait_s=600
+# in-request). Added only to a NEW batch submission: the flag is batch-only
+# (the client rejects it for local / local-parallel), and a --attach resume
+# launches nothing, so both omit it. The effective backend is the caller's
+# --backend when given, else the request JSON's backend field (unknown ->
+# omitted, never guessed). KLT_CAPACITY_WAIT_S overrides the 600 s default;
+# KLT_CAPACITY_WAIT_S=0 forwards a literal zero (single attempt). A
+# caller-supplied --wait-for-capacity is forwarded verbatim, never duplicated.
 klt_run_request() {
   local req="$1" out="$2" err="$3"
   shift 3
-  echo "run.sh: ${KLT_CMD[*]} sim $(basename "${req}") $* --format json"
+  local args=("$@") backend="" attach=0 have_wait=0 i
+  for i in "${!args[@]}"; do
+    case "${args[i]}" in
+      --backend)   backend="${args[i+1]:-}" ;;
+      --backend=*) backend="${args[i]#--backend=}" ;;
+      --attach|--attach=*) attach=1 ;;
+      --wait-for-capacity|--wait-for-capacity=*) have_wait=1 ;;
+    esac
+  done
+  if [[ -z "${backend}" ]]; then
+    backend="$(python3 -c 'import json,sys
+print(json.load(open(sys.argv[1])).get("backend") or "")' "${req}" 2>/dev/null || true)"
+  fi
+  local capacity_args=()
+  if [[ "${backend}" == "batch" && "${attach}" -eq 0 && "${have_wait}" -eq 0 ]]; then
+    capacity_args=(--wait-for-capacity "${KLT_CAPACITY_WAIT_S:-600}")
+  fi
+  local sim_argv=("${req}" "${args[@]}" "${capacity_args[@]}" --format json)
+  echo "run.sh: ${KLT_CMD[*]} sim $(basename "${req}") ${sim_argv[*]:1}"
   local rc=0
-  "${KLT_CMD[@]}" sim "${req}" "$@" --format json > "${out}" 2> "${err}" || rc=$?
+  "${KLT_CMD[@]}" sim "${sim_argv[@]}" > "${out}" 2> "${err}" || rc=$?
   # klt sim: 0 = pass, 3 = ran and some limit failed -- both are complete,
   # gradable runs. 1/2 = did not run; 4 = errored/inconclusive/not_checked.
   if [[ "${rc}" -ne 0 && "${rc}" -ne 3 ]]; then
