@@ -6,6 +6,42 @@
 
 - [2026-09](work_log/WORK_LOG_2026-09.md)
 
+### 2026-11-23
+
+- **Issue #466** (closed): sim: rz_solver.py manifest entries record no deck_content_sha256, so #451 legs still commit only a path-dependent body digest
+- **PR #467**: feat(sim): record deck_content_sha256 in rz_solver manifest entries
+- **Issue #432** (closed): Remove the circular dpkg-deb recovery instructions from the OSDI build
+- **PR #434**: fix: replace circular dpkg-deb recovery recipe with install-and-retry hint
+- **Issue #462** (closed): sim: rz_candidate manifest entries do not record the new deck_content_sha256, so future legs still commit no path-independent deck digest
+- **PR #465**: feat(sim): record deck_content_sha256 in rz_candidate manifest entries
+- **Issue #460** (closed): sim: generated bench decks embed an absolute DUT .include path, so committed envelope provenance digests are unreproducible across checkouts
+- **PR #461**: feat(sim): report a path-independent deck digest from bench builders
+- **Issue #451** (closed): sim: slew bench aborts with timestep_too_small once a PDK rppd card is on the extracted netlist
+- **PR #458**: sim: name the extracted-leg slew abort — rppd body-terminal star leaf; DR-0013 keeps default solver settings
+- **Issue #455** (closed): sim/post-layout/rz_candidate.py: drop dead _worst(), make control-request labelling consistent with its test name
+- **PR #457**: refactor(sim/post-layout): drop dead _worst, document deliberate control-comment split
+
+### 2026-11-22
+
+- **Issue #454** (closed): klt body-file header comments still describe process bundles as cornerCAP-only after DR-0012
+- **PR #456**: docs(sim): name the cap_typ + res_typ pair in klt body-file headers
+- **PR #452**: sim: record the drawn nulling-resistor candidate, its corner grids and the slew-bench abort
+- **Issue #448** (closed): Bench READMEs still describe process bundles as cornerCAP-only after DR-0012
+- **PR #453**: docs(sim): name the cap_typ + res_typ pair in bench README bundles
+- **PR #302**: docs: request EE and market key review of DR-0010
+- **Issue #449** (closed): Consolidate remaining audit-suite boilerplate onto RawAuditCase in signoff/characterization/test_generate.py
+- **PR #450**: refactor: share audit-suite fixture/edit/CSV helpers on RawAuditCase
+- **Issue #446** (closed): Decide the MOS-to-resistor corner pairing before a drawn nulling resistor enters the corner grids
+- **PR #447**: feat(sim): pair MOS corners with typical resistor models
+- **PR #445**: sim: record the nulling-resistor screening of the Miller compensation
+- **PR #439**: sim: record the 26.0 µm Miller-cap trial and its falling-slew failure
+- **Issue #436** (closed): Share the malformed CSV fixtures across five comparator test suites
+- **PR #442**: refactor: share the malformed-CSV fixtures via envelope_fixtures.malformed_csv_paths
+- **Issue #440** (closed): Remove the stale 3σ methodology from the CMRR runner header
+- **PR #443**: docs(cmrr): replace MC runner header narrative with README pointer
+- **Issue #438** (closed): Share the error assertion across four characterization raw-audit suites
+- **PR #441**: test: share the raw-audit error assertion via a RawAuditCase base
+
 ### 2026-11-18
 
 - **PR #424**: docs: name merge-group runs in the three remaining push+PR-only CI trigger descriptions
@@ -487,43 +523,4 @@
 - **PR #49**: layout: drawn-and-routed opamp_core GDS with a committed generator and klt drc report (T1 items 2-3)
 - **PR #48**: sim: extract duplicated run_*.sh preflight preamble into sim/preflight.sh
 - **PR #46**: feat: SG13G2 drawing/routing scaffold in layout/ (LV core MOS + MIM cap primitives, DRC-clean smoke fixture)
-
-### 2026-09-22
-
-- **Issue #41** (closed): Remove empty measurements/ scaffold: its role was absorbed by sim per-bench records
-- **Issue #37** (closed): 2am: reuse rule 9 — name this block's consumers in the spec, carry their requirement rows, publish the integrator view as data
-- **Issue #30** (closed): docs: input-noise README non-claim bullet predates the DR-0002 ratification (noise row is [DR-2], not [P])
-- **PR #42**: chore: remove empty measurements/ scaffold (#41)
-- **PR #40**: docs(spec): record consumers with per-row verdicts, publish integrator view as data
-- **PR #39**: docs: past-tense the input-noise non-claim bullet after DR-0002
-
-### 2026-09-21
-
-- **Issue #32** (closed): spec: re-ratify the CMRR row on the mismatch-inclusive 3σ record (DR-0002 residual (c), two-key)
-- **Issue #26** (closed): sim: mismatch Monte Carlo CMRR evidence for the DR-1 op-amp (companion to #17)
-- **Issue #23** (closed): Commit a klt signoff block manifest so this block's T1 state is graded, not hand-read
-- **Issue #21** (closed): sim: input common-mode range (ICMR) characterization bench
-- **Issue #19** (closed): design: decide whether to re-size the input pair for flicker noise (1/f corner measured above the whole noise band)
-- **Issue #17** (closed): sim: Monte Carlo statistical evidence for input-referred offset (seed/N/negative control)
-- **Issue #16** (closed): spec: ratify target-spec.md via the two-key (EE + market) mechanism
-- **Issue #15** (closed): sim: output-swing bench for the DR-1 op-amp
-- **Issue #14** (closed): sim: CMRR/PSRR bench for the DR-1 op-amp
-- **PR #36**: docs: re-ratify the CMRR row on the mismatch-inclusive 3σ record (DR-4)
-- **PR #35**: sim: add mismatch Monte Carlo offset evidence for the DR-1 op-amp
-- **PR #34**: sim: add input common-mode range (ICMR) PVT bench for the DR-1 op-amp
-- **PR #33**: sim: add mismatch Monte Carlo CMRR evidence for the DR-1 op-amp
-- **PR #31**: feat(signoff): add a klt-graded T1 signoff verdict of record
-- **PR #28**: docs: decide input-pair flicker-noise re-size (declined) in DR-0003
-- **PR #27**: spec: ratify measured target-spec rows via two-key DR-0002
-- **PR #25**: sim: add CMRR/PSRR+ PVT bench for the DR-1 op-amp
-- **PR #24**: sim: add output-swing PVT bench for the DR-1 op-amp
-
-### 2026-09-18
-
-- **Issue #13** (closed): sim: input-referred noise bench for the DR-1 op-amp (choose band, then measure)
-- **Issue #12** (closed): sim: slew-rate (large-signal step) bench for the DR-1 op-amp
-- **Issue #11** (closed): sim: input-referred offset bench (deterministic, corner-only) for the DR-1 op-amp
-- **PR #22**: sim: add slew-rate (large-signal step) PVT bench for the DR-1 op-amp
-- **PR #20**: sim: add input-referred noise PVT bench, choose the noise band
-- **PR #18**: feat(sim): add deterministic PVT input-referred offset bench
 
