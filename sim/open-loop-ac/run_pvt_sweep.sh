@@ -79,6 +79,7 @@ total=0
 passed=0
 op_fail_points=()
 sim_fail_points=()
+declare -A op_fields
 
 for corner in "${CORNERS[@]}"; do
   for temp in "${TEMPS[@]}"; do
@@ -103,18 +104,21 @@ for corner in "${CORNERS[@]}"; do
         continue
       fi
 
-      vout="$(grep '^OP_VOUT ' "${log}" | awk '{print $2}')"
-      vd1="$(grep '^OP_VD1 ' "${log}" | awk '{print $2}')"
-      vd2="$(grep '^OP_VD2 ' "${log}" | awk '{print $2}')"
-      vtail="$(grep '^OP_VTAIL ' "${log}" | awk '{print $2}')"
-      vibias="$(grep '^OP_VIBIAS ' "${log}" | awk '{print $2}')"
-      ivdd="$(grep '^OP_IVDD ' "${log}" | awk '{print $2}')"
-
-      if [[ -z "${vout}" || -z "${vd1}" || -z "${vd2}" || -z "${vtail}" || -z "${ivdd}" ]]; then
+      # One scan of the log for every OP_* field this bench records (the
+      # shared reader, issue #471): a marker missing from a point's log
+      # reports through the status and lands here, in the per-point failure
+      # accounting, instead of exiting the sweep under set -e.
+      if ! sg13g2_read_log_fields op_fields "${log}" OP_VOUT OP_VD1 OP_VD2 OP_VTAIL OP_VIBIAS OP_IVDD; then
         echo "run_pvt_sweep.sh: SIM FAILED ${point_id} -- missing OP_* line(s), see ${log}" >&2
         sim_fail_points+=("${point_id}")
         continue
       fi
+      vout="${op_fields[OP_VOUT]}"
+      vd1="${op_fields[OP_VD1]}"
+      vd2="${op_fields[OP_VD2]}"
+      vtail="${op_fields[OP_VTAIL]}"
+      vibias="${op_fields[OP_VIBIAS]}"
+      ivdd="${op_fields[OP_IVDD]}"
 
       # --- Per-point DC sanity check (issue #9 Test Plan "Edge cases"):
       # output within 15% of VDD of mid-rail, and no internal node fully

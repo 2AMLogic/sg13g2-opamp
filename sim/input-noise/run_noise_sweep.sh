@@ -134,6 +134,7 @@ total=0
 passed=0
 op_fail_points=()
 sim_fail_points=()
+declare -A log_fields
 
 for corner in "${CORNERS[@]}"; do
   for temp in "${TEMPS[@]}"; do
@@ -160,22 +161,24 @@ for corner in "${CORNERS[@]}"; do
         continue
       fi
 
-      vout="$(grep '^OP_VOUT ' "${log}" | awk '{print $2}')"
-      vd1="$(grep '^OP_VD1 ' "${log}" | awk '{print $2}')"
-      vd2="$(grep '^OP_VD2 ' "${log}" | awk '{print $2}')"
-      vtail="$(grep '^OP_VTAIL ' "${log}" | awk '{print $2}')"
-      vibias="$(grep '^OP_VIBIAS ' "${log}" | awk '{print $2}')"
-      ivdd="$(grep '^OP_IVDD ' "${log}" | awk '{print $2}')"
-      vni_int="$(grep '^NOISE_INOISE_TOTAL ' "${log}" | awk '{print $2}')"
-      clgain_lo="$(grep '^AC_CLGAIN_100HZ ' "${log}" | awk '{print $2}')"
-      clgain_hi="$(grep '^AC_CLGAIN_1MHZ ' "${log}" | awk '{print $2}')"
-
-      if [[ -z "${vout}" || -z "${vd1}" || -z "${vd2}" || -z "${vtail}" || -z "${ivdd}" \
-            || -z "${vni_int}" || -z "${clgain_lo}" || -z "${clgain_hi}" ]]; then
+      # One scan of the log for every OP_*/NOISE_*/AC_* field this bench
+      # records (the shared reader, issue #471): a marker missing from a
+      # point's log reports through the status and lands in the per-point
+      # failure accounting, instead of exiting the sweep under set -e.
+      if ! sg13g2_read_log_fields log_fields "${log}" OP_VOUT OP_VD1 OP_VD2 OP_VTAIL OP_VIBIAS OP_IVDD NOISE_INOISE_TOTAL AC_CLGAIN_100HZ AC_CLGAIN_1MHZ; then
         echo "run_noise_sweep.sh: SIM FAILED ${point_id} -- missing OP_*/NOISE_*/AC_* line(s), see ${log}" >&2
         sim_fail_points+=("${point_id}")
         continue
       fi
+      vout="${log_fields[OP_VOUT]}"
+      vd1="${log_fields[OP_VD1]}"
+      vd2="${log_fields[OP_VD2]}"
+      vtail="${log_fields[OP_VTAIL]}"
+      vibias="${log_fields[OP_VIBIAS]}"
+      ivdd="${log_fields[OP_IVDD]}"
+      vni_int="${log_fields[NOISE_INOISE_TOTAL]}"
+      clgain_lo="${log_fields[AC_CLGAIN_100HZ]}"
+      clgain_hi="${log_fields[AC_CLGAIN_1MHZ]}"
 
       # --- Per-point sanity check. Two parts, both documented in
       # README.md "Per-point sanity checks":

@@ -12,12 +12,14 @@
 # SG13G2_TEMPS / SG13G2_VDDS / SG13G2_CL_F (the grid's other two axes and the
 # stated load),
 # and SG13G2_NGSPICE_ERR_RE, the broken-simulation log signature every harness
-# scans its raw ngspice log for (see their own headers below). Nine companion
+# scans its raw ngspice log for (see their own headers below). Ten companion
 # functions cover the remaining shared per-caller work:
 # sg13g2_preflight_require_netlist (the DUT_NETLIST_SRC guard most -- not all
 # -- callers need), sg13g2_preflight_record_paths (the record-id and
 # output-path block all ten callers need), sg13g2_sim_broken (the per-point
 # "did this simulation actually solve?" gate all ten callers apply),
+# sg13g2_read_log_fields (the single-scan per-point marker reader the sweep
+# runners read their OP_*/TR_*/NOISE_*/AC_* fields through, issue #471),
 # sg13g2_op_sanity (the per-point "is this DC operating point sane?" gate
 # behind every bench's op_pass column), sg13g2_latest_record_csv (resolve
 # the newest committed sibling record every
@@ -231,6 +233,71 @@ sg13g2_sim_broken() {
   fi
   grep -qiE "${re}" "${log}" && return 0
   return 1
+}
+
+# sg13g2_read_log_fields <map-name> <log> <marker> [<marker> ...]
+#   Read one ngspice log's per-point measurement markers -- the OP_*/TR_*/
+#   NOISE_*/AC_* lines every bench's .control block prints -- in a SINGLE
+#   scan, filling the caller's associative array <map-name> with
+#   marker -> value. <marker> names the line's first whitespace field and
+#   value is its second (what the awk half of every pre-#471 `grep '^MARKER '
+#   | awk '{print $2}'` pipeline read); the FIRST occurrence of a repeated
+#   marker wins. Every requested marker gets a key (empty when the log does
+#   not carry it), so "${map[MARKER]:-}" is safe under set -u.
+#
+#   Status: 0 every requested marker carried a non-empty value; 1 at least
+#   one was absent or empty -- exactly the condition the per-bench
+#   `[[ -z "${vout}" || ... ]]` guards tested before this reader existed.
+#   Callers MUST test that status in a condition, never bare:
+#
+#     declare -A op_fields
+#     if ! sg13g2_read_log_fields op_fields "${log}" OP_VOUT OP_VD1 ...; then
+#       echo "...: SIM FAILED ${point_id} -- missing OP_* line(s), see ${log}" >&2
+#       sim_fail_points+=("${point_id}")
+#       continue
+#     fi
+#     vout="${op_fields[OP_VOUT]}"
+#
+#   Under the runners' `set -euo pipefail` a bare call that returns 1 would
+#   exit the script -- which is precisely the failure this reader removes:
+#   before it, each field was its own grep|awk pipeline, one absent marker
+#   made the assignment exit 1, and bash killed the whole sweep before the
+#   failure branch above could record the point and continue (issue #471;
+#   four runners carried 25 such pipelines). An unreadable <log> also
+#   reports 1 (with awk's own diagnostic on stderr): after sg13g2_sim_broken
+#   has scanned it, that path is unreachable in practice.
+#
+#   <map-name> must not collide with this function's own locals (log, marks,
+#   out, mark, val, ok, __fields). The reader-vs-old-pipeline parity on
+#   committed evidence, and the one-degraded-point sweep regression, are
+#   pinned offline by sim/tools/test_log_field_reader.py.
+sg13g2_read_log_fields() {
+  if [[ $# -lt 3 ]]; then
+    echo "${_sg13g2_preflight_self}: sg13g2_read_log_fields: expected <map-name> <log> <marker> [<marker> ...], got $# argument(s)" >&2
+    exit 3
+  fi
+  local -n __fields="$1"
+  local log="$2"
+  shift 2
+  local marks=("$@")
+  local out mark val ok=0
+  __fields=()
+  out="$(awk -v want="${marks[*]}" '
+    BEGIN { n = split(want, w, " "); for (i = 1; i <= n; i++) wanted[w[i]] = 1 }
+    !/^[[:space:]]/ && ($1 in wanted) && !($1 in seen) { seen[$1] = 1; print $1 "\t" $2 }
+  ' "${log}")" || out=""
+  if [[ -n "${out}" ]]; then
+    while IFS=$'\t' read -r mark val; do
+      __fields["${mark}"]="${val}"
+    done <<< "${out}"
+  fi
+  for mark in "${marks[@]}"; do
+    if [[ -z "${__fields["${mark}"]:-}" ]]; then
+      __fields["${mark}"]=""
+      ok=1
+    fi
+  done
+  return "${ok}"
 }
 
 # sg13g2_op_sanity <vdd> <vcm> <vout> <vd1> <vd2> <vtail>
