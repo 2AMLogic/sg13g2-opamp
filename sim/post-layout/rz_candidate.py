@@ -3,6 +3,7 @@
 
   rz_candidate.py bench   <dut-netlist> <out-dir>
   rz_candidate.py control <dut-netlist> <schematic-netlist> <out-dir>
+  rz_candidate.py bracket <dut-netlist> <schematic-netlist> <out-dir>
   rz_candidate.py grade   <dir>
 
 `bench` builds the committed-bench legs for the extracted netlist of the
@@ -338,6 +339,37 @@ def variants(dut, out):
     return manifest
 
 
+def bracket(dut, schematic, out):
+    """DR-0013's bracket for a candidate's extracted-leg slew rows.
+
+    The #451 outcome (DR-0013 clause 4) leaves the 45-corner extracted-leg
+    slew grid and DR-0012's nine passive slew legs of any extraction whose
+    PDK resistor body sits on a parasitic star leaf `ungraded` on the
+    committed bench -- `bench` still submits those legs, aborts and all, so
+    the diagnostics stay in the record. What the row *reads* while the
+    extractor ask (2AMLogic/klayout-tools#7317) is open is bracketed by two
+    controls, never the bench: the body-on-hub edit of the same extraction
+    (the one-leaf star surgery that runs clean) and the schematic netlist
+    (no star network), each as the 45-corner slew grid plus the nine
+    resistor x capacitor sections at the binding slew corner. 20 requests.
+    """
+    dut = os.path.abspath(dut)
+    schematic = os.path.abspath(schematic)
+    os.makedirs(out, exist_ok=True)
+    point = SLEW_POINTS["ss"]
+    bodyhub = os.path.join(out, "opamp_core_pex_bodyhub.spice")
+    open(bodyhub, "w").write(body_on_hub(open(dut).read()))
+    manifest = []
+    for dut_path, tag in ((bodyhub, "bodyhub"), (schematic, "sch")):
+        manifest.append(_slew(dut_path, out, f"ctl_{tag}_grid_slew", None, control=True))
+        for res in RES_SECTIONS:
+            for cap in CAP_SECTIONS:
+                manifest.append(_slew(dut_path, out, f"ctl_{tag}_ss_{res}_{cap}_slew", point,
+                                      res, cap, control=True))
+    _manifest(manifest, out)
+    return manifest
+
+
 def probe_request():
     """The `rppd`-alone probes' request base, shared with rz_solver: the
     committed slew.request.json restricted to the single binding slew corner
@@ -417,6 +449,10 @@ def main(argv=None):
     p.add_argument("dut")
     p.add_argument("schematic")
     p.add_argument("out")
+    p = sub.add_parser("bracket")
+    p.add_argument("dut")
+    p.add_argument("schematic")
+    p.add_argument("out")
     p = sub.add_parser("grade")
     p.add_argument("directory")
     args = ap.parse_args(argv)
@@ -425,6 +461,8 @@ def main(argv=None):
         manifest = bench(args.dut, args.out)
     elif args.cmd == "control":
         manifest = control(args.dut, args.schematic, args.out)
+    elif args.cmd == "bracket":
+        manifest = bracket(args.dut, args.schematic, args.out)
     else:
         grade(args.directory)
         return 0

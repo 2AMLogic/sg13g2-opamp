@@ -335,6 +335,87 @@ class ControlTest(Scratch):
             self.assertEqual(by[geared_name]["body_sha256"], rc.sha256_file(deck_body_path(by[geared_name])), geared_name)
 
 
+class BracketTest(Scratch):
+    BRACKET_NAMES = (
+        ["ctl_bodyhub_grid_slew", "ctl_sch_grid_slew"]
+        + [f"ctl_{tag}_ss_{r}_{c}_slew" for tag in ("bodyhub", "sch")
+           for r in rc.RES_SECTIONS for c in rc.CAP_SECTIONS]
+    )
+
+    def build(self):
+        out = os.path.join(self.tmp, "brk")
+        with contextlib.redirect_stdout(io.StringIO()):
+            return rc.bracket(self.dut, self.sch, out), out
+
+    def test_builds_the_20_dr0013_bracket_legs(self):
+        manifest, out = self.build()
+        self.assertEqual(sorted(m["name"] for m in manifest), sorted(self.BRACKET_NAMES))
+        self.assertEqual(len(load_json(os.path.join(out, "manifest.json"))), 20)
+        by = {m["name"]: m for m in manifest}
+        for name in self.BRACKET_NAMES:
+            self.assertEqual(by[name]["corners"], 45 if name.endswith("grid_slew") else 1, name)
+            self.assertEqual(by[name]["point"], None if name.endswith("grid_slew") else "mos_ss:-40:1.08", name)
+
+    def test_every_leg_is_a_labelled_control_on_the_batch_backend(self):
+        manifest, out = self.build()
+        for entry in manifest:
+            req = self.req(entry)
+            self.assertEqual(req["backend"], "batch")
+            self.assertEqual(req["batch"]["capacity_wait_s"], 600)
+            self.assertTrue(req["_comment"].startswith("issue #430 CONTROL"), entry["name"])
+            self.assertFalse(entry["gear"])
+
+    def test_bodyhub_legs_run_the_one_leaf_star_surgery_dut(self):
+        manifest, out = self.build()
+        by = {m["name"]: m for m in manifest}
+        bodyhub = os.path.join(out, "opamp_core_pex_bodyhub.spice")
+        hub = open(bodyhub).read()
+        self.assertIn("X$39 \\$5__t4 \\$8__t1 vss rppd l=7.47U w=1U\n", hub)
+        self.assertNotIn("vss__t23", hub)
+        for name in self.BRACKET_NAMES:
+            if name.startswith("ctl_bodyhub_"):
+                self.assertEqual(by[name]["dut"], os.path.abspath(bodyhub), name)
+                self.assertEqual(by[name]["dut_sha256"], rc.sha256_file(bodyhub), name)
+            else:
+                self.assertEqual(by[name]["dut"], os.path.abspath(self.sch), name)
+                self.assertEqual(by[name]["dut_sha256"], rc.sha256_file(self.sch), name)
+
+    def test_section_legs_rewrite_both_passive_sections(self):
+        manifest, out = self.build()
+        by = {m["name"]: m for m in manifest}
+        for tag in ("bodyhub", "sch"):
+            for r in rc.RES_SECTIONS:
+                for c in rc.CAP_SECTIONS:
+                    entry = by[f"ctl_{tag}_ss_{r}_{c}_slew"]
+                    self.assertEqual(entry["res"], r)
+                    self.assertEqual(entry["cap"], c)
+                    req = self.req(entry)
+                    for proc in req["corners"]["process"]:
+                        secs = [s for s in proc["sections"] if isinstance(s, dict)]
+                        self.assertEqual([s["section"] for s in secs if s.get("lib") == rc.CAP_LIB], [c])
+                        self.assertEqual([s["section"] for s in secs if s.get("lib") == rc.RES_LIB], [r])
+            grid = by[f"ctl_{tag}_grid_slew"]
+            self.assertEqual(grid["res"], None)
+            self.assertEqual(grid["passive_sections_rewritten"], 0)
+
+    def test_grid_digests_match_the_same_dut_bench_grid(self):
+        manifest, out = self.build()
+        with contextlib.redirect_stdout(io.StringIO()):
+            plain = {e["name"]: e for e in rc.bench(self.dut, os.path.join(self.tmp, "bench"))}
+        by = {m["name"]: m for m in manifest}
+        # The body-on-hub edit changes the DUT, so its digest differs from the
+        # bench grid's; the schematic grid digests the schematic netlist.
+        self.assertNotEqual(by["ctl_bodyhub_grid_slew"]["deck_content_sha256"],
+                            plain["grid_slew"]["deck_content_sha256"])
+        self.assertNotEqual(by["ctl_sch_grid_slew"]["deck_content_sha256"],
+                            plain["grid_slew"]["deck_content_sha256"])
+        for entry in manifest:
+            dut = os.path.abspath(entry["dut"])
+            body = open(deck_body_path(entry)).read()
+            self.assertEqual(entry["deck_content_sha256"], canonical_deck_digest(body, dut), entry["name"])
+            self.assertEqual(entry["dut_sha256"], rc.sha256_file(dut), entry["name"])
+
+
 class GradeTest(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.mkdtemp()
