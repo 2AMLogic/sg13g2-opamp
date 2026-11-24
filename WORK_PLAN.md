@@ -3,7 +3,6 @@
 This roadmap is generated from the repository's current GitHub label state.
 
 <!-- guide:plan-body:start -->
-_Generated: 2026-11-23T04:24:42Z (snapshot; compare against live labels)_
 ## Operator Attention: Merge-Risk-Hold Pileup
 
 Judge-approved PRs under a hold (`loom:blocked` or `loom:operator`) — only a human merge decision is missing.
@@ -30,7 +29,7 @@ Judge-approved PRs under a hold (`loom:blocked` or `loom:operator`) — only a h
 - **#428**: sim preflight: on batch-fleet runs take OSDI identity from the runner-reported digests, not a locally built .build-manifest, then write the #325 input-cmr record
 - **#429**: post-layout: attribute the klt 0.9.0 extracted phase-margin miss (ff / 1.32 V / 125 C) and the tt / 1.08 V / 27 C non-convergence, then route #312 to a design or klt follow-up
 - **#430**: design: post-layout phase margin misses the 60 deg bound at mos_ff/1.32V/125C (extracted PM 59.81 deg; ng=1-vs-drawn representation -1.64 deg, parasitics -0.53 deg)
-- **#435**: Collect the two substrate-tie batch results for PR #431 on a batch-enabled worker
+- **#435**: Resubmit the 1 MΩ and 1 GΩ TT substrate-tie probes and record the results on PR #431
 
 ## Ready
 
@@ -44,18 +43,16 @@ Human-approved issues ready for implementation (`loom:issue`).
 
 Issues currently being built (`loom:building`).
 
-- **#459**: test flake (instrumented, two owners decisive): test_overlapping_starts_give_exactly_one_owner fails on T1 signoff register
-- **#464**: .loom/account-ranking.codex (dispatcher-written) is untracked and not gitignored, so check-main-clean.sh exits 3 on a clean main
-- **#468**: Consolidate duplicated request, deck-rewrite, and hashing helpers in sim/post-layout/
 - **#469**: Two doc-accuracy nits in sim/post-layout after the deck_content_sha256 rollout
-- **#470**: Deduplicate generic harness-CSV negative controls across all six sim/*/klt/test_compare.py suites
 - **#471**: Read sweep log fields once so a missing marker skips only the affected point
 
 ## PRs Awaiting Review
 
 PRs waiting on Judge (`loom:review-requested`).
 
-- **#463**: test: give the reservation race diagnostic inode/ctime and a clock probe
+- **#475**: sim: read sweep log fields once so a missing marker skips only that point
+- **#478**: docs(sim): fix controls() leg count and name both final-deck-hash generators
+- **#490**: docs: record the open TT tie measurements and replacement procedure
 
 ## Approved (Awaiting Merge)
 
@@ -78,15 +75,13 @@ Issues carrying `loom:curated`.
 - **#342**: design: raise PSRR+ via bias/topology change, re-run 45 corners, carry bounds into spec (PR #303 operator ruling) *(curated)*
 - **#429**: post-layout: attribute the klt 0.9.0 extracted phase-margin miss (ff / 1.32 V / 125 C) and the tt / 1.08 V / 27 C non-convergence, then route #312 to a design or klt follow-up *(curated)*
 - **#430**: design: post-layout phase margin misses the 60 deg bound at mos_ff/1.32V/125C (extracted PM 59.81 deg; ng=1-vs-drawn representation -1.64 deg, parasitics -0.53 deg) *(curated)*
-- **#435**: Collect the two substrate-tie batch results for PR #431 on a batch-enabled worker *(curated)*
-- **#459**: test flake (instrumented, two owners decisive): test_overlapping_starts_give_exactly_one_owner fails on T1 signoff register *(curated)*
-- **#464**: .loom/account-ranking.codex (dispatcher-written) is untracked and not gitignored, so check-main-clean.sh exits 3 on a clean main *(curated)*
+- **#435**: Resubmit the 1 MΩ and 1 GΩ TT substrate-tie probes and record the results on PR #431 *(curated)*
 - **#469**: Two doc-accuracy nits in sim/post-layout after the deck_content_sha256 rollout *(curated)*
 
 ## Proposed (Architect / Hermit)
 
 - **#105**: signoff: express the statistical rows as klt yield evidence for T1 item 6 (offset MC, mismatch CMRR) *(architect)*
-- **#444**: Retire five-job submission from the PSRR supply-gain runner *(hermit)*
+- **#485**: Keep the CMRR sample audit enabled when tests edit the corrected open-loop record *(hermit)*
 
 ## Epics
 
@@ -100,10 +95,10 @@ _None._
 | Very important | 2 |
 | Important | 10 |
 | Ready (`loom:issue`) | 3 |
-| In Progress (`loom:building`) | 6 |
-| PRs awaiting review | 1 |
+| In Progress (`loom:building`) | 2 |
+| PRs awaiting review | 3 |
 | Approved PRs awaiting merge | 2 |
-| Curated | 14 |
+| Curated | 12 |
 | Architect / Hermit proposals | 2 |
 | Active epics | 0 |
 <!-- guide:plan-body:end -->

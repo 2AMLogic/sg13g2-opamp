@@ -8,6 +8,10 @@
 
 ### 2026-11-23
 
+- **PR #489**: test: report reserve mkdir rc and inode stat in reservation race diagnostic
+- **Issue #488** (closed): test flake (4th, runner probe answers #459: t= is live): test_overlapping_starts_give_exactly_one_owner fails on T1 signoff register
+- **PR #486**: sim: wait for fleet capacity on new batch klt sim submissions
+- **Issue #484** (closed): sim/*/klt/run.sh batch submissions carry no capacity wait (--wait-for-capacity / batch.capacity_wait_s)
 - **PR #483**: Retire five-job shard submission from the PSRR supply-gain runner (single request only)
 - **Issue #444** (closed): Retire five-job submission from the PSRR supply-gain runner
 - **PR #482**: refactor(sim): delegate ideal_swap's rppd rewrite to rewrite_rppd
