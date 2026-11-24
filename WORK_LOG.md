@@ -8,6 +8,9 @@
 
 ### 2026-11-24
 
+- **Issue #430** (closed): design: post-layout phase margin misses the 60 deg bound at mos_ff/1.32V/125C (extracted PM 59.81 deg; ng=1-vs-drawn representation -1.64 deg, parasitics -0.53 deg)
+- **PR #495**: sim(post-layout): qualify the 24.3 um trim -- both bounds hold; add DR-0013 slew brackets
+- **Issue #496** (closed): docs: refresh stale 25.3 um and pre-DR-0013 prose in candidate.patch when #312 lands
 - **Issue #485** (closed): Keep the CMRR sample audit enabled when tests edit the corrected open-loop record
 - **PR #493**: test(signoff): keep CMRR sample audit on under corrected-gain edits
 - **PR #478**: docs(sim): fix controls() leg count and name both final-deck-hash generators
