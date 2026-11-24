@@ -8,6 +8,24 @@
 
 ### 2026-11-23
 
+- **PR #489**: test: report reserve mkdir rc and inode stat in reservation race diagnostic
+- **Issue #488** (closed): test flake (4th, runner probe answers #459: t= is live): test_overlapping_starts_give_exactly_one_owner fails on T1 signoff register
+- **PR #486**: sim: wait for fleet capacity on new batch klt sim submissions
+- **Issue #484** (closed): sim/*/klt/run.sh batch submissions carry no capacity wait (--wait-for-capacity / batch.capacity_wait_s)
+- **PR #483**: Retire five-job shard submission from the PSRR supply-gain runner (single request only)
+- **Issue #444** (closed): Retire five-job submission from the PSRR supply-gain runner
+- **PR #482**: refactor(sim): delegate ideal_swap's rppd rewrite to rewrite_rppd
+- **Issue #479** (closed): sim/post-layout: ideal_swap still hand-rolls the rppd-card scan that rewrite_rppd now owns
+- **PR #481**: test(signoff): share raw-pin controls via PointRawPinControlMixin
+- **Issue #477** (closed): Deduplicate generic per-point raw-pin negative controls and leftover Fixture() loops in signoff
+- **PR #476**: chore: gitignore .loom/account-ranking.* dispatcher state
+- **Issue #464** (closed): .loom/account-ranking.codex (dispatcher-written) is untracked and not gitignored
+- **PR #473**: refactor(sim): dedupe request/deck/hash helpers across post-layout generators
+- **Issue #468** (closed): Consolidate duplicated request, deck-rewrite, and hashing helpers in sim/post-layout/
+- **Issue #459** (closed): test flake (instrumented, two owners decisive): test_overlapping_starts_give_exactly_one_owner fails on T1 signoff register
+- **PR #463**: test: give the reservation race diagnostic inode/ctime and a clock probe
+- **Issue #470** (closed): Deduplicate generic harness-CSV negative controls across all six sim/*/klt/test_compare.py suites
+- **PR #474**: test(sim): deduplicate harness-CSV negative controls into HarnessCsvControlMixin
 - **Issue #466** (closed): sim: rz_solver.py manifest entries record no deck_content_sha256, so #451 legs still commit only a path-dependent body digest
 - **PR #467**: feat(sim): record deck_content_sha256 in rz_solver manifest entries
 - **Issue #432** (closed): Remove the circular dpkg-deb recovery instructions from the OSDI build

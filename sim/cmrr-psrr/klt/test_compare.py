@@ -19,9 +19,12 @@ import copy
 import csv
 import json
 import os
+import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
+from pathlib import Path
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
@@ -33,6 +36,7 @@ import envelope_fixtures as F  # noqa: E402
 
 BENCH = os.path.dirname(HERE)
 SIM = os.path.dirname(BENCH)
+REPO = os.path.dirname(SIM)
 HARNESS_CSV = os.path.join(BENCH, "records", "20260921-151815-707b34c.csv")
 OPENLOOP_CSV = os.path.join(SIM, "open-loop-ac", "records", "20260910-221601-22feaba.csv")
 REQUEST = os.path.join(HERE, "psrr.request.json")
@@ -508,6 +512,192 @@ class TestCli(Base):
         off = copy.deepcopy(self.ol_env)
         off["corners"][0]["measurements"][0]["value"] += 0.5
         self.assertEqual(C.main(base + ["--openloop-envelope", self._dump(off), "--openloop-csv", OPENLOOP_CSV]), 1)
+
+
+# ---------------------------------------------------------------------------
+# run.sh: one single-request submission (issue #444)
+
+# A stub `klt` client: `--version` answers klt_check_client; every `sim`
+# invocation is logged (one line, full args) and replays the envelope the
+# test parked in STUB_KLT_ENVELOPE, or exits STUB_KLT_RC to simulate a
+# submission that produced no gradable envelope.
+STUB_KLT = r"""#!/usr/bin/env bash
+if [[ "$1" == "--version" ]]; then echo "stub-klt 0.9"; exit 0; fi
+if [[ "$1" != "sim" ]]; then echo "stub klt: unexpected invocation: $*" >&2; exit 9; fi
+printf '%s\n' "$*" >> "${STUB_KLT_LOG}"
+if [[ -n "${STUB_KLT_RC:-}" && "${STUB_KLT_RC}" != "0" ]]; then
+  echo "stub klt: simulated klt sim exit ${STUB_KLT_RC}" >&2
+  exit "${STUB_KLT_RC}"
+fi
+cat "${STUB_KLT_ENVELOPE}"
+"""
+
+# Offline stand-in for sim/preflight.sh (the real one needs a PDK install and
+# the OSDI build): no checks, and the #209 identity lifecycle becomes a no-op
+# (the real one is driven against a fake PDK install by
+# sim/tools/test_env_drift_lifecycle.py). PDK / PDK_ROOT / NGSPICE_VERSION
+# cover the provenance variables klt_compare_and_finish reads.
+STUB_PREFLIGHT = """#!/usr/bin/env bash
+# shellcheck shell=bash
+sg13g2_preflight_require_netlist() { :; }
+sg13g2_env_identity_begin() { :; }
+sg13g2_env_identity_finalize() { :; }
+PDK="${PDK:-ihp-sg13g2}"
+PDK_ROOT="${PDK_ROOT:-/nonexistent-pdk-root}"
+NGSPICE_VERSION="${NGSPICE_VERSION:-stub-ngspice}"
+"""
+
+
+class RunnerFixture:
+    """A throwaway repo tree that drives the real sim/cmrr-psrr/klt/run.sh
+    offline (issue #444): the runner, comparator, request, shared wrappers
+    and harness CSVs are the checked-out files; `klt` and sim/preflight.sh
+    are stubs, so no PDK, OSDI build, ngspice or klt binary is needed. The
+    synthetic envelopes come from Base (built from the committed harness and
+    open-loop CSVs), so the compare step joins, agrees and exits 0, as the
+    real runner would on an in-tolerance run. `date` and `git` are shadowed
+    by exported bash functions (the sim/tools/test_klt_run_common.py
+    pattern) so each invocation mints a deterministic record id."""
+
+    COPIES = (
+        "sim/cmrr-psrr/klt/run.sh",
+        "sim/cmrr-psrr/klt/compare.py",
+        "sim/cmrr-psrr/klt/psrr.request.json",
+        "sim/tools/klt_run_common.sh",
+        "sim/tools/klt_envelope.py",
+        "sim/record-paths.sh",
+        "sim/cmrr-psrr/records/20260921-151815-707b34c.csv",
+        "sim/open-loop-ac/records/20260910-221601-22feaba.csv",
+    )
+
+    def __init__(self, root, psrr_env, ol_env):
+        self.root = Path(root)
+        for rel in self.COPIES:
+            dst = self.root / rel
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(os.path.join(REPO, rel), dst)
+        (self.root / "sim" / "preflight.sh").write_text(STUB_PREFLIGHT)
+        self.klt_dir = self.root / "sim" / "cmrr-psrr" / "klt"
+        self.records = self.klt_dir / "records"
+        self.run_sh = self.klt_dir / "run.sh"
+        self.envelope = self.root / "stub-psrr.sim.json"
+        self.ol_envelope = self.root / "stub-open-loop.ac.sim.json"
+        self.log = self.root / "klt-sim-calls.log"
+        self.tmp = self.root / "tmp"
+        self.tmp.mkdir()
+        self.write_envelope(psrr_env)
+        self.write_openloop(ol_env)
+        self.klt = self.root / "klt"
+        self.klt.write_text(STUB_KLT)
+        self.klt.chmod(0o755)
+
+    def write_envelope(self, env):
+        with open(self.envelope, "w") as f:
+            json.dump(env, f)
+
+    def write_openloop(self, env):
+        with open(self.ol_envelope, "w") as f:
+            json.dump(env, f)
+
+    def sim_calls(self):
+        if not self.log.exists():
+            return []
+        return [ln.split() for ln in self.log.read_text().splitlines()]
+
+    def published(self):
+        return sorted(p.name for p in self.records.iterdir())
+
+
+class TestRunnerSingleRequest(Base):
+    """issue #444: run.sh submits psrr.request.json as ONE `klt sim` call
+    (submit_mode=single, provenance-recorded) and publishes nothing under
+    records/ when the run is not gradable. The five-job shard bridge
+    (PSRR_KLT_MODE / PSRR_KLT_RESUME_DIR / PSRR_KLT_SUBMIT_TRIES /
+    PSRR_KLT_RETRY_SLEEP_S / the <id>.shards/ copy) is gone from the runner;
+    its replay tools, records and tests stay (test_shard.py)."""
+
+    def setUp(self):
+        super().setUp()
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.fx = RunnerFixture(tmp.name, self.env, self.ol_env)
+
+    def invoke(self, ts, env=None):
+        e = {"PATH": os.environ.get("PATH", "/usr/bin:/bin"),
+             "KLT": str(self.fx.klt),
+             "STUB_KLT_LOG": str(self.fx.log),
+             "STUB_KLT_ENVELOPE": str(self.fx.envelope),
+             "TMPDIR": str(self.fx.tmp),
+             # Av0 fixtures consistent with the harness record (the old
+             # floating-inn CSV both envelopes here are built from), so the
+             # compare step itself agrees -- the join numerics have their own
+             # tests above; these are runner-mechanics tests.
+             "PSRR_OPENLOOP_CSV": "sim/open-loop-ac/records/20260910-221601-22feaba.csv",
+             "PSRR_OPENLOOP_ENVELOPE": "stub-open-loop.ac.sim.json",
+             "FAKE_TS": ts, "FAKE_SHA": "abc1234",
+             "RUNNER": str(self.fx.run_sh)}
+        e.update(env or {})
+        wrapper = ('date() { echo "$FAKE_TS"; }\n'
+                   'git() { echo "$FAKE_SHA"; }\n'
+                   'export -f date git\n'
+                   'exec bash "$RUNNER"\n')
+        return subprocess.run(["bash", "-c", wrapper], cwd=str(self.fx.root), env=e,
+                              capture_output=True, text=True)
+
+    def compare_report(self, ts):
+        with open(self.fx.records / f"{ts}-abc1234.compare.json") as f:
+            return json.load(f)
+
+    def test_one_klt_sim_call_and_published_records(self):
+        r = self.invoke("20260101-000001")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        calls = self.fx.sim_calls()
+        self.assertEqual(len(calls), 1, calls)  # one submission, no shard loop
+        self.assertEqual(calls[0][0], "sim")
+        self.assertEqual(os.path.basename(calls[0][1]), "psrr.request.json")
+        self.assertNotIn("--backend", calls[0])  # request field: batch
+        self.assertEqual(self.fx.published(),
+                         ["20260101-000001-abc1234.compare.json",
+                          "20260101-000001-abc1234.sim.json"])  # no <id>.shards/, no reservation
+        rep = self.compare_report("20260101-000001")
+        self.assertEqual(rep["status"], "agree")
+        self.assertEqual(rep["points_compared"], 45)
+        self.assertEqual(rep["provenance"]["submit_mode"], "single")
+        self.assertEqual(rep["provenance"]["backend_override"], "none (request field: batch)")
+
+    def test_backend_override_forwarded_to_the_single_call(self):
+        r = self.invoke("20260101-000002", {"PSRR_KLT_BACKEND": "local"})
+        self.assertEqual(r.returncode, 0, r.stderr)
+        calls = self.fx.sim_calls()
+        self.assertEqual(len(calls), 1, calls)
+        self.assertEqual(calls[0][calls[0].index("--backend") + 1], "local")
+        self.assertEqual(self.compare_report("20260101-000002")["provenance"]["backend_override"], "local")
+
+    def test_failed_klt_sim_publishes_nothing(self):
+        r = self.invoke("20260101-000003", {"STUB_KLT_RC": "4"})
+        self.assertEqual(r.returncode, 4)
+        self.assertIn("klt sim exited 4", r.stderr)
+        self.assertEqual(len(self.fx.sim_calls()), 1)  # submitted once, no retry loop
+        self.assertEqual(self.fx.published(), [])  # nothing written, reservation released
+
+    def test_44_corner_envelope_refused_and_not_published(self):
+        env = copy.deepcopy(self.env)
+        del env["corners"][7]
+        env["corner_count"] = 44
+        self.fx.write_envelope(env)
+        r = self.invoke("20260101-000004")
+        self.assertEqual(r.returncode, 4)
+        self.assertIn("envelope failed validation", r.stderr)
+        self.assertEqual(self.fx.published(), [])
+
+    def test_errored_corner_envelope_refused_and_not_published(self):
+        env = copy.deepcopy(self.env)
+        env["corners"][2]["status"] = "error"
+        self.fx.write_envelope(env)
+        r = self.invoke("20260101-000005")
+        self.assertEqual(r.returncode, 4)
+        self.assertIn("envelope failed validation", r.stderr)
+        self.assertEqual(self.fx.published(), [])
 
 
 if __name__ == "__main__":

@@ -34,7 +34,6 @@ klt_measure.py reads them.
 """
 import argparse
 import glob
-import hashlib
 import json
 import math
 import os
@@ -46,6 +45,10 @@ if HERE not in sys.path:
     sys.path.insert(0, HERE)
 import klt_measure as km  # noqa: E402
 import rz_screen as rz  # noqa: E402
+
+#: The one definition lives in klt_measure (issue #468); re-exported so this
+#: module's callers and tests keep `rz_candidate.sha256_file`.
+sha256_file = km.sha256_file
 
 CAP_LIB = "libs.tech/ngspice/models/cornerCAP.lib"
 RES_LIB = "libs.tech/ngspice/models/cornerRES.lib"
@@ -75,7 +78,8 @@ PASSIVE_SLEW_POINTS = {"ss": "mos_ss:-40:1.08"}
 
 #: Signed margin is taken against the request's own lower limit.
 PM_LIMIT_RAD = -2.0943951023931953
-GEAR = ".options method=gear"
+GEAR_OPTION = "method=gear"
+GEAR = ".options " + GEAR_OPTION
 RPPD_CARD = re.compile(r"^(X\S+\s+\S+\s+\S+\s+\S+\s+rppd)(\s.*)$")
 IDEAL_OHMS = 2000.6
 PROBE_BODY = """* r3_cmc transient probe: the rppd model alone (issue #430 control)
@@ -92,11 +96,6 @@ PROBE_MEASUREMENTS = (
     {"name": "vout_final_v", "spice": ".meas tran vout_final_v find v(out) at=800n", "unit": "V"},
     {"name": "t_10_90_s", "spice": ".meas tran t_10_90_s trig v(out) val=0.1 rise=1 targ v(out) val=0.9 rise=1", "unit": "s"},
 )
-
-
-def sha256_file(path):
-    with open(path, "rb") as f:
-        return hashlib.sha256(f.read()).hexdigest()
 
 
 def set_passives(req, res, cap):
@@ -117,12 +116,37 @@ def set_passives(req, res, cap):
     return hits
 
 
-def insert_gear(body):
-    """Return `body` with `.options method=gear` after its last .options line."""
+def insert_options(body, option):
+    """Return `body` with `.options <option>` after its last .options line."""
     lines = body.split("\n")
     last = max(i for i, line in enumerate(lines) if line.lower().startswith(".options"))
-    lines.insert(last + 1, GEAR)
+    lines.insert(last + 1, ".options " + option)
     return "\n".join(lines)
+
+
+def insert_gear(body):
+    """Return `body` with `.options method=gear` after its last .options line."""
+    return insert_options(body, GEAR_OPTION)
+
+
+def rewrite_rppd(text, rewrite):
+    """Return `text` with its one `rppd` card rewritten by `rewrite(match)`.
+
+    Loud: anything but exactly one `rppd` card exits 1.
+    """
+    lines = text.split("\n")
+    hits = [i for i, line in enumerate(lines) if RPPD_CARD.match(line)]
+    if len(hits) != 1:
+        sys.exit(f"rz_candidate: expected exactly one rppd card, found {len(hits)}")
+    i = hits[0]
+    lines[i] = rewrite(RPPD_CARD.match(lines[i]))
+    return "\n".join(lines)
+
+
+def body_on_hub(text):
+    """Move the `rppd` card's body terminal onto the `vss` hub (the #430
+    `bodyhub` control's edit, applied to the extraction)."""
+    return rewrite_rppd(text, lambda m: " ".join(m.group(1).split()[:3] + ["vss", "rppd"]) + m.group(2))
 
 
 def ideal_swap(text, ohms=IDEAL_OHMS):
@@ -130,14 +154,10 @@ def ideal_swap(text, ohms=IDEAL_OHMS):
 
     Loud: anything but exactly one `rppd` card exits 1 and writes nothing.
     """
-    lines = text.split("\n")
-    hits = [i for i, line in enumerate(lines) if RPPD_CARD.match(line)]
-    if len(hits) != 1:
-        sys.exit(f"rz_candidate: expected exactly one rppd card, found {len(hits)}")
-    i = hits[0]
-    toks = lines[i].split()
-    lines[i] = f"Rz_cc {toks[1]} {toks[2]} {ohms:g}"
-    return "\n".join(lines)
+    def swap(m):
+        toks = m.group(0).split()
+        return f"Rz_cc {toks[1]} {toks[2]} {ohms:g}"
+    return rewrite_rppd(text, swap)
 
 
 def _write_req(req, path):
@@ -191,7 +211,12 @@ def _grid(dut, out, kind):
     return entry
 
 
-def _slew(dut, out, name, point, res=None, cap=None, gear=False, control=False, note=""):
+def slew_leg(dut, out, name, point, options=None):
+    """The core of one slew-bench leg, shared with rz_solver: `rz.slew_build`
+    into `<out>/<name>/`, the request renamed to `<name>.request.json`, and
+    the optional `.options` rewrite of the bench body (with the deck digest
+    recomputed from the rewritten deck). Returns `(summary, request,
+    request_path, body_path, deck_content_sha256)`."""
     art = os.path.join(out, name)
     if point:
         os.environ["SG13G2_PEX_POINTS"] = point
@@ -202,11 +227,17 @@ def _slew(dut, out, name, point, res=None, cap=None, gear=False, control=False, 
     path = os.path.join(art, f"{name}.request.json")
     os.replace(os.path.join(art, "slew.request.json"), path)
     deck_content_sha256 = b["deck_content_sha256"]
-    if gear:
-        geared = insert_gear(open(body).read())
-        open(body, "w").write(geared)
-        deck_content_sha256 = km.deck_content_sha256(geared, b["dut"])
+    if options:
+        rewritten = insert_options(open(body).read(), options)
+        open(body, "w").write(rewritten)
+        deck_content_sha256 = km.deck_content_sha256(rewritten, b["dut"])
     req = json.load(open(path))
+    return b, req, path, body, deck_content_sha256
+
+
+def _slew(dut, out, name, point, res=None, cap=None, gear=False, control=False, note=""):
+    b, req, path, body, deck_content_sha256 = slew_leg(
+        dut, out, name, point, options=GEAR_OPTION if gear else None)
     rewritten = set_passives(req, res, cap) if res else 0
     if control:
         req["_comment"] = ("issue #430 CONTROL, not the committed bench: "
@@ -291,34 +322,40 @@ def variants(dut, out):
 
     `sw_et=1` switches the model's self-heating on, which replaces its
     1e6 S thermal tie with the physical thermal conductance; `bodyhub` moves
-    the card's body terminal from its parasitic star node onto the `vss` hub.
+    the card's body terminal from its parasitic star node onto the `vss` hub
+    (`body_on_hub`, shared with rz_solver).
     """
     point = SLEW_POINTS["ss"]
     text = open(dut).read()
     manifest = []
-    cards = {
-        "swet1": (lambda t, m: f"{m.group(1)}{m.group(2)} sw_et=1",
-                  [(res, cap) for res in RES_SECTIONS for cap in CAP_SECTIONS]),
-        "bodyhub": (lambda t, m: " ".join(m.group(1).split()[:3] + ["vss", "rppd"]) + m.group(2),
-                    [("res_typ", "cap_typ")]),
-    }
-    for tag, (rewrite, combos) in cards.items():
-        lines = text.split("\n")
-        hits = [i for i, line in enumerate(lines) if RPPD_CARD.match(line)]
-        if len(hits) != 1:
-            sys.exit(f"rz_candidate: expected exactly one rppd card, found {len(hits)}")
-        i = hits[0]
-        lines[i] = rewrite(text, RPPD_CARD.match(lines[i]))
-        variant = os.path.join(out, f"opamp_core_pex_{tag}.spice")
-        open(variant, "w").write("\n".join(lines))
-        for res, cap in combos:
-            manifest.append(_slew(variant, out, f"ctl_{tag}_ss_{res}_{cap}_slew", point, res, cap))
+    swet1 = os.path.join(out, "opamp_core_pex_swet1.spice")
+    open(swet1, "w").write(rewrite_rppd(text, lambda m: f"{m.group(1)}{m.group(2)} sw_et=1"))
+    for res, cap in [(r, c) for r in RES_SECTIONS for c in CAP_SECTIONS]:
+        manifest.append(_slew(swet1, out, f"ctl_swet1_ss_{res}_{cap}_slew", point, res, cap))
+    bodyhub = os.path.join(out, "opamp_core_pex_bodyhub.spice")
+    open(bodyhub, "w").write(body_on_hub(text))
+    manifest.append(_slew(bodyhub, out, "ctl_bodyhub_ss_res_typ_cap_typ_slew", point, "res_typ", "cap_typ"))
     return manifest
+
+
+def probe_request():
+    """The `rppd`-alone probes' request base, shared with rz_solver: the
+    committed slew.request.json restricted to the single binding slew corner
+    (`mos_ss` / `1.08 V` / `-40 C`), pointing at `probe.body.spice`, with
+    PROBE_MEASUREMENTS. The caller appends its own `_comment`: rz_candidate's
+    probes set `batch` first, so their key order (`batch` before `_comment`)
+    stays as the #430 record submitted it."""
+    slew_req = json.load(open(os.path.join(rz.SLEW_DIR, "slew.request.json")))
+    req = {k: v for k, v in slew_req.items() if k != "_comment"}
+    req["netlist"] = "probe.body.spice"
+    ss = next(p for p in slew_req["corners"]["process"] if p["name"] == "mos_ss")
+    req["corners"] = {"process": [ss], "supply_v": {"vdd": [1.08]}, "temperature_c": [-40]}
+    req["measurements"] = [dict(m) for m in PROBE_MEASUREMENTS]
+    return req
 
 
 def probe(out):
     """The `rppd` model alone in a transient, default method and `method=gear`."""
-    slew_req = json.load(open(os.path.join(rz.SLEW_DIR, "slew.request.json")))
     manifest = []
     for tag, gear in (("default", False), ("gear", True)):
         name = f"probe_r_{tag}"
@@ -326,11 +363,7 @@ def probe(out):
         os.makedirs(art, exist_ok=True)
         body = PROBE_BODY + (GEAR + "\n" if gear else "")
         open(os.path.join(art, "probe.body.spice"), "w").write(body)
-        req = {k: v for k, v in slew_req.items() if k != "_comment"}
-        req["netlist"] = "probe.body.spice"
-        ss = next(p for p in slew_req["corners"]["process"] if p["name"] == "mos_ss")
-        req["corners"] = {"process": [ss], "supply_v": {"vdd": [1.08]}, "temperature_c": [-40]}
-        req["measurements"] = [dict(m) for m in PROBE_MEASUREMENTS]
+        req = probe_request()
         req.setdefault("batch", {}).setdefault("capacity_wait_s", 600)
         req["_comment"] = ("issue #430 control: rppd model alone in transient, same "
                            "analysis/options/osdi preload as the slew bench"

@@ -12,6 +12,7 @@ real klt_run_common.sh from bash, with a stub `klt` and a stub compare.py.
 `date` and `git` are shadowed by bash functions to force an identical
 timestamp and commit. No PDK, ngspice, OSDI build or klt is needed.
 """
+import json
 import os
 import subprocess
 import tempfile
@@ -46,6 +47,28 @@ if os.environ.get("STUB_COMPARE_RC", "0") != "9":
 sys.exit(int(os.environ.get("STUB_COMPARE_RC", "0")))
 """
 
+# Issue #484: the argument tests need to see the `klt sim` argv with
+# argument boundaries intact, so this stub appends one argument per line to
+# STUB_KLT_ARGV_LOG (the reservation stub above logs only PIDs, and its
+# tests count tokens in that log).
+STUB_KLT_ARGV = r"""#!/usr/bin/env bash
+if [[ "$1" == "--version" ]]; then echo "stub-klt 0"; exit 0; fi
+printf '%s\n' "$@" >> "${STUB_KLT_ARGV_LOG}"
+echo "{}"
+exit "${STUB_KLT_RC:-0}"
+"""
+
+# Drives only klt_check_client + klt_run_request (no record lifecycle, no
+# reservation): $1 = request json path, further args forward verbatim.
+DRIVER_RUN = r"""
+set -euo pipefail
+source "${COMMON}"
+KLT="${STUB_KLT}"
+klt_check_client
+run_dir="$(mktemp -d)"
+klt_run_request "$1" "${run_dir}/x.sim.json" "${run_dir}/x.stderr" "${@:2}"
+"""
+
 # Mimics a bench run.sh: reserve, run klt, gate, publish, compare.
 DRIVER = r"""
 set -euo pipefail
@@ -53,6 +76,21 @@ SCRIPT_DIR="$1"; REPO_ROOT="$2"; SUFFIX="${3:-}"
 SIM_DIR="${REPO_ROOT}/sim"
 date() { echo "${FAKE_TS}"; }
 git() { echo "${FAKE_SHA}"; }
+# #488: capture the reserving mkdir's own exit status and the reservation
+# path's stat without touching klt_begin_record: a test-only wrapper that
+# delegates to the real mkdir and, for .reserve- paths only, records the
+# literal rc plus `stat -c '%h %i'` taken immediately after the call. The
+# wrapper's return value is the real rc, so owner/loser branching (and the
+# loser's exit 3) is byte-identical to an unwrapped mkdir.
+mkdir() {
+  command mkdir "$@"
+  local rc=$?
+  if [[ "$*" == *.reserve-* ]]; then
+    RESERVE_MKDIR_RC="${rc}"
+    RESERVE_MKDIR_STAT="$(stat -c '%h %i' "$@" 2>/dev/null || echo stat-failed)"
+  fi
+  return "${rc}"
+}
 export NGSPICE_VERSION=stub PDK=pdk PDK_ROOT="${REPO_ROOT}/nopdk"
 # shellcheck source=/dev/null
 source "${COMMON}"
@@ -68,7 +106,10 @@ KLT="${STUB_KLT}"
 klt_check_client
 klt_begin_record stub "${SUFFIX}"
 ino_ctime="$(stat -c '%i %z' "${KLT_RESERVATION}" 2>/dev/null || echo stat-failed)"
-echo "BEGUN ${RECORD_ID} pid=$$ t=${EPOCHREALTIME:-0} reserve=${KLT_RESERVATION} inode_ctime=${ino_ctime}"
+# #488: mkdir_rc/mkdir_stat come from the wrapper above: two owners both
+# rc=0 on one inode is a mkdir(2) atomicity failure on the runner; a nonzero
+# rc on this owner branch is a shell success-test bug in klt_begin_record.
+echo "BEGUN ${RECORD_ID} pid=$$ t=${EPOCHREALTIME:-0} reserve=${KLT_RESERVATION} mkdir_rc=${RESERVE_MKDIR_RC:-unrecorded} mkdir_stat=${RESERVE_MKDIR_STAT:-unrecorded} inode_ctime=${ino_ctime}"
 if [[ -n "${HOLD:-}" ]]; then
   while [[ ! -e "${HOLD}" ]]; do sleep 0.005; done
 fi
@@ -176,13 +217,17 @@ class Reservation(unittest.TestCase):
                 # runner's bash keeps EPOCHREALTIME live (identical t=
                 # across children is then real near-simultaneity); equal
                 # reads mean t= is frozen there and orders nothing.
+                # #488: also record the filesystem type of TMPDIR, the fs
+                # the reservation directory lives on.
                 try:
                     probe = subprocess.run(
                         ["bash", "-c",
                          'a="${EPOCHREALTIME:-0}"; sleep 0.2; '
                          'b="${EPOCHREALTIME:-0}"; '
-                         'printf "BASH_VERSION=%s t1=%s t2=%s" '
-                         '"${BASH_VERSION:-unknown}" "$a" "$b"'],
+                         'printf "BASH_VERSION=%s t1=%s t2=%s fstype=%s" '
+                         '"${BASH_VERSION:-unknown}" "$a" "$b" '
+                         '"$(stat -f -c %T "${TMPDIR:-/tmp}" 2>/dev/null '
+                         '|| echo stat-failed)"'],
                         capture_output=True, text=True, timeout=30)
                     runner = (f"runner probe ({probe.stdout.strip()}); "
                               f"rc={probe.returncode} "
@@ -204,6 +249,13 @@ class Reservation(unittest.TestCase):
             for (out, err), _ in losers:
                 self.assertNotIn("BEGUN", out)
                 self.assertIn("reserved by another run", err)
+            # #488: the diagnostic fields must be live on every run, not
+            # only in the (rare) failure message: the owner's BEGUN carries
+            # the reserving mkdir's rc (0 on the success path) and its
+            # link-count/inode stat.
+            for (out, _), _ in owners:
+                self.assertIn("mkdir_rc=0", out)
+                self.assertRegex(out, r"mkdir_stat=[0-9]+ [0-9]+")
             self.assertEqual(fx.klt_calls(), 1)
 
     def test_existing_envelope_refused_bytes_unchanged(self):
@@ -394,6 +446,85 @@ class PairOfEnvelopes(unittest.TestCase):
             r = fx.run(TAG="bad", STUB_VALIDATE_RC="1")
             self.assertEqual(r.returncode, 4, r.stderr)
             self.assertEqual(fx.snapshot(), {})
+
+
+# Issue #484: a NEW batch submission must carry `--wait-for-capacity
+# ${KLT_CAPACITY_WAIT_S:-600}` so a vCPU-budgeted fleet refusal is retried
+# with backoff by the client; everything else (local overrides, --attach
+# resumes, caller-supplied waits) must not gain or duplicate it.
+class CapacityWait(unittest.TestCase):
+    def run_stub(self, req_obj, extra_args=(), **env):
+        with tempfile.TemporaryDirectory() as d:
+            fx = Fixture(d)
+            fx.klt.write_text(STUB_KLT_ARGV)
+            fx.driver.write_text(DRIVER_RUN)
+            argvlog = fx.root / "argv.log"
+            req = fx.root / "req.json"
+            req.write_text(json.dumps(req_obj))
+            r = subprocess.run(
+                ["bash", str(fx.driver), str(req), *extra_args],
+                env=fx.env(STUB_KLT_ARGV_LOG=str(argvlog), **env),
+                capture_output=True, text=True, timeout=60)
+            argv = (argvlog.read_text().splitlines()
+                    if argvlog.exists() else [])
+            return r, argv
+
+    def assert_wait(self, argv, seconds):
+        self.assertEqual(argv.count("--wait-for-capacity"), 1, argv)
+        self.assertEqual(argv[argv.index("--wait-for-capacity") + 1],
+                         seconds, argv)
+
+    def test_batch_request_defaults_to_exactly_one_600s_wait(self):
+        r, argv = self.run_stub({"backend": "batch"})
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assert_wait(argv, "600")
+        self.assertEqual(argv[0], "sim")
+        self.assertEqual(argv[-2:], ["--format", "json"])
+
+    def test_runner_log_shows_the_capacity_arguments_sent(self):
+        r, _ = self.run_stub({"backend": "batch"})
+        self.assertIn("--wait-for-capacity 600", r.stdout)
+        r, _ = self.run_stub({"backend": "batch"}, ["--attach", "j"])
+        self.assertNotIn("--wait-for-capacity", r.stdout)
+
+    def test_explicit_batch_backend_beats_local_request(self):
+        r, argv = self.run_stub({"backend": "local"}, ["--backend", "batch"])
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assert_wait(argv, "600")
+
+    def test_env_override_forwarded_including_literal_zero(self):
+        for val in ("0", "45"):
+            with self.subTest(KLT_CAPACITY_WAIT_S=val):
+                r, argv = self.run_stub({"backend": "batch"},
+                                        KLT_CAPACITY_WAIT_S=val)
+                self.assertEqual(r.returncode, 0, r.stderr)
+                self.assert_wait(argv, val)
+
+    def test_local_overrides_of_batch_request_omit_the_wait(self):
+        for backend in ("local", "local-parallel"):
+            with self.subTest(backend=backend):
+                r, argv = self.run_stub({"backend": "batch"},
+                                        ["--backend", backend])
+                self.assertEqual(r.returncode, 0, r.stderr)
+                self.assertNotIn("--wait-for-capacity", argv)
+
+    def test_local_request_without_override_omits_the_wait(self):
+        r, argv = self.run_stub({"backend": "local"})
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertNotIn("--wait-for-capacity", argv)
+
+    def test_attach_resume_forwards_job_id_without_wait(self):
+        r, argv = self.run_stub({"backend": "batch"},
+                                ["--backend", "batch", "--attach", "job-42"])
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertNotIn("--wait-for-capacity", argv)
+        self.assertEqual(argv[argv.index("--attach") + 1], "job-42")
+
+    def test_caller_supplied_wait_forwarded_not_duplicated(self):
+        r, argv = self.run_stub({"backend": "batch"},
+                                ["--wait-for-capacity", "30"])
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assert_wait(argv, "30")
 
 
 if __name__ == "__main__":

@@ -33,13 +33,12 @@
 # klt executable (default: `klt` on PATH), e.g.
 # KLT="uvx --from klayout-tools==X.Y.Z klt" to match a fleet runner.
 #
-# PSRR_KLT_MODE selects how the grid is submitted. `shard` (default): five
-# per-process requests built by shard.py, each one fleet job, merged by
-# shard.py's validation-gated merge -- the bridge for the fleet runner image
-# that still pinned klt 0.5.0 (2AMLogic/2am#2193). The runner now carries
-# klt 0.8.0, so use KLT="uvx --from klayout-tools==0.8.0 klt" (0.5.0 has no
-# batch backend). `single`: the one 45-point psrr.request.json,
-# for a runner image new enough to carry it.
+# One request: psrr.request.json is the whole 45-point grid in ONE fleet job
+# (submit_mode=single; operator ruling 2026-11-23, issue #444, confirmed on
+# the current runner image -- see README.md). The five-job shard bridge this
+# runner used to select via PSRR_KLT_MODE (the klt 0.5.0 runner era,
+# 2AMLogic/2am#2193) is retired; shard.py and its records remain for
+# historical replay of records/20261010-094256-469573d only.
 #
 # Exit status: 0 records written; 3 preflight failed (PDK/OSDI/ngspice/klt
 # missing -- nothing written); 4 the run produced no gradable envelope
@@ -81,88 +80,18 @@ BACKEND_ARGS=()
 [[ -n "${PSRR_KLT_BACKEND:-}" ]] && BACKEND_ARGS=(--backend "${PSRR_KLT_BACKEND}")
 
 out="${SCRATCH}/psrr.sim.json"
-MODE="${PSRR_KLT_MODE:-shard}"
-case "${MODE}" in
-  single)
-    # One 45-point request: needs a runner whose klt can carry per-section
-    # corner libraries, osdi_preload and staged includes (a bumped image,
-    # 2AMLogic/2am#2193) and a client whose version equals the runner's.
-    klt_run_request "${SCRIPT_DIR}/psrr.request.json" "${out}" "${SCRATCH}/psrr.stderr" "${BACKEND_ARGS[@]}"
-    ;;
-  shard)
-    # Five per-process requests (shard.py), the bridge written for a fleet runner
-    # image that pinned klt 0.5.0. Each is one fleet job; the submitting client
-    # must carry the batch backend and be accepted by the runner (the runner
-    # now carries 0.8.0: KLT="uvx --from klayout-tools==0.8.0 klt"). Never local: the shards ARE
-    # the grid.
-    if [[ "${PSRR_KLT_BACKEND:-batch}" != "batch" ]]; then
-      echo "run.sh: shard mode submits to the batch fleet only; PSRR_KLT_BACKEND=${PSRR_KLT_BACKEND} refused." >&2
-      exit 3
-    fi
-    python3 "${SCRIPT_DIR}/shard.py" gen --workdir "${SCRATCH}"
-    merge_args=()
-    for proc in mos_tt mos_ss mos_ff mos_sf mos_fs; do
-      rep="${SCRATCH}/report-${proc}.json"
-      # Resume: reuse a prior shard report only if its request is byte-identical
-      # to the one just generated and the report is a complete gradable run.
-      if [[ -n "${PSRR_KLT_RESUME_DIR:-}" && -s "${PSRR_KLT_RESUME_DIR}/report-${proc}.json" ]] \
-         && cmp -s "${PSRR_KLT_RESUME_DIR}/request-${proc}.json" "${SCRATCH}/request-${proc}.json" \
-         && python3 -c 'import json,sys; r=json.load(open(sys.argv[1])); sys.exit(0 if r.get("status") in ("pass","fail") and r.get("corner_count")==9 else 1)' "${PSRR_KLT_RESUME_DIR}/report-${proc}.json"; then
-        echo "run.sh: shard ${proc}: reusing ${PSRR_KLT_RESUME_DIR}/report-${proc}.json (request byte-identical)"
-        cp "${PSRR_KLT_RESUME_DIR}/report-${proc}.json" "${rep}"
-        merge_args+=("${proc}=${rep}")
-        continue
-      fi
-      # A capacity refusal ("no capacity in any of the 30 pools", or the fleet-wide
-      # BATCH_MAX_CONCURRENT_INSTANCES cap) is final per
-      # klt submit (0.6.0 has no capacity wait): re-submit a bounded number of
-      # times, sleeping between. Any other failure stops at once. Never local.
-      tries="${PSRR_KLT_SUBMIT_TRIES:-3}"
-      attempt=1
-      while :; do
-        echo "run.sh: ${KLT_CMD[*]} sim request-${proc}.json --backend batch --format json (attempt ${attempt}/${tries})"
-        rc=0
-        ( cd "${SCRATCH}" && "${KLT_CMD[@]}" sim "request-${proc}.json" --backend batch --format json \
-            > "report-${proc}.json" 2> "stderr-${proc}.txt" ) || rc=$?
-        if [[ "${rc}" -ne 0 && "${rc}" -ne 3 ]] \
-           && grep -q -E "no capacity in any|exceeds BATCH_MAX_CONCURRENT_INSTANCES" "${SCRATCH}/stderr-${proc}.txt" "${rep}" 2>/dev/null \
-           && [[ "${attempt}" -lt "${tries}" ]]; then
-          attempt=$((attempt + 1))
-          sleep "${PSRR_KLT_RETRY_SLEEP_S:-120}"
-          continue
-        fi
-        break
-      done
-      if [[ "${rc}" -ne 0 && "${rc}" -ne 3 ]]; then
-        echo "run.sh: shard ${proc}: klt sim exited ${rc} -- not a gradable report; nothing written to records/." >&2
-        { head -c 4000 "${SCRATCH}/stderr-${proc}.txt"; head -c 4000 "${rep}"; } | sed 's/^/run.sh:   /' >&2 || true
-        incomplete=1
-        break
-      fi
-      merge_args+=("${proc}=${rep}")
-    done
-    if [[ "${incomplete}" -eq 0 ]]; then
-      python3 "${SCRIPT_DIR}/shard.py" merge --manifest "${SCRATCH}/shards.json" -o "${out}" "${merge_args[@]}" || incomplete=1
-    fi
-    ;;
-  *)
-    echo "run.sh: PSRR_KLT_MODE must be shard or single, got '${MODE}'." >&2
-    exit 3
-    ;;
-esac
+# One 45-point request (submit_mode=single): needs a runner whose klt can
+# carry per-section corner libraries, osdi_preload and staged includes (a
+# bumped image, 2AMLogic/2am#2193) and a client whose version equals the
+# runner's. Confirmed on the current runner image (issue #444; job id in
+# README.md).
+klt_run_request "${SCRIPT_DIR}/psrr.request.json" "${out}" "${SCRATCH}/psrr.stderr" "${BACKEND_ARGS[@]}"
 klt_validate_envelope "${out}"
 klt_require_complete
 klt_write_envelope "${out}"
-if [[ "${MODE}" == "shard" ]]; then
-  # Keep the raw per-shard evidence the merged envelope was built from.
-  SHARD_DIR="${RECORDS_DIR}/${RECORD_ID}.shards"
-  mkdir -p "${SHARD_DIR}"
-  cp "${SCRATCH}"/shards.json "${SCRATCH}"/request-mos_*.json "${SCRATCH}"/body-mos_*.spice \
-     "${SCRATCH}"/report-mos_*.json "${SHARD_DIR}/"
-fi
 
 KLT_PROVENANCE_EXTRA=("backend_override=${PSRR_KLT_BACKEND:-none (request field: batch)}"
-                      "submit_mode=${MODE}")
+                      "submit_mode=single")
 klt_compare_and_finish \
   --harness-csv "${HARNESS_CSV}" \
   --openloop-envelope "${OPENLOOP_ENVELOPE}" \
