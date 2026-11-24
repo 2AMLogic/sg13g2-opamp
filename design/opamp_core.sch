@@ -5,7 +5,8 @@ v {xschem version=3.4.8RC file_version=1.3
 * common-source PMOS output gain device loaded by an NMOS current sink,
 * non-cascoded, Cc Miller compensation into CL = 2 pF [DR-1]. CMOS only,
 * per CLAUDE.md (sg13_lv_nmos / sg13_lv_pmos, cap_cmim for Cc -- no HBT
-* device anywhere in this schematic).
+* device anywhere in this schematic). The one non-MOS addition is Rz, a PDK
+* rppd poly nulling resistor (issue #430).
 *
 * Full gm/ID sizing derivation for every device below, citing literal rows
 * of sim/gm-id-characterization/records/20260909-063633-b402592.csv, is in
@@ -36,10 +37,17 @@ v {xschem version=3.4.8RC file_version=1.3
 *            (stage-1 output), drain = out.
 *   M7       sg13_lv_nmos output current sink, drain = out, gate = ibias
 *            (mirrors Mbias, same L, scaled W), source = vss.
-*   Cc       cap_cmim Miller compensation cap, from out to d2 (across the
-*            M6 common-source stage). No nulling Rz in this first pass --
-*            see opamp_sizing.md "Rz" section for why, and the candidate
-*            value if a future pass needs one.
+*   Cc       cap_cmim Miller compensation cap, from out to cc_rz.
+*   Rz       rppd nulling resistor from cc_rz to d2, in series with Cc on
+*            the d2 side (the M6 gate). Added for issue #430: the drawn
+*            klt 0.9.0 extraction measured 59.8136 deg at mos_ff / 1.32 V /
+*            125 C against the 60 deg bound with a bare capacitor; the
+*            screening in sim/post-layout/rz-nulling-430 sized the fix.
+*            Nominal 2 kOhm (R = 70e-6/w + 260*l/(w+6e-9), the rppd symbol's
+*            own value expression, rsh_rppd = 260 Ohm/sq at res_typ), and
+*            Cc reduced to 25.3 um to recover the falling slew the smaller
+*            capacitor buys. Its body pin is tied to vss, like every other
+*            body in this block; see opamp_sizing.md Rz and Cc sections.
 *
 * -------------------------------------------------------------- polarity
 * Small-signal path from inp [M2 gate] to out: raising inp steers relatively
@@ -146,11 +154,17 @@ C {lab_pin.sym} 440 450 0 0 {name=l31 lab=vss}
 N 420 400 440 400 {}
 C {lab_pin.sym} 440 400 0 0 {name=l32 lab=vss}
 
-C {sg13g2_pr/cap_cmim.sym} 900 200 0 0 {name=Cc model=cap_cmim w=25.7u l=25.7u m=1}
+C {sg13g2_pr/cap_cmim.sym} 900 200 0 0 {name=Cc model=cap_cmim w=24.3u l=24.3u m=1}
 N 900 170 900 150 {}
 C {lab_pin.sym} 900 150 0 0 {name=l33 lab=out}
 N 900 230 900 250 {}
-C {lab_pin.sym} 900 250 0 0 {name=l34 lab=d2}
+C {lab_pin.sym} 900 250 0 0 {name=l34 lab=cc_rz}
+
+C {sg13g2_pr/rppd.sym} 1100 250 0 0 {name=Rz model=rppd w=1u l=7.47u m=1 b=0 body=vss}
+N 1100 220 1100 200 {}
+C {lab_pin.sym} 1100 200 0 0 {name=l35 lab=cc_rz}
+N 1100 280 1100 300 {}
+C {lab_pin.sym} 1100 300 0 0 {name=l36 lab=d2}
 
 C {iopin.sym} -1100 -200 0 0 {name=p1 lab=vdd}
 C {iopin.sym} -1100 1000 0 0 {name=p2 lab=vss}

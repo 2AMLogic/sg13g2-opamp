@@ -3,7 +3,7 @@
 The block's placed-and-routed `opamp_core` GDS, plus the SG13G2
 drawing/routing **scaffold** it is drawn with.
 
-- **`opamp_core/`** — all nine instances of
+- **`opamp_core/`** — all ten instances of
   `design/netlist/opamp_core.spice`, placed, wired and labelled, with a
   committed `klt drc --deck sg13g2` report and, since #57, a committed
   `klt lvs` request/report pair (verdict: `match`) plus the expanded
@@ -13,7 +13,7 @@ drawing/routing **scaffold** it is drawn with.
   anything into that.
 - **`builder.py` / `devices.py` / `sg13g2_layers.py`** — the machinery:
   a cited SG13G2 layer table, a `klayout.db` builder with routing / via / tap
-  primitives, and `klt gen` wrappers for the three device flavours the
+  primitives, and `klt gen` wrappers for the four device flavours the
   netlist needs.
 - **What still does not exist**: no parasitic extraction, no post-layout
   sim, no supply/ERC spec
@@ -29,12 +29,12 @@ The structure mirrors `2AMLogic/sg13g2-bandgap`'s: shared drawing modules at
 |---|---|
 | `sg13g2_layers.py` | The SG13G2 layer table + the curated deck's 43 rule minima, each with its provenance inline. `verify_deck_minima()` re-derives the minima from the installed `klt` and raises on drift. Counterpart of the precedent's `common.py` layer table. |
 | `builder.py` | `Builder`: one `kdb.Layout` at `dbu = 0.001`, micron-valued `box`/`label`/`pr_boundary`/`route_h`/`route_v`/`cut_array`/`landing_pad`/`via`/`via_stack`, `place_stream` for importing a generator stream, and a timestamp-free `write`. Counterpart of `_klayout_builder_base.py`. |
-| `devices.py` | `lv_nmos()` / `lv_pmos()` / `cmim_cap()` — thin, validated wrappers over `klt gen mos_array` / `klt gen cap_array` against the `ihp-sg13g2` PDK — plus `patch_mim_bottom_plate()` and `run_drc()`, the one implementation each of the MIM.c correction and of the signoff `klt drc` run + report shaping that `opamp_core/` uses. |
+| `devices.py` | `lv_nmos()` / `lv_pmos()` / `cmim_cap()` / `rppd_res()` — thin, validated wrappers over `klt gen mos_array` / `klt gen cap_array` / `klt gen res_array` against the `ihp-sg13g2` PDK — plus `patch_mim_bottom_plate()` and `run_drc()`, the one implementation each of the MIM.c correction and of the signoff `klt drc` run + report shaping that `opamp_core/` uses. |
 | `opamp_core/floorplan.py` | Every coordinate of the block in one file: device placements, the Metal3 track ordinates and the Metal2 lanes, with the invariants they rest on asserted at import time. |
 | `opamp_core/generate.py` | Places and routes the block, cross-checks itself against the netlist file, re-extracts the drawn connectivity, writes the GDS and runs DRC. Also `--check`, `--devices`, `--negative-control` and `--drc-negative-control`. |
 | `opamp_core/opamp_core.gds` | **The committed layout.** |
 | `opamp_core/drc_report.json` | Its committed `klt drc --deck sg13g2 --format json` report. |
-| `opamp_core/lvs_reference.py` | Emits `opamp_core.lvs_reference.spice`, the plain-element LVS reference: the schematic's nine instances expanded to the 38 drawn units (matched-array unit/dummy columns, folded fingers), sourced from `generate.py`'s own tables. Also `--check` and `--negative-control`. |
+| `opamp_core/lvs_reference.py` | Emits `opamp_core.lvs_reference.spice`, the plain-element LVS reference: the schematic's ten instances expanded to the 39 drawn units (matched-array unit/dummy columns, folded fingers, the capacitor and the nulling resistor), sourced from `generate.py`'s own tables. Also `--check` and `--negative-control`. |
 | `opamp_core/lvs_request.json` | The committed `klt lvs` request: layout = the committed GDS under the curated `sg13g2` deck, reference = the expanded plain-element netlist. Paths inside resolve relative to this file's own directory. |
 | `opamp_core/lvs_report.json` | The committed `klt lvs --format json` verdict (see ["The LVS verdict"](#the-lvs-verdict-opamp_corelvs_reportjson)). |
 | `opamp_core/run_lvs.sh` | Regenerates `lvs_report.json` from the committed request, verdict intact whatever it is. |
@@ -179,9 +179,11 @@ generator's output had to be corrected.
 
 # The op-amp layout (`opamp_core/`)
 
-85.3 µm × 32.5 µm (`prBoundary` 189/0 at `(-11.5, -0.7)`–`(73.8, 31.84)`),
-nine instances, nine nets, six labelled ports.
-`sha256:2c5829ed6a664ca7904b0012cac09c8a832e11b1cc0d2279f0c7b680e38cf4c9`.
+84.9 µm × 33.1 µm (`prBoundary` 189/0 at `(-11.5, -0.7)`–`(73.4, 32.42)`),
+ten instances, ten nets, six labelled ports.
+`sha256:8f5e66fd8914501f35291500913bbc87880500ec4fbcd564455f198eb0edf22f`.
+Since #430 the third column also holds the nulling resistor, laid along the
+capacitor's top edge.
 
 ## Floorplan
 
@@ -191,9 +193,9 @@ Three columns, read left to right:
 |---|---|---|
 | 1 | Stage 1 + the bias reference, stacked bottom-to-top in signal order: tail/bias pair (XM5 + XMbias), input pair (XM1 + XM2), mirror load (XM3 + XM4) | 0 … 12.6 |
 | 2 | Stage 2: output tail XM7 below, the folded gain device XM6 above | 21 … 41.4 |
-| 3 | The Miller capacitor XCc | 46 … 72.7 |
+| 3 | The Miller capacitor XCc, with the nulling resistor XRz along its top edge | 46 … 72.4 |
 
-XCc alone is 26.7 µm × 28.8 µm — **larger than the entire amplifier** — which
+XCc alone is 26.3 µm × 28.4 µm — **larger than the entire amplifier** — which
 is why it gets a column rather than a corner. The left channel (x < 0) carries
 the vertical links between channels and the five left-edge port pads.
 
@@ -318,14 +320,36 @@ the bias loop, not by a neighbour.
 
 ## The Miller capacitor's plates are not interchangeable
 
-The netlist writes `XCc out d2`. Which terminal becomes which plate is the
-layout's decision, and the layout makes it deliberately: **the `Metal5`
-bottom plate carries `out`, and the `MIM` top plate carries `d2`.** The
-bottom plate is a 26.7 µm square sitting over the substrate, so it has far
-more parasitic capacitance to ground than the MIM plate above it; that
-parasitic belongs on `out`, stage 2's low-impedance output, not on `d2`, the
-high-impedance stage-1 output and XM6's gate, where it would move the
-dominant pole and the compensation with it.
+The netlist writes `XCc out cc_rz`, with `XRz` from `cc_rz` to `d2` (#430;
+before it the capacitor went straight to `d2`). Which terminal becomes
+which plate is the layout's decision, and the layout makes it
+deliberately: **the `Metal5` bottom plate carries `out`, and the `MIM` top
+plate carries `cc_rz`.** The bottom plate is a 26.3 µm square sitting over
+the substrate, so it has far more parasitic capacitance to ground than the
+MIM plate above it; that parasitic belongs on `out`, stage 2's
+low-impedance output, not on the series node behind the resistor and XM6's
+gate, where it would move the dominant pole and the compensation with it.
+
+## The nulling resistor sits between the capacitor and `d2`
+
+`XRz` is drawn by `klt gen res_array` with `flavor="rppd"`: one straight
+8.31 µm × 1.0 µm poly body (`w = 1.0 µm`, `l = 7.47 µm`, nominal
+2000.6 Ω), placed at `(60.5, 28.9)` — above the capacitor's `Metal5` plate,
+right of its `TopMetal1` strap. `d2` keeps its `d2_c4` track from XM6's gate
+and now ends at the resistor's `R0_A` pad; the resistor's `R0_B` pad rises
+on `Metal2` to a new `cc_c4` track at y = 30.6 µm, which returns to the
+strap through the same `Metal3` → `TopMetal1` via stack the capacitor always
+had. The capacitor shrank from 25.7 to 25.3 µm at the same time
+(`design/opamp_sizing.md`, "Cc").
+
+Two things about the resistor are taken on the generator's word and are
+checked elsewhere, not here. Its body is the device, not interconnect, so
+`check_connectivity()` sees two `Metal1` pads on two nets (`d2` and
+`cc_rz`) and nothing between them; device recognition is `klt lvs`, where
+the curated deck extracts it as class `rppd` and the reference carries the
+matching card. And the curated deck carries no rule for the resistor's
+identification markers (`28/0`, `111/0`, `128/0`), which
+`drc_report.json` lists under `layers_in_stream_without_rules`.
 
 ## Ports and labels
 
@@ -357,10 +381,10 @@ an open. So the generator checks connectivity itself, in two steps:
    own `LayoutToNetlist` (Metal1 → TopMetal1, through Via1/2/3/4 and
    TopVia1) and asserts that **every terminal of each net lands on one
    extracted net, no two nets share one, and the stream extracts to exactly
-   nine nets** — the last clause being what catches a floating conductor,
+   ten nets** — the last clause being what catches a floating conductor,
    including an untied dummy gate.
 
-On the committed stream: **9 nets, 93 terminals, no open, no short, nothing
+On the committed stream: **10 nets, 95 terminals, no open, no short, nothing
 floating.**
 
 **This self-check is not LVS.** No device is *recognised* from the geometry, so nothing
@@ -473,8 +497,8 @@ description.
 **`status: match`** — `mismatch_count: 0`, `error_count: 0`,
 `category_counts: {}` (not even a warning-severity entry survives: no
 tolerated parameter differences, no placeholder values, no exclusions).
-Counts, quoted from the report: nets 9 vs 9 (9 matched), devices 38 vs 38
-(38 matched), pins 6 vs 0 (6 matched — the reference is a flat plain-element
+Counts, quoted from the report: nets 10 vs 10 (10 matched), devices 39 vs 39
+(39 matched), pins 6 vs 0 (6 matched — the reference is a flat plain-element
 netlist, so its side declares no pins; the layout's six port labels all
 paired).
 
@@ -488,18 +512,27 @@ paired).
   wells (bodies resolve to `vdd`). The two containment properties the
   derivation rests on (NMOS rings outside every `NWell`, PMOS rings inside
   their own) are asserted at generation time, not assumed.
-- **`net_correspondence`** — 9 entries, one per net, no gaps: the six ports
+- **`net_correspondence`** — 10 entries, one per net, no gaps: the six ports
   (`vdd`, `vss`, `inn`, `inp`, `out`, `ibias`, all `pin: true`) plus
-  `tail`, `d1`, `d2` (internal, anonymous on the layout side — topology
-  pairs them, which is all the compare requires).
+  `tail`, `d1`, `d2` and `cc_rz` (internal, anonymous on the layout side —
+  topology pairs them, which is all the compare requires).
+- **The nulling resistor is recognised and paired** (since #430). The
+  curated deck extracts the drawn body as class `rppd` and pairs it with
+  the reference's `Rz d2 cc_rz vss 1942.2000 rppd L=7.47U W=1U`. That
+  value is the pinned deck's own formula, `260 Ω/sq × L/W`, which carries
+  neither the contact resistance nor the width offset of the PDK symbol's
+  expression (2000.6 Ω); `lvs_reference.py` mirrors the deck's formula the
+  same way it mirrors the capacitor's, so the compare is the model agreeing
+  with itself on both sides of one geometry, and the electrical nominal
+  remains the one in `design/opamp_sizing.md`.
 - **`power_connectivity.status: "unchecked"`**, with the report's own
   reason: the reference is plain-element SPICE whose power pins already
   take part in the ordinary compare, so the gate-level-verilog-only power
   check does not apply. It is a "does not apply", not an unverified
   miswire.
 - **What the reference is**: `opamp_core.lvs_reference.spice`
-  (`lvs_reference.py` output) — the schematic's nine instances expanded to
-  the 38 drawn units, because the layout draws interdigitated arrays and
+  (`lvs_reference.py` output) — the schematic's ten instances expanded to
+  the 39 drawn units, because the layout draws interdigitated arrays and
   folded fingers while the schematic lumps, and `options.combine_devices`
   cannot close that gap on this block (KLayout `combine_devices()` internal
   error on the matched-vs-dummy partial-match groups, klayout-tools #1185 —
@@ -516,7 +549,7 @@ paired).
   `provenance.klayout_version_mismatch: true` (that `klt` build was tested
   against `klayout==0.30.10`) — same disclosure as the DRC report's row in
   the revisions table above. The report pins its layout input at
-  `sha256:07fcb216…` — the committed `opamp_core.gds` — which is what
+  `sha256:8f5e66fd…` — the committed `opamp_core.gds` — which is what
   `klt lvs --check lvs_report.json` (run from `layout/opamp_core/`) re-hashes,
   and what `signoff/` pins for items 2, 3 **and now 4**.
 - **Shown to fail**: `python3 layout/opamp_core/lvs_reference.py
@@ -710,7 +743,7 @@ bytes or in the DRC report's `status` / `violation_count` / `coverage`.
 
 | Stream | sha256 (= its report's `provenance.input.content_hash`) |
 |---|---|
-| `opamp_core/opamp_core.gds` | `2c5829ed6a664ca7904b0012cac09c8a832e11b1cc0d2279f0c7b680e38cf4c9` |
+| `opamp_core/opamp_core.gds` | `8f5e66fd8914501f35291500913bbc87880500ec4fbcd564455f198eb0edf22f` |
 
 Three things make that hold:
 
@@ -722,7 +755,8 @@ Three things make that hold:
    nor their generator-internal cell names reach the committed stream. The
    result is not a fully flat stream: it has exactly two levels — the assembly
    top plus one cell per placed device, named by this repo
-   (`tail_pair`, `input_pair`, `mirror`, `out_tail`, `gain`, `miller_cap`) —
+   (`tail_pair`, `input_pair`, `mirror`, `out_tail`, `gain`, `miller_cap`,
+   `nulling_res`) —
    and no `$1`-suffixed names leak in from the generators.
 3. Every coordinate is a pure function of the constants in
    `opamp_core/floorplan.py` and `opamp_core/generate.py` and

@@ -206,32 +206,81 @@ perimeter capacitance formula in `cap_cmim.sym`
 `1.5e-3 * w^2 + 160e-12*w - 1.0e-12 = 0` for a square plate gives
 `w = l ≈ 25.7 um`. **`w = l = 25.7 um`, `m = 1`.**
 
-### Rz — nulling resistor: evaluated, not populated this pass
+**Revised for issue #430 (2026-11-22): `w = l = 25.3 um`, `m = 1`, in
+series with `Rz` (next section).** The first-cut rule of thumb above is a
+schematic-level estimate; on drawn devices it does not hold with margin.
+The klt 0.9.0 extraction of the retained 25.7 um layout measured
+**59.8136°** phase margin at `mos_ff / 1.32 V / Vinp 0.66 V / 125 °C`
+against the 60° bound (PR #431), and the two trials filed under #430 sized
+the fix:
 
-The issue scopes an "optional nulling Rz." **Not used in this first-cut
-sizing**: the non-dominant-pole-to-GBW ratio the `Cc`/`M6` joint sizing
-above already reaches (`p2/GBW`, computed below) lands at `≈2.2`, the same
-threshold value the classic rule of thumb uses to reach `≈60°` phase margin
-*without* a zero-nulling resistor. Adding one now, before any simulated
-number exists to size it against, would be sizing a device against no
-data — exactly what `CLAUDE.md`'s "gm/ID first" / "no claim without a
-testbench" language warns against. **If `sim/open-loop-ac/`'s measured
-phase margin comes in short of a future target, a PDK poly resistor
-(`rppd`, already used elsewhere in this fleet, e.g.
-`sg13g2-bandgap/design/bandgap_core.sch`) in series with `Cc`, sized near
-`Rz ≈ 1/gm6 ≈ 2.06 kΩ` (using the scaled `gm6` above) to cancel the RHP
-zero, is the first thing to try** — noted here so a future pass has a
-concrete starting point instead of re-deriving it from scratch.
+- Enlarging the capacitor alone does not close it. Drawn phase margin rises
+  by about 0.176° per 1% of `Cc`, so clearing 60° needs about 25.84 um, but
+  falling slew falls as `1/Cc` and crosses its 7.51 V/us bound at about
+  25.65 um: the windows are disjoint (PR #439,
+  `sim/post-layout/cc-sizing-430/README.md`).
+- A nulling resistor in series with `Cc` lifts fast/hot phase margin from
+  59.81° to 67.02° at 2 kΩ and leaves slew untouched (PR #445,
+  `sim/post-layout/rz-nulling-430/README.md`).
+
+With that margin in hand the capacitor gives slew back: at 2 kΩ a 25.3 um
+side read 66.38° fast/hot and 7.6909 V/us falling at `mos_ss / 1.08 V /
+-40 °C`, against 7.4674 V/us at 25.7 um. `C(25.3 um) = 1.5 * 25.3^2 +
+0.16 * 25.3 = 964.18 fF`. The drawn candidate measures **66.4616°** and,
+on the `method=gear` control bench, **7.6881 V/us** falling
+(`sim/post-layout/rz-layout-430/README.md`). The bottom plate stays on
+`out` and the series node `cc_rz` sits between the top plate and `Rz`.
+
+### Rz — nulling resistor: populated for issue #430
+
+The issue scopes an "optional nulling Rz." The first-cut sizing left it
+out: the `Cc`/`M6` joint sizing reaches `p2/GBW ≈ 2.2`, the classic 60°
+rule-of-thumb ratio *without* a nulling resistor, and there was no
+measurement to size one against. The post-layout measurement that followed
+(59.8136° at `mos_ff / 1.32 V / 125 °C`, PR #431) is that datum, so the
+candidate noted then — `Rz ≈ 1/gm6 ≈ 2.06 kΩ`, from the scaled `gm6` above
+— has been screened and drawn.
+
+**Device: PDK `rppd` poly resistor, `w = 1.0 um`, `l = 7.47 um`, `m = 1`,
+`b = 0` (one straight body), from `out`-side `Cc` through `cc_rz` to `d2`.**
+Nominal resistance is the `rppd` symbol's own expression,
+`R = 70e-6 / w + 260 * l / (w + 6e-9)` ohm at `res_typ` (`rsh_rppd` =
+260 Ω/sq, `cornerRES.lib`): 70 Ω of contact resistance plus 7.42 squares of
+body, **2000.6 Ω**. Sizing rests on the measured resistance sweep of PR #445
+on the extracted layout, not on the 1/gm6 estimate alone:
+
+- Fast/hot phase margin rises monotonically with `Rz`, about 3.3–3.7° per
+  kΩ at this design's `gm6`, and clears 60° from 250 Ω to 10 kΩ; 2 kΩ
+  leaves about 6.5° in hand after the capacitor is shrunk.
+- The PDK's own spread is narrow against that window: `rsh_rppd` is 234
+  (`res_bcs`) to 286 Ω/sq (`res_wcs`), ±10%, which moves the part only to
+  about 1.8–2.2 kΩ. The nine passive combinations of DR-0012 confirm it
+  (`sim/post-layout/rz-layout-430/README.md`): the lowest phase margin over
+  `{res_bcs, res_typ, res_wcs} × {cap_bcs, cap_typ, cap_wcs}` at the binding
+  corner is 63.49°, at `res_bcs` with `cap_bcs`.
+- The resistor costs no gain and no supply current (it sits behind a
+  capacitor, so the operating point cannot move) and under 0.4% of GBW
+  against the bare capacitor (PR #445).
+- A 1.0 um body keeps the width-mismatch term small (`smm_w` = 0.01 um is
+  1% per sigma at this width); sheet-rho mismatch (1.5% per sigma) dominates
+  and is inside the window above.
+
+The resistor's body pin is tied to `vss`, as every other body in this block
+is; the extraction resolves the drawn body to the same net. In transient
+analysis the PDK model's thermal node makes the committed slew bench fail
+to converge at most corners; that is a bench finding recorded in
+`sim/post-layout/rz-layout-430/README.md`, not a sizing one.
 
 ## First-order expected performance
 
 | Quantity | Formula | Value |
 |---|---|---|
 | `Av0` (open-loop DC gain) | `Av1 * Av2 = 17.4 * 16.1` | `≈ 280` (`≈ 49.0 dB`) |
-| `GBW` (into `CL = 2 pF` [DR-1]) | `gm1 / (2*pi*Cc)` | `110.6 uS / (2*pi*1 pF) ≈ 17.6 MHz` |
+| `GBW` (into `CL = 2 pF` [DR-1]) | `gm1 / (2*pi*Cc)` | `110.6 uS / (2*pi*1 pF) ≈ 17.6 MHz` (`≈ 18.2 MHz` at the drawn 0.964 pF) |
 | Non-dominant pole `p2` | `gm6 / (2*pi*CL)` | `486.2 uS / (2*pi*2 pF) ≈ 38.7 MHz` |
 | `p2 / GBW` ratio | — | `≈ 2.2` (60° rule-of-thumb target, no `Rz`) |
-| `SR` (slew rate) | `I_tail / Cc` | `10 uA / 1 pF = 10 V/us` |
+| `SR` (slew rate) | `I_tail / Cc` | `10 uA / 1 pF = 10 V/us` (`10.4 V/us` at the drawn 0.964 pF) |
+| `Rz` | `1 / gm6` | `≈ 2.06 kΩ` candidate; drawn `rppd` nominal 2.00 kΩ (#430) |
 | `Iq`, signal-path branches | `I_tail + I_D6` | `10 uA + 54.2 uA ≈ 64.2 uA` |
 | `Iq`, incl. `ibias` reference | `+ I(ibias)` | `≈ 74.2 uA` (see note below) |
 
@@ -276,7 +325,8 @@ rather than a hand estimate.
 | Mbias | `sg13_lv_nmos` | 2.2 um | 0.52 um | 10 uA (= `ibias`) | `nmos,0.52u,mos_tt,0.35` |
 | M6 | `sg13_lv_pmos` | 33 um | 1.04 um | 54.2 uA | `pmos,1.04u,mos_tt,0.55` |
 | M7 | `sg13_lv_nmos` | 11.9 um | 0.52 um | 54.1 uA | `nmos,0.52u,mos_tt,0.35` |
-| Cc | `cap_cmim` | 25.7 um x 25.7 um | — | — | (model formula, not gm/ID) |
+| Cc | `cap_cmim` | 24.3 um x 24.3 um | — | — | (model formula; resized for #430, see "Cc") |
+| Rz | `rppd` | 1.0 um | 7.47 um | — | (resistance sweep of PR #445; nominal 2000.6 Ω, see "Rz") |
 
 Pin list (matches `design/opamp_core.sym`): `vdd`, `vss`, `inn`, `inp`,
 `out`, `ibias`. `inn = M1` gate (inverting), `inp = M2` gate
@@ -321,4 +371,5 @@ The device table above is unchanged by that decision.
   needs the extra ~6 dB and a bias-generator follow-on issue is opened to
   own the second reference branch this would need.
 - A nulling `Rz` (candidate value `≈1/gm6 ≈ 2.06 kOhm`, PDK `rppd`) if
-  measured phase margin comes in short of a future target.
+  measured phase margin comes in short of a future target. **Done for
+  #430**: see "Rz" above.

@@ -191,9 +191,9 @@
       "levels": [
         {
           "layer": "gatpoly",
-          "step_area_um2": 56.7276,
-          "cumulative_area_um2": 56.7276,
-          "antenna_ratio": 1.652902,
+          "step_area_um2": 57.1476,
+          "cumulative_area_um2": 57.1476,
+          "antenna_ratio": 1.66514,
           "antenna_ratio_max": null,
           "antenna_ratio_source": null,
           "verdict": "unchecked",
@@ -201,9 +201,9 @@
         },
         {
           "layer": "metal1",
-          "step_area_um2": 1.9572,
-          "cumulative_area_um2": 58.6848,
-          "antenna_ratio": 1.70993,
+          "step_area_um2": 2.3772,
+          "cumulative_area_um2": 59.5248,
+          "antenna_ratio": 1.734406,
           "antenna_ratio_max": null,
           "antenna_ratio_source": null,
           "verdict": "unchecked",
@@ -211,9 +211,9 @@
         },
         {
           "layer": "metal2",
-          "step_area_um2": 12.152,
-          "cumulative_area_um2": 70.8368,
-          "antenna_ratio": 2.064009,
+          "step_area_um2": 12.392,
+          "cumulative_area_um2": 71.9168,
+          "antenna_ratio": 2.095478,
           "antenna_ratio_max": null,
           "antenna_ratio_source": null,
           "verdict": "unchecked",
@@ -221,9 +221,9 @@
         },
         {
           "layer": "metal3",
-          "step_area_um2": 32.424,
-          "cumulative_area_um2": 103.2608,
-          "antenna_ratio": 3.008765,
+          "step_area_um2": 32.968,
+          "cumulative_area_um2": 104.8848,
+          "antenna_ratio": 3.056084,
           "antenna_ratio_max": null,
           "antenna_ratio_source": null,
           "verdict": "unchecked",
@@ -231,9 +231,9 @@
         },
         {
           "layer": "metal4",
-          "step_area_um2": 0.1521,
-          "cumulative_area_um2": 103.4129,
-          "antenna_ratio": 3.013196,
+          "step_area_um2": 0.0,
+          "cumulative_area_um2": 104.8848,
+          "antenna_ratio": 3.056084,
           "antenna_ratio_max": null,
           "antenna_ratio_source": null,
           "verdict": "unchecked",
@@ -241,9 +241,9 @@
         },
         {
           "layer": "metal5",
-          "step_area_um2": 0.4356,
-          "cumulative_area_um2": 103.8485,
-          "antenna_ratio": 3.025889,
+          "step_area_um2": 0.0,
+          "cumulative_area_um2": 104.8848,
+          "antenna_ratio": 3.056084,
           "antenna_ratio_max": null,
           "antenna_ratio_source": null,
           "verdict": "unchecked",
@@ -251,9 +251,9 @@
         },
         {
           "layer": "topmetal1",
-          "step_area_um2": 26.7484,
-          "cumulative_area_um2": 130.5969,
-          "antenna_ratio": 3.805271,
+          "step_area_um2": 0.0,
+          "cumulative_area_um2": 104.8848,
+          "antenna_ratio": 3.056084,
           "antenna_ratio_max": null,
           "antenna_ratio_source": null,
           "verdict": "unchecked",
@@ -262,8 +262,8 @@
         {
           "layer": "topmetal2",
           "step_area_um2": 0.0,
-          "cumulative_area_um2": 130.5969,
-          "antenna_ratio": 3.805271,
+          "cumulative_area_um2": 104.8848,
+          "antenna_ratio": 3.056084,
           "antenna_ratio_max": null,
           "antenna_ratio_source": null,
           "verdict": "unchecked",
@@ -959,7 +959,7 @@
   "ties_disclosure": null,
   "provenance": {
     "klt_version": "0.6.0+g5265f1a27e8f",
-    "klayout_version": "0.30.12",
+    "klayout_version": "0.30.14",
     "pdk": null,
     "deck": {
       "name": "sg13g2",
@@ -967,13 +967,21 @@
       "released": true
     },
     "input": {
-      "content_hash": "sha256:07fcb21698709178395cb2f04ba998c3752efb6eff24aace7626d9ffc10e553e",
+      "content_hash": "sha256:61ac5d53cfbd9e680f1cd778c5cdfde27db6dae5fce9b48956d39a108c9ba77d",
       "role": "layout"
     },
     "spec": {
       "content_hash": "sha256:711156c4169354ddec5c1c0a9299728f9eaf0c4e5e9c3cc5958bf4cab08872eb"
     },
     "devices": [
+      {
+        "name": "rppd",
+        "body_layer": "5/0",
+        "on": "gatpoly",
+        "body_area_um2": 7.47,
+        "source": "deck",
+        "superseded_by": null
+      },
       {
         "name": "cap_cmim",
         "body_layer": "36/0",

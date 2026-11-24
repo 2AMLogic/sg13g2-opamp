@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Draw and route ``opamp_core``: the block's first-cut placed-and-routed GDS.
 
-Reads ``design/netlist/opamp_core.spice`` -- nine instances, ports ``vdd vss
+Reads ``design/netlist/opamp_core.spice`` -- ten instances, ports ``vdd vss
 inn inp out ibias`` -- and emits one committed stream plus its
 ``klt drc --deck sg13g2`` report. This generator places every device in the
 netlist's topology and wires them together.
@@ -255,20 +255,37 @@ FOLDED: tuple[FoldedDevice, ...] = (
     ),
 )
 
-#: ``XCc``, the Miller capacitor, from the netlist: ``w=25.7u l=25.7u``.
-CAP_W_UM = 25.7
-CAP_L_UM = 25.7
+#: ``XCc``, the Miller capacitor, from the netlist: ``w=24.3u l=24.3u``.
+CAP_W_UM = 24.3
+CAP_L_UM = 24.3
 
-#: Which plate carries which net. The netlist writes ``XCc out d2``; the
+#: How far past the ``cc_c4`` track the drawn strap extension must reach
+#: (see :func:`devices.patch_tm1_strap_reach`): the via landing pad centred
+#: on the track spans ``track +/- 0.82`` um, so 0.90 um of margin covers the
+#: whole pad with slack.
+TM1_STRAP_REACH_MARGIN_UM = 0.90
+
+#: Which plate carries which net. The netlist writes ``XCc out cc_rz``; the
 #: layout decides which terminal is which plate, and it is not a free choice:
-#: the ``Metal5`` bottom plate is a 26.7 um square sitting over the
+#: the ``Metal5`` bottom plate is a 26.3 um square sitting over the
 #: substrate, so it carries far more parasitic capacitance to ground than the
 #: ``MIM`` top plate above it. That parasitic is put on ``out`` -- stage 2's
-#: low-impedance output -- rather than on ``d2``, the high-impedance stage-1
-#: output and XM6's gate, where an extra ~0.7 pF-scale shunt would move the
-#: dominant pole and the compensation with it.
+#: low-impedance output -- rather than on the series node ``cc_rz`` behind
+#: the nulling resistor and XM6's gate, where an extra ~0.7 pF-scale shunt
+#: would move the dominant pole and the compensation with it.
 CAP_BOTTOM_NET = "out"
-CAP_TOP_NET = "d2"
+
+#: ``XRz``, the ``rppd`` nulling resistor in series with ``XCc`` on its
+#: ``d2`` side, from the netlist: ``w=1u l=7.47u``. ``R0_A`` is the ``d2``
+#: end, ``R0_B`` the capacitor end. Nominal resistance is the PDK symbol's
+#: own expression at ``res_typ`` (``rsh_rppd`` = 260 ohm/sq):
+#: ``70e-6 / w + 260 * l / (w + 6e-9)`` = 2000.6 ohm.
+RZ_W_UM = 1.0
+RZ_L_UM = 7.47
+RZ_D2_NET = "d2"
+CAP_TOP_NET = "cc_rz"
+RZ_CC_NET = CAP_TOP_NET
+RZ_BODY_NET = "vss"
 
 #: The six ports ``design/netlist/opamp_core.spice`` declares (``*.iopin``).
 #: Every one must appear as a label in the committed stream.
@@ -354,7 +371,7 @@ def verify_against_netlist(path: Path = NETLIST_PATH) -> list[str]:
             (dev.drain_net, dev.gate_net, dev.source_net, dev.body_net),
         )
 
-    missing = sorted(set(instances) - set(expected) - {"XCc"})
+    missing = sorted(set(instances) - set(expected) - {"XCc", "XRz"})
     extra = sorted(set(expected) - set(instances))
     if missing:
         problems.append(f"netlist has instances this layout does not draw: {missing}")
@@ -407,6 +424,32 @@ def verify_against_netlist(path: Path = NETLIST_PATH) -> list[str]:
             have = _microns(cap["params"].get(key, "nan"))
             if abs(have - want) > 1e-9:
                 problems.append(f"XCc: netlist {key}={have} um, layout draws {want} um")
+
+    rz = instances.get("XRz")
+    if rz is None:
+        problems.append(
+            "netlist has no XRz: the nulling resistor is drawn but not declared"
+        )
+    else:
+        if rz["model"] != "rppd":
+            problems.append(f"XRz: netlist model {rz['model']!r} != 'rppd'")
+        if tuple(rz["nodes"]) != (RZ_CC_NET, RZ_D2_NET, RZ_BODY_NET):
+            problems.append(
+                f"XRz: netlist terminals {tuple(rz['nodes'])} != the cap-end / "
+                f"d2-end / body nets this layout wires, "
+                f"{(RZ_CC_NET, RZ_D2_NET, RZ_BODY_NET)}"
+            )
+        for key, want in (("w", RZ_W_UM), ("l", RZ_L_UM)):
+            have = _microns(rz["params"].get(key, "nan"))
+            if abs(have - want) > 1e-9:
+                problems.append(f"XRz: netlist {key}={have} um, layout draws {want} um")
+        for key, want in (("m", "1"), ("b", "0")):
+            if rz["params"].get(key, want) != want:
+                problems.append(
+                    f"XRz: netlist sets {key}={rz['params'][key]}, which this "
+                    "layout does not implement (it draws one straight unit "
+                    "resistor: m=1, no bends)"
+                )
 
     declared = {node for inst in instances.values() for node in inst["nodes"]}
     for port in PORT_NETS:
@@ -651,6 +694,9 @@ def generate_devices(
     out["miller_cap"] = devices.cmim_cap(
         CAP_W_UM, CAP_L_UM, "miller_cap", scratch, klt=klt
     )
+    out["nulling_res"] = devices.rppd_res(
+        RZ_W_UM, RZ_L_UM, "nulling_res", scratch, klt=klt
+    )
     return out
 
 
@@ -884,6 +930,7 @@ def build(
 
     tp, ip, mr = placed["tail_pair"], placed["input_pair"], placed["mirror"]
     xm7, xm6, cap = placed["out_tail"], placed["gain"], placed["miller_cap"]
+    rz = placed["nulling_res"]
 
     # -- stage 1 + bias: three matched arrays, bottom to top ---------------- #
     route_pair(
@@ -963,6 +1010,12 @@ def build(
 
     # -- the Miller capacitor ------------------------------------------------ #
     mim_patch = devices.patch_mim_bottom_plate(b, cap.placed)
+    # The cap cell's own TopMetal1 strap tops 1 um lower at 24.3 um than it
+    # did at 25.3 um; extend it into the cc_c4 via landing above it (the
+    # patch helper is a no-op if a future klt lengthens the strap itself).
+    strap_patch = devices.patch_tm1_strap_reach(
+        b, cap.placed, fp.TRACK_UM["cc_c4"] + TM1_STRAP_REACH_MARGIN_UM
+    )
     m5 = cap.placed.layer_bbox[L_METAL5]
     tm1 = cap.placed.layer_bbox[L_TOPMETAL1]
     # Bottom plate (Metal5) -> `out`: land the stack well inside the plate, so
@@ -971,18 +1024,25 @@ def build(
     r.track("out_stage2", bot_x, bot_x)
     b.via_stack(L_METAL3, L_METAL5, bot_x, fp.TRACK_UM["out_stage2"])
     r.expect("out", L_METAL5, bot_x, fp.TRACK_UM["out_stage2"])
-    # Top plate (MIM) -> `d2`, reached through the generator's own TopMetal1
-    # strap. The stack lands above the bottom plate's top edge so the Metal5
-    # landing pad it draws on the way up does not touch it.
+    # Top plate (MIM) -> `cc_rz`, reached through the generator's own
+    # TopMetal1 strap. The stack lands above the bottom plate's top edge so
+    # the Metal5 landing pad it draws on the way up does not touch it.
     top_x = (tm1[0] + tm1[2]) / 2.0
-    r.track("d2_c4", top_x, top_x)
-    b.via_stack(L_METAL3, L_TOPMETAL1, top_x, fp.TRACK_UM["d2_c4"])
-    r.expect("d2", L_TOPMETAL1, top_x, fp.TRACK_UM["d2_c4"])
+    r.track("cc_c4", top_x, top_x)
+    b.via_stack(L_METAL3, L_TOPMETAL1, top_x, fp.TRACK_UM["cc_c4"])
+    r.expect(RZ_CC_NET, L_TOPMETAL1, top_x, fp.TRACK_UM["cc_c4"])
     r.expect(CAP_BOTTOM_NET, L_METAL5, (m5[0] + m5[2]) / 2.0, (m5[1] + m5[3]) / 2.0)
     r.expect(CAP_TOP_NET, L_TOPMETAL1, (tm1[0] + tm1[2]) / 2.0, tm1[1] + 1.0)
-    # `d2` runs from XM6's gate along the top of stage 2 to the cap; `out`
-    # from XM7's drain along the bottom to the plate below it.
-    r.track("d2_c4", xm6.port("U0_G")[0], top_x)
+
+    # -- the nulling resistor, in series with the cap on its `cc_rz` side ---- #
+    # `d2` runs from XM6's gate along the top of stage 2 to the resistor's
+    # `d2` end; `cc_rz` takes the resistor's other end up one track and back
+    # to the cap's strap. The resistor body itself is the device, not
+    # interconnect, so the connectivity check sees two pads on two nets.
+    r.drop(RZ_D2_NET, *rz.port("R0_A"), "d2_c4")
+    r.drop(RZ_CC_NET, *rz.port("R0_B"), "cc_c4")
+    r.track("d2_c4", xm6.port("U0_G")[0], rz.port("R0_A")[0])
+    # `out` runs from XM7's drain along the bottom to the plate below it.
     r.track("out_stage2", xm7.port("U0_D")[0], bot_x)
 
     # -- matching-driven track balancing ------------------------------------- #
@@ -1040,6 +1100,7 @@ def build(
     summary = {
         "bbox_um": [round(v, 4) for v in b.bbox_um()],
         "mim_c_patch_um": mim_patch,
+        "tm1_strap_patch_um": strap_patch,
         "tap_implants": [
             {
                 "cell": entry["cell"],
@@ -1366,7 +1427,7 @@ def main(argv: list[str] | None = None) -> int:
         return 1
     print(
         f"netlist cross-check: {NETLIST_PATH.relative_to(REPO_ROOT)} agrees with "
-        f"{len(PAIRS) * 2 + len(FOLDED) + 1} drawn instances"
+        f"{len(PAIRS) * 2 + len(FOLDED) + 2} drawn instances"
     )
 
     deck = verify_deck_minima(args.klt)
@@ -1407,6 +1468,8 @@ def main(argv: list[str] | None = None) -> int:
             )
         if summary["mim_c_patch_um"] is not None:
             print(f"  MIM.c patched: {summary['mim_c_patch_um']}")
+        if summary["tm1_strap_patch_um"] is not None:
+            print(f"  TM1 strap reach patched: {summary['tm1_strap_patch_um']}")
 
         drc = devices.run_drc(gds_out, report_out, GDS_PATH, REPO_ROOT, klt=args.klt)
         cov = drc["coverage"]
