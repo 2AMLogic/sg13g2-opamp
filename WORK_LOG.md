@@ -8,6 +8,8 @@
 
 ### 2026-11-24
 
+- **Issue #485** (closed): Keep the CMRR sample audit enabled when tests edit the corrected open-loop record
+- **PR #493**: test(signoff): keep CMRR sample audit on under corrected-gain edits
 - **PR #478**: docs(sim): fix controls() leg count and name both final-deck-hash generators
 - **Issue #469** (closed): Two doc-accuracy nits in sim/post-layout after the deck_content_sha256 rollout
 - **PR #475**: sim: read sweep log fields once so a missing marker skips only that point
