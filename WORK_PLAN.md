@@ -79,7 +79,6 @@ Issues carrying `loom:curated`.
 ## Proposed (Architect / Hermit)
 
 - **#105**: signoff: express the statistical rows as klt yield evidence for T1 item 6 (offset MC, mismatch CMRR) *(architect)*
-- **#485**: Keep the CMRR sample audit enabled when tests edit the corrected open-loop record *(hermit)*
 
 ## Epics
 
@@ -97,6 +96,6 @@ _None._
 | PRs awaiting review | 0 |
 | Approved PRs awaiting merge | 3 |
 | Curated | 11 |
-| Architect / Hermit proposals | 2 |
+| Architect / Hermit proposals | 1 |
 | Active epics | 0 |
 <!-- guide:plan-body:end -->
