@@ -6,6 +6,13 @@
 
 - [2026-09](work_log/WORK_LOG_2026-09.md)
 
+### 2026-11-24
+
+- **PR #478**: docs(sim): fix controls() leg count and name both final-deck-hash generators
+- **Issue #469** (closed): Two doc-accuracy nits in sim/post-layout after the deck_content_sha256 rollout
+- **PR #475**: sim: read sweep log fields once so a missing marker skips only that point
+- **Issue #471** (closed): Read sweep log fields once so a missing marker skips only the affected point
+
 ### 2026-11-23
 
 - **PR #489**: test: report reserve mkdir rc and inode stat in reservation race diagnostic

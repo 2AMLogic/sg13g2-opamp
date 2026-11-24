@@ -38,21 +38,19 @@ Human-approved issues ready for implementation (`loom:issue`).
 - **#332**: DR-0011: re-derive CMRR bound, re-check gain/swing vs market comps, restate swing headroom (PR #303 operator ruling)
 - **#428**: sim preflight: on batch-fleet runs take OSDI identity from the runner-reported digests, not a locally built .build-manifest, then write the #325 input-cmr record
 - **#429**: post-layout: attribute the klt 0.9.0 extracted phase-margin miss (ff / 1.32 V / 125 C) and the tt / 1.08 V / 27 C non-convergence, then route #312 to a design or klt follow-up
+- **#430**: design: post-layout phase margin misses the 60 deg bound at mos_ff/1.32V/125C (extracted PM 59.81 deg; ng=1-vs-drawn representation -1.64 deg, parasitics -0.53 deg)
 
 ## In Progress
 
 Issues currently being built (`loom:building`).
 
-- **#469**: Two doc-accuracy nits in sim/post-layout after the deck_content_sha256 rollout
-- **#471**: Read sweep log fields once so a missing marker skips only the affected point
+_None._
 
 ## PRs Awaiting Review
 
 PRs waiting on Judge (`loom:review-requested`).
 
-- **#475**: sim: read sweep log fields once so a missing marker skips only that point
-- **#478**: docs(sim): fix controls() leg count and name both final-deck-hash generators
-- **#490**: docs: record the open TT tie measurements and replacement procedure
+_None._
 
 ## Approved (Awaiting Merge)
 
@@ -60,6 +58,7 @@ PRs that passed review and are queued for Champion auto-merge (`loom:pr`).
 
 - **#303**: docs: submit DR-0011 for two-key ratification (status flip)
 - **#333**: docs(DR-0011): revision 5 restates swing as output range, discloses CMRR/gain gaps
+- **#490**: docs: record the open TT tie measurements and replacement procedure
 
 ## Proposed
 
@@ -76,7 +75,6 @@ Issues carrying `loom:curated`.
 - **#429**: post-layout: attribute the klt 0.9.0 extracted phase-margin miss (ff / 1.32 V / 125 C) and the tt / 1.08 V / 27 C non-convergence, then route #312 to a design or klt follow-up *(curated)*
 - **#430**: design: post-layout phase margin misses the 60 deg bound at mos_ff/1.32V/125C (extracted PM 59.81 deg; ng=1-vs-drawn representation -1.64 deg, parasitics -0.53 deg) *(curated)*
 - **#435**: Resubmit the 1 MΩ and 1 GΩ TT substrate-tie probes and record the results on PR #431 *(curated)*
-- **#469**: Two doc-accuracy nits in sim/post-layout after the deck_content_sha256 rollout *(curated)*
 
 ## Proposed (Architect / Hermit)
 
@@ -94,11 +92,11 @@ _None._
 | Operator merge-risk holds | 1 |
 | Very important | 2 |
 | Important | 10 |
-| Ready (`loom:issue`) | 3 |
-| In Progress (`loom:building`) | 2 |
-| PRs awaiting review | 3 |
-| Approved PRs awaiting merge | 2 |
-| Curated | 12 |
+| Ready (`loom:issue`) | 4 |
+| In Progress (`loom:building`) | 0 |
+| PRs awaiting review | 0 |
+| Approved PRs awaiting merge | 3 |
+| Curated | 11 |
 | Architect / Hermit proposals | 2 |
 | Active epics | 0 |
 <!-- guide:plan-body:end -->
