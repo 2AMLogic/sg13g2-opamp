@@ -74,18 +74,19 @@ def rows_by_id(content: dict) -> dict:
 
 
 # One row per raw-population audit a control can detach, carrying the four
-# facts the detach needs: (flag suffix, TRIGGER record whose rewritten CSV
-# fires the detach, TARGET record the population hangs off, population key,
-# definition check to drop).
+# facts the detach needs: (flag suffix, record whose rewritten CSV fires the
+# detach and whose population hangs off it, population key, definition check
+# to drop). Each control detaches the audit of the record it edits for the
+# control's OWN purpose; the matching RawAuditCase suite tests that audit.
 #
-# Trigger and target differ for cmrr and must stay distinct: the CMRR audit
-# joins Av0 from the open-loop record (issue #208), so rewriting the
-# `open-loop-ac` CSV detaches the population hanging off `cmrr-mismatch`.
+# The CMRR sample population has no row: its Av0 join reads the explicitly
+# selected `open-loop-ac-floating-inn` record (issue #208), not the corrected
+# open-loop record, so editing the corrected gain leaves the mismatch sample
+# audit attached (issue #485).
 POPULATION_AUDITS = (
-    ("cmrr",  "open-loop-ac", "cmrr-mismatch", "mc_samples", "cmrr_mc_statistics"),
-    ("klt",   "open-loop-ac", "open-loop-ac",  "klt_raw",    "open_loop_klt_audit"),
-    ("noise", "input-noise",  "input-noise",   "noise_raw",  "noise_raw_audit"),
-    ("swing", "output-swing", "output-swing",  "swing_raw",  "swing_raw_audit"),
+    ("klt",   "open-loop-ac",  "klt_raw",    "open_loop_klt_audit"),
+    ("noise", "input-noise",   "noise_raw",  "noise_raw_audit"),
+    ("swing", "output-swing",  "swing_raw",  "swing_raw_audit"),
 )
 
 
@@ -136,23 +137,14 @@ class Fixture:
         """Drop one POPULATION_AUDITS row's raw population and its definition
         check from the selection.
 
-        The shared body of the four named detach methods below; each of those
+        The shared body of the three named detach methods below; each of those
         records WHY its own control detaches, which is the part that differs.
         """
-        _, _, target, population, check = next(r for r in POPULATION_AUDITS if r[0] == suffix)
-        rec = self.selection["records"][target]
+        _, record, population, check = next(r for r in POPULATION_AUDITS if r[0] == suffix)
+        rec = self.selection["records"][record]
         rec.pop(population, None)
         rec["definition_checks"] = [c for c in rec.get("definition_checks", []) if c != check]
         self.save_selection()
-
-    keep_cmrr_audit = False
-
-    def detach_cmrr_population(self) -> None:
-        """The CMRR audit joins Av0 from the open-loop record (issue #208), so a
-        control that perturbs open-loop Av0 for ITS OWN purpose would trip the
-        join. Those controls drop the CMRR raw-sample audit; CmrrMcStatistics
-        (keep_cmrr_audit) tests the join itself."""
-        self.detach_population("cmrr")
 
     keep_klt_audit = False
 
@@ -186,8 +178,8 @@ class Fixture:
         self.detach_population("swing")
 
     def rewrite_csv(self, key: str, transform, repin: bool = True) -> None:
-        for suffix, trigger, *_ in POPULATION_AUDITS:
-            if key == trigger and not getattr(self, f"keep_{suffix}_audit"):
+        for suffix, record, *_ in POPULATION_AUDITS:
+            if key == record and not getattr(self, f"keep_{suffix}_audit"):
                 getattr(self, f"detach_{suffix}_population")()
         path = self.csv_path(key)
         lines = path.read_text(encoding="utf-8").splitlines()
@@ -528,6 +520,14 @@ class NegativeControls(unittest.TestCase):
                     self.assertTrue(row["coverage"]["complete"])
                     self.assertEqual(row["violating_points"], [pid])
                     self.assertEqual(content["overall"]["verdict"], "FAIL")
+                    if key == "open-loop-ac":
+                        # Editing the corrected open-loop record (here: the
+                        # dc_gain bound) leaves the mismatch sample audit
+                        # attached and verified: the CMRR Av0 join reads
+                        # `open-loop-ac-floating-inn`, not this record.
+                        samples = content["sources"]["cmrr-mismatch"]["samples"]
+                        self.assertEqual(samples["status"], "verified")
+                        self.assertEqual((samples["files"], samples["draws"]), (45, 45 * 300))
                 finally:
                     fx.close()
 
@@ -1210,7 +1210,6 @@ class CmrrMcStatistics(RawAuditCase):
 
     RECORD = "cmrr-mismatch"
     POINT = "mos_tt_27C_1.20V"
-    KEEP_AUDIT = "keep_cmrr_audit"
 
     def entry(self, pid=None) -> dict:
         return self.fx.selection["records"][self.RECORD]["mc_samples"]["files"][pid or self.POINT]
