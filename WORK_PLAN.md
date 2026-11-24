@@ -38,12 +38,13 @@ Human-approved issues ready for implementation (`loom:issue`).
 - **#332**: DR-0011: re-derive CMRR bound, re-check gain/swing vs market comps, restate swing headroom (PR #303 operator ruling)
 - **#428**: sim preflight: on batch-fleet runs take OSDI identity from the runner-reported digests, not a locally built .build-manifest, then write the #325 input-cmr record
 - **#429**: post-layout: attribute the klt 0.9.0 extracted phase-margin miss (ff / 1.32 V / 125 C) and the tt / 1.08 V / 27 C non-convergence, then route #312 to a design or klt follow-up
+- **#430**: design: post-layout phase margin misses the 60 deg bound at mos_ff/1.32V/125C (extracted PM 59.81 deg; ng=1-vs-drawn representation -1.64 deg, parasitics -0.53 deg)
 
 ## In Progress
 
 Issues currently being built (`loom:building`).
 
-- **#430**: design: post-layout phase margin misses the 60 deg bound at mos_ff/1.32V/125C (extracted PM 59.81 deg; ng=1-vs-drawn representation -1.64 deg, parasitics -0.53 deg)
+_None._
 
 ## PRs Awaiting Review
 
@@ -91,8 +92,8 @@ _None._
 | Operator merge-risk holds | 1 |
 | Very important | 2 |
 | Important | 10 |
-| Ready (`loom:issue`) | 3 |
-| In Progress (`loom:building`) | 1 |
+| Ready (`loom:issue`) | 4 |
+| In Progress (`loom:building`) | 0 |
 | PRs awaiting review | 0 |
 | Approved PRs awaiting merge | 3 |
 | Curated | 11 |
