@@ -198,7 +198,7 @@ def _leg(dut, out, name, point, options=None, note="", grid=False):
 
 
 def controls(dut, schematic, out):
-    """The 18 issue-#451 legs. Returns the manifest list."""
+    """The 17 issue-#451 legs. Returns the manifest list."""
     dut = os.path.abspath(dut)
     schematic = os.path.abspath(schematic)
     os.makedirs(out, exist_ok=True)
