@@ -33,9 +33,11 @@ by name).
   screening, and the drawn resistor's extraction and corner grids.
 - `rz-trim-430/` -- the append-only issue #430 record closing the sizing:
   the 24.3 µm trim of the drawn candidate clears DR-0012's `cap_wcs`
-  falling-slew bound (7.6352 V/µs schematic, bracket 7.5846) while every AC
-  bound holds (worst passive section 61.6649°), with the extracted-leg slew
-  rows ungraded-with-bracket per DR-0013.
+  falling-slew bound on the gradeable schematic leg (7.6351 V/µs worst;
+  body-on-hub control bracket 7.5844 V/µs) while every AC bound holds
+  (worst passive section 61.6649°), with the extracted-leg slew row
+  `ungraded` (bracket recorded) per DR-0013 clause 4 and the schematic leg
+  separately gradeable per clause 5.
 - `rz-solver-451/` -- the append-only issue #451 record: the extracted-leg
   slew abort named (the `rppd` body terminal's star leaf; Newton
   non-convergence), its controls and grids. Decision: DR-0013.
