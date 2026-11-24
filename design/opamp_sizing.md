@@ -206,12 +206,12 @@ perimeter capacitance formula in `cap_cmim.sym`
 `1.5e-3 * w^2 + 160e-12*w - 1.0e-12 = 0` for a square plate gives
 `w = l ≈ 25.7 um`. **`w = l = 25.7 um`, `m = 1`.**
 
-**Revised for issue #430 (2026-11-22): `w = l = 25.3 um`, `m = 1`, in
-series with `Rz` (next section).** The first-cut rule of thumb above is a
-schematic-level estimate; on drawn devices it does not hold with margin.
-The klt 0.9.0 extraction of the retained 25.7 um layout measured
+**Revised for issue #430 (2026-11-22, trimmed 2026-11-24): `w = l = 24.3 um`,
+`m = 1`, in series with `Rz` (next section).** The first-cut rule of thumb
+above is a schematic-level estimate; on drawn devices it does not hold with
+margin. The klt 0.9.0 extraction of the retained 25.7 um layout measured
 **59.8136°** phase margin at `mos_ff / 1.32 V / Vinp 0.66 V / 125 °C`
-against the 60° bound (PR #431), and the two trials filed under #430 sized
+against the 60° bound (PR #431), and the trials filed under #430 sized
 the fix:
 
 - Enlarging the capacitor alone does not close it. Drawn phase margin rises
@@ -223,13 +223,23 @@ the fix:
   59.81° to 67.02° at 2 kΩ and leaves slew untouched (PR #445,
   `sim/post-layout/rz-nulling-430/README.md`).
 
-With that margin in hand the capacitor gives slew back: at 2 kΩ a 25.3 um
-side read 66.38° fast/hot and 7.6909 V/us falling at `mos_ss / 1.08 V /
--40 °C`, against 7.4674 V/us at 25.7 um. `C(25.3 um) = 1.5 * 25.3^2 +
-0.16 * 25.3 = 964.18 fF`. The drawn candidate measures **66.4616°** and,
-on the `method=gear` control bench, **7.6881 V/us** falling
-(`sim/post-layout/rz-layout-430/README.md`). The bottom plate stays on
-`out` and the series node `cc_rz` sits between the top plate and `Rz`.
+With the resistor carrying the phase margin, the capacitor sizes against
+slew — and DR-0012's independent passive sections set the binding number:
+at 25.3 um the nine `{res} x {cap}` combinations at `mos_ss / 1.08 V /
+-40 °C` passed at `cap_bcs`/`cap_typ` but read **7.0739 V/us** falling at
+`cap_wcs`, 5.8 % under the 7.51 V/us bound (PR #452,
+`sim/post-layout/rz-layout-430/README.md` §6). Slew scales as `1/C`, so
+the square shrank one further step, to **24.3 um**: `C(24.3 um) =
+1.5 * 24.3^2 + 0.16 * 24.3 = 889.62 fF`, 92.27 % of `C(25.3 um)`, which
+puts the `cap_wcs` falling edge at the measured **7.6352 V/us**
+(schematic leg; body-on-hub extraction control 7.5846 V/us) while the
+worst passive AC leg, `res_bcs + cap_bcs` fast/hot, keeps **61.6649°**
+(the drawn candidate's own grid and every section are in
+`sim/post-layout/rz-trim-430/README.md`). Phase margin still rises with
+`Cc` (about 0.25° per 1 %), so the trim spends 1.82° of the 25.3 um
+candidate's 3.49° passive-section margin and lands with 1.66° to spare —
+both ratified bounds hold at one size. The bottom plate stays on `out`
+and the series node `cc_rz` sits between the top plate and `Rz`.
 
 ### Rz — nulling resistor: populated for issue #430
 

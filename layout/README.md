@@ -339,7 +339,7 @@ right of its `TopMetal1` strap. `d2` keeps its `d2_c4` track from XM6's gate
 and now ends at the resistor's `R0_A` pad; the resistor's `R0_B` pad rises
 on `Metal2` to a new `cc_c4` track at y = 30.6 µm, which returns to the
 strap through the same `Metal3` → `TopMetal1` via stack the capacitor always
-had. The capacitor shrank from 25.7 to 25.3 µm at the same time
+had. The capacitor shrank from 25.7 to 24.3 µm at the same time
 (`design/opamp_sizing.md`, "Cc").
 
 Two things about the resistor are taken on the generator's word and are
