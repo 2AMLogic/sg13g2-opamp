@@ -69,7 +69,7 @@ from selection import load_selection
 # sibling that holds its own `from ... import X` binding would not see it.
 # The four names test_generate.py patches (_dt, git_head, _link_no_clobber,
 # _replace_text_atomically) and every caller of them stay in this file.
-from common import KLT_RAW_KINDS, KLT_RAW_REQUIRED_KINDS  # noqa: F401
+from common import KLT_RAW_KINDS, KLT_RAW_REQUIRED_KINDS, OFFSET_KLT_RAW_KINDS  # noqa: F401
 from defchecks import (  # noqa: F401
     _cell_problem,
     _check_cmrr_linear,
@@ -308,6 +308,51 @@ KLT_AUDIT_RULE = (
     "inconsistent artifact is an error naming the point and file."
 )
 
+OFFSET_KLT_AUDIT_RULE = (
+    "Input-offset `klt sim` raw-evidence audit (issue #504): a record that "
+    "selects `offset_klt_raw` (the null-sweep and closed-loop `klt sim` "
+    "envelopes, both requests and both circuit bodies of "
+    "sim/input-offset/klt/, each sha256-pinned, plus the selected same-DUT "
+    "open-loop record the closed-loop referral joins Av0 from) is audited "
+    "offline against them with the derivation in "
+    "sim/input-offset/klt/offset_post.py -- the SAME module the bench's "
+    "run.sh mints the record with. Both envelopes must cover the 45-point "
+    "grid uniquely with no errored, inconclusive or diagnostic-carrying "
+    "corner (a corner whose LIMIT check failed is evidence: a ratified "
+    "bound miss is a result the row grades, never a reason to refuse the "
+    "envelope), and must agree on engine, model deck, PDK and the simulated "
+    "circuit: the DUT snapshot hash recorded in each envelope's "
+    "netlist_closure must be the selected snapshot's, and each simulated "
+    "bench body must be the pinned one -- the null body with its "
+    "differential B-source drive and no feedback, the closed-loop body with "
+    "`Lbreak inn out 1e18` and inp at Vcm -- each carrying exactly one CL "
+    "the record's own prose states and the 10 uA `Iibias` reference. The "
+    "requests must declare exactly the pinned measurement definitions and "
+    "limits (the ratified +/- 21.9 mV [DR-2] bound lives in the null "
+    "request). The simulator version is the envelopes' own engine identity, "
+    "held to sim/pdk.json's toolchain floor (ngspice_min_major) when one is "
+    "stated -- the fleet policy sim/tools/env_identity.py defines (#348) -- "
+    "and to the exact pin otherwise. Av0 is joined per corner from the "
+    "explicitly selected, hash-pinned open-loop record (`av0_join`): its own "
+    "columns must spell each row's point_id (an Av0 bound to a foreign "
+    "corner is an error naming the point), every grid point must have a "
+    "finite Av0, and the join record's netlist snapshot must hash-match "
+    "this record's (an Av0 from a different DUT is never joined silently). "
+    "Per point every published cell is recomputed from the raw envelopes -- "
+    "the signed null verbatim, vos_abs_v = |vos_null_v|, the local gain in "
+    "dB, the rail-window node voltages, vout_cl_v, the closed-loop referral "
+    "vos_cl = -(vout_cl - Vcm)*(1 + Av0)/Av0 and its method delta -- and "
+    "must equal the committed cell as the converter serializes it (printf "
+    "%.9g, nine significant digits; `nan` where undefined), with the "
+    "validity flags op_pass / xcheck_pass re-derived by the harness's own "
+    "rules (sim/tools/op_sanity.py rail window over Vd1, Vd2, Vtail and the "
+    "output at the null, local gain >= 10 V/V, exactly one Vout = Vcm "
+    "crossing; two-method agreement within max(200 uV, 5% |Vos|)). A "
+    "missing, changed, stale-pinned or inconsistent artifact is an error "
+    "naming the point and file; a genuine bound miss stays visible in the "
+    "row, never masked by the validity cells."
+)
+
 NOT_CLAIMED = [
     "Not item 5 or item 6 evidence: it is a generic, offline aggregation of "
     "harness-native records, not a `klt sim` or `klt yield` envelope, and the "
@@ -426,7 +471,10 @@ def build_content(repo: Path, selection_path: Path) -> dict:
         row["id"] for row in ratified if row["verdict"] == "FAIL" and row.get("fails_only_beyond_written_decimals")
     )
 
-    return {
+    # The offset klt audit rule is emitted ONLY when a record selects
+    # offset_klt_raw, so a selection without it reproduces the committed
+    # reports byte-for-byte (the rule text is part of content_sha256).
+    content = {
         "schema": REPORT_SCHEMA,
         "block": selection["block"],
         "selection": {
@@ -467,6 +515,9 @@ def build_content(repo: Path, selection_path: Path) -> dict:
             "rule": "ERROR if any input is in error; else FAIL if any ratified (binding) row fails its bound; else INCOMPLETE if any non-pending row lacks full valid grid coverage; else PASS. Superseded rows are context and never FAIL the report; measured rows carry no bound; Area is PENDING.",
         },
     }
+    if any("offset_klt_raw" in rec for rec in selection["records"].values()):
+        content["offset_klt_audit_rule"] = OFFSET_KLT_AUDIT_RULE
+    return content
 
 
 def content_hash(content: dict) -> str:

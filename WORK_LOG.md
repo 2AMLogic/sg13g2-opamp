@@ -8,6 +8,11 @@
 
 ### 2026-11-25
 
+- **PR #517**: test(sim): add mkdir binary probe and os.mkdir race control to overlap-test failure message
+- **PR #516**: feat(sim): batch systematic-CMRR deck joined to the PSRR direct evidence
+- **PR #507**: test: fold cmrr-psrr envelope builders and Av0 negative controls onto sim/tools helpers
+- **Issue #515** (closed): test flake (5th, two owners on one inode): test_overlapping_starts_give_exactly_one_owner fails on T1 signoff register
+- **Issue #499** (closed): Fold cmrr-psrr test_compare.py's remaining envelope builders and open-loop Av0 controls onto sim/tools helpers
 - **PR #511**: feat: audit schematic open-loop OP and ngspice floor policy
 - **Issue #500** (closed): Audit schematic open-loop AC and DC continuity on the batch simulator
 - **PR #510**: feat(signoff): audit the slew row from pinned batch klt envelope crossings

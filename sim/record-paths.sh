@@ -58,7 +58,8 @@ _sg13g2_preflight_self="${_sg13g2_preflight_self:-$(basename "$0")}"
 #   here, before the caller writes anything:
 #
 #     * Fresh run (no --resumable, or --resumable with RECORD_ID unset):
-#       `mkdir` WITHOUT -p of corners/<id>/ is the reservation. mkdir(2) is
+#       an exclusive (un-`-p`) mkdir(2) of corners/<id>/, taken through
+#       sg13g2_exclusive_mkdir (#525), is the reservation. mkdir(2) is
 #       atomic and fails on an existing path, so of any number of concurrent
 #       starts with the same id exactly one owns it; there is no
 #       check-then-create window. The owner then refuses (and releases the
@@ -87,6 +88,20 @@ _sg13g2_preflight_self="${_sg13g2_preflight_self:-$(basename "$0")}"
 #   The id syntax itself is unchanged; a RECORD_ID taken from the
 #   environment must be a single path component ([A-Za-z0-9._-], not
 #   starting with "."), because it is spliced into output paths.
+# sg13g2_exclusive_mkdir <dir> (issue #525)
+#   Exclusive-create claim primitive: mkdir(2) via python3 os.mkdir, with no
+#   userland `mkdir` binary involved. Returns 0 only for the one caller that
+#   created <dir>; nonzero if it already exists or cannot be created. The CI
+#   runner's /usr/bin/mkdir (uutils coreutils) was observed to report success
+#   to two racers for one directory, so the reservation must not depend on it.
+sg13g2_exclusive_mkdir() {
+  python3 -I -S -c 'import os, sys
+try:
+    os.mkdir(sys.argv[1])
+except OSError:
+    sys.exit(1)' "$1" 2>/dev/null
+}
+
 # shellcheck disable=SC2034  # CSV_OUT/MD_OUT/RECORD_RESUMED are consumed by callers after this returns
 sg13g2_preflight_record_paths() {
   local prefix="" resumable=0 resume=0
@@ -149,7 +164,7 @@ sg13g2_preflight_record_paths() {
       } >&2
       exit 3
     fi
-    if mkdir "${CORNERS_OUT}" 2>/dev/null; then
+    if sg13g2_exclusive_mkdir "${CORNERS_OUT}"; then
       _sg13g2_record_refuse_if_taken
     else
       RECORD_RESUMED=1
@@ -159,11 +174,11 @@ sg13g2_preflight_record_paths() {
     return 0
   fi
 
-  if ! mkdir "${CORNERS_OUT}" 2>/dev/null; then
+  if ! sg13g2_exclusive_mkdir "${CORNERS_OUT}"; then
     _sg13g2_record_refuse "${CORNERS_OUT}"
   fi
   _sg13g2_record_refuse_if_taken
-  if ! mkdir "${SNAPSHOTS_OUT}" 2>/dev/null; then
+  if ! sg13g2_exclusive_mkdir "${SNAPSHOTS_OUT}"; then
     rmdir "${CORNERS_OUT}" 2>/dev/null || true
     _sg13g2_record_refuse "${SNAPSHOTS_OUT}"
   fi
