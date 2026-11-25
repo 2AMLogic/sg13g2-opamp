@@ -70,9 +70,10 @@
 #
 # Reservation (issue #171). klt_begin_record claims the record destinations
 # BEFORE klt is invoked, with the same primitive as sim/record-paths.sh
-# (#140): an un-`-p` mkdir, which is atomic and fails on an existing path, so
-# of any number of overlapping starts with the same <id><suffix> exactly one
-# owns it. The reservation is the empty hidden directory
+# (#140): sg13g2_exclusive_mkdir, an un-`-p` mkdir(2) via python3 os.mkdir
+# (#525: not the userland mkdir binary, which uutils coreutils was seen to
+# double-succeed), atomic and failing on an existing path, so of any number of
+# overlapping starts with the same <id><suffix> exactly one owns it. The reservation is the empty hidden directory
 #
 #   records/.reserve-<id><suffix>/
 #
@@ -146,7 +147,7 @@ klt_begin_record() {
   mkdir -p "${RECORDS_DIR}"
   local rec="${RECORD_ID}${RECORD_SUFFIX}"
   KLT_RESERVATION="${RECORDS_DIR}/.reserve-${rec}"
-  if ! mkdir "${KLT_RESERVATION}" 2>/dev/null; then
+  if ! sg13g2_exclusive_mkdir "${KLT_RESERVATION}"; then
     echo "run.sh: record ${rec} is reserved by another run (${KLT_RESERVATION}) -- nothing written." >&2
     echo "run.sh: if no run is live (killed earlier), rmdir that empty directory; otherwise re-run to mint a new id." >&2
     KLT_RESERVATION=""
