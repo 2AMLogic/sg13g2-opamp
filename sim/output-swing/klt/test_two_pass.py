@@ -17,6 +17,7 @@ import math
 import os
 import sys
 import unittest
+from unittest import mock
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
@@ -138,6 +139,89 @@ class TwoPass(unittest.TestCase):
             T.waveform_to_pass_curves(wf, ("v(out)", "i(vdd)"))
         wf["points"] = [[1.0, 0.1], [0.5, 0.2]]
         with self.assertRaisesRegex(T.PairError, "invalid curve"):
+            T.waveform_to_pass_curves(wf, ("v(out)",))
+
+
+class TwoPassNegativeControls(unittest.TestCase):
+    """Each guard of audit_pair / audit_population must fire on bad evidence."""
+
+    def test_missing_curve_keys_are_pair_errors_not_keyerrors(self):
+        for label, key in (("coarse", "vout"), ("coarse", "vid"), ("fine", "ivdd"), ("fine", "vout"), ("fine", "vid")):
+            coarse, fine = make_pair(tanh_curve(0.45, 0.003, 0.015))
+            del {"coarse": coarse, "fine": fine}[label][key]
+            with self.assertRaisesRegex(T.PairError, f"point {PID}: {label} pass records no {key}"):
+                T.audit_pair(PID, coarse, fine)
+
+    def test_vout_or_ivdd_length_mismatch_is_refused(self):
+        coarse, fine = make_pair(tanh_curve(0.45, 0.003, 0.015))
+        fine["ivdd"] = fine["ivdd"][:-1]
+        with self.assertRaisesRegex(T.PairError, r"samples.*\(ivdd\)"):
+            T.audit_pair(PID, coarse, fine)
+        coarse, fine = make_pair(tanh_curve(0.45, 0.003, 0.015))
+        coarse["vout"] = coarse["vout"][:-1]
+        with self.assertRaisesRegex(T.PairError, r"coarse curve.*\(vout\)"):
+            T.audit_pair(PID, coarse, fine)
+
+    def test_incomplete_corner_does_not_abort_population(self):
+        pids = [PID, "mos_ss_27C_1.20V"]
+        c1, f1 = make_pair(tanh_curve(0.45, 0.003, 0.015))
+        c2, f2 = make_pair(tanh_curve(0.45, 0.003, 0.015), pid=pids[1])
+        del f1["ivdd"]
+        out, problems = T.audit_population(pids, [c1, c2], [f1, f2])
+        self.assertEqual(list(out), [pids[1]])
+        self.assertEqual(problems, [f"point {PID}: fine pass records no ivdd"])
+
+    def test_pass_for_another_point_is_refused(self):
+        coarse, fine = make_pair(tanh_curve(0.45, 0.003, 0.015))
+        fine["pid"] = "mos_ss_27C_1.20V"
+        with self.assertRaisesRegex(T.PairError, "fine pass is for point 'mos_ss_27C_1.20V'"):
+            T.audit_pair(PID, coarse, fine)
+
+    def test_unpinned_coarse_sweep_is_refused(self):
+        coarse, fine = make_pair(tanh_curve(0.45, 0.003, 0.015))
+        coarse["step"] = CSTEP * 2
+        with self.assertRaisesRegex(T.PairError, "not the pinned configuration"):
+            T.audit_pair(PID, coarse, fine)
+
+    def test_common_mode_not_half_vdd_is_refused(self):
+        coarse, fine = make_pair(tanh_curve(0.45, 0.003, 0.015))
+        coarse["vdd_v"] = fine["vdd_v"] = 1.5
+        with self.assertRaisesRegex(T.PairError, "common mode is not VDD/2"):
+            T.audit_pair(PID, coarse, fine)
+
+    def test_coarse_sweep_with_two_crossings_is_refused(self):
+        wiggle = lambda x: VCM + 0.45 * math.tanh(x / 0.003) * (1 if abs(x) < 0.06 else -1)
+        coarse, fine = make_pair(tanh_curve(0.45, 0.003, 0.015))
+        coarse["vout"] = [wiggle(x) for x in coarse["vid"]]
+        with self.assertRaisesRegex(T.PairError, r"coarse sweep has [2-9]\d* Vout=Vcm crossings"):
+            T.audit_pair(PID, coarse, fine)
+
+    def test_coarse_sweep_that_never_saturates_fails_plateau_check(self):
+        # 1 mV/V gain over the +-100 mV window: one crossing, no clipped ends.
+        coarse, fine = make_pair(tanh_curve(0.45, 0.003, 0.015))
+        coarse["vout"] = [VCM + 1.0 * (x - 0.015) for x in coarse["vid"]]
+        with self.assertRaisesRegex(T.PairError, "plateau check failed"):
+            T.audit_pair(PID, coarse, fine)
+
+    def test_fine_window_rejects_non_single_crossing(self):
+        cvid = grid(CS, CE, CSTEP)
+        with self.assertRaisesRegex(ValueError, "crossings"):
+            T.fine_window(cvid, [VCM + 0.3] * len(cvid), VCM)
+
+    def test_op_pass_rule_failure_is_refused(self):
+        coarse, fine = make_pair(tanh_curve(0.45, 0.003, 0.015))
+        real = T.swing_post.fine_measure
+        with mock.patch.object(T.swing_post, "fine_measure", lambda *a: dict(real(*a), op_pass=0)):
+            with self.assertRaisesRegex(T.PairError, r"per-point sanity rule failed \(op_pass=0\)"):
+                T.audit_pair(PID, coarse, fine)
+
+    def test_waveform_short_or_non_numeric_row_is_pair_error(self):
+        wf = {"variables": [{"index": 0, "name": "vid"}, {"index": 1, "name": "v(out)"}],
+              "points": [[0.0, 0.1], [1.0]]}
+        with self.assertRaisesRegex(T.PairError, "short or non-numeric"):
+            T.waveform_to_pass_curves(wf, ("v(out)",))
+        wf["points"] = [[0.0, 0.1], [1.0, "x"]]
+        with self.assertRaisesRegex(T.PairError, "short or non-numeric"):
             T.waveform_to_pass_curves(wf, ("v(out)",))
 
 

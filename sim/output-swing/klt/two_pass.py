@@ -26,7 +26,6 @@ A "pass" is a dict:
 """
 from __future__ import annotations
 
-import math
 import os
 import sys
 
@@ -34,7 +33,9 @@ sys.path.insert(0, os.path.normpath(os.path.join(os.path.dirname(os.path.abspath
 import swing_post  # noqa: E402
 
 # Ratified limits (spec/target-spec.md section 2 [DR-2]); literal numbers, as
-# swing.request.json carries them.
+# swing.request.json carries them. Source of truth: signoff/characterization/
+# selection.json rows swing_headroom_vdd / swing_headroom_vss / swing_span;
+# this copy is interim until admission through selection.py/defchecks.py lands.
 LIMITS = {"headroom_hi_v": 0.251, "headroom_lo_v": 0.141, "swing_span_v": 0.571}
 IDENTITY_KEYS = ("dut_sha256", "bench_sha256", "simulator", "process", "temp_c", "vdd_v", "vcm_v")
 
@@ -61,8 +62,11 @@ def waveform_to_pass_curves(wf, vectors, pid="waveform"):
     lines = []
     for p in wf.get("points") or []:
         row = []
-        for c in cols:
-            row += [repr(float(p[0])), repr(float(p[c]))]
+        try:
+            for c in cols:
+                row += [repr(float(p[0])), repr(float(p[c]))]
+        except (IndexError, TypeError, ValueError) as exc:
+            raise PairError(pid, f"waveform row {len(lines)} is short or non-numeric ({exc!r}): {p!r}") from None
         lines.append(" ".join(row))
     try:
         vid, data = swing_post.parse_wrdata("\n".join(lines), tuple(vectors), pid)
@@ -74,6 +78,9 @@ def waveform_to_pass_curves(wf, vectors, pid="waveform"):
 def fine_window(coarse_vid, coarse_vout, vcm, halfspan=None):
     """The fine sweep window for one corner: the serialized (%.9g) unique
     coarse crossing +- half-span, exactly the hop the harness runner makes.
+    The producer must pin the returned start/stop at full float precision
+    (repr): `audit_pair` compares them for exact equality, and a %.9g
+    re-serialization of the window fails that check on most corners.
     Raises PairError-free ValueError when there is not exactly one crossing."""
     half = float(swing_post.CONFIG["fine_halfspan_v"]) if halfspan is None else halfspan
     c = swing_post.coarse_measure(coarse_vid, coarse_vout, vcm)
@@ -84,7 +91,8 @@ def fine_window(coarse_vid, coarse_vout, vcm, halfspan=None):
 
 
 def _identity(pid, label, p):
-    for k in IDENTITY_KEYS + ("start", "stop", "step"):
+    curves = ("vid", "vout") + (("ivdd",) if label == "fine" else ())
+    for k in IDENTITY_KEYS + ("start", "stop", "step") + curves:
         if k not in p:
             raise PairError(pid, f"{label} pass records no {k}")
 
@@ -108,8 +116,10 @@ def audit_pair(pid, coarse, fine, criterion=None):
         raise PairError(pid, f"fine step {fine['step']} is not the pinned {cfg['fine_step_v']}")
     for label, p in (("coarse", coarse), ("fine", fine)):
         want = swing_post.sweep_count(p["start"], p["stop"], p["step"])
-        if len(p["vid"]) != want:
-            raise PairError(pid, f"{label} curve has {len(p['vid'])} samples; its sweep declares {want}")
+        for k in ("vid", "vout") + (("ivdd",) if label == "fine" else ()):
+            if len(p[k]) != want:
+                raise PairError(pid, f"{label} curve has {len(p[k])} samples; its sweep declares {want}"
+                                     + ("" if k == "vid" else f" ({k})"))
     if abs(2.0 * coarse["vcm_v"] - coarse["vdd_v"]) > 1e-9:
         raise PairError(pid, "common mode is not VDD/2")
     c = swing_post.coarse_measure(coarse["vid"], coarse["vout"], coarse["vcm_v"])
@@ -142,7 +152,8 @@ def audit_pair(pid, coarse, fine, criterion=None):
         "vos_crossing_v": s(m["vos_crossing"]), "peak_inc_gain_v_v": s(m["g_pk"]),
         "ivdd_center_a": s(m["ivdd_center"]),
     }
-    assert tuple(fields) == swing_post.AUDIT_FIELDS
+    if tuple(fields) != swing_post.AUDIT_FIELDS:
+        raise PairError(pid, "audit fields drifted from swing_post.AUDIT_FIELDS")
     verdicts = {name: float(fields[name]) >= lim for name, lim in LIMITS.items()}
     return {"fields": fields, "verdicts": verdicts, "valid": True}
 
