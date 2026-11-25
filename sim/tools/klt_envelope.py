@@ -101,6 +101,49 @@ def finite(x) -> bool:
     return isinstance(x, (int, float)) and not isinstance(x, bool) and math.isfinite(x)
 
 
+def batch_job_ids(env: dict) -> List[str]:
+    """A single batch job, or the set of jobs in a sharded fleet run."""
+    environment = env.get("environment")
+    remote = environment.get("remote") if isinstance(environment, dict) else None
+    if not isinstance(remote, dict):
+        return []
+    ids = [remote.get("job_id")]
+    fleet = remote.get("fleet")
+    if isinstance(fleet, list):
+        ids.extend(f.get("job_id") for f in fleet if isinstance(f, dict))
+    return sorted({job for job in ids if isinstance(job, str) and job})
+
+
+def exact_pvt_key(corner: dict) -> Key:
+    """Check the measured coordinates before formatting a PVT45 point ID."""
+    supply = corner.get("supply_v") if isinstance(corner, dict) else None
+    if not isinstance(supply, dict):
+        raise InputError(f"corner lacks supply_v: {supply!r}")
+    process, temp, vdd = corner.get("process"), corner.get("temperature_c"), supply.get("vdd")
+    if process not in PROCESSES or temp not in TEMPERATURES or vdd not in SUPPLIES:
+        raise InputError(f"corner {(process, temp, vdd)!r} is outside the expected grid")
+    if supply.get("vinp") != vdd / 2:
+        raise InputError(f"corner {(process, temp, vdd)!r}: supplies {supply!r} do not put Vcm at VDD/2")
+    return process, int(temp), vdd
+
+
+def check_decided_counts(env: dict, expected_count: int) -> None:
+    """The summary counts and status must describe the full population being used."""
+    corners = env.get("corners")
+    if not isinstance(corners, list):
+        raise InputError("no corners[] array")
+    statuses = [c.get("status") for c in corners if isinstance(c, dict)]
+    passed, failed = statuses.count("pass"), statuses.count("fail")
+    if (len(corners) != expected_count or env.get("corner_count") != expected_count
+            or passed + failed != expected_count or env.get("passed") != passed or env.get("failed") != failed
+            or env.get("status") != ("fail" if failed else "pass")
+            or env.get("errored") != 0 or env.get("inconclusive") != 0):
+        raise InputError(f"need all {expected_count} corners decided: {passed} passed, {failed} failed in corners[]")
+    diagnostics = env.get("diagnostic_counts")
+    if not isinstance(diagnostics, dict) or diagnostics.get("corners_with_diagnostics") != 0:
+        raise InputError("corners carry diagnostics")
+
+
 def sha256_file(path: str) -> str:
     h = hashlib.sha256()
     with open(path, "rb") as f:

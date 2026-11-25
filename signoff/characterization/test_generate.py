@@ -2133,6 +2133,52 @@ class CmrrPsrrKltAudit(RawAuditCase):
         self.edit_env("psrr_request", relax)
         self.assert_error("limits are", "a validity bound is never relaxed")
 
+    def test_request_axes_must_cover_the_envelope_grid(self):
+        for deck in ("cmrr", "psrr"):
+            for axis, mutate in (
+                ("temperature_c", lambda c: c.update(temperature_c=[27])),
+                ("process", lambda c: c["process"].pop()),
+                ("supply_v", lambda c: c["supply_v"]["vinp"].reverse()),
+            ):
+                with self.subTest(deck=deck, axis=axis):
+                    self.fresh()
+                    self.edit_env(f"{deck}_request", lambda d: mutate(d["corners"]))
+                    self.assert_error(f"{deck} request", axis)
+
+    def test_request_and_reported_measurement_metadata_must_agree(self):
+        for deck in ("cmrr", "psrr"):
+            for side, field, value in (("request", "unit", "V"), ("envelope", "unit", "V"),
+                                       ("envelope", "limits", {"max": 0.5})):
+                name = f"{deck}_plateau_delta_db"
+
+                def alter(doc):
+                    m = next(m for m in doc["measurements"] if m["name"] == name)
+                    m[field] = value
+
+                with self.subTest(deck=deck, side=side, field=field):
+                    self.fresh()
+                    self.edit_env(f"{deck}_{side}", alter)
+                    self.assert_error(name, field)
+
+    def test_corner_measurement_unit_must_agree_with_request(self):
+        self.edit_env("cmrr_envelope", lambda d: self.meas(d, "acm0_db").update(unit="V"))
+        self.assert_error(self.POINT, "acm0_db", "unit")
+
+    def test_fractional_corner_coordinates_cannot_alias_a_selected_point(self):
+        for deck in ("cmrr", "psrr"):
+            for field in ("temperature_c", "vdd"):
+                def alter(doc):
+                    c = self.corner(doc, self.POINT)
+                    if field == "temperature_c":
+                        c[field] = 27.9
+                    else:
+                        c["supply_v"].update(vdd=1.204, vinp=0.602)
+
+                with self.subTest(deck=deck, field=field):
+                    self.fresh()
+                    self.edit_env(f"{deck}_envelope", alter)
+                    self.assert_error("outside the expected grid")
+
     def test_request_naming_another_bench_body_is_an_error(self):
         self.edit_env("cmrr_request", lambda d: d.__setitem__("netlist", "tb_psrr_direct.body.spice"))
         self.assert_error("is not the pinned bench body")
@@ -2142,8 +2188,11 @@ class CmrrPsrrKltAudit(RawAuditCase):
         self.assert_error("is not the pinned")
 
     def test_bench_load_not_stated_by_the_record_is_an_error(self):
-        self.edit_env("cmrr_body", lambda t: t.replace("Cloada outa vss 2e-12", "Cloada outa vss 5e-12"))
-        self.assert_error("not one CL the record's own prose states")
+        for load in ("5e-12", "2p"):
+            with self.subTest(load=load):
+                self.fresh()
+                self.edit_env("cmrr_body", lambda t: t.replace("Cloada outa vss 2e-12", f"Cloada outa vss {load}"))
+                self.assert_error("not one CL the record's own prose states")
 
     def test_pinned_envelope_edited_without_repin_is_refused(self):
         self.edit_env("psrr_envelope", lambda d: d.__setitem__("status", "fail"), repin=False)

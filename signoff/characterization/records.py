@@ -47,6 +47,7 @@ from defchecks import DEFINITION_CHECKS
 from paths import (
     draws_contract,
     env_identity,
+    klt_envelope,
     mc_samples,
     noise_post,
     slew_post,
@@ -911,13 +912,49 @@ def _load_slew_klt_population(repo: Path, key: str, sk: dict, expected: list, sn
 _CMRR_PSRR_CLOAD_RE = re.compile(r"^Cload[ab]\s+out[ab]\s+vss\s+(\S+)\s*$", re.IGNORECASE | re.MULTILINE)
 
 
-def _batch_jobs(env: dict) -> list[str]:
-    """Every batch job id an envelope names (a sharded run has `remote.fleet[]`
-    and no single `remote.job_id`)."""
-    remote = (env.get("environment") or {}).get("remote") or {}
-    ids = [remote["job_id"]] if remote.get("job_id") else []
-    ids += [f["job_id"] for f in remote.get("fleet") or [] if isinstance(f, dict) and f.get("job_id")]
-    return sorted(set(ids))
+def _check_direct_request_grid(req: dict, deck: str, problems: list) -> None:
+    """PVT45 sweeps process and temperature independently, and pairs VINP with VDD by index."""
+    axes = req.get("corners")
+    if not isinstance(axes, dict):
+        problems.append(f"{deck} request: missing corners axes")
+        return
+    def covers(values, expected):
+        return (isinstance(values, list) and len(values) == len(expected)
+                and all(values.count(item) == 1 for item in expected))
+
+    processes = axes.get("process")
+    if isinstance(processes, list) and all(isinstance(p, dict) for p in processes):
+        names = [p.get("name") for p in processes]
+        for process in processes:
+            sections = [process.get("name"),
+                        {"lib": "libs.tech/ngspice/models/cornerCAP.lib", "section": "cap_typ"},
+                        {"lib": "libs.tech/ngspice/models/cornerRES.lib", "section": "res_typ"}]
+            if process.get("sections") != sections:
+                problems.append(f"{deck} request: process {process.get('name')!r} has unexpected model sections")
+    else:
+        names = []
+    if not covers(names, klt_envelope.PROCESSES):
+        problems.append(f"{deck} request: process axis does not cover the five selected sections once")
+    if not covers(axes.get("temperature_c"), klt_envelope.TEMPERATURES):
+        problems.append(f"{deck} request: temperature_c axis does not cover the selected temperatures once")
+    supply = axes.get("supply_v")
+    if isinstance(supply, dict) and set(supply) == {"vdd", "vinp"}:
+        vdd, vinp = supply["vdd"], supply["vinp"]
+        if isinstance(vdd, list) and isinstance(vinp, list) and len(vdd) == len(vinp):
+            if covers(list(zip(vdd, vinp)), [(v, v / 2) for v in klt_envelope.SUPPLIES]):
+                return
+    problems.append(f"{deck} request: supply_v axis must pair each selected VDD with VINP = VDD/2")
+
+
+def _direct_measurements(entries, names, label, problems):
+    """Index by name without silently collapsing duplicates or accepting extra measurements."""
+    by_name = {}
+    for m in entries if isinstance(entries, list) else ():
+        if not isinstance(m, dict) or m.get("name") not in names or m["name"] in by_name:
+            problems.append(f"{label}: unexpected or duplicate measurement {m!r}")
+            continue
+        by_name[m["name"]] = m
+    return by_name
 
 
 def _load_cmrr_psrr_klt_population(repo: Path, key: str, ck: dict, expected: list, snapshot_rel: str,
@@ -989,17 +1026,16 @@ def _load_cmrr_psrr_klt_population(repo: Path, key: str, ck: dict, expected: lis
         if not isinstance(env, dict) or not isinstance(req, dict):
             problems.append(f"{deck}: envelope and request must be JSON objects")
             continue
-        count = env.get("corner_count")
-        if count != len(expected_ids) or env.get("status") not in ("pass", "fail") \
-                or (env.get("passed") or 0) + (env.get("failed") or 0) != count:
-            problems.append(f"{label}: status {env.get('status')!r}, {env.get('passed')} passed + {env.get('failed')} failed of {count} corners (need all {len(expected_ids)} decided)")
-        for field in ("errored", "inconclusive"):
-            if env.get(field) != 0:
-                problems.append(f"{label}: {field} = {env.get(field)!r}")
-        if (env.get("diagnostic_counts") or {}).get("corners_with_diagnostics") != 0:
-            problems.append(f"{label}: corners carry diagnostics")
+        if not isinstance(env.get("corners"), list):
+            problems.append(f"{label}: no corners[] array")
+            continue
+        try:
+            klt_envelope.check_decided_counts(env, len(expected_ids))
+        except klt_envelope.InputError as exc:
+            problems.append(f"{label}: {exc}")
         e = env.get("environment") or {}
-        if not _batch_jobs(env):
+        jobs = klt_envelope.batch_job_ids(env)
+        if not jobs:
             problems.append(f"{label}: no environment.remote batch job (not a batch run)")
         version = e.get("engine_version")
         if e.get("engine") != "ngspice" or not version:
@@ -1029,11 +1065,21 @@ def _load_cmrr_psrr_klt_population(repo: Path, key: str, ck: dict, expected: lis
             problems.append(f"{deck} request: netlist {req.get('netlist')!r} is not the pinned bench body")
         if req.get("analysis") != CMRR_PSRR_ANALYSIS:
             problems.append(f"{deck} request: analysis is not {CMRR_PSRR_ANALYSIS}")
-        defs = {m.get("name"): m for m in req.get("measurements") or []}
+        _check_direct_request_grid(req, deck, problems)
+        defs = _direct_measurements(req.get("measurements"), spec["names"], f"{deck} request", problems)
+        reported = _direct_measurements(env.get("measurements"), spec["names"], label, problems)
         for name in spec["names"]:
             if name not in defs:
                 problems.append(f"{deck} request: measurement {name} is not declared")
                 continue
+            if defs[name].get("unit") != "dB":
+                problems.append(f"{deck} request: measurement {name} unit must be dB")
+            if name not in reported:
+                problems.append(f"{label}: measurement {name} is missing from the envelope summary")
+            else:
+                for field in ("unit", "limits"):
+                    if reported[name].get(field) != defs[name].get(field):
+                        problems.append(f"{label}: measurement {name} {field} disagrees with the {deck} request")
             if "spice" in spec and name in spec["spice"] and defs[name].get("spice") != spec["spice"][name]:
                 problems.append(f"{deck} request: measurement {name} is {defs[name].get('spice')!r}, not {spec['spice'][name]!r}")
             if name in spec["expr"] and defs[name].get("expr") != spec["expr"][name]:
@@ -1051,9 +1097,9 @@ def _load_cmrr_psrr_klt_population(repo: Path, key: str, ck: dict, expected: lis
         corners: dict = {}
         for corner in env.get("corners") or []:
             try:
-                pid = f"{corner['process']}_{int(corner['temperature_c'])}C_{float(corner['supply_v']['vdd']):.2f}V"
-            except (KeyError, TypeError, ValueError):
-                problems.append(f"{label}: a corner has no process/temperature/vdd identity")
+                pid = klt_envelope.key_str(klt_envelope.exact_pvt_key(corner))
+            except klt_envelope.InputError as exc:
+                problems.append(f"{label}: {exc}")
                 continue
             if pid in corners:
                 problems.append(f"{label}: duplicate corner {pid}")
@@ -1071,21 +1117,22 @@ def _load_cmrr_psrr_klt_population(repo: Path, key: str, ck: dict, expected: lis
             if corner.get("status") not in ("pass", "fail") or corner.get("diagnostics"):
                 problems.append(f"{label}: point {pid} is not a decided corner (status {corner.get('status')!r}, {len(corner.get('diagnostics') or [])} diagnostic(s))")
                 continue
-            got = {m.get("name"): m.get("value") for m in corner.get("measurements") or []}
+            measures = _direct_measurements(corner.get("measurements"), spec["names"], f"{label}: point {pid}", problems)
+            for name, m in measures.items():
+                if m.get("unit") != "dB":
+                    problems.append(f"{label}: point {pid}: measurement {name} unit must be dB")
+                if m.get("status") not in ("pass", "fail"):
+                    problems.append(f"{label}: point {pid}: measurement {name} has undecided status {m.get('status')!r}")
+            got = {name: m.get("value") for name, m in measures.items()}
             bad = [n for n in spec["names"]
                    if not isinstance(got.get(n), (int, float)) or isinstance(got.get(n), bool) or not math.isfinite(got[n])]
             if bad:
                 problems.append(f"point {pid}: {deck} deck: missing or non-finite measurement(s) {bad}")
                 continue
-            sup = corner.get("supply_v") or {}
-            vdd, vinp = sup.get("vdd"), sup.get("vinp")
-            if not all(isinstance(x, (int, float)) and math.isfinite(x) for x in (vdd, vinp)) or vdd <= 0 or abs(vinp - vdd / 2) > 1e-9:
-                problems.append(f"point {pid}: {deck} deck: supplies {sup!r} do not put Vcm at VDD/2")
-                continue
             points[pid] = {n: float(got[n]) for n in spec["names"]}
         decks[deck] = {"points": points, "version": version, "models": e.get("models_lib_sha256"),
-                       "dut": dict(dut), "jobs": _batch_jobs(env), "envelope": pins[f"{deck}_envelope"]["path"],
-                       "cload_f": float(loads[0]) if loads else None}
+                       "dut": dict(dut), "jobs": jobs, "envelope": pins[f"{deck}_envelope"]["path"],
+                       "cload_f": float(next(iter(cloads))) if len(cloads) == 1 else None}
     if len(decks) == 2:
         a, b = decks["cmrr"], decks["psrr"]
         for field in ("version", "models", "dut"):

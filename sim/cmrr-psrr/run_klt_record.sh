@@ -19,7 +19,8 @@
 # record there is a deliberate edit of signoff/characterization/selection.json.
 #
 # Set SKIP_RUN=1 to summarize the already committed newest envelopes without
-# submitting anything.
+# submitting anything. To publish a revised summary of the same envelopes,
+# set RECORD_ID to a fresh record ID; the default is the CMRR envelope ID.
 #
 # Exit status: 0 record written; 1 summarize failed (nothing written);
 # 2 an envelope is missing.
@@ -39,11 +40,39 @@ if [[ -z "${CMRR_ENV}" || -z "${PSRR_ENV}" ]]; then
   echo "error: no CMRR and/or PSRR direct envelope under ${KLT_RECORDS}" >&2
   exit 2
 fi
-ID="$(basename "${CMRR_ENV}" .cmrr.sim.json)"
-OUT="${SCRIPT_DIR}/records/${ID}"
-if [[ -e "${OUT}.csv" || -e "${OUT}.md" ]]; then
-  echo "error: record ${ID} already exists; records are append-only" >&2
+RECORD_ID="${RECORD_ID:-$(basename "${CMRR_ENV}" .cmrr.sim.json)}"
+if [[ ! "${RECORD_ID}" =~ ^[[:alnum:]_-][[:alnum:]_.-]*$ ]]; then
+  echo "error: invalid record id: ${RECORD_ID}" >&2
   exit 1
 fi
-python3 "${SCRIPT_DIR}/klt/summarize_batch.py" "${CMRR_ENV}" "${PSRR_ENV}" "${OUT}.csv" "${OUT}.md"
+# shellcheck source=../record-paths.sh
+source "${SCRIPT_DIR}/../record-paths.sh"
+RECORDS_DIR="${SCRIPT_DIR}/records"
+OUT="${RECORDS_DIR}/${RECORD_ID}"
+RESERVATION="${RECORDS_DIR}/.reserve-${RECORD_ID}"
+mkdir -p "${RECORDS_DIR}"
+if ! sg13g2_exclusive_mkdir "${RESERVATION}"; then
+  echo "error: record ${RECORD_ID} is reserved by another writer" >&2
+  exit 1
+fi
+SCRATCH=""
+cleanup() {
+  if [[ -n "${SCRATCH}" ]]; then rm -rf -- "${SCRATCH}"; fi
+  rmdir -- "${RESERVATION}"
+}
+trap cleanup EXIT
+trap 'exit 1' INT TERM
+if [[ -e "${OUT}.csv" || -L "${OUT}.csv" || -e "${OUT}.md" || -L "${OUT}.md" ]]; then
+  echo "error: record ${RECORD_ID} already exists; records are append-only" >&2
+  exit 1
+fi
+SCRATCH="$(mktemp -d "${TMPDIR:-/tmp}/cmrr-psrr-record.XXXXXXXX")"
+python3 "${SCRIPT_DIR}/klt/summarize_batch.py" "${CMRR_ENV}" "${PSRR_ENV}" "${SCRATCH}/record.csv" "${SCRATCH}/record.md"
+# Finish the two short link operations (or their rollback) if interrupted.
+trap '' INT TERM
+sg13g2_publish_noclobber "${SCRATCH}/record.csv" "${OUT}.csv"
+if ! sg13g2_publish_noclobber "${SCRATCH}/record.md" "${OUT}.md"; then
+  unlink "${OUT}.csv"
+  exit 1
+fi
 echo "wrote ${OUT}.csv and ${OUT}.md"
