@@ -19,7 +19,7 @@ from __future__ import annotations
 import math
 from decimal import Decimal
 
-from common import parse_decimal
+from common import SLEW_KLT_LIMITS, parse_decimal
 from paths import mc_samples, noise_post, op_sanity, slew_post, swing_post
 
 # --------------------------------------------------------------------------
@@ -198,6 +198,106 @@ def _check_slew_raw(point: dict, pop: dict | None) -> str | None:
         problem = _cell_problem(field, point.get(field), cells[field], "pinned waveform", 6)
         if problem:
             problems.append(f"{problem} {where}")
+    return "; ".join(problems) or None
+
+
+# Comparison tolerance of a batch-envelope slew cell against the summary
+# (mirrors sim/slew-rate/klt/compare.py TOLERANCES; a test keeps them equal).
+SLEW_KLT_RATE_REL = 2e-3
+SLEW_KLT_DC_ABS = 1e-6
+SLEW_KLT_DC_REL = 1e-3
+SLEW_KLT_DERIVE_REL = 1e-6  # reported measurement vs its own crossings (12-digit serialization)
+_SLEW_KLT_DC_CELLS = ("vout_dc_v", "vd1_dc_v", "vd2_dc_v", "vtail_dc_v", "vibias_dc_v")
+
+
+def _within(limits: dict, value: float) -> bool:
+    return limits.get("min", -math.inf) <= value <= limits.get("max", math.inf)
+
+
+def _slew_klt_flags(v: dict, vdd: float) -> dict:
+    """The four validity flags, derived from the reported quantities and the
+    request's own limits (SLEW_KLT_LIMITS)."""
+    lim = SLEW_KLT_LIMITS
+    lin = _within(lim["lin_rise_ratio"], v["lin_rise_ratio"]) and _within(lim["lin_fall_ratio"], v["lin_fall_ratio"])
+    trav = _within(lim["pre_rise_orel_v"], v["pre_rise_orel_v"]) and _within(lim["pre_fall_orel_v"], v["pre_fall_orel_v"])
+    drive = _within(lim["drive_pp_v"], v["drive_pp_v"]) and _within(lim["drive_centre_err_v"], v["drive_centre_err_v"])
+    op = all(_within(lim[n], v[n]) for n in lim if n.startswith("op_"))
+    return {"op_pass": op, "linearity_pass": lin, "traverse_pass": trav, "drive_pass": drive}
+
+
+def _check_slew_klt(point: dict, pop: dict | None) -> str | None:
+    """The slew summary must follow from the pinned batch `klt sim` envelope
+    (SLEW_KLT_AUDIT_RULE): both edge rates, the inner rates, linearity and the
+    worse edge are recomputed from the measured window crossings, and the
+    validity flags from the reported integrity quantities and the request's
+    limits. A limit miss stays a failing row; only an inconsistency is an error."""
+    if pop is None:
+        return "cannot evaluate (no batch slew envelope population available)"
+    pid = (point.get("point_id") or "").strip()
+    raw = pop["points"].get(pid)
+    if raw is None:
+        return "cannot evaluate (no pinned batch slew values for this point)"
+    v, where, problems = raw["values"], f"({pop['envelope']})", []
+
+    def near(a: float, b: float, rel: float, absol: float = 0.0) -> bool:
+        return abs(a - b) <= absol + rel * abs(b)
+
+    d = {}
+    for edge in ("rise", "fall"):
+        for kind, span, t in (("", 0.3, f"t_{edge}_outer_s"), ("_inner", 0.15, f"t_{edge}_inner_s")):
+            name = f"sr_{edge}{kind}_v_per_us"
+            if not v[t] > 0:
+                problems.append(f"{t} {v[t]!r} is not a positive crossing interval, so no measurement exists")
+                d[name] = math.nan
+                continue
+            d[name] = span / v[t] * 1e-6
+            if not near(v[name], d[name], SLEW_KLT_DERIVE_REL):
+                problems.append(f"{name}: envelope reports {v[name]!r} but {t} gives {d[name]:.9g}")
+    for edge in ("rise", "fall"):
+        ratio = d[f"sr_{edge}_inner_v_per_us"] / d[f"sr_{edge}_v_per_us"] if d[f"sr_{edge}_v_per_us"] == d[f"sr_{edge}_v_per_us"] else math.nan
+        if not near(v[f"lin_{edge}_ratio"], ratio, SLEW_KLT_DERIVE_REL):
+            problems.append(f"lin_{edge}_ratio: envelope reports {v[f'lin_{edge}_ratio']!r} but the crossings give {ratio:.9g}")
+    if not near(v["drive_pp_v"], v["vinn_max_v"] - v["vinn_min_v"], SLEW_KLT_DERIVE_REL, 1e-9):
+        problems.append("drive_pp_v: does not equal vinn_max_v - vinn_min_v")
+    if not near(v["drive_centre_err_v"], abs((v["vinn_max_v"] + v["vinn_min_v"]) / 2 - v["vout_dc_v"]), SLEW_KLT_DERIVE_REL, 1e-9):
+        problems.append("drive_centre_err_v: does not follow from vinn_max_v, vinn_min_v and vout_dc_v")
+    vdd = raw["vdd"]
+    fracs = {
+        "op_vout_offset_frac": abs(v["vout_dc_v"] - vdd / 2) / vdd, "op_vout_rail_frac": v["vout_dc_v"] / vdd,
+        "op_vd1_rail_frac": v["vd1_dc_v"] / vdd, "op_vd2_rail_frac": v["vd2_dc_v"] / vdd,
+        "op_vtail_rail_frac": v["vtail_dc_v"] / vdd,
+    }
+    for name, want in fracs.items():
+        if not near(v[name], want, 1e-6, 1e-9):
+            problems.append(f"{name}: envelope reports {v[name]!r} but the raw supply/node voltage gives {want:.9g}")
+    worst = min(d["sr_rise_v_per_us"], d["sr_fall_v_per_us"])
+    want_cells = {
+        "sr_rise_v_per_us": d["sr_rise_v_per_us"], "sr_fall_v_per_us": d["sr_fall_v_per_us"],
+        "sr_worst_v_per_us": worst,
+        "sr_rise_inner_v_per_us": d["sr_rise_inner_v_per_us"], "sr_fall_inner_v_per_us": d["sr_fall_inner_v_per_us"],
+    }
+    for field, want in want_cells.items():
+        cell, why = parse_decimal(point.get(field))
+        if cell is None:
+            problems.append(f"{field}: {why}")
+        elif not near(float(cell), want, SLEW_KLT_RATE_REL):
+            problems.append(f"{field} {cell} is not {want:.6g} recomputed from the pinned envelope crossings (tolerance {SLEW_KLT_RATE_REL:g} relative) {where}")
+    for field in _SLEW_KLT_DC_CELLS:
+        cell, why = parse_decimal(point.get(field))
+        if cell is None:
+            problems.append(f"{field}: {why}")
+        elif not near(float(cell), v[field], SLEW_KLT_DC_REL, SLEW_KLT_DC_ABS):
+            problems.append(f"{field} {cell} is not the pinned envelope's {v[field]:.6g} {where}")
+    for field, want in (("vdd_v", vdd), ("vcm_v", raw["vinp"])):
+        cell, why = parse_decimal(point.get(field))
+        if cell is None:
+            problems.append(f"{field}: {why}")
+        elif abs(float(cell) - want) > 1e-9:
+            problems.append(f"{field} {cell} is not the pinned envelope corner's {want:g} {where}")
+    for flag, want in _slew_klt_flags(v, vdd).items():
+        cell = (point.get(flag) or "").strip()
+        if cell != ("1" if want else "0"):
+            problems.append(f"{flag} {cell!r} but the pinned envelope's reported quantities and the request's limits give {int(want)} {where}")
     return "; ".join(problems) or None
 
 
@@ -442,6 +542,7 @@ DEFINITION_CHECKS = {
     "noise_raw_audit": (_check_noise_raw, "noise"),
     "slew_worse_edge": (_check_slew_worse_edge, False),
     "slew_raw_audit": (_check_slew_raw, "slew"),
+    "slew_klt_audit": (_check_slew_klt, "slew_klt"),
     "swing_raw_audit": (_check_swing_raw, "swing"),
     "offset_magnitude": (_check_offset_magnitude, False),
     "offset_mc_statistics": (_check_offset_mc_statistics, "draws"),

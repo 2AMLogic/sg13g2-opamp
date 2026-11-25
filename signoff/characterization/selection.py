@@ -26,6 +26,7 @@ from common import (
     NOISE_PIN_KINDS,
     ROW_CLASSES,
     SELECTION_SCHEMA,
+    SLEW_KLT_KINDS,
     SLEW_PIN_KINDS,
     SWING_PIN_KINDS,
     VALID_OPS,
@@ -107,6 +108,13 @@ def load_selection(path: Path) -> dict:
             _validate_slew_raw_selection(key, rec["slew_raw"])
         if "swing_raw" in rec:
             _validate_swing_raw_selection(key, rec["swing_raw"])
+        if "slew_klt" in rec:
+            _validate_slew_klt_selection(key, rec["slew_klt"])
+            if "slew_klt_audit" not in rec.get("definition_checks", []):
+                raise SelectionError(
+                    f"selection: record {key}: `slew_klt` is named, so the definition check "
+                    "'slew_klt_audit' must run (raw evidence is never pinned and then ignored)"
+                )
         if "klt_raw" in rec:
             _validate_klt_raw_selection(key, rec["klt_raw"], selection["records"])
             if "open_loop_klt_audit" not in rec.get("definition_checks", []):
@@ -122,6 +130,11 @@ def load_selection(path: Path) -> dict:
                 raise SelectionError(
                     f"selection: record {key}: definition check {name!r} verifies raw "
                     "transient waveforms; name hash-pinned `slew_raw` beside the summary"
+                )
+            if need == "slew_klt" and rec.get("slew_klt") is None:
+                raise SelectionError(
+                    f"selection: record {key}: definition check {name!r} verifies the batch "
+                    "`klt sim` slew envelope; name hash-pinned `slew_klt` beside the summary"
                 )
             if need == "draws" and rec.get("draws_csv") is None:
                 raise SelectionError(
@@ -228,6 +241,20 @@ def _validate_slew_raw_selection(key: str, sr) -> None:
             "sim/slew-rate/run_slew_sweep.sh that the shared post-processing is defined for)"
         )
     _validate_raw_pins(where, sr.get("files"), SLEW_PIN_KINDS, f"{{tran, netlist}}")
+
+
+def _validate_slew_klt_selection(key: str, sk) -> None:
+    """Shape of a record's `slew_klt` pin: the batch envelope, the request it
+    ran and the bench body, each with its sha256 (issue #501)."""
+    where = f"selection: record {key}: `slew_klt`"
+    if not isinstance(sk, dict) or sorted(sk) != ["files"]:
+        raise SelectionError(f"{where} must be an object with exactly `files`")
+    files = sk["files"]
+    if not isinstance(files, dict) or sorted(files) != sorted(SLEW_KLT_KINDS):
+        raise SelectionError(f"{where}.files must have exactly {list(SLEW_KLT_KINDS)}")
+    for kind, pin in files.items():
+        if not (isinstance(pin, dict) and isinstance(pin.get("path"), str) and isinstance(pin.get("sha256"), str)):
+            raise SelectionError(f"{where}.files.{kind} needs string `path` and `sha256` (a raw artifact is never named without its pin)")
 
 
 def _validate_swing_raw_selection(key: str, sw) -> None:
