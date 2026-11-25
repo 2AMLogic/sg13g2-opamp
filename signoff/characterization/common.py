@@ -57,6 +57,18 @@ SLEW_KLT_SPICE = {
     "sr_fall_inner_v_per_us": ".meas tran sr_fall_inner_v_per_us param='0.15/t_fall_inner_s*1e-6'",
     "lin_rise_ratio": ".meas tran lin_rise_ratio param='sr_rise_inner_v_per_us/sr_rise_v_per_us'",
     "lin_fall_ratio": ".meas tran lin_fall_ratio param='sr_fall_inner_v_per_us/sr_fall_v_per_us'",
+    "pre_rise_orel_v": ".meas tran pre_rise_orel_v find v(orel) at=299n",
+    "pre_fall_orel_v": ".meas tran pre_fall_orel_v find v(orel) at=549n",
+    "vinn_max_v": ".meas tran vinn_max_v max v(inn)",
+    "vinn_min_v": ".meas tran vinn_min_v min v(inn)",
+    "vout_dc_v": ".meas tran vout_dc_v find v(out) at=0",
+    "drive_pp_v": ".meas tran drive_pp_v param='vinn_max_v-vinn_min_v'",
+    "drive_centre_err_v": ".meas tran drive_centre_err_v param='abs((vinn_max_v+vinn_min_v)/2-vout_dc_v)'",
+    "op_vout_offset_frac": ".meas tran op_vout_offset_frac find v(ofrac) at=0",
+    "op_vout_rail_frac": ".meas tran op_vout_rail_frac find v(fout) at=0",
+    "op_vd1_rail_frac": ".meas tran op_vd1_rail_frac find v(fd1) at=0",
+    "op_vd2_rail_frac": ".meas tran op_vd2_rail_frac find v(fd2) at=0",
+    "op_vtail_rail_frac": ".meas tran op_vtail_rail_frac find v(ftail) at=0",
 }
 SLEW_KLT_LIMITS = {
     "lin_rise_ratio": {"min": 0.98, "max": 1.02}, "lin_fall_ratio": {"min": 0.98, "max": 1.02},
