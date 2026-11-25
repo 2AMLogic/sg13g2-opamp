@@ -2405,7 +2405,7 @@ class OffsetKltAudit(RawAuditCase):
             self.rawfile(kind).write_text(json.dumps(doc), encoding="utf-8")
             self.raw()["files"][kind]["sha256"] = generate.sha256_file(self.rawfile(kind))
         self.fx.save_selection()
-        self.assert_error("below the sim/pdk.json toolchain floor")
+        self.assert_error("rejected by sim/pdk.json")
 
     def test_simulated_dut_must_be_the_selected_snapshot(self):
         # A comment-only touch leaves the normalized (design-identity) hash

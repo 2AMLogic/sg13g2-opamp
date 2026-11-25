@@ -1526,7 +1526,7 @@ def load_record(repo: Path, key: str, spec: dict, grid: dict, env: dict, records
     offset_klt_pop: dict | None = None
     okr = spec.get("offset_klt_raw")
     if okr is not None:
-        offset_klt_pop = _load_offset_klt_population(repo, key, okr, expected, spec["netlist_snapshot"], md_text, records or {}, env, errors)
+        offset_klt_pop = _load_offset_klt_population(repo, key, okr, expected, spec["netlist_snapshot"], md_text, records or {}, errors)
         src["offset_klt_raw"] = {
             "status": "verified" if offset_klt_pop is not None else "error",
             "points": len(expected),
@@ -1537,19 +1537,9 @@ def load_record(repo: Path, key: str, spec: dict, grid: dict, env: dict, records
             src["offset_klt_raw"]["jobs"] = offset_klt_pop["jobs"]
             src["offset_klt_raw"]["av0_join_csv"] = offset_klt_pop["join_csv"]
             envelope_ngspice = f"ngspice-{offset_klt_pop['version']}"
-            if src["ngspice"] is None:
-                src["ngspice"] = envelope_ngspice
-            if src["ngspice"] != envelope_ngspice:
-                errors.append(f"record {key}: {spec['md']} names {src['ngspice']}, but the pinned envelopes ran {envelope_ngspice}")
-            floor = ((env.get("pin") or {}).get("osdi_toolchain") or {}).get("ngspice_min_major")
-            if not (isinstance(floor, int) and not isinstance(floor, bool)):
-                # no floor stated: the legacy exact-pin rule applies here too
-                if env.get("ngspice") and src["ngspice"] != env["ngspice"]:
-                    errors.append(
-                        f"record {key}: ran on {src['ngspice']}, but sim/pdk.json pins "
-                        f"{env['ngspice']} -- mixed simulation environments are not "
-                        "combined silently"
-                    )
+            # Same carrier as 3e/3g: establish-or-agree, admitted through the
+            # shared policy (floor, else legacy exact pin) in one place.
+            _carry_ngspice_version(key, src, envelope_ngspice, "the pinned envelopes", spec, env, errors)
 
     # 3g. raw `klt sim` envelopes (issue #101 / #500): the AC and OP envelopes,
     # both requests and the bench body (plus optional measurement document), cross-checked.
@@ -1686,13 +1676,8 @@ def _offset_klt_corner_ids(env: dict, label: str, expected_ids: list, problems: 
     return out
 
 
-def _ngspice_major(version) -> int | None:
-    m = NGSPICE_RE.match(f"ngspice-{version}")
-    return int(m.group(1)) if m else None
-
-
 def _load_offset_klt_population(repo: Path, key: str, kr: dict, expected: list, snapshot_rel: str,
-                                md_text: str, records: dict, env: dict, errors: list) -> dict | None:
+                                md_text: str, records: dict, errors: list) -> dict | None:
     """Pin-check and strictly cross-check the input-offset `klt sim` evidence
     (both envelopes, both requests, both bodies, the Av0 join) and return the
     per-point raw values the definition check re-derives every cell from.
@@ -1784,16 +1769,9 @@ def _load_offset_klt_population(repo: Path, key: str, kr: dict, expected: list, 
         if (doc.get("netlist") or {}).get("path") != body_pin["path"]:
             problems.append(f"{kind} envelope: netlist path {(doc.get('netlist') or {}).get('path')!r} is not the pinned bench body")
 
-    # Simulator version: the fleet policy sim/tools/env_identity.py defines
-    # (#348, and #497 item 6 tracks the legacy exact-string check) -- a FLOOR
-    # on the ngspice major when the pin states one, an exact match otherwise.
-    floor = ((env.get("pin") or {}).get("osdi_toolchain") or {}).get("ngspice_min_major")
-    if isinstance(floor, int) and not isinstance(floor, bool):
-        major = _ngspice_major(version)
-        if major is None or major < floor:
-            problems.append(f"the envelopes ran ngspice-{version}, below the sim/pdk.json toolchain floor ngspice-{floor}")
-    elif env.get("ngspice") and f"ngspice-{version}" != env["ngspice"]:
-        problems.append(f"the envelopes ran ngspice-{version}, but sim/pdk.json pins {env['ngspice']} -- mixed simulation environments are not combined silently")
+    # Simulator version admission (floor / exact pin) is applied by the caller
+    # through _carry_ngspice_version, the one shared policy; only the version
+    # is reported here.
 
     # requests: the measurement definitions and analyses the audit relies on
     null_req, cl_req = docs["null_request"], docs["cl_request"]
