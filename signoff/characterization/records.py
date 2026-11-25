@@ -517,6 +517,21 @@ def _admit_ngspice_version(key: str, actual: str, env: dict, errors: list) -> No
         )
 
 
+def _carry_ngspice_version(key: str, src: dict, envelope_ngspice: str, origin_phrase: str, spec: dict, env: dict, errors: list) -> None:
+    """Carry an envelope's simulator version into src["ngspice"]: establish it
+    when nothing has yet (summary .md or an earlier envelope, whichever came
+    first), otherwise require agreement, never overwrite. The envelope's
+    version goes through the shared admission policy when it establishes or
+    disagrees; on agreement the establishing site already admitted it, so a
+    second admit would only duplicate the error."""
+    if src["ngspice"] is None:
+        src["ngspice"] = envelope_ngspice
+        _admit_ngspice_version(key, envelope_ngspice, env, errors)
+    elif src["ngspice"] != envelope_ngspice:
+        errors.append(f"record {key}: {spec['md']} names {src['ngspice']}, but {origin_phrase} ran {envelope_ngspice}")
+        _admit_ngspice_version(key, envelope_ngspice, env, errors)
+
+
 def _load_sample_population(repo: Path, key: str, ms: dict, expected: list, records: dict, errors: list) -> dict | None:
     """Pin-check and strictly parse each grid point's raw sample file, and join
     Av0 from the pinned deterministic record. None when anything is wrong."""
@@ -1256,12 +1271,7 @@ def load_record(repo: Path, key: str, spec: dict, grid: dict, env: dict, records
             # Same carrier as the klt_raw path (3g): the summary .md already went
             # through the shared policy; a versionless summary leaves the envelope
             # as the only source, so admit it here instead of exact-matching.
-            if src["ngspice"] is None:
-                src["ngspice"] = envelope_ngspice
-                _admit_ngspice_version(key, envelope_ngspice, env, errors)
-            elif src["ngspice"] != envelope_ngspice:
-                errors.append(f"record {key}: {spec['md']} names {src['ngspice']}, but the pinned slew envelope ran {envelope_ngspice}")
-                _admit_ngspice_version(key, envelope_ngspice, env, errors)
+            _carry_ngspice_version(key, src, envelope_ngspice, "the pinned slew envelope", spec, env, errors)
 
     # 3f. raw DC transfer curves (issue #230): both passes' pinned wrdata
     # curves and rendered netlists per grid point, strictly parsed.
@@ -1330,12 +1340,7 @@ def load_record(repo: Path, key: str, spec: dict, grid: dict, env: dict, records
             # One carrier for the invariant: src["ngspice"] is set by the summary
             # .md or by the slew envelope (3e), whichever came first; every later
             # evidence kind must agree with it, never overwrite it.
-            if src["ngspice"] is None:
-                src["ngspice"] = envelope_ngspice
-                _admit_ngspice_version(key, envelope_ngspice, env, errors)
-            elif src["ngspice"] != envelope_ngspice:
-                errors.append(f"record {key}: {spec['md']} names {src['ngspice']}, but the pinned envelopes ran {envelope_ngspice}")
-                _admit_ngspice_version(key, envelope_ngspice, env, errors)
+            _carry_ngspice_version(key, src, envelope_ngspice, "the pinned envelopes", spec, env, errors)
             sidecar_ngspice = state.get("sidecar_ngspice")
             if sidecar_ngspice is not None and sidecar_ngspice != envelope_ngspice:
                 errors.append(
