@@ -36,12 +36,14 @@ import csv
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 
 TOOLS_DIR = Path(__file__).resolve().parent
 SIM_DIR = TOOLS_DIR.parent
+sys.path.insert(0, str(TOOLS_DIR))
 
 # The throwaway-tree fixture, stub binaries and deterministic record-id
 # constants are shared with the #209 lifecycle controls: same fake PDK
@@ -52,11 +54,8 @@ from test_env_drift_lifecycle import (  # noqa: E402
     PDK,
     PIN,
     RID,
-    SHA,
-    STUB_NGSPICE,
-    TS,
+    STUB_NGSPICE_HEADER,
     Tree,
-    _write_exec,
 )
 
 OP_MARKERS = ("OP_VOUT", "OP_VD1", "OP_VD2", "OP_VTAIL", "OP_VIBIAS", "OP_IVDD")
@@ -256,11 +255,7 @@ class ReaderFixture:
     """A throwaway tree whose sim/ can source the real preflight.sh offline."""
 
     def __init__(self, root: str):
-        self.t = Tree(root)
-        for name in ("preflight.sh", "env.sh", "record-paths.sh", "env-identity.sh", "ac-join.sh"):
-            shutil.copy2(SIM_DIR / name, self.t.sim / name)
-        _write_exec(self.t.sim / "tools" / "build-osdi.sh", "#!/usr/bin/env bash\nexit 0\n")
-        _write_exec(self.t.bin / "ngspice", STUB_NGSPICE)
+        self.t = Tree(root).setup_preflight()
         self.driver = self.t.root / "read-fields.sh"
         self.driver.write_text(DRIVER, encoding="utf-8")
 
@@ -456,32 +451,19 @@ def shrink_grid(preflight: Path, vdds: str = "1.08 1.20") -> None:
     preflight.write_text(text, encoding="utf-8")
 
 
-def setup_runner_tree(root: str, vdds: str = "1.08 1.20") -> Tree:
-    """Shared throwaway repo setup for running a real sweep script offline."""
-    t = Tree(root)
-    for name in ("preflight.sh", "env.sh", "record-paths.sh", "env-identity.sh", "ac-join.sh"):
-        shutil.copy2(SIM_DIR / name, t.sim / name)
-    _write_exec(t.sim / "tools" / "build-osdi.sh", "#!/usr/bin/env bash\nexit 0\n")
-    for tool in ("op_sanity.py", "csv_summary.py", "ac_join_admission.py"):
-        shutil.copy2(TOOLS_DIR / tool, t.sim / "tools" / tool)
+def setup_runner_tree(root: str, vdds: str = "1.08 1.20", stub_ngspice=None) -> Tree:
+    """Shared throwaway repo setup for running a real sweep script offline:
+    a preflighted tree with deterministic date/git (STUB_BIN) whose declared
+    PVT grid is shrunk to the given VDDs; the caller's gap solver is
+    installed when given, else left for the caller to install."""
+    t = Tree(root).setup_preflight(stub_ngspice=stub_ngspice, stub_bin=True)
     shrink_grid(t.sim / "preflight.sh", vdds=vdds)
-    (t.root / "design" / "netlist").mkdir(parents=True)
-    (t.root / "design" / "netlist" / "opamp_core.spice").write_text("* stub DUT\n", encoding="utf-8")
-    for name, text in (("date", '#!/usr/bin/env bash\necho "${FAKE_TS}"\n'),
-                       ("git", '#!/usr/bin/env bash\necho "${FAKE_SHA}"\n')):
-        _write_exec(t.bin / name, text)
     return t
 
 
 # Open-loop stub solver: 1.08 V omits OP_VD1; 1.20 V emits pairwise-distinct
 # OP_* values so swapping any two assignments in run_pvt_sweep.sh fails.
-STUB_NGSPICE_ONE_GAP = "#!/usr/bin/env bash\n" + r"""
-if [[ "$1" == "-v" ]]; then
-  printf '******\n** ngspice-46 : Circuit level simulation program (stub)\n'
-  exit 0
-fi
-[[ "$1" == "-b" ]] || exit 2
-netlist="$2"
+STUB_NGSPICE_ONE_GAP = "#!/usr/bin/env bash\n" + STUB_NGSPICE_HEADER + r"""
 vdd="$(awk '/^Vdd /{print $5}' "${netlist}")"
 ac_csv="$(awk '/^wrdata /{print $2}' "${netlist}")"
 printf '1 60 1 -10\n1e6 20 1e6 -100\n1e9 -20 1e9 -170\n' > "${ac_csv}"
@@ -495,26 +477,46 @@ exit 0
 """
 
 
-class MissingMarkerRegression(unittest.TestCase):
-    """The real open-loop sweep over one degraded point + one complete point."""
+class SweepRegression(unittest.TestCase):
+    """Shared scaffolding for the four bench regressions below: a runner
+    tree (shrunken grid, deterministic date/git) with the class's gap
+    solver installed, the bench staged at self.bench, the real sweep
+    invocation and the record CSV rows. Defines no test_* methods."""
+
+    RUNNER: str
+    SOLVER: str
+    VDDS = "1.08 1.20"
 
     def setUp(self) -> None:
         self._tmp = tempfile.TemporaryDirectory()
-        self.t = setup_runner_tree(self._tmp.name)
-        self.bench = self.t.sim / "open-loop-ac"
-        (self.bench / "testbench").mkdir(parents=True)
-        shutil.copy2(SIM_DIR / "open-loop-ac" / "run_pvt_sweep.sh", self.bench / "run_pvt_sweep.sh")
-        shutil.copy2(SIM_DIR / "open-loop-ac" / "testbench" / "tb_openloop_ac.spice.tmpl",
-                     self.bench / "testbench" / "tb_openloop_ac.spice.tmpl")
-        _write_exec(self.t.bin / "ngspice", STUB_NGSPICE_ONE_GAP)
+        self.t = setup_runner_tree(self._tmp.name, vdds=self.VDDS,
+                                   stub_ngspice=self.SOLVER)
+        self.bench = self.stage_bench()
+
+    def stage_bench(self) -> Path:
+        raise NotImplementedError
 
     def tearDown(self) -> None:
         self._tmp.cleanup()
 
-    def run_sweep(self) -> subprocess.CompletedProcess:
-        return subprocess.run(["bash", str(self.bench / "run_pvt_sweep.sh")],
-                              env=self.t.env(FAKE_TS=TS, FAKE_SHA=SHA),
+    def run_sweep(self, **env) -> subprocess.CompletedProcess:
+        return subprocess.run(["bash", str(self.bench / self.RUNNER)],
+                              env=self.t.env(**env),
                               capture_output=True, text=True, timeout=300)
+
+    def record_rows(self) -> list:
+        with (self.bench / "records" / f"{RID}.csv").open(newline="", encoding="utf-8") as fh:
+            return list(csv.DictReader(fh))
+
+
+class MissingMarkerRegression(SweepRegression):
+    """The real open-loop sweep over one degraded point + one complete point."""
+
+    RUNNER = "run_pvt_sweep.sh"
+    SOLVER = STUB_NGSPICE_ONE_GAP
+
+    def stage_bench(self) -> Path:
+        return self.t.stage_openloop_bench()
 
     def test_degraded_point_recorded_and_complete_point_processed(self):
         r = self.run_sweep()
@@ -524,8 +526,7 @@ class MissingMarkerRegression(unittest.TestCase):
         corners = self.bench / "corners" / RID
         self.assertTrue((corners / "mos_tt_27C_1.08V.log").is_file())
         self.assertTrue((corners / "mos_tt_27C_1.08V_ac.csv").is_file())
-        with (self.bench / "records" / f"{RID}.csv").open(newline="", encoding="utf-8") as fh:
-            rows = list(csv.DictReader(fh))
+        rows = self.record_rows()
         self.assertEqual(len(rows), 1)
         row = rows[0]
         self.assertEqual(row["point_id"], "mos_tt_27C_1.20V")
@@ -543,13 +544,7 @@ class MissingMarkerRegression(unittest.TestCase):
 # Slew stub solver: 1.08 V omits OP_VD1; 1.20 V emits pairwise-distinct OP_*
 # and TR_VINN_{MAX,MIN} centred on OP_VOUT=0.587154 (+/- 0.3 V), so swapping
 # any two DC columns or swapping TR_VINN_MAX/MIN fails.
-STUB_NGSPICE_SLEW_GAP = "#!/usr/bin/env bash\n" + r"""
-if [[ "$1" == "-v" ]]; then
-  printf '******\n** ngspice-46 : Circuit level simulation program (stub)\n'
-  exit 0
-fi
-[[ "$1" == "-b" ]] || exit 2
-netlist="$2"
+STUB_NGSPICE_SLEW_GAP = "#!/usr/bin/env bash\n" + STUB_NGSPICE_HEADER + r"""
 vdd="$(awk '/^Vdd /{print $5}' "${netlist}")"
 tran_csv="$(awk '/^wrdata /{print $2}' "${netlist}")"
 awk -v vdd="${vdd}" 'BEGIN{
@@ -580,26 +575,19 @@ wrdata @@TRAN_CSV@@ v(out)
 """
 
 
-class MissingMarkerSlewRegression(unittest.TestCase):
+class MissingMarkerSlewRegression(SweepRegression):
     """The real slew sweep over one degraded point + one complete point."""
 
-    def setUp(self) -> None:
-        self._tmp = tempfile.TemporaryDirectory()
-        self.t = setup_runner_tree(self._tmp.name)
-        self.bench = self.t.sim / "slew-rate"
-        (self.bench / "testbench").mkdir(parents=True)
-        shutil.copy2(SIM_DIR / "slew-rate" / "run_slew_sweep.sh", self.bench / "run_slew_sweep.sh")
-        shutil.copy2(SIM_DIR / "slew-rate" / "slew_post.py", self.bench / "slew_post.py")
-        (self.bench / "testbench" / "tb_slew.spice.tmpl").write_text(SLEW_TMPL, encoding="utf-8")
-        _write_exec(self.t.bin / "ngspice", STUB_NGSPICE_SLEW_GAP)
+    RUNNER = "run_slew_sweep.sh"
+    SOLVER = STUB_NGSPICE_SLEW_GAP
 
-    def tearDown(self) -> None:
-        self._tmp.cleanup()
-
-    def run_sweep(self) -> subprocess.CompletedProcess:
-        return subprocess.run(["bash", str(self.bench / "run_slew_sweep.sh")],
-                              env=self.t.env(FAKE_TS=TS, FAKE_SHA=SHA),
-                              capture_output=True, text=True, timeout=300)
+    def stage_bench(self) -> Path:
+        bench = self.t.sim / "slew-rate"
+        (bench / "testbench").mkdir(parents=True)
+        shutil.copy2(SIM_DIR / "slew-rate" / "run_slew_sweep.sh", bench / "run_slew_sweep.sh")
+        shutil.copy2(SIM_DIR / "slew-rate" / "slew_post.py", bench / "slew_post.py")
+        (bench / "testbench" / "tb_slew.spice.tmpl").write_text(SLEW_TMPL, encoding="utf-8")
+        return bench
 
     def test_degraded_point_recorded_and_complete_point_processed(self):
         r = self.run_sweep()
@@ -609,8 +597,7 @@ class MissingMarkerSlewRegression(unittest.TestCase):
         corners = self.bench / "corners" / RID
         self.assertTrue((corners / "mos_tt_27C_1.08V.log").is_file())
         self.assertTrue((corners / "mos_tt_27C_1.08V_tran.csv").is_file())
-        with (self.bench / "records" / f"{RID}.csv").open(newline="", encoding="utf-8") as fh:
-            rows = list(csv.DictReader(fh))
+        rows = self.record_rows()
         self.assertEqual(len(rows), 1)
         row = rows[0]
         self.assertEqual(row["point_id"], "mos_tt_27C_1.20V")
@@ -626,13 +613,7 @@ class MissingMarkerSlewRegression(unittest.TestCase):
 # Input-noise stub solver: answers the units check, omits OP_VD1 at 1.08 V,
 # and emits 9 pairwise-distinct marker values at 1.20 V (including distinct
 # AC_CLGAIN_100HZ vs AC_CLGAIN_1MHZ).
-STUB_NGSPICE_NOISE_GAP = "#!/usr/bin/env bash\n" + r"""
-if [[ "$1" == "-v" ]]; then
-  printf '******\n** ngspice-46 : Circuit level simulation program (stub)\n'
-  exit 0
-fi
-[[ "$1" == "-b" ]] || exit 2
-netlist="$2"
+STUB_NGSPICE_NOISE_GAP = "#!/usr/bin/env bash\n" + STUB_NGSPICE_HEADER + r"""
 if [[ "${netlist}" == *tb_noise_units_check* ]]; then
   echo "UNITS_INOISE_SPECTRUM 4.0704e-09"
   echo "UNITS_ONOISE_SPECTRUM 4.0704e-07"
@@ -654,37 +635,14 @@ echo "AC_CLGAIN_1MHZ 0.981094"
 exit 0
 """
 
-NOISE_TMPL = """\
-* stub noise testbench (offline log-field-reader regression)
-Vdd vdd 0 dc @@VDD_V@@
-wrdata @@NOISE_CSV@@ inoise_spectrum onoise_spectrum
-wrdata @@NOISE_WIDE_CSV@@ inoise_spectrum onoise_spectrum
-"""
-
-
-class MissingMarkerNoiseRegression(unittest.TestCase):
+class MissingMarkerNoiseRegression(SweepRegression):
     """The real input-noise sweep over one degraded point + one complete point."""
 
-    def setUp(self) -> None:
-        self._tmp = tempfile.TemporaryDirectory()
-        self.t = setup_runner_tree(self._tmp.name)
-        self.bench = self.t.sim / "input-noise"
-        (self.bench / "testbench").mkdir(parents=True)
-        shutil.copy2(SIM_DIR / "input-noise" / "run_noise_sweep.sh", self.bench / "run_noise_sweep.sh")
-        shutil.copy2(SIM_DIR / "input-noise" / "noise_post.py", self.bench / "noise_post.py")
-        (self.bench / "testbench" / "tb_noise.spice.tmpl").write_text(NOISE_TMPL, encoding="utf-8")
-        (self.bench / "testbench" / "tb_noise_units_check.spice").write_text(
-            "* stub units-check deck\n", encoding="utf-8"
-        )
-        _write_exec(self.t.bin / "ngspice", STUB_NGSPICE_NOISE_GAP)
+    RUNNER = "run_noise_sweep.sh"
+    SOLVER = STUB_NGSPICE_NOISE_GAP
 
-    def tearDown(self) -> None:
-        self._tmp.cleanup()
-
-    def run_sweep(self) -> subprocess.CompletedProcess:
-        return subprocess.run(["bash", str(self.bench / "run_noise_sweep.sh")],
-                              env=self.t.env(FAKE_TS=TS, FAKE_SHA=SHA),
-                              capture_output=True, text=True, timeout=300)
+    def stage_bench(self) -> Path:
+        return self.t.stage_noise_bench()
 
     def test_degraded_point_recorded_and_complete_point_processed(self):
         r = self.run_sweep()
@@ -693,8 +651,7 @@ class MissingMarkerNoiseRegression(unittest.TestCase):
         self.assertEqual(r.stderr.count("SIM FAILED"), 1)
         corners = self.bench / "corners" / RID
         self.assertTrue((corners / "mos_tt_27C_1.08V.log").is_file())
-        with (self.bench / "records" / f"{RID}.csv").open(newline="", encoding="utf-8") as fh:
-            rows = list(csv.DictReader(fh))
+        rows = self.record_rows()
         self.assertEqual(len(rows), 1)
         row = rows[0]
         self.assertEqual(row["point_id"], "mos_tt_27C_1.20V")
@@ -716,13 +673,7 @@ class MissingMarkerNoiseRegression(unittest.TestCase):
 #   - 1.32 V: both complete, with pairwise-distinct CMRR OP_* values AND
 #             completely different PSRR OP_* values (OP_VOUT delta = 0.0125 V),
 #             so equating OR interchanging _cmrr.log and _psrr.log fails.
-STUB_NGSPICE_CMRR_PSRR = "#!/usr/bin/env bash\n" + r"""
-if [[ "$1" == "-v" ]]; then
-  printf '******\n** ngspice-46 : Circuit level simulation program (stub)\n'
-  exit 0
-fi
-[[ "$1" == "-b" ]] || exit 2
-netlist="$2"
+STUB_NGSPICE_CMRR_PSRR = "#!/usr/bin/env bash\n" + STUB_NGSPICE_HEADER + r"""
 vdd="$(awk '/^Vdd /{print $5}' "${netlist}")"
 ac_csv="$(awk '/^wrdata /{print $2}' "${netlist}")"
 if [[ "${netlist}" == *_cmrr.spice ]]; then
@@ -746,14 +697,16 @@ exit 0
 """
 
 
-class MissingMarkerCmrrPsrrRegression(unittest.TestCase):
+class MissingMarkerCmrrPsrrRegression(SweepRegression):
     """The real CMRR/PSRR sweep over CMRR-gap, PSRR-gap, and complete points."""
 
+    RUNNER = "run_cmrr_psrr_sweep.sh"
+    SOLVER = STUB_NGSPICE_CMRR_PSRR
+    VDDS = "1.08 1.20 1.32"
     AC_SID = "20251231-235959-aaaaaaa"
 
     def setUp(self) -> None:
-        self._tmp = tempfile.TemporaryDirectory()
-        self.t = setup_runner_tree(self._tmp.name, vdds="1.08 1.20 1.32")
+        super().setUp()
         # Admissible 3-point open-loop-ac source record for sg13g2_ac_join_admit:
         # vout_dc_v matches _cmrr.log's 0.648044 at 1.32 V (not _psrr.log's
         # 0.635544), so interchanging CMRR and PSRR also trips ol_vout_delta_v.
@@ -776,22 +729,15 @@ class MissingMarkerCmrrPsrrRegression(unittest.TestCase):
         (ol_rec / f"{self.AC_SID}.env.json").write_text(ei.canonical_json(sidecar),
                                                         encoding="utf-8")
 
-        self.bench = self.t.sim / "cmrr-psrr"
-        (self.bench / "testbench").mkdir(parents=True)
+    def stage_bench(self) -> Path:
+        bench = self.t.sim / "cmrr-psrr"
+        (bench / "testbench").mkdir(parents=True)
         shutil.copy2(SIM_DIR / "cmrr-psrr" / "run_cmrr_psrr_sweep.sh",
-                     self.bench / "run_cmrr_psrr_sweep.sh")
+                     bench / "run_cmrr_psrr_sweep.sh")
         for harness in ("cmrr", "psrr"):
             shutil.copy2(SIM_DIR / "cmrr-psrr" / "testbench" / f"tb_{harness}.spice.tmpl",
-                         self.bench / "testbench" / f"tb_{harness}.spice.tmpl")
-        _write_exec(self.t.bin / "ngspice", STUB_NGSPICE_CMRR_PSRR)
-
-    def tearDown(self) -> None:
-        self._tmp.cleanup()
-
-    def run_sweep(self) -> subprocess.CompletedProcess:
-        return subprocess.run(["bash", str(self.bench / "run_cmrr_psrr_sweep.sh")],
-                              env=self.t.env(FAKE_TS=TS, FAKE_SHA=SHA),
-                              capture_output=True, text=True, timeout=300)
+                         bench / "testbench" / f"tb_{harness}.spice.tmpl")
+        return bench
 
     def test_cmrr_and_psrr_logs_checked_independently_and_columns_verified(self):
         r = self.run_sweep()
@@ -799,8 +745,7 @@ class MissingMarkerCmrrPsrrRegression(unittest.TestCase):
         self.assertIn("SIM FAILED mos_tt_27C_1.08V -- missing OP_* line(s)", r.stderr)
         self.assertIn("SIM FAILED mos_tt_27C_1.20V -- missing OP_* line(s)", r.stderr)
         self.assertEqual(r.stderr.count("SIM FAILED"), 2)
-        with (self.bench / "records" / f"{RID}.csv").open(newline="", encoding="utf-8") as fh:
-            rows = list(csv.DictReader(fh))
+        rows = self.record_rows()
         self.assertEqual(len(rows), 1)
         row = rows[0]
         self.assertEqual(row["point_id"], "mos_tt_27C_1.32V")

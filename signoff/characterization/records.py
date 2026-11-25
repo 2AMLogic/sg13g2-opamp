@@ -28,6 +28,10 @@ from common import (
     NGSPICE_RE,
     OFFSET_KLT_RAW_KINDS,
     NOISE_PIN_KINDS,
+    SLEW_KLT_KINDS,
+    SLEW_KLT_LIMITS,
+    SLEW_KLT_MEASUREMENTS,
+    SLEW_KLT_SPICE,
     SLEW_PIN_KINDS,
     SWING_PIN_KINDS,
     canonical_json,
@@ -585,6 +589,155 @@ def _load_slew_population(repo: Path, key: str, sr: dict, expected: list, errors
     return None if len(errors) > n_err else points
 
 
+def _load_slew_klt_population(repo: Path, key: str, sk: dict, expected: list, snapshot_rel: str,
+                              md_text: str, errors: list) -> dict | None:
+    """Pin-check and strictly cross-check the batch slew `klt sim` envelope
+    (issue #501) and return the per-point raw values (SLEW_KLT_AUDIT_RULE).
+    A corner that merely misses a limit is a clean (failing) corner; an
+    errored/inconclusive/missing/duplicate/outside corner, a missing or
+    non-finite measurement, a stale DUT or bench hash, or an inconsistent
+    simulator version is an error naming the artifact, corner and field."""
+    n_err = len(errors)
+    expected_ids = [pid for pid, _ in expected]
+    docs: dict = {}
+    for kind in SLEW_KLT_KINDS:
+        pin = sk["files"][kind]
+        path = repo / pin["path"]
+        if not path.is_file():
+            errors.append(f"record {key}: missing batch slew artifact {kind} {pin['path']}")
+            continue
+        actual = sha256_file(path)
+        if actual != pin["sha256"]:
+            errors.append(
+                f"record {key}: {pin['path']} does not match its selection pin "
+                f"(pinned {pin['sha256']}, actual {actual}) -- re-select deliberately, never re-read silently"
+            )
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+            docs[kind] = text if kind == "bench_body" else json.loads(text)
+        except (OSError, UnicodeDecodeError, ValueError) as exc:
+            errors.append(f"record {key}: cannot read {pin['path']} ({exc})")
+    if len(errors) > n_err:
+        return None
+    env, req = docs["envelope"], docs["request"]
+    label = f"envelope {sk['files']['envelope']['path']}"
+    problems: list[str] = []
+    if not isinstance(env, dict) or not isinstance(req, dict):
+        errors.append(f"record {key}: slew klt evidence: envelope and request must be JSON objects")
+        return None
+    count = env.get("corner_count")
+    if count != len(expected_ids) or env.get("status") not in ("pass", "fail") or (env.get("passed"), env.get("failed")) == (None, None) \
+            or (env.get("passed") or 0) + (env.get("failed") or 0) != count:
+        problems.append(f"{label}: status {env.get('status')!r}, {env.get('passed')} passed + {env.get('failed')} failed of {count} corners (need all {len(expected_ids)} decided)")
+    for field in ("errored", "inconclusive"):
+        if env.get(field) != 0:
+            problems.append(f"{label}: {field} = {env.get(field)!r}")
+    if (env.get("diagnostic_counts") or {}).get("corners_with_diagnostics") != 0:
+        problems.append(f"{label}: corners carry diagnostics")
+    e = env.get("environment") or {}
+    remote = e.get("remote") or {}
+    if not remote.get("job_id"):
+        problems.append(f"{label}: no environment.remote.job_id (not a batch run)")
+    version = e.get("engine_version")
+    if e.get("engine") != "ngspice" or not version:
+        problems.append(f"{label}: engine {e.get('engine')!r} {version!r} is not an identified ngspice")
+    version = str(version)
+    banner = ((remote.get("worker_environment") or {}).get("simulator") or {}).get("version_banner")
+    if banner is not None and f"ngspice-{version}" not in banner:
+        problems.append(f"{label}: worker banner does not name ngspice-{version} (contradictory simulator version)")
+    stated = sorted(set(NGSPICE_RE.findall(md_text)))
+    if stated and stated != [version]:
+        problems.append(f"{label}: ran ngspice-{version} but the selected record's prose names {', '.join('ngspice-' + s for s in stated)}")
+    prov = env.get("provenance") or {}
+    if (prov.get("pdk") or {}).get("name") != "ihp-sg13g2":
+        problems.append(f"{label}: PDK is {(prov.get('pdk') or {}).get('name')!r}, not ihp-sg13g2")
+    deck = prov.get("deck") or {}
+    if deck.get("name") != "cornerMOSlv.lib" or deck.get("content_hash") != "sha256:" + str(e.get("models_lib_sha256")):
+        problems.append(f"{label}: model deck identity {deck.get('name')!r} {deck.get('content_hash')!r} is not cornerMOSlv.lib at the recorded models_lib_sha256")
+    snap = repo / snapshot_rel
+    snap_hash = sha256_file(snap) if snap.is_file() else None
+    closure = {c.get("path"): c.get("sha256") for c in e.get("netlist_closure") or []}
+    # the envelope names the DUT by its design path; match it by file name
+    dut = {p: "sha256:" + str(h) for p, h in closure.items() if Path(p).name == Path(snapshot_rel).name}
+    if not dut or set(dut.values()) != {snap_hash}:
+        problems.append(f"{label}: simulated DUT {dut or sorted(closure)} is not the selected netlist snapshot {snapshot_rel} ({snap_hash})")
+    body_pin = sk["files"]["bench_body"]
+    body_path = (env.get("netlist") or {}).get("path")
+    if body_path is None or "sha256:" + str(e.get("netlist_sha256")) != body_pin["sha256"] \
+            or "sha256:" + str(closure.get(body_path)) != body_pin["sha256"]:
+        problems.append(f"{label}: simulated bench body {body_path!r} is not the pinned {body_pin['path']}")
+    if Path(str(req.get("netlist"))).name != Path(body_pin["path"]).name:
+        problems.append(f"slew request: netlist {req.get('netlist')!r} is not the pinned bench body")
+    if (req.get("analysis") or {}).get("kind") != "tran" or (req.get("analysis") or {}).get("args") != "1n 800n 0 0.05n":
+        problems.append("slew request: analysis is not `tran 1n 800n 0 0.05n`")
+    defs = {m.get("name"): m for m in req.get("measurements") or []}
+    for name in SLEW_KLT_MEASUREMENTS:
+        if name not in defs:
+            problems.append(f"slew request: measurement {name} is not declared")
+    for name, spice in SLEW_KLT_SPICE.items():
+        if name in defs and defs[name].get("spice") != spice:
+            problems.append(f"slew request: measurement {name} is {defs[name].get('spice')!r}, not {spice!r}")
+    for name, limits in SLEW_KLT_LIMITS.items():
+        if name in defs and defs[name].get("limits") != limits:
+            problems.append(f"slew request: measurement {name} limits are {defs[name].get('limits')!r}, not {limits!r} (a validity bound is never relaxed)")
+    body = "\n".join(line for line in docs["bench_body"].splitlines() if not line.lstrip().startswith("*"))
+    loads = _KLT_CLOAD_RE.findall(body)
+    cl_stated = {parse_capacitance(s)[0] for s in source_cl_statements(md_text)} - {None}
+    if len(loads) != 1:
+        problems.append(f"bench body: {len(loads)} Cload elements (need exactly one)")
+    else:
+        try:
+            cload = Decimal(loads[0])
+        except InvalidOperation:
+            cload = None
+        if cload is None or cload not in cl_stated:
+            problems.append(f"bench body: Cload {loads[0]} is not a CL the record's own prose states ({sorted(source_cl_statements(md_text))})")
+    # corners
+    corners: dict = {}
+    for corner in env.get("corners") or []:
+        try:
+            pid = f"{corner['process']}_{int(corner['temperature_c'])}C_{float(corner['supply_v']['vdd']):.2f}V"
+        except (KeyError, TypeError, ValueError):
+            problems.append(f"{label}: a corner has no process/temperature/vdd identity")
+            continue
+        if pid in corners:
+            problems.append(f"{label}: duplicate corner {pid}")
+        corners[pid] = corner
+    for pid in expected_ids:
+        if pid not in corners:
+            problems.append(f"{label}: no corner for point {pid}")
+    for pid in sorted(set(corners) - set(expected_ids)):
+        problems.append(f"{label}: corner {pid} is outside the expected grid")
+    points: dict = {}
+    for pid in expected_ids:
+        corner = corners.get(pid)
+        if corner is None:
+            continue
+        if corner.get("status") not in ("pass", "fail") or corner.get("diagnostics"):
+            problems.append(f"{label}: point {pid} is not a decided corner (status {corner.get('status')!r}, {len(corner.get('diagnostics') or [])} diagnostic(s))")
+            continue
+        got = {m.get("name"): m.get("value") for m in corner.get("measurements") or []}
+        bad = [n for n in SLEW_KLT_MEASUREMENTS
+               if not isinstance(got.get(n), (int, float)) or isinstance(got.get(n), bool) or not math.isfinite(got[n])]
+        if bad:
+            problems.append(f"point {pid}: missing or non-finite measurement(s) {bad} (no crossing, so no measurement exists)")
+            continue
+        sup = corner.get("supply_v") or {}
+        vdd, vinp = sup.get("vdd"), sup.get("vinp")
+        if not all(isinstance(x, (int, float)) and math.isfinite(x) for x in (vdd, vinp)) or vdd <= 0 or abs(vinp - vdd / 2) > 1e-9:
+            problems.append(f"point {pid}: supplies {sup!r} do not put Vcm at VDD/2")
+            continue
+        points[pid] = {"values": {n: float(got[n]) for n in SLEW_KLT_MEASUREMENTS}, "vdd": float(vdd), "vinp": float(vinp)}
+    if problems:
+        errors.extend(f"record {key}: slew klt evidence: {p}" for p in problems)
+        return None
+    return {
+        "points": points, "version": version, "job": remote["job_id"],
+        "envelope": sk["files"]["envelope"]["path"], "cload_f": float(loads[0]),
+    }
+
+
 _SWING_PID_RE = re.compile(r"^(?P<corner>.+)_(?P<temp>-?\d+(?:\.\d+)?)C_(?P<vdd>\d+(?:\.\d+)?)V$")
 
 
@@ -779,7 +932,7 @@ def load_record(repo: Path, key: str, spec: dict, grid: dict, env: dict, records
     md_text = (repo / spec["md"]).read_text(encoding="utf-8")
     state["stated_cl"] = source_cl_statements(md_text)
     versions = sorted(set(NGSPICE_RE.findall(md_text)))
-    if len(versions) != 1 and not (not versions and (spec.get("klt_raw") is not None or spec.get("offset_klt_raw") is not None)):
+    if len(versions) != 1 and not (not versions and (spec.get("klt_raw") is not None or spec.get("slew_klt") is not None or spec.get("offset_klt_raw") is not None)):
         errors.append(
             f"record {key}: {spec['md']} names {len(versions)} ngspice versions "
             f"({', '.join('ngspice-' + v for v in versions) or 'none'}) -- the "
@@ -942,6 +1095,27 @@ def load_record(repo: Path, key: str, spec: dict, grid: dict, env: dict, records
             "config": sr["config"],
         }
 
+    # 3e'. batch slew `klt sim` envelope (issue #501), cross-checked.
+    slew_klt_pop: dict | None = None
+    sk = spec.get("slew_klt")
+    if sk is not None:
+        slew_klt_pop = _load_slew_klt_population(repo, key, sk, expected, spec["netlist_snapshot"], md_text, errors)
+        src["slew_klt"] = {
+            "status": "verified" if slew_klt_pop is not None else "error",
+            "points": len(expected),
+            "pins_sha256": sha256_bytes(canonical_json(sk["files"]).encode("utf-8")),
+        }
+        if slew_klt_pop is not None:
+            src["slew_klt"]["job"] = slew_klt_pop["job"]
+            src["slew_klt"]["cload_f"] = slew_klt_pop["cload_f"]
+            envelope_ngspice = f"ngspice-{slew_klt_pop['version']}"
+            if src["ngspice"] is None:
+                src["ngspice"] = envelope_ngspice
+            if src["ngspice"] != envelope_ngspice:
+                errors.append(f"record {key}: {spec['md']} names {src['ngspice']}, but the pinned slew envelope ran {envelope_ngspice}")
+            if env.get("ngspice") and src["ngspice"] != env["ngspice"]:
+                errors.append(f"record {key}: ran on {src['ngspice']}, but sim/pdk.json pins {env['ngspice']} -- mixed simulation environments are not combined silently")
+
     # 3f. raw DC transfer curves (issue #230): both passes' pinned wrdata
     # curves and rendered netlists per grid point, strictly parsed.
     swing_pop: dict | None = None
@@ -1020,7 +1194,7 @@ def load_record(repo: Path, key: str, spec: dict, grid: dict, env: dict, records
     def run_definition_checks(pid: str, row: dict) -> None:
         for name in spec.get("definition_checks", []):
             check, needs = DEFINITION_CHECKS[name]
-            pop = {"draws": draws_pass, "samples": sample_pop, "noise": noise_pop, "slew": slew_pop, "swing": swing_pop, "klt": klt_pop, "offset_klt": offset_klt_pop}.get(needs)
+            pop = {"draws": draws_pass, "samples": sample_pop, "noise": noise_pop, "slew": slew_pop, "swing": swing_pop, "klt": klt_pop, "slew_klt": slew_klt_pop, "offset_klt": offset_klt_pop}.get(needs)
             if needs and pop is None:
                 continue  # the population load above already reported why
             problem = check(row, pop)

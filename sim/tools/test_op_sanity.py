@@ -29,8 +29,8 @@ Two kinds of control here, matching the issue's Test Plan:
 
 Sourcing the real sim/preflight.sh needs a resolvable PDK install, a
 build-osdi.sh that passes --check, and an ngspice on PATH (it is the same
-source-time environment every real runner has), so each fixture builds a
-fake install and stubs, mirroring test_env_drift_lifecycle.py. No ngspice
+source-time environment every real runner has), so each fixture reuses
+test_env_drift_lifecycle.py's Tree fake install and stubs. No ngspice
 solve, no PDK content, and no committed record is touched: records are read
 from the repo read-only.
 
@@ -45,8 +45,6 @@ record and cmrr-mismatch's 13,500 committed draws.
 import csv
 import importlib.util
 import math
-import os
-import shutil
 import subprocess
 import sys
 import tempfile
@@ -55,11 +53,10 @@ from pathlib import Path
 
 TOOLS_DIR = Path(__file__).resolve().parent
 SIM_DIR = TOOLS_DIR.parent
-REPO_ROOT = SIM_DIR.parent
-PREFLIGHT = SIM_DIR / "preflight.sh"
 
 sys.path.insert(0, str(TOOLS_DIR))
 import op_sanity  # noqa: E402  -- the shared predicate under control (#380)
+from test_env_drift_lifecycle import Tree, _write_exec  # noqa: E402
 
 # The benches whose op_pass derives from the shared rule, with the record
 # columns each one's op_pass was computed from. The last element is the
@@ -98,7 +95,7 @@ exit 2
 """
 
 # Sourced by driver.sh after the fixture has substituted the three literal
-# paths. Mirrors test_env_drift_lifecycle.py's OpenLoopRunner environment:
+# paths. Reuses test_env_drift_lifecycle.py's OpenLoopRunner environment:
 # the real preflight.sh runs its source-time guards against a fake install,
 # then the requested mode drives the real helper.
 #
@@ -184,47 +181,21 @@ def setup_script(sim_dir: Path, pdk_root: Path, bin_dir: Path) -> str:
 
 
 class Fixture:
-    """A throwaway tree that can source the REAL sim/preflight.sh."""
+    """A throwaway tree that can source the REAL sim/preflight.sh, built on
+    the #209 lifecycle controls' Tree.setup_preflight (same fake PDK install
+    and stub-solver shape as its OpenLoopRunner); the fixture tree gets the
+    genuine op_sanity module, so every helper verdict below exercises the
+    exact code the runners run."""
 
     def __init__(self, root: Path) -> None:
-        self.root = root
-        self.sim = root / "sim"
-        self.sim.mkdir(parents=True)
-        for name in ("preflight.sh", "env.sh", "env-identity.sh",
-                     "ac-join.sh", "record-paths.sh", "pdk.json"):
-            shutil.copy2(SIM_DIR / name, self.sim / name)
-        tools = self.sim / "tools"
-        tools.mkdir()
-        self._write_exec(tools / "build-osdi.sh", "#!/usr/bin/env bash\nexit 0\n")
-        # sg13g2_op_sanity delegates to the real shared predicate (#380):
-        # the fixture tree gets the genuine module, not a stub, so every
-        # helper verdict below exercises the exact code the runners run.
-        shutil.copy2(TOOLS_DIR / "op_sanity.py", tools / "op_sanity.py")
-        # Only ${PDK}/libs.tech/ngspice must exist for the source-time guard;
-        # nothing reads PDK content on this path (no solver, no OSDI load).
-        # The psp103.osdi placeholder keeps env.sh's WARN-only "models not
-        # built" banner quiet.
-        osdi = root / "ihp-sg13g2" / "libs.tech" / "ngspice" / "osdi"
-        osdi.mkdir(parents=True)
-        (osdi / "psp103.osdi").write_text("", encoding="utf-8")
-        self.bin = root / "bin"
-        self.bin.mkdir()
-        self._write_exec(self.bin / "ngspice", STUB_NGSPICE)
-        self._write_exec(root / "setup.sh",
-                         setup_script(self.sim, self.root, self.bin))
+        self.t = Tree(str(root)).setup_preflight(stub_ngspice=STUB_NGSPICE)
+        _write_exec(root / "setup.sh",
+                    setup_script(self.t.sim, self.t.pdk_root, self.t.bin))
         self.driver = root / "driver.sh"
-        self._write_exec(self.driver, DRIVER)
-
-    @staticmethod
-    def _write_exec(path: Path, text: str) -> None:
-        path.write_text(text, encoding="utf-8")
-        path.chmod(0o755)
+        _write_exec(self.driver, DRIVER)
 
     def _env(self, mode: str) -> dict:
-        env = dict(os.environ)
-        env["SETUP_SH"] = str(self.root / "setup.sh")
-        env["MODE"] = mode
-        return env
+        return self.t.env(SETUP_SH=str(self.t.root / "setup.sh"), MODE=mode)
 
     def run_cases(self, rows, guard=None):
         """Feed 'vdd vcm vout vd1 vd2 vtail [guard columns]' lines; get '0'/'1's.

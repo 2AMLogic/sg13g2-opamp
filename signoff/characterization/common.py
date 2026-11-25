@@ -32,6 +32,39 @@ NOISE_PIN_KINDS = ("log", "spectrum")
 SLEW_PIN_KINDS = ("tran", "netlist")
 SWING_PIN_KINDS = ("coarse_csv", "coarse_netlist", "fine_csv", "fine_netlist")
 KLT_RAW_KINDS = ("ac", "op", "measurement", "ac_request", "op_request", "bench_body")
+# Issue #501: the slew bench's batch `klt sim` evidence (sim/slew-rate/klt/).
+SLEW_KLT_KINDS = ("envelope", "request", "bench_body")
+SLEW_KLT_MEASUREMENTS = (
+    "t_rise_outer_s", "t_fall_outer_s", "t_rise_inner_s", "t_fall_inner_s",
+    "sr_rise_v_per_us", "sr_fall_v_per_us", "sr_rise_inner_v_per_us", "sr_fall_inner_v_per_us",
+    "lin_rise_ratio", "lin_fall_ratio", "pre_rise_orel_v", "pre_fall_orel_v",
+    "vinn_max_v", "vinn_min_v", "vout_dc_v", "drive_pp_v", "drive_centre_err_v",
+    "vd1_dc_v", "vd2_dc_v", "vtail_dc_v", "vibias_dc_v",
+    "op_vout_offset_frac", "op_vout_rail_frac", "op_vd1_rail_frac", "op_vd2_rail_frac", "op_vtail_rail_frac",
+)
+# The request definitions the offline derivation relies on (the `.meas` text of
+# the crossings, the per-edge arithmetic) and the integrity limits the validity
+# flags are derived from. The audit refuses a request that differs.
+SLEW_KLT_SPICE = {
+    "t_rise_outer_s": ".meas tran t_rise_outer_s trig v(orel) val=-0.15 rise=1 td=250n targ v(orel) val=0.15 rise=1 td=250n",
+    "t_fall_outer_s": ".meas tran t_fall_outer_s trig v(orel) val=0.15 fall=1 td=500n targ v(orel) val=-0.15 fall=1 td=500n",
+    "t_rise_inner_s": ".meas tran t_rise_inner_s trig v(orel) val=-0.075 rise=1 td=250n targ v(orel) val=0.075 rise=1 td=250n",
+    "t_fall_inner_s": ".meas tran t_fall_inner_s trig v(orel) val=0.075 fall=1 td=500n targ v(orel) val=-0.075 fall=1 td=500n",
+    "sr_rise_v_per_us": ".meas tran sr_rise_v_per_us param='0.3/t_rise_outer_s*1e-6'",
+    "sr_fall_v_per_us": ".meas tran sr_fall_v_per_us param='0.3/t_fall_outer_s*1e-6'",
+    "sr_rise_inner_v_per_us": ".meas tran sr_rise_inner_v_per_us param='0.15/t_rise_inner_s*1e-6'",
+    "sr_fall_inner_v_per_us": ".meas tran sr_fall_inner_v_per_us param='0.15/t_fall_inner_s*1e-6'",
+    "lin_rise_ratio": ".meas tran lin_rise_ratio param='sr_rise_inner_v_per_us/sr_rise_v_per_us'",
+    "lin_fall_ratio": ".meas tran lin_fall_ratio param='sr_fall_inner_v_per_us/sr_fall_v_per_us'",
+}
+SLEW_KLT_LIMITS = {
+    "lin_rise_ratio": {"min": 0.98, "max": 1.02}, "lin_fall_ratio": {"min": 0.98, "max": 1.02},
+    "pre_rise_orel_v": {"max": -0.15}, "pre_fall_orel_v": {"min": 0.15},
+    "drive_pp_v": {"min": 0.588, "max": 0.612}, "drive_centre_err_v": {"max": 0.01},
+    "op_vout_offset_frac": {"max": 0.15},
+    "op_vout_rail_frac": {"min": 0.02, "max": 0.98}, "op_vd1_rail_frac": {"min": 0.02, "max": 0.98},
+    "op_vd2_rail_frac": {"min": 0.02, "max": 0.98}, "op_vtail_rail_frac": {"min": 0.02, "max": 0.98},
+}
 # The input-offset bench's own `klt sim` family (issue #504): the null-sweep
 # and closed-loop envelopes, both requests and both circuit bodies.
 OFFSET_KLT_RAW_KINDS = ("null", "cl", "null_request", "cl_request", "null_body", "cl_body")

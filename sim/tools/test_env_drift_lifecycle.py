@@ -141,7 +141,10 @@ klt_write_envelope "${out}"
 klt_compare_and_finish
 """
 
-STUB_NGSPICE = "#!/usr/bin/env bash\n" + r"""
+# Shared stub-solver preamble, reused by every stub ngspice below and in
+# test_log_field_reader.py / test_op_sanity.py: answers the source-time
+# `ngspice -v` probe, then gates `-b <netlist>`.
+STUB_NGSPICE_HEADER = r"""
 if [[ "$1" == "-v" ]]; then
   # VERSION_FILE (optional) holds the reported version, or one of the
   # failure modes below, so a test can change it while a solver runs.
@@ -156,7 +159,9 @@ if [[ "$1" == "-v" ]]; then
 fi
 [[ "$1" == "-b" ]] || exit 2
 netlist="$2"
-""" + MUTATE_SH + r"""
+"""
+
+STUB_NGSPICE = "#!/usr/bin/env bash\n" + STUB_NGSPICE_HEADER + MUTATE_SH + r"""
 if [[ -n "${REMOVE_NGSPICE:-}" ]]; then rm -f "${REMOVE_NGSPICE}"; fi
 vdd="$(awk '/^Vdd /{print $5}' "${netlist}")"
 ac_csv="$(awk '/^wrdata /{print $2}' "${netlist}")"
@@ -181,21 +186,7 @@ exit 0
 # MUTATE_UNITS_FILE/TEXT mutate the install at the units check only;
 # MUTATE_FILE/TEXT (the shared MUTATE_SH) at a DUT solve only. NGSPICE_LOG
 # records every `-b` deck path, so a test can prove a solver never ran.
-STUB_NOISE_NGSPICE = "#!/usr/bin/env bash\n" + r"""
-if [[ "$1" == "-v" ]]; then
-  # VERSION_FILE (optional) holds the reported version, or one of the
-  # failure modes below, so a test can change it while a solver runs.
-  v=46; [[ -z "${VERSION_FILE:-}" ]] || v="$(cat "${VERSION_FILE}")"
-  case "${v}" in
-    failexit) printf '******\n** ngspice-46 : Circuit level simulation program (stub)\n'; exit 1 ;;
-    empty) exit 0 ;;
-    malformed) printf '******\n** not a version banner\n'; exit 0 ;;
-  esac
-  printf '******\n** ngspice-%s : Circuit level simulation program (stub)\n' "${v}"
-  exit 0
-fi
-[[ "$1" == "-b" ]] || exit 2
-netlist="$2"
+STUB_NOISE_NGSPICE = "#!/usr/bin/env bash\n" + STUB_NGSPICE_HEADER + r"""
 echo "${netlist}" >> "${NGSPICE_LOG}"
 if [[ "${netlist}" == *tb_noise_units_check* ]]; then
   if [[ -n "${MUTATE_UNITS_FILE:-}" ]]; then printf '%s' "${MUTATE_UNITS_TEXT}" > "${MUTATE_UNITS_FILE}"; fi
@@ -244,6 +235,10 @@ def _write_exec(path: Path, text: str) -> None:
     path.chmod(0o755)
 
 
+# The sim/ shell files a runner tree needs alongside the real preflight.sh.
+PREFLIGHT_FILES = ("preflight.sh", "env.sh", "record-paths.sh", "env-identity.sh", "ac-join.sh")
+
+
 class Tree:
     """A throwaway repo root with a fake PDK install behind a symlinked PDK_ROOT."""
 
@@ -279,6 +274,53 @@ class Tree:
     def capture(self, record_id: str = RID, pin: dict = PIN) -> str:
         """What a begin capture of the CURRENT install says, byte for byte."""
         return ei.canonical_json(ei.capture(self.pdk_root, PDK, pin, record_id, NGSPICE))
+
+    def setup_preflight(self, stub_ngspice: str | None = STUB_NGSPICE,
+                        stub_bin: bool = False) -> Tree:
+        """Everything a runner's sim/ needs to source the real
+        sim/preflight.sh offline: the five shell files, the stub
+        build-osdi.sh, the delegated tools, a stub DUT netlist and the stub
+        solver (skipped when stub_ngspice is None so a caller can install
+        its own), plus STUB_BIN's deterministic date/git when stub_bin."""
+        for name in PREFLIGHT_FILES:
+            shutil.copy2(SIM_DIR / name, self.sim / name)
+        _write_exec(self.sim / "tools" / "build-osdi.sh", "#!/usr/bin/env bash\nexit 0\n")
+        # sg13g2_op_sanity and sg13g2_ac_join_admit delegate to shared
+        # predicates (#380); the fixture tree needs the real modules like
+        # any runner's sim/tools.
+        for tool in ("op_sanity.py", "ac_join_admission.py"):
+            shutil.copy2(TOOLS_DIR / tool, self.sim / "tools" / tool)
+        (self.root / "design" / "netlist").mkdir(parents=True)
+        (self.root / "design" / "netlist" / "opamp_core.spice").write_text("* stub DUT\n", encoding="utf-8")
+        if stub_ngspice is not None:
+            _write_exec(self.bin / "ngspice", stub_ngspice)
+        if stub_bin:
+            for name, text in STUB_BIN.items():
+                _write_exec(self.bin / name, text)
+        return self
+
+    def stage_openloop_bench(self) -> Path:
+        """The real open-loop-ac runner and testbench template in the tree."""
+        bench = self.sim / "open-loop-ac"
+        (bench / "testbench").mkdir(parents=True)
+        shutil.copy2(SIM_DIR / "open-loop-ac" / "run_pvt_sweep.sh", bench / "run_pvt_sweep.sh")
+        shutil.copy2(SIM_DIR / "open-loop-ac" / "testbench" / "tb_openloop_ac.spice.tmpl",
+                     bench / "testbench" / "tb_openloop_ac.spice.tmpl")
+        return bench
+
+    def stage_noise_bench(self) -> Path:
+        """The real input-noise runner and per-point post-processor, with
+        the stub noise testbench template the stub solver reads."""
+        bench = self.sim / "input-noise"
+        (bench / "testbench").mkdir(parents=True)
+        shutil.copy2(SIM_DIR / "input-noise" / "run_noise_sweep.sh", bench / "run_noise_sweep.sh")
+        # The per-point post-processing the runner shells out to (#213): it
+        # validates the stub solver's spectrum like the real one.
+        shutil.copy2(SIM_DIR / "input-noise" / "noise_post.py", bench / "noise_post.py")
+        (bench / "testbench" / "tb_noise.spice.tmpl").write_text(NOISE_TMPL, encoding="utf-8")
+        (bench / "testbench" / "tb_noise_units_check.spice").write_text(
+            "* stub units-check deck -- the stub solver answers for it\n", encoding="utf-8")
+        return bench
 
 
 def mutations(tree: Tree) -> dict:
@@ -451,39 +493,44 @@ class KltRunner(unittest.TestCase):
         self.assertEqual(self.snapshot(), {})  # reservation released too
 
 
-class OpenLoopRunner(unittest.TestCase):
-    """The real sim/open-loop-ac/run_pvt_sweep.sh with a stub ngspice."""
+class NativeSweepCase(unittest.TestCase):
+    """Shared scaffolding for the native ngspice sweep runners below: a
+    preflighted throwaway tree with deterministic date/git, the bench staged
+    at self.bench, the sweep invocation and record listing. Defines no
+    test_* methods -- the concrete runners do."""
+
+    RUNNER: str
 
     def setUp(self) -> None:
         self._tmp = tempfile.TemporaryDirectory()
-        self.t = Tree(self._tmp.name)
-        for name in ("preflight.sh", "env.sh", "record-paths.sh", "env-identity.sh", "ac-join.sh"):
-            shutil.copy2(SIM_DIR / name, self.t.sim / name)
-        _write_exec(self.t.sim / "tools" / "build-osdi.sh", "#!/usr/bin/env bash\nexit 0\n")
-        # sg13g2_op_sanity delegates to the shared predicate (#380); the
-        # fixture tree needs the real module like any runner's sim/tools.
-        shutil.copy2(TOOLS_DIR / "op_sanity.py", self.t.sim / "tools" / "op_sanity.py")
-        self.bench = self.t.sim / "open-loop-ac"
-        (self.bench / "testbench").mkdir(parents=True)
-        shutil.copy2(SIM_DIR / "open-loop-ac" / "run_pvt_sweep.sh", self.bench / "run_pvt_sweep.sh")
-        shutil.copy2(SIM_DIR / "open-loop-ac" / "testbench" / "tb_openloop_ac.spice.tmpl",
-                     self.bench / "testbench" / "tb_openloop_ac.spice.tmpl")
-        (self.t.root / "design" / "netlist").mkdir(parents=True)
-        (self.t.root / "design" / "netlist" / "opamp_core.spice").write_text("* stub DUT\n", encoding="utf-8")
-        _write_exec(self.t.bin / "ngspice", STUB_NGSPICE)
-        for name, text in STUB_BIN.items():
-            _write_exec(self.t.bin / name, text)
+        self.t = self.build_tree(self._tmp.name)
+        self.bench = self.stage_bench()
+
+    def build_tree(self, root: str) -> Tree:
+        return Tree(root).setup_preflight(stub_bin=True)
+
+    def stage_bench(self) -> Path:
+        raise NotImplementedError
 
     def tearDown(self) -> None:
         self._tmp.cleanup()
 
     def run_sweep(self, ts: str = TS, **env) -> subprocess.CompletedProcess:
-        return subprocess.run(["bash", str(self.bench / "run_pvt_sweep.sh")],
+        return subprocess.run(["bash", str(self.bench / self.RUNNER)],
                               env=self.t.env(FAKE_TS=ts, **env),
                               capture_output=True, text=True, timeout=300)
 
     def record_files(self, rid: str) -> list[str]:
         return sorted(p.name for p in (self.bench / "records").glob(f"{rid}*"))
+
+
+class OpenLoopRunner(NativeSweepCase):
+    """The real sim/open-loop-ac/run_pvt_sweep.sh with a stub ngspice."""
+
+    RUNNER = "run_pvt_sweep.sh"
+
+    def stage_bench(self) -> Path:
+        return self.t.stage_openloop_bench()
 
     def test_stable_drift_and_rerun(self):
         # (a) unchanged install: the sidecar is published and equals the
@@ -604,44 +651,20 @@ class OpenLoopRunner(unittest.TestCase):
         self.assertEqual(self.record_files(RID), [f"{RID}.csv", f"{RID}.env.json", f"{RID}.md"])
 
 
-class NativeNoiseRunner(unittest.TestCase):
+class NativeNoiseRunner(NativeSweepCase):
     """The real sim/input-noise/run_noise_sweep.sh with a stub ngspice."""
 
-    def setUp(self) -> None:
-        self._tmp = tempfile.TemporaryDirectory()
-        self.t = Tree(self._tmp.name)
-        for name in ("preflight.sh", "env.sh", "record-paths.sh", "env-identity.sh", "ac-join.sh"):
-            shutil.copy2(SIM_DIR / name, self.t.sim / name)
-        _write_exec(self.t.sim / "tools" / "build-osdi.sh", "#!/usr/bin/env bash\nexit 0\n")
-        # sg13g2_op_sanity delegates to the shared predicate (#380); the
-        # fixture tree needs the real module like any runner's sim/tools.
-        shutil.copy2(TOOLS_DIR / "op_sanity.py", self.t.sim / "tools" / "op_sanity.py")
-        self.bench = self.t.sim / "input-noise"
-        (self.bench / "testbench").mkdir(parents=True)
-        shutil.copy2(SIM_DIR / "input-noise" / "run_noise_sweep.sh", self.bench / "run_noise_sweep.sh")
-        # The per-point post-processing the runner shells out to (#213): it
-        # validates the stub solver's spectrum like the real one.
-        shutil.copy2(SIM_DIR / "input-noise" / "noise_post.py", self.bench / "noise_post.py")
-        (self.bench / "testbench" / "tb_noise.spice.tmpl").write_text(NOISE_TMPL, encoding="utf-8")
-        (self.bench / "testbench" / "tb_noise_units_check.spice").write_text(
-            "* stub units-check deck -- the stub solver answers for it\n", encoding="utf-8")
-        (self.t.root / "design" / "netlist").mkdir(parents=True)
-        (self.t.root / "design" / "netlist" / "opamp_core.spice").write_text("* stub DUT\n", encoding="utf-8")
-        _write_exec(self.t.bin / "ngspice", STUB_NOISE_NGSPICE)
-        for name, text in STUB_BIN.items():
-            _write_exec(self.t.bin / name, text)
-        self.log = self.t.root / "ngspice.log"
+    RUNNER = "run_noise_sweep.sh"
 
-    def tearDown(self) -> None:
-        self._tmp.cleanup()
+    def build_tree(self, root: str) -> Tree:
+        self.log = Path(root) / "ngspice.log"
+        return Tree(root).setup_preflight(stub_ngspice=STUB_NOISE_NGSPICE, stub_bin=True)
+
+    def stage_bench(self) -> Path:
+        return self.t.stage_noise_bench()
 
     def run_sweep(self, ts: str = TS, **env) -> subprocess.CompletedProcess:
-        return subprocess.run(["bash", str(self.bench / "run_noise_sweep.sh")],
-                              env=self.t.env(FAKE_TS=ts, NGSPICE_LOG=str(self.log), **env),
-                              capture_output=True, text=True, timeout=300)
-
-    def record_files(self, rid: str) -> list[str]:
-        return sorted(p.name for p in (self.bench / "records").glob(f"{rid}*"))
+        return super().run_sweep(ts, NGSPICE_LOG=str(self.log), **env)
 
     def solver_calls(self) -> int:
         return len(self.log.read_text().splitlines()) if self.log.exists() else 0

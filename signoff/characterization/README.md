@@ -355,6 +355,21 @@ presented as recomputed against the corrected Av0 (the same dependency holds
 for any other result that joined the old Av0; new numbers need separately
 authorized new evidence).
 
+### Slew-rate from batch evidence (issue #501)
+
+A slew record may pin the batch `klt sim` evidence instead of (or beside) the
+local waveforms: `slew_klt` = `{files: {envelope, request, bench_body}}`, each
+with its sha256, plus definition check `slew_klt_audit` (`SLEW_KLT_AUDIT_RULE`
+in the generated report). The envelope returns no waveform, so the audit
+recomputes both edge rates, the inner rates, linearity and `min(rise, fall)`
+from the four measured window crossings, derives the op / linearity / traverse
+/ drive flags from the reported quantities and the request's unrelaxed
+limits, and requires the 45 corners to be decided exactly once, on the
+selected DUT and the pinned bench body, with one consistent ngspice version.
+Rates match within `sim/slew-rate/klt/compare.py`'s 2e-3 relative tolerance
+(a different circuit simply yields different numbers); a corner below the
+bound is a failing row, never an error. `slew_raw` stays accepted.
+
 The new CSV has no `op_pass` / `gm_status` columns and names `iq_a` where the
 old one named `ivdd_total_a`. Nothing was deleted to make it fit: the record
 selects `klt_raw` (six sha256-pinned files: the AC and OP `klt sim` envelopes,
