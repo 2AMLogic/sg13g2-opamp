@@ -13,10 +13,10 @@ real klt_run_common.sh from bash, with a stub `klt` and a stub compare.py.
 timestamp and commit. No PDK, ngspice, OSDI build or klt is needed.
 """
 import json
+import multiprocessing
 import os
 import subprocess
 import tempfile
-import threading
 import time
 import unittest
 from pathlib import Path
@@ -180,40 +180,92 @@ class Reservation(unittest.TestCase):
             self.assertEqual(list(fx.tmp.iterdir()), [])
 
     @staticmethod
+    def _mkdir_racer(target, barrier, conn):
+        """Child body: wait at the barrier, os.mkdir once, report the outcome
+        ("won" / "exists" / "error: ...") over the pipe. Module-level-free so
+        it runs under the fork start method."""
+        try:
+            barrier.wait(timeout=30)
+            try:
+                os.mkdir(target)
+                out = "won"
+            except FileExistsError:
+                out = "exists"
+        except BaseException as e:
+            out = f"error: {e!r}"
+        try:
+            conn.send(out)
+        finally:
+            conn.close()
+
+    @staticmethod
     def _os_mkdir_race_control(procs=6, trials=50):
         """#515: no-shell control for the double-owner flake. Race `procs`
-        threads on os.mkdir (the mkdir(2) syscall, no shell, no mkdir
-        binary) against a fresh path in the same TMPDIR, `trials` times, and
-        report the worst per-trial success count. >1 means the filesystem or
-        kernel breaks mkdir atomicity; exactly 1 with a shell double-success
-        points at the mkdir binary or a harness artifact. Runs only inside a
-        private TemporaryDirectory, never against records/."""
+        independent processes (as the six shell children are) on os.mkdir
+        (the mkdir(2) syscall, no shell, no mkdir binary) against a fresh
+        path in the same TMPDIR, `trials` times, and report the worst
+        per-trial success count. >1 means the filesystem or kernel breaks
+        mkdir atomicity; exactly 1 with a shell double-success points at
+        the mkdir binary or a harness artifact. The count is reported only
+        when every worker recorded success or EEXIST; any other outcome
+        (startup failure, barrier abort, unexpected errno) is reported as
+        inconclusive. Runs only inside a private TemporaryDirectory, never
+        against records/."""
+        started = []
         try:
+            ctx = multiprocessing.get_context("fork")
             worst = 0
+            problems = []
             with tempfile.TemporaryDirectory() as d:
                 for n in range(trials):
                     target = os.path.join(d, f".reserve-{n}")
-                    barrier = threading.Barrier(procs)
-                    wins = []
-
-                    def attempt():
-                        barrier.wait()
+                    barrier = ctx.Barrier(procs)
+                    started = []
+                    pipes = []
+                    try:
+                        for _ in range(procs):
+                            rx, tx = ctx.Pipe(duplex=False)
+                            w = ctx.Process(target=Reservation._mkdir_racer,
+                                            args=(target, barrier, tx))
+                            w.start()
+                            tx.close()
+                            started.append(w)
+                            pipes.append(rx)
+                    except BaseException as e:
+                        # Partial startup: release the workers already at the
+                        # barrier, then reap every one that started.
+                        barrier.abort()
+                        problems.append(f"trial {n}: startup failed: {e!r}")
+                    outs = []
+                    for w, rx in zip(started, pipes):
                         try:
-                            os.mkdir(target)
-                            wins.append(1)
-                        except FileExistsError:
-                            pass
-
-                    ts = [threading.Thread(target=attempt)
-                          for _ in range(procs)]
-                    for t in ts:
-                        t.start()
-                    for t in ts:
-                        t.join()
-                    worst = max(worst, len(wins))
-            return (f"os.mkdir race control ({procs} racers x {trials} "
+                            outs.append(rx.recv() if rx.poll(40)
+                                        else "error: no result")
+                        except Exception as e:
+                            outs.append(f"error: {e!r}")
+                        finally:
+                            rx.close()
+                    for w in started:
+                        w.join(10)
+                        if w.is_alive():
+                            w.kill()
+                            w.join()
+                    bad = [o for o in outs if o not in ("won", "exists")]
+                    if bad or len(outs) != procs:
+                        problems.append(f"trial {n}: {len(outs)}/{procs} "
+                                        f"workers reported, errors={bad}")
+                        continue
+                    worst = max(worst, outs.count("won"))
+            if problems:
+                return (f"os.mkdir race control INCONCLUSIVE ({procs} "
+                        f"processes x {trials} trials): "
+                        + " | ".join(problems[:5]))
+            return (f"os.mkdir race control ({procs} processes x {trials} "
                     f"trials in TMPDIR): max successes per trial={worst}")
         except Exception as e:
+            for w in started:
+                if w.is_alive():
+                    w.kill()
             return f"os.mkdir race control failed: {e!r}"
 
     def test_overlapping_starts_give_exactly_one_owner(self):
@@ -266,13 +318,14 @@ class Reservation(unittest.TestCase):
                          '"${BASH_VERSION:-unknown}" "$a" "$b" '
                          '"$(stat -f -c %T "${TMPDIR:-/tmp}" 2>/dev/null '
                          '|| echo stat-failed)"; '
-                         # #515: which mkdir the driver's `command mkdir`
-                         # resolves to, and its version (BSD/busybox have no
-                         # --version: fall back to unknown).
-                         'printf " mkdir=%s mkdir_version=%s" '
-                         '"$(command -v mkdir || echo unknown)" '
-                         '"$(mkdir --version 2>/dev/null | head -n 1 '
-                         '| grep . || echo unknown)"'],
+                         # #515: the external mkdir the driver's `command mkdir`
+                         # resolves to (`type -P` skips functions/aliases), and
+                         # its version (BSD/busybox have no --version: fall
+                         # back to unknown).
+                         'mk="$(type -P mkdir || echo unknown)"; '
+                         'printf " mkdir=%s mkdir_version=%s" "$mk" '
+                         '"$([[ $mk != unknown ]] && "$mk" --version '
+                         '2>/dev/null | head -n 1 | grep . || echo unknown)"'],
                         capture_output=True, text=True, timeout=30)
                     runner = (f"runner probe ({probe.stdout.strip()}); "
                               f"rc={probe.returncode} "
