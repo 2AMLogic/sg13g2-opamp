@@ -6,6 +6,13 @@
 
 - [2026-09](work_log/WORK_LOG_2026-09.md)
 
+### 2026-11-25
+
+- **PR #510**: feat(signoff): audit the slew row from pinned batch klt envelope crossings
+- **Issue #501** (closed): Derive the slew-rate characterization row from batch transient evidence
+- **PR #508**: test(sim): share Tree.setup_preflight fixture across the three offline suites
+- **Issue #506** (closed): Share Tree.setup_preflight across test_env_drift_lifecycle, test_log_field_reader, and test_op_sanity
+
 ### 2026-11-24
 
 - **Issue #430** (closed): design: post-layout phase margin misses the 60 deg bound at mos_ff/1.32V/125C (extracted PM 59.81 deg; ng=1-vs-drawn representation -1.64 deg, parasitics -0.53 deg)
