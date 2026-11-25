@@ -32,6 +32,9 @@ NOISE_PIN_KINDS = ("log", "spectrum")
 SLEW_PIN_KINDS = ("tran", "netlist")
 SWING_PIN_KINDS = ("coarse_csv", "coarse_netlist", "fine_csv", "fine_netlist")
 KLT_RAW_KINDS = ("ac", "op", "measurement", "ac_request", "op_request", "bench_body")
+# The input-offset bench's own `klt sim` family (issue #504): the null-sweep
+# and closed-loop envelopes, both requests and both circuit bodies.
+OFFSET_KLT_RAW_KINDS = ("null", "cl", "null_request", "cl_request", "null_body", "cl_body")
 
 
 # --------------------------------------------------------------------------

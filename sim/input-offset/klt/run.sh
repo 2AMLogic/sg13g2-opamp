@@ -66,22 +66,23 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# SIM_DIR is sim/ (where env.sh/preflight.sh/record-paths.sh live); the BENCH
+# dir -- whose records/ and netlist-snapshots/ hold this bench's append-only
+# evidence -- is one level above this klt/ script dir.
 SIM_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+BENCH_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 REPO_ROOT="$(cd "${SIM_DIR}/.." && pwd)"
 
 # The batch backend (the default) simulates on the fleet, so the host needs
 # neither the pinned ngspice nor built OSDI models -- only the PDK path klt
 # resolves model references through (what sim/env.sh finds). The full local
 # preflight (PDK + OSDI + ngspice) applies only when the grid is deliberately
-# sent to a local backend. Mirrors sim/open-loop-ac/klt/run.sh (#274): with
-# the batch backend there is also no run-time PDK/model identity sidecar --
-# the local host is not the machine that ran the simulation.
+# sent to a local backend.
 case "${OFFSET_KLT_BACKEND:-batch}" in
   batch)
     # shellcheck source=/dev/null
     source "${SIM_DIR}/env.sh" >&2
     NGSPICE_VERSION="n/a (simulated on the batch fleet)"
-    KLT_IDENTITY=0
     ;;
   *)
     # shellcheck source=/dev/null
@@ -92,6 +93,10 @@ esac
 
 # shellcheck source=/dev/null
 source "${SIM_DIR}/tools/klt_run_common.sh"
+# Set AFTER sourcing klt_run_common.sh (its defaults reset the flag): with the
+# batch backend the local host is not the machine that ran the simulation, so
+# there is no local PDK/model identity to capture (#274, as open-loop-ac).
+KLT_IDENTITY=0
 
 klt_check_client
 
@@ -120,7 +125,9 @@ BACKEND_ARGS=()
 [[ -n "${OFFSET_KLT_BACKEND:-}" ]] && BACKEND_ARGS=(--backend "${OFFSET_KLT_BACKEND}")
 
 for kind in null cl; do
-  req="${SCRIPT_DIR}/offset$([[ "${kind}" == "cl" ]] && printf '_cl').request.json"
+  suffix=""
+  if [[ "${kind}" == "cl" ]]; then suffix="_cl"; fi
+  req="${SCRIPT_DIR}/offset${suffix}.request.json"
   klt_run_request "${req}" "${SCRATCH}/${kind}.sim.json" "${SCRATCH}/${kind}.stderr" "${BACKEND_ARGS[@]}"
   klt_validate_envelope "${SCRATCH}/${kind}.sim.json" --kind "${kind}"
 done
@@ -151,7 +158,7 @@ python3 "${SCRIPT_DIR}/offset_post.py" write-record \
   --out-csv "${SCRATCH}/${RECORD_ID}.csv" \
   --out-md "${SCRATCH}/${RECORD_ID}.md"
 for f in "${RECORD_ID}.csv" "${RECORD_ID}.md"; do
-  sg13g2_publish_noclobber "${SCRATCH}/${f}" "${SIM_DIR}/records/${f}" || exit 4
+  sg13g2_publish_noclobber "${SCRATCH}/${f}" "${BENCH_DIR}/records/${f}" || exit 4
   echo "run.sh: wrote records/${f}"
 done
 

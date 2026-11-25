@@ -1,13 +1,13 @@
-"""The six shared-module `sys.path` hops, in exactly one place.
+"""The shared-module `sys.path` hops, in exactly one place.
 
 Split out of generate.py (issue #355), where these hops sat at the top of a
-2,972-line module and so coupled every import in the file to all six. Each
+2,972-line module and so coupled every import in the file to all of them. Each
 sibling that needs a shared module imports it from here instead.
 
 These are the SAME modules the benches themselves run -- not copies of their
 logic -- so the generator re-derives each published cell with the bench's own
 post-processing. The hops stay unconditional, as they were: a full report
-needs all six.
+needs all of them.
 
 Load-order note: the six hops insert at position 0, i.e. AHEAD of this
 directory, so a same-named module added to one of them later (a `sim/tools/
@@ -43,8 +43,12 @@ import slew_post  # noqa: E402
 # Shared output-swing post-processing (issue #230): the SAME module run_swing_sweep.sh runs.
 sys.path.insert(0, str(DEFAULT_REPO_ROOT / "sim" / "output-swing"))
 import swing_post  # noqa: E402
+# Shared input-offset klt derivation (issue #504): the SAME module the bench's
+# run.sh writer, its compare.py and this package's offset_klt_audit all apply.
+sys.path.insert(0, str(DEFAULT_REPO_ROOT / "sim" / "input-offset" / "klt"))
+import offset_post  # noqa: E402
 
-# The six hops above each insert at position 0, ahead of this directory. Put
+# The seven hops above each insert at position 0, ahead of this directory. Put
 # this package back in front of them so no shared directory can shadow a
 # sibling module (common.py, defchecks.py, records.py, render.py, rows.py,
 # selection.py) by gaining a file of the same name later.

@@ -233,7 +233,7 @@ def csv_text(rows: list[dict]) -> str:
     for r in sorted(rows, key=lambda r: r["point_id"]):
         cells = {
             "point_id": r["point_id"], "corner": r["corner"],
-            "temperature_c": r["temperature_c"], "vdd_v": serialize(r["vdd_v"]),
+            "temp_c": str(r["temperature_c"]), "vdd_v": f"{r['vdd_v']:.2f}",
             "vcm_v": serialize(r["vcm_v"]),
             "op_pass": str(int(r["op_pass"])), "xcheck_pass": str(int(r["xcheck_pass"])),
             "vos_null_v": serialize(r["vos_null_v"]), "vos_abs_v": serialize(r["vos_abs_v"]),
@@ -258,7 +258,6 @@ def md_text(rid: str, rows: list[dict], null_env: dict, cl_env: dict,
         remote = (env.get("environment") or {}).get("remote") or {}
         return f"`{remote.get('job_id')}` ({remote.get('state')})"
 
-    version = (null_env.get("environment") or {}).get("engine_version")
     worst_vos = max(rows, key=lambda r: abs(r["vos_null_v"]))
     worst_delta = max(rows, key=lambda r: abs(r["vos_method_delta_v"]))
     op_fail = [r["point_id"] for r in rows if not r["op_pass"]]
@@ -283,8 +282,9 @@ def md_text(rid: str, rows: list[dict], null_env: dict, cl_env: dict,
         "(`sim/input-offset/klt/offset_post.py`), the same derivation "
         "signoff/characterization's `offset_klt_audit` re-applies to the pinned envelopes.",
         "",
-        f"Engine: ngspice-{version} (both envelopes name it; the envelopes' environment "
-        "blocks are the pin).",
+        "Engine: both envelopes agree on the simulator and name its version in their "
+        "environment blocks -- that is the pin the selection audits (against the "
+        "sim/pdk.json toolchain floor), not this prose.",
         "",
         "## Derived summary (45 corners)",
         "",

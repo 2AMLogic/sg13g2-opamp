@@ -42,6 +42,9 @@ import slew_post  # noqa: E402
 sys.path.insert(0, str(HERE.parent.parent / "sim" / "output-swing"))
 import swing_post  # noqa: E402
 
+sys.path.insert(0, str(HERE.parent.parent / "sim" / "input-offset" / "klt"))
+import offset_post  # noqa: E402
+
 REPO = HERE.parent.parent
 SELECTION = REPO / generate.SELECTION_REL
 
@@ -72,6 +75,22 @@ RATIFIED_IDS = {
 def rows_by_id(content: dict) -> dict:
     return {row["id"]: row for row in content["rows"]}
 
+
+# The committed input-offset batch record (issue #504): the null + closed-loop
+# `klt sim` envelopes and the CSV/MD derived from them, selected in place of
+# the harness CSV by OffsetKltAudit's fixtures.
+OFFSET_BATCH_RID = "20261124-235819-4314768"
+OFFSET_BATCH_FILES = {
+    "csv": f"sim/input-offset/records/{OFFSET_BATCH_RID}.csv",
+    "md": f"sim/input-offset/records/{OFFSET_BATCH_RID}.md",
+    "netlist_snapshot": f"sim/input-offset/netlist-snapshots/{OFFSET_BATCH_RID}/opamp_core.spice",
+    "null": f"sim/input-offset/klt/records/{OFFSET_BATCH_RID}.sim.json",
+    "cl": f"sim/input-offset/klt/records/{OFFSET_BATCH_RID}.cl.sim.json",
+    "null_request": "sim/input-offset/klt/offset.request.json",
+    "cl_request": "sim/input-offset/klt/offset_cl.request.json",
+    "null_body": "sim/input-offset/klt/tb_offset.body.spice",
+    "cl_body": "sim/input-offset/klt/tb_offset_cl.body.spice",
+}
 
 # One row per raw-population audit a control can detach, carrying the four
 # facts the detach needs: (flag suffix, record whose rewritten CSV fires the
@@ -110,6 +129,8 @@ class Fixture:
                         files.update(pin["path"] for pin in entry.values())
             if "klt_raw" in rec:
                 files.update(pin["path"] for pin in rec["klt_raw"]["files"].values())
+            if "offset_klt_raw" in rec:
+                files.update(pin["path"] for pin in rec["offset_klt_raw"]["files"].values())
         files.update({generate.SELECTION_REL, generate.GENERATOR_REL})
         for rel in files:
             dst = self.root / rel
@@ -228,6 +249,39 @@ class Fixture:
 
     def build(self) -> dict:
         return generate.build_content(self.root, self.selection_path)
+
+    def select_offset_batch_record(self) -> None:
+        """Swap the selected `input-offset` record from the harness CSV to the
+        committed batch record (issue #504): copy its artifacts in, pin every
+        hash from the real repo, and repoint the item 9 inventory line at the
+        new CSV (a real flip edits the same two files; nothing else moves --
+        the rows keep naming the `input-offset` key)."""
+        for rel in OFFSET_BATCH_FILES.values():
+            dst = self.root / rel
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(REPO / rel, dst)
+        self.selection["records"]["input-offset"] = {
+            "csv": OFFSET_BATCH_FILES["csv"],
+            "csv_sha256": generate.sha256_file(REPO / OFFSET_BATCH_FILES["csv"]),
+            "md": OFFSET_BATCH_FILES["md"],
+            "md_sha256": generate.sha256_file(REPO / OFFSET_BATCH_FILES["md"]),
+            "netlist_snapshot": OFFSET_BATCH_FILES["netlist_snapshot"],
+            "grid": "pvt45",
+            "valid_when": [["op_pass", "==", "1"], ["xcheck_pass", "==", "1"]],
+            "definition_checks": ["offset_magnitude", "offset_klt_audit"],
+            "offset_klt_raw": {
+                "av0_join": "open-loop-ac",
+                "files": {k: {"path": p, "sha256": generate.sha256_file(REPO / p)}
+                          for k, p in OFFSET_BATCH_FILES.items()
+                          if k in {"null", "cl", "null_request", "cl_request", "null_body", "cl_body"}},
+            },
+        }
+        self.save_selection()
+        inv = self.root / "signoff" / "evidence" / "testbenches.txt"
+        inv.write_text(
+            inv.read_text(encoding="utf-8").replace(
+                "sim/input-offset/records/20260918-203858-90844d2.csv", OFFSET_BATCH_FILES["csv"]),
+            encoding="utf-8")
 
     def heal_precision_rows(self) -> None:
         """Set the four literal-FAIL binding points exactly AT their bound.
@@ -1920,6 +1974,360 @@ class KltRawAudit(RawAuditCase):
     def test_continuity_requires_dc_agreement(self):
         self.fx.set_cell("open-loop-ac-floating-inn", self.POINT, "vout_dc_v", "0.5")
         self.assert_error("differs from the dc_continuity record")
+
+
+class OffsetKltAudit(RawAuditCase):
+    """Issue #504: the input-offset batch record -- the null + closed-loop
+    `klt sim` envelopes joined with the selected open-loop record's Av0 --
+    is selectable in place of the harness CSV, and every published cell
+    follows from the pinned artifacts (definition check offset_klt_audit,
+    the shared offset_post derivation)."""
+
+    RECORD = "input-offset"
+    POINT = "mos_tt_27C_1.20V"
+    RAW_KEY = "offset_klt_raw"
+    DEFINITION_CHECK = "offset_klt_audit"
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.fx.select_offset_batch_record()
+
+    def fresh(self) -> None:
+        super().fresh()
+        self.fx.select_offset_batch_record()
+
+    def rawfile(self, kind):
+        return self.fx.root / self.raw()["files"][kind]["path"]
+
+    def edit_envelope(self, kind, pid, name, value, repin=True) -> None:
+        doc = json.loads(self.rawfile(kind).read_text(encoding="utf-8"))
+        for c in doc["corners"]:
+            if f"{c['process']}_{c['temperature_c']}C_{c['supply_v']['vdd']:.2f}V" == pid:
+                for m in c["measurements"]:
+                    if m["name"] == name:
+                        m["value"] = value
+        self.rawfile(kind).write_text(json.dumps(doc), encoding="utf-8")
+        if repin:
+            self.raw()["files"][kind]["sha256"] = generate.sha256_file(self.rawfile(kind))
+            self.fx.save_selection()
+
+    def edit_join_row(self, mutate) -> None:
+        """Rewrite (and repin) one row of the joined open-loop record CSV."""
+        rec = self.fx.selection["records"][self.raw()["av0_join"]]
+        path = self.fx.root / rec["csv"]
+        lines = path.read_text(encoding="utf-8").splitlines()
+        path.write_text("\n".join(mutate(lines)) + "\n", encoding="utf-8")
+        rec["csv_sha256"] = generate.sha256_file(path)
+        self.fx.save_selection()
+
+    # --- committed evidence -------------------------------------------------
+
+    def test_committed_batch_record_verifies_all_45_points(self):
+        content = self.fx.build()
+        self.assertEqual(self.errors(content), [])
+        src = content["sources"][self.RECORD]
+        self.assertEqual((src["offset_klt_raw"]["status"], src["offset_klt_raw"]["points"]), ("verified", 45))
+        self.assertEqual(src["offset_klt_raw"]["av0_join"], "open-loop-ac")
+        self.assertEqual(src["valid_points"], 45)
+        self.assertEqual(src["ngspice"], "ngspice-47")
+        rows = rows_by_id(content)
+        self.assertEqual(rows["offset_systematic"]["source"]["csv"], OFFSET_BATCH_FILES["csv"])
+        self.assertEqual(rows["offset_systematic"]["coverage"]["complete"], True)
+        # The ngspice-47 fleet record reproduces the harness binding corner to
+        # all nine serialized digits; the literal bound verdict is unchanged.
+        self.assertEqual((rows["offset_systematic"]["verdict"], rows["offset_systematic"]["measured_worst"]["point"]),
+                         ("FAIL", "mos_fs_125C_1.08V"))
+        self.assertEqual(rows["offset_systematic"]["measured_worst"]["value"], "21.9273527")
+
+    def test_report_exposes_the_audit_rule_only_when_selected(self):
+        content = self.fx.build()
+        self.assertIn("Input-offset `klt sim` raw-evidence audit", content["offset_klt_audit_rule"])
+        md = generate.render_markdown(generate.make_report(content, "20260101-000000-abcd", self.fx.root))
+        self.assertIn("Input-offset `klt sim` raw-evidence audit", md)
+        # Compatibility control (issue #504 AC): the committed harness-CSV
+        # selection keeps reproducing without the rule or the population.
+        committed = generate.build_content(REPO, SELECTION)
+        self.assertNotIn("offset_klt_audit_rule", committed)
+        self.assertNotIn("offset_klt_raw", json.dumps(committed["sources"]["input-offset"]))
+
+    def test_summary_cells_follow_the_envelopes(self):
+        for column in ("vos_null_v", "vos_abs_v", "vout_cl_v", "vos_closed_loop_v"):
+            with self.subTest(column=column):
+                self.fresh()
+                self.fx.set_cell(self.RECORD, self.POINT, column, "0.005")
+                self.assert_error(f"point {self.POINT} fails definition check {self.DEFINITION_CHECK}", column)
+
+    # --- selection shape ----------------------------------------------------
+
+    def test_offset_klt_raw_without_its_audit_is_refused(self):
+        self.fx.selection["records"][self.RECORD]["definition_checks"] = ["offset_magnitude"]
+        self.fx.save_selection()
+        with self.assertRaises(generate.SelectionError):
+            self.fx.build()
+
+    def test_audit_without_pinned_raw_evidence_is_refused(self):
+        del self.fx.selection["records"][self.RECORD]["offset_klt_raw"]
+        self.fx.save_selection()
+        with self.assertRaises(generate.SelectionError):
+            self.fx.build()
+
+    def test_every_artifact_must_be_pinned(self):
+        for kind in generate.OFFSET_KLT_RAW_KINDS:
+            with self.subTest(kind=kind):
+                self.fresh()
+                del self.raw()["files"][kind]
+                self.fx.save_selection()
+                with self.assertRaises(generate.SelectionError):
+                    self.fx.build()
+
+    def test_av0_join_must_be_another_selected_record(self):
+        for name in ("nope", self.RECORD):
+            with self.subTest(name=name):
+                self.raw()["av0_join"] = name
+                self.fx.save_selection()
+                with self.assertRaises(generate.SelectionError):
+                    self.fx.build()
+
+    # --- tampering ----------------------------------------------------------
+
+    def test_stale_pin_is_rejected_for_every_artifact(self):
+        for kind in generate.OFFSET_KLT_RAW_KINDS:
+            with self.subTest(kind=kind):
+                self.fresh()
+                path = self.rawfile(kind)
+                path.write_text(path.read_text(encoding="utf-8") + "\n", encoding="utf-8")
+                self.assert_error("does not match its selection pin")
+
+    def test_missing_artifact_is_rejected(self):
+        self.rawfile("cl").unlink()
+        self.assert_error("missing raw offset-klt artifact cl")
+
+    def test_coherent_envelope_edit_still_fails_against_the_summary(self):
+        self.edit_envelope("null", self.POINT, "vos_null_v", 0.005)
+        errors = self.assert_error(f"point {self.POINT} fails definition check {self.DEFINITION_CHECK}")
+        self.assertTrue(any("vos_null_v" in e for e in errors), errors)
+
+    def test_missing_corner_is_rejected(self):
+        doc = json.loads(self.rawfile("null").read_text(encoding="utf-8"))
+        doc["corners"] = [c for c in doc["corners"]
+                          if f"{c['process']}_{c['temperature_c']}C_{c['supply_v']['vdd']:.2f}V" != self.POINT]
+        self.rawfile("null").write_text(json.dumps(doc), encoding="utf-8")
+        self.raw()["files"]["null"]["sha256"] = generate.sha256_file(self.rawfile("null"))
+        self.fx.save_selection()
+        self.assert_error("no corner for point " + self.POINT)
+
+    def test_duplicate_corner_is_rejected(self):
+        doc = json.loads(self.rawfile("cl").read_text(encoding="utf-8"))
+        doc["corners"].append(json.loads(json.dumps(doc["corners"][0])))
+        self.rawfile("cl").write_text(json.dumps(doc), encoding="utf-8")
+        self.raw()["files"]["cl"]["sha256"] = generate.sha256_file(self.rawfile("cl"))
+        self.fx.save_selection()
+        self.assert_error("duplicate corner")
+
+    def test_errored_corner_is_rejected(self):
+        doc = json.loads(self.rawfile("null").read_text(encoding="utf-8"))
+        for c in doc["corners"]:
+            if f"{c['process']}_{c['temperature_c']}C_{c['supply_v']['vdd']:.2f}V" == self.POINT:
+                c["status"] = "error"
+        self.rawfile("null").write_text(json.dumps(doc), encoding="utf-8")
+        self.raw()["files"]["null"]["sha256"] = generate.sha256_file(self.rawfile("null"))
+        self.fx.save_selection()
+        self.assert_error("is not a completed run")
+
+    def test_non_finite_raw_value_is_rejected(self):
+        self.edit_envelope("null", self.POINT, "vos_null_v", None)
+        self.assert_error("missing or non-finite raw value")
+
+    def test_engines_must_agree(self):
+        doc = json.loads(self.rawfile("cl").read_text(encoding="utf-8"))
+        doc["environment"]["engine_version"] = "46"
+        self.rawfile("cl").write_text(json.dumps(doc), encoding="utf-8")
+        self.raw()["files"]["cl"]["sha256"] = generate.sha256_file(self.rawfile("cl"))
+        self.fx.save_selection()
+        self.assert_error("disagree on the engine")
+
+    def test_below_the_toolchain_floor_is_rejected(self):
+        for kind in ("null", "cl"):
+            doc = json.loads(self.rawfile(kind).read_text(encoding="utf-8"))
+            doc["environment"]["engine_version"] = "45"
+            banner = doc["environment"]["remote"]["worker_environment"]["simulator"]["version_banner"]
+            doc["environment"]["remote"]["worker_environment"]["simulator"]["version_banner"] = banner.replace("ngspice-47", "ngspice-45")
+            self.rawfile(kind).write_text(json.dumps(doc), encoding="utf-8")
+            self.raw()["files"][kind]["sha256"] = generate.sha256_file(self.rawfile(kind))
+        self.fx.save_selection()
+        self.assert_error("below the sim/pdk.json toolchain floor")
+
+    def test_simulated_dut_must_be_the_selected_snapshot(self):
+        # A comment-only touch leaves the normalized (design-identity) hash
+        # alone, so the ONLY thing that fires is the envelope-closure binding
+        # of the simulated DUT to the selected snapshot: the stale-DUT rule.
+        snap = self.fx.root / self.fx.selection["records"][self.RECORD]["netlist_snapshot"]
+        snap.write_text(snap.read_text(encoding="utf-8") + "* touched\n", encoding="utf-8")
+        self.assert_error("is not the selected netlist snapshot")
+
+    def test_request_measurement_definitions_are_checked(self):
+        doc = json.loads(self.rawfile("null_request").read_text(encoding="utf-8"))
+        doc["measurements"][0]["limits"] = {"min": -0.05, "max": 0.05}
+        self.rawfile("null_request").write_text(json.dumps(doc), encoding="utf-8")
+        self.raw()["files"]["null_request"]["sha256"] = generate.sha256_file(self.rawfile("null_request"))
+        self.fx.save_selection()
+        self.assert_error("measurement vos_null_v limits")
+
+    def test_closed_loop_body_must_carry_the_loop_break(self):
+        body = self.rawfile("cl_body")
+        body.write_text(body.read_text(encoding="utf-8").replace("Lbreak inn out 1e18", "* removed"), encoding="utf-8")
+        self.raw()["files"]["cl_body"]["sha256"] = generate.sha256_file(body)
+        self.fx.save_selection()
+        errors = self.assert_error("element Lbreak")
+        self.assertTrue(any("simulated bench body is not the pinned" in e for e in errors), errors)
+
+    # --- the derivation's own negative controls ------------------------------
+
+    def test_multiple_crossings_fail_op_validity(self):
+        self.edit_envelope("null", self.POINT, "vos_crossings_n", 3.0)
+        errors = self.assert_error(f"point {self.POINT} fails definition check {self.DEFINITION_CHECK}")
+        self.assertTrue(any("crossings (expected exactly 1)" in e for e in errors), errors)
+
+    def test_zero_crossings_fail_op_validity(self):
+        self.edit_envelope("null", self.POINT, "vos_crossings_n", 0.0)
+        errors = self.assert_error(f"point {self.POINT} fails definition check {self.DEFINITION_CHECK}")
+        self.assertTrue(any("crossings (expected exactly 1)" in e for e in errors), errors)
+
+    def test_railed_node_fails_op_validity(self):
+        self.edit_envelope("null", self.POINT, "vtail_dc_v", 1.19)
+        errors = self.assert_error(f"point {self.POINT} fails definition check {self.DEFINITION_CHECK}")
+        self.assertTrue(any("op_pass" in e for e in errors), errors)
+
+    def test_method_disagreement_fails_the_cross_check(self):
+        self.edit_envelope("cl", self.POINT, "vout_cl_v", 0.58)
+        errors = self.assert_error(f"point {self.POINT} fails definition check {self.DEFINITION_CHECK}")
+        self.assertTrue(any("xcheck_pass" in e and "tolerance" in e for e in errors), errors)
+
+    def test_flag_flips_that_match_the_derivation_are_coverage_not_errors(self):
+        """op_pass=0 in the cell AND in the derivation is an invalid point
+        (counted as missing coverage), never a silently passing one."""
+        self.edit_envelope("null", self.POINT, "vos_crossings_n", 3.0)
+        self.fx.set_cell(self.RECORD, self.POINT, "op_pass", "0")
+        content = self.fx.build()
+        self.assertEqual(self.errors(content), [])
+        rows = rows_by_id(content)
+        row = rows["offset_systematic"]
+        # The still-failing binding corner keeps the row's FAIL verdict; what
+        # this control pins is that the invalid point is EXCLUDED (counted as
+        # missing coverage), never graded and never an error.
+        self.assertEqual(row["coverage"]["valid"], 44)
+        self.assertIn(self.POINT, row["coverage"]["invalid"])
+        self.assertNotIn(self.POINT, row["violating_points"])
+        self.assertNotIn(self.POINT, [p["point_id"] for p in []])
+
+    # --- the Av0 join --------------------------------------------------------
+
+    def test_av0_bound_to_a_foreign_corner_is_rejected(self):
+        def swap_temp(lines):
+            header = lines[0].split(",")
+            i_temp, i_pid = header.index("temp_c"), header.index("point_id")
+            out = [lines[0]]
+            for line in lines[1:]:
+                cells = line.split(",")
+                if cells[i_pid] == self.POINT:
+                    cells[i_temp] = "125"
+                out.append(",".join(cells))
+            return out
+        self.edit_join_row(swap_temp)
+        self.assert_error(f"point {self.POINT}: its corner/temp_c/vdd_v columns spell")
+
+    def test_av0_without_a_finite_value_is_rejected(self):
+        def blank(lines):
+            header = lines[0].split(",")
+            i_av0, i_pid = header.index("av0_db"), header.index("point_id")
+            out = [lines[0]]
+            for line in lines[1:]:
+                cells = line.split(",")
+                if cells[i_pid] == self.POINT:
+                    cells[i_av0] = "nan"
+                out.append(",".join(cells))
+            return out
+        self.edit_join_row(blank)
+        self.assert_error(f"point {self.POINT}: no finite Av0")
+
+    def test_av0_row_missing_for_a_corner_is_rejected(self):
+        def drop(lines):
+            header = lines[0].split(",")
+            i_pid = header.index("point_id")
+            return [lines[0]] + [l for l in lines[1:] if l.split(",")[i_pid] != self.POINT]
+        self.edit_join_row(drop)
+        self.assert_error(f"point {self.POINT}: no row in the joined record")
+
+    def test_av0_from_a_different_dut_is_rejected(self):
+        join = self.raw()["av0_join"]
+        snap = self.fx.root / self.fx.selection["records"][join]["netlist_snapshot"]
+        snap.write_text(snap.read_text(encoding="utf-8") + "\nRdifferent_dut vdd vss 1\n", encoding="utf-8")
+        errors = self.assert_error(f"av0_join record {join}: simulated a different DUT")
+        self.assertTrue(any("never joined silently" in e for e in errors), errors)
+
+    # --- a new valid value is selectable --------------------------------------
+
+    def test_a_new_valid_value_that_differs_from_the_harness_csv_selects(self):
+        """The batch record's binding corner re-measured UNDER the ratified
+        bound (the harness CSV says 21.9273527 mV, a FAIL): envelope + derived
+        cells edited coherently -- exactly what a new DUT's own evidence would
+        be -- the audit passes, all 45 points stay valid, and the row now
+        PASSES on a value the old fixed harness CSV never held."""
+        pid = "mos_fs_125C_1.08V"
+        new_vos = 0.0151
+        self.edit_envelope("null", pid, "vos_null_v", new_vos)
+        # A coherent new measurement moves the closed-loop reading with the
+        # null (the two methods measure one offset): choose vout_cl so the
+        # referred-back vos_cl IS the new null, exactly as a re-measured
+        # corner of a changed DUT would agree with itself.
+        av0 = float(next(r.split(",")[4] for r in
+                         (self.fx.root / self.fx.selection["records"][self.raw()["av0_join"]]["csv"]).read_text().splitlines()[1:]
+                         if r.split(",")[0] == pid))
+        av = 10.0 ** (av0 / 20.0)
+        self.edit_envelope("cl", pid, "vout_cl_v", 1.08 / 2 - new_vos * av / (1.0 + av))
+        # regenerate the CSV's derived cells for the edited corner the way the
+        # bench writer does (the same shared derivation).
+        doc = json.loads(self.rawfile("null").read_text(encoding="utf-8"))
+        corner = next(c for c in doc["corners"]
+                      if f"{c['process']}_{c['temperature_c']}C_{c['supply_v']['vdd']:.2f}V" == pid)
+        n = {m["name"]: m["value"] for m in corner["measurements"]}
+        cl_doc = json.loads(self.rawfile("cl").read_text(encoding="utf-8"))
+        cl_corner = next(c for c in cl_doc["corners"]
+                         if f"{c['process']}_{c['temperature_c']}C_{c['supply_v']['vdd']:.2f}V" == pid)
+        vout_cl = {m["name"]: m["value"] for m in cl_corner["measurements"]}["vout_cl_v"]
+        d = offset_post.derive_point(n, vout_cl, 1.08, av0)
+        def rewrite(lines):
+            header = lines[0].split(",")
+            idx = {c: i for i, c in enumerate(header)}
+            out = [lines[0]]
+            for line in lines[1:]:
+                cells = line.split(",")
+                if cells[0] == pid:
+                    cells[idx["vos_null_v"]] = offset_post.serialize(d["vos_null_v"])
+                    cells[idx["vos_abs_v"]] = offset_post.serialize(d["vos_abs_v"])
+                    cells[idx["vout_cl_v"]] = offset_post.serialize(vout_cl)
+                    cells[idx["vout_cl_err_v"]] = offset_post.serialize(d["vout_cl_err_v"])
+                    cells[idx["vos_closed_loop_v"]] = offset_post.serialize(d["vos_closed_loop_v"])
+                    cells[idx["vos_method_delta_v"]] = offset_post.serialize(d["vos_method_delta_v"])
+                out.append(",".join(cells))
+            return out
+        path = self.fx.csv_path(self.RECORD)
+        path.write_text("\n".join(rewrite(path.read_text(encoding="utf-8").splitlines())) + "\n", encoding="utf-8")
+        self.fx.selection["records"][self.RECORD]["csv_sha256"] = generate.sha256_file(path)
+        self.fx.save_selection()
+        content = self.fx.build()
+        self.assertEqual(self.errors(content), [])
+        rows = rows_by_id(content)
+        row = rows["offset_systematic"]
+        self.assertEqual(row["verdict"], "PASS")
+        self.assertEqual(row["violating_points"], [])
+        # The row's extremum is now a DIFFERENT point at a DIFFERENT value
+        # than the fixed harness CSV ever held (its worst was mos_fs_125C_1.08V
+        # at 21.9273527 mV): the selection grades the batch record's own
+        # numbers, not the old CSV's.
+        self.assertNotEqual(row["measured_worst"]["point"], "mos_fs_125C_1.08V")
+        self.assertNotEqual(row["measured_worst"]["value"], "21.9273527")
+        self.assertLess(float(row["measured_worst"]["value"]), 21.9)
 
 
 class SlewRawAudit(PointRawPinControlMixin, RawAuditCase):
