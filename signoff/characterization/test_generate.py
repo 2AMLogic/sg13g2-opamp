@@ -16,6 +16,7 @@ import contextlib
 import io
 import json
 import math
+import re
 import shutil
 import subprocess
 import sys
@@ -2238,6 +2239,57 @@ class SlewKltAudit(RawAuditCase):
         row = rows_by_id(content)["slew_rate"]
         self.assertEqual(row["verdict"], "PASS")
         self.assertTrue(row["load"].startswith("CL = 2 pF"), row["load"])
+
+    # --- shared simulator admission policy (issue #519) ----------------------
+
+    def versionless_summary(self, envelope_version: str) -> None:
+        """The summary names no ngspice version, so the slew envelope is the
+        only source; both inputs are re-pinned so hash errors cannot mask the
+        policy outcome."""
+        md_rel = self.fx.selection["records"][self.RECORD]["md"]
+        md = self.fx.root / md_rel
+        md.write_text(re.sub(r"ngspice-\d+", "batch-fleet", md.read_text(encoding="utf-8")), encoding="utf-8")
+        self.fx.selection["records"][self.RECORD]["md_sha256"] = generate.sha256_file(md)
+        self.fx.save_selection()
+
+        def set_ver(doc):
+            doc["environment"]["engine_version"] = envelope_version
+            banner = doc["environment"].get("engine_build", {}).get("version_banner")
+            if banner:
+                doc["environment"]["engine_build"]["version_banner"] = re.sub(r"ngspice-\d+", f"ngspice-{envelope_version}", banner)
+
+        self.edit_env(set_ver)
+
+    def edit_pdk(self, mutate) -> None:
+        path = self.fx.root / self.fx.selection["pdk_pin"]
+        doc = json.loads(path.read_text(encoding="utf-8"))
+        mutate(doc)
+        path.write_text(json.dumps(doc), encoding="utf-8")
+
+    def test_envelope_above_the_floor_is_admitted(self):
+        self.versionless_summary("47")
+        content = self.fx.build()
+        self.assertEqual(self.errors(content), [])
+        self.assertEqual(content["sources"][self.RECORD]["ngspice"], "ngspice-47")
+
+    def test_envelope_below_the_floor_is_rejected(self):
+        self.versionless_summary("45")
+        errors = self.assert_error("ran on ngspice-45", "floor ngspice-46")
+        self.assertFalse(any("pins ngspice-46" in e for e in errors), errors)
+
+    def test_envelope_must_match_the_exact_pin_when_the_floor_is_absent(self):
+        self.versionless_summary("47")
+        self.edit_pdk(lambda d: d["osdi_toolchain"].pop("ngspice_min_major"))
+        self.assert_error("ran on ngspice-47", "expected 'ngspice-46'")
+
+    def test_summary_and_envelope_conflict_fails_even_when_both_clear_the_floor(self):
+        self.versionless_summary("47")
+        md_rel = self.fx.selection["records"][self.RECORD]["md"]
+        md = self.fx.root / md_rel
+        md.write_text(md.read_text(encoding="utf-8") + "\nSimulator: ngspice-48\n", encoding="utf-8")
+        self.fx.selection["records"][self.RECORD]["md_sha256"] = generate.sha256_file(md)
+        self.fx.save_selection()
+        self.assert_error("ran ngspice-47 but the selected record's prose names ngspice-48")
 
     def test_unselected_report_carries_no_batch_rule(self):
         fx = Fixture()
