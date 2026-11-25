@@ -57,7 +57,7 @@ REQUIRED_OSDI_MODELS = ("psp103", "psp103_nqs", "r3_cmc", "mosvar")
 DEFAULT_MODELS = ("cornerMOSlv.lib", "cornerCAP.lib", "cornerRES.lib")
 _DIRECTIVE_RE = re.compile(r'^\s*\.(lib|include|inc)\s+(?:"([^"]+)"|\'([^\']+)\'|(\S+))(\s+\S+)?', re.IGNORECASE)
 _SHA_RE = re.compile(r"^[0-9a-f]{64}$")
-_NGSPICE_RE = re.compile(r"^ngspice-(\d+)")
+_NGSPICE_RE = re.compile(r"^ngspice-(\d+)(?:$|[.+_-])")
 
 
 class IdentityError(Exception):
@@ -290,6 +290,29 @@ def _release_of(tag) -> str | None:
     return tag[1:] if isinstance(tag, str) and tag.startswith("v") else tag if isinstance(tag, str) else None
 
 
+def check_ngspice_version(observed, pin: dict | None, ngspice: str | None = None) -> str | None:
+    """Return why `observed` violates the configured simulator policy in `pin`
+    (`sim/pdk.json`), or None when acceptable.
+
+    When `osdi_toolchain.ngspice_min_major` is configured as an integer, require
+    an `ngspice-<major>` simulator with `<major> >= ngspice_min_major`; when the
+    floor is absent, fall back to exact equality against `ngspice` (or
+    `osdi_toolchain.ngspice_actually_used`).
+    """
+    toolchain = (pin.get("osdi_toolchain") if isinstance(pin, dict) else None) or {}
+    floor = toolchain.get("ngspice_min_major")
+    if isinstance(floor, int) and not isinstance(floor, bool):
+        # Fleet policy: a floor on the ngspice major, not an exact pin.
+        m = _NGSPICE_RE.match(observed) if isinstance(observed, str) else None
+        if not m or int(m.group(1)) < floor:
+            return f"incompatible: observed simulator {observed!r}, floor ngspice-{floor}"
+        return None
+    want_ngspice = ngspice or toolchain.get("ngspice_actually_used")
+    if want_ngspice and observed != want_ngspice:
+        return f"incompatible: observed simulator {observed!r}, expected {want_ngspice!r}"
+    return None
+
+
 def verify(sidecar, pin: dict, record_id: str | None = None, ngspice: str | None = None) -> list[str]:
     """Explicit provenance errors for a sidecar; empty list means verified and compatible."""
     if not isinstance(sidecar, dict):
@@ -326,17 +349,9 @@ def verify(sidecar, pin: dict, record_id: str | None = None, ngspice: str | None
         errs.append("sidecar carries no observed release marker (install .fetched-version)")
     elif marker != _release_of(pin.get("release_tag")):
         errs.append(f"incompatible: observed install release {marker!r} is not the configured release {pin.get('release_tag')!r}")
-    toolchain = pin.get("osdi_toolchain") or {}
-    floor = toolchain.get("ngspice_min_major")
-    if isinstance(floor, int) and not isinstance(floor, bool):
-        # Fleet policy: a floor on the ngspice major, not an exact pin.
-        m = _NGSPICE_RE.match(str(obs.get("ngspice")))
-        if not m or int(m.group(1)) < floor:
-            errs.append(f"incompatible: observed simulator {obs.get('ngspice')!r}, floor ngspice-{floor}")
-    else:
-        want_ngspice = ngspice or toolchain.get("ngspice_actually_used")
-        if want_ngspice and obs.get("ngspice") != want_ngspice:
-            errs.append(f"incompatible: observed simulator {obs.get('ngspice')!r}, expected {want_ngspice!r}")
+    ngspice_err = check_ngspice_version(obs.get("ngspice"), pin, ngspice)
+    if ngspice_err:
+        errs.append(ngspice_err)
     return errs
 
 

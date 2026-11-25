@@ -22,6 +22,7 @@ from common import (
     BOUND_OPS,
     EXTREMA,
     KLT_RAW_KINDS,
+    KLT_RAW_REQUIRED_KINDS,
     NOISE_PIN_KINDS,
     ROW_CLASSES,
     SELECTION_SCHEMA,
@@ -272,17 +273,18 @@ def _validate_swing_raw_selection(key: str, sw) -> None:
 
 
 def _validate_klt_raw_selection(key: str, kr, records: dict) -> None:
-    """Shape of a record's `klt_raw` pin: one pinned file per kind, plus the
-    selected record that stands in for the DC checks the corrected bench does
-    not repeat."""
+    """Shape of a record's `klt_raw` pin: pinned AC/OP envelopes, requests and
+    bench body (plus optional `measurement`, and optional `dc_continuity` when
+    comparing two configurations or standing in for a legacy port-only run)."""
     where = f"selection: record {key}: `klt_raw`"
-    if not isinstance(kr, dict) or sorted(kr) != ["dc_continuity", "files"]:
-        raise SelectionError(f"{where} must be an object with exactly `files` and `dc_continuity`")
-    if kr["dc_continuity"] not in records or kr["dc_continuity"] == key:
+    if not isinstance(kr, dict) or "files" not in kr or set(kr) - {"files", "dc_continuity"}:
+        raise SelectionError(f"{where} must be an object with `files` and optional `dc_continuity`")
+    if "dc_continuity" in kr and (kr["dc_continuity"] not in records or kr["dc_continuity"] == key):
         raise SelectionError(f"{where}.dc_continuity must name another selected record")
     files = kr["files"]
-    if not isinstance(files, dict) or sorted(files) != sorted(KLT_RAW_KINDS):
-        raise SelectionError(f"{where}.files must have exactly {list(KLT_RAW_KINDS)}")
+    required = set(KLT_RAW_REQUIRED_KINDS)
+    if not isinstance(files, dict) or not required.issubset(files) or set(files) - set(KLT_RAW_KINDS):
+        raise SelectionError(f"{where}.files must have {sorted(required)} (within {list(KLT_RAW_KINDS)})")
     for kind, pin in files.items():
         if not (isinstance(pin, dict) and isinstance(pin.get("path"), str) and isinstance(pin.get("sha256"), str)):
             raise SelectionError(f"{where}.files.{kind} needs string `path` and `sha256` (a raw artifact is never named without its pin)")

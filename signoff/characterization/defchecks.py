@@ -20,7 +20,7 @@ import math
 from decimal import Decimal
 
 from common import SLEW_KLT_LIMITS, parse_decimal
-from paths import mc_samples, noise_post, slew_post, swing_post
+from paths import mc_samples, noise_post, op_sanity, slew_post, swing_post
 
 # --------------------------------------------------------------------------
 # definition checks: per-point identities a record's derived column must obey
@@ -456,15 +456,18 @@ def _check_open_loop_klt(point: dict, pop: dict | None) -> str | None:
     if raw is None:
         return "cannot evaluate (no pinned raw klt values for this point)"
     problems = []
+    if raw["phase_rad"] > 0.0:
+        problems.append(f"phase_at_ugf_rad {raw['phase_rad']!r} > 0 (wrapped phase; not a valid positive phase margin)")
     pm = 180.0 + math.degrees(raw["phase_rad"])
     want = {"av0_db": raw["av0_db"], "gbw_hz": raw["gbw_hz"], "pm_deg": pm, "iq_a": raw["ivdd"]}
     for field, value in want.items():
         problem = _cell_problem(field, point.get(field), format(value, ".6g"), "pinned klt envelopes", 6, nan_ok=False)
         if problem:
             problems.append(problem)
-        meas = (raw["measurement"] or {}).get(field)
-        if not isinstance(meas, (int, float)) or not math.isfinite(meas) or abs(meas - value) > 1e-9 * max(1.0, abs(value)):
-            problems.append(f"{field}: the measurement document gives {meas!r}, not the envelope-derived {value!r}")
+        if raw.get("has_measurement"):
+            meas = (raw["measurement"] or {}).get(field)
+            if not isinstance(meas, (int, float)) or not math.isfinite(meas) or abs(meas - value) > 1e-9 * max(1.0, abs(value)):
+                problems.append(f"{field}: the measurement document gives {meas!r}, not the envelope-derived {value!r}")
     vdd, vinp, vout = raw["vdd"], raw["vinp"], raw["vout"]
     if not all(isinstance(v, (int, float)) and math.isfinite(v) for v in (vdd, vinp)) or vdd <= 0:
         return "; ".join(problems + ["the corner supplies are unreadable"])
@@ -473,29 +476,60 @@ def _check_open_loop_klt(point: dict, pop: dict | None) -> str | None:
         "op_vout_offset_frac": abs(vout - vdd / 2.0) / vdd,
         "op_vout_rail_frac": vout / vdd,
     }
+    if raw.get("schematic_op"):
+        recomputed.update({
+            "op_vd1_rail_frac": raw["vd1_dc_v"] / vdd,
+            "op_vd2_rail_frac": raw["vd2_dc_v"] / vdd,
+            "op_vtail_rail_frac": raw["vtail_dc_v"] / vdd,
+        })
+        for col, val in (
+            ("vcm_v", vdd / 2.0),
+            ("vout_dc_v", vout),
+            ("vd1_dc_v", raw["vd1_dc_v"]),
+            ("vd2_dc_v", raw["vd2_dc_v"]),
+            ("vtail_dc_v", raw["vtail_dc_v"]),
+            ("vibias_dc_v", raw["vibias_dc_v"]),
+        ):
+            if col in point:
+                problem = _cell_problem(col, point.get(col), format(val, ".6g"), "pinned klt envelopes", 6, nan_ok=False)
+                if problem:
+                    problems.append(problem)
+        if "op_pass" in point and (point.get("op_pass") or "").strip() != "1":
+            problems.append(f"op_pass {point.get('op_pass')!r} != '1'")
     for name, value in recomputed.items():
         if abs(raw["reported"][name] - value) > 1e-9:
             problems.append(f"{name}: envelope reports {raw['reported'][name]!r} but the raw supplies/Vout give {value!r}")
     if abs(recomputed["op_vcm_frac"] - 0.5) > KLT_VCM_FRAC_TOL:
         problems.append(f"operating point: Vcm/VDD {recomputed['op_vcm_frac']:.6g} is not 1/2 (within {KLT_VCM_FRAC_TOL:g})")
-    if recomputed["op_vout_offset_frac"] > KLT_OFFSET_FRAC_MAX:
+    if not op_sanity.midrail_ok(vdd, vdd / 2.0, vout, KLT_OFFSET_FRAC_MAX):
         problems.append(f"operating point: |Vout - VDD/2| is {recomputed['op_vout_offset_frac']:.4g} VDD, beyond {KLT_OFFSET_FRAC_MAX}")
-    if not (KLT_RAIL_FRAC <= recomputed["op_vout_rail_frac"] <= 1.0 - KLT_RAIL_FRAC):
+    if not op_sanity.rail_ok(vdd, (vout,), KLT_RAIL_FRAC):
         problems.append(f"operating point: Vout is {recomputed['op_vout_rail_frac']:.4g} VDD, within {KLT_RAIL_FRAC} of a rail")
-    cont = raw["continuity"]
+    if raw.get("schematic_op"):
+        for label, key_name in (("Vd1", "vd1_dc_v"), ("Vd2", "vd2_dc_v"), ("Vtail", "vtail_dc_v")):
+            val = raw[key_name]
+            if not op_sanity.rail_ok(vdd, (val,), KLT_RAIL_FRAC):
+                problems.append(f"operating point: {label} is {val / vdd:.4g} VDD, within {KLT_RAIL_FRAC} of a rail")
+    for op_name, op_status in sorted((raw.get("op_statuses") or {}).items()):
+        if op_status not in (None, "pass"):
+            problems.append(f"operating point: envelope measurement {op_name} status is {op_status!r}, not 'pass'")
+
     ck = pop["continuity_record"]
-    if cont is None:
-        problems.append(f"dc_continuity record {ck} has no row for this point")
-    else:
-        if (cont.get("op_pass") or "").strip() != "1":
-            problems.append(f"dc_continuity record {ck}: op_pass={cont.get('op_pass')!r} (the legacy internal-node check did not pass)")
-        for name, col, tol in (("Vout", "vout_dc_v", KLT_VOUT_TOL_V), ("total VDD current", "ivdd_total_a", KLT_IVDD_TOL_A)):
-            ref, why = parse_decimal(cont.get(col))
-            now = raw["vout"] if col == "vout_dc_v" else raw["ivdd"]
-            if ref is None:
-                problems.append(f"dc_continuity record {ck}: {col}: {why}")
-            elif abs(float(ref) - now) > tol:
-                problems.append(f"{name} {now:.9g} differs from the dc_continuity record {ck} ({float(ref):.9g}) by more than {tol:g}")
+    if ck is not None:
+        cont = raw["continuity"]
+        if cont is None:
+            problems.append(f"dc_continuity record {ck} has no row for this point")
+        else:
+            if ("op_pass" in cont or not raw.get("schematic_op")) and (cont.get("op_pass") or "").strip() != "1":
+                problems.append(f"dc_continuity record {ck}: op_pass={cont.get('op_pass')!r} (the legacy internal-node check did not pass)")
+            ivdd_col = "ivdd_total_a" if "ivdd_total_a" in cont else "iq_a"
+            for name, col, tol in (("Vout", "vout_dc_v", KLT_VOUT_TOL_V), ("total VDD current", ivdd_col, KLT_IVDD_TOL_A)):
+                ref, why = parse_decimal(cont.get(col))
+                now = raw["vout"] if col == "vout_dc_v" else raw["ivdd"]
+                if ref is None:
+                    problems.append(f"dc_continuity record {ck}: {col}: {why}")
+                elif abs(float(ref) - now) > tol:
+                    problems.append(f"{name} {now:.9g} differs from the dc_continuity record {ck} ({float(ref):.9g}) by more than {tol:g}")
     return "; ".join(problems) or None
 
 
