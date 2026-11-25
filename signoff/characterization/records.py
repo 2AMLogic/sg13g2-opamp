@@ -1252,12 +1252,15 @@ def load_record(repo: Path, key: str, spec: dict, grid: dict, env: dict, records
             src["slew_klt"]["job"] = slew_klt_pop["job"]
             src["slew_klt"]["cload_f"] = slew_klt_pop["cload_f"]
             envelope_ngspice = f"ngspice-{slew_klt_pop['version']}"
+            # Same carrier as the klt_raw path (3g): the summary .md already went
+            # through the shared policy; a versionless summary leaves the envelope
+            # as the only source, so admit it here instead of exact-matching.
             if src["ngspice"] is None:
                 src["ngspice"] = envelope_ngspice
-            if src["ngspice"] != envelope_ngspice:
+                _admit_ngspice_version(key, envelope_ngspice, env, errors)
+            elif src["ngspice"] != envelope_ngspice:
                 errors.append(f"record {key}: {spec['md']} names {src['ngspice']}, but the pinned slew envelope ran {envelope_ngspice}")
-            if env.get("ngspice") and src["ngspice"] != env["ngspice"]:
-                errors.append(f"record {key}: ran on {src['ngspice']}, but sim/pdk.json pins {env['ngspice']} -- mixed simulation environments are not combined silently")
+                _admit_ngspice_version(key, envelope_ngspice, env, errors)
 
     # 3f. raw DC transfer curves (issue #230): both passes' pinned wrdata
     # curves and rendered netlists per grid point, strictly parsed.
