@@ -1,0 +1,53 @@
+* sg13g2-opamp -- direct systematic CMRR bench as a `klt sim` circuit body (issue #505)
+*
+* CMRR (DC shelf) = Av0 - Acm0 in dB, as ONE measurement of ONE request, built
+* like tb_psrr_direct.body.spice: two independent DUT copies in one deck that
+* share only quiet reference nodes, so one AC solve is exactly the two
+* single-excitation solves.
+*
+*   instance A (xa): differential excitation. Vinp has `ac 1`, Vdd is quiet,
+*                    so vdb(outa) = Av0(f), as in the open-loop-ac bench.
+*   instance B (xb): in-phase common-mode excitation. The input sits on the
+*                    quiet VDD/2 divider mid node; a series source Vcmb
+*                    (dc 0, ac 1) lifts inpb above it, and Ccm = 1 F ties innb
+*                    to inpb at AC only (open at DC, so the Lbreak DC loop is
+*                    undisturbed), exactly as tb_cmrr.spice.tmpl. The supply is
+*                    quiet, so vdb(outb) = Acm(f).
+*
+* CMRR = vdb(outa) - vdb(outb); the request's `expr` reads it at the first AC
+* point (10 mHz, the DC shelf).
+*
+* Per-corner sweep: klt applies `alter vdd=<V>` and `alter vinp=<V/2>`. Copy B's
+* DC input is the R1/R2 divider off vdd (VDD/2 at every corner), so both copies
+* see the same Vcm and DC operating point.
+*
+* Per-copy circuit as the single-excitation benches: Lbreak = 1e18 H inn-out,
+* Cinn_acgnd = 1 F inn-vss on copy A (copy B's inn follows inp through Ccm),
+* CL = 2 pF [DR-1], 10 uA ideal ibias from the copy's rail, Vss = ground.
+*
+* No solver option is set (DR-0005: ngspice default tolerance).
+
+.subckt opamp_dut vdd vss inn inp out ibias
+.include ../../../design/netlist/opamp_core.spice
+.ends opamp_dut
+
+.options tnom=27
+
+Vdd vdd 0 dc 1.2
+Vss vss 0 dc 0
+
+Xa vdd vss inna inpa outa ibiasa opamp_dut
+Iibiasa vdd ibiasa dc 10u
+Vinp inpa 0 dc 0.6 ac 1
+Lbreaka inna outa 1e18
+Cinna_acgnd inna vss 1
+Cloada outa vss 2e-12
+
+Xb vdd vss innb inpb outb ibiasb opamp_dut
+Iibiasb vdd ibiasb dc 10u
+R1 vdd midb 1k
+R2 midb vss 1k
+Vcmb inpb midb dc 0 ac 1
+Ccmb innb inpb 1
+Lbreakb innb outb 1e18
+Cloadb outb vss 2e-12
