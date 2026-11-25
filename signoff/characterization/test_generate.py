@@ -1901,7 +1901,7 @@ class KltRawAudit(RawAuditCase):
 
     def test_corner_diagnostics_are_rejected(self):
         self.edit_json("ac", lambda d: self.corner(d).update(diagnostics=[{"code": "nonconvergence"}]))
-        self.assert_error("is not a clean pass")
+        self.assert_error("is not a decided corner")
 
     def test_non_finite_raw_value_is_rejected(self):
         self.edit_json("ac", lambda d: self.set_value(d, "gbw_hz", None))
@@ -2167,7 +2167,7 @@ class OffsetKltAudit(RawAuditCase):
         self.rawfile("null").write_text(json.dumps(doc), encoding="utf-8")
         self.raw()["files"]["null"]["sha256"] = generate.sha256_file(self.rawfile("null"))
         self.fx.save_selection()
-        self.assert_error("is not a completed run")
+        self.assert_error("is not a decided corner")
 
     def test_non_finite_raw_value_is_rejected(self):
         self.edit_envelope("null", self.POINT, "vos_null_v", None)
@@ -2187,10 +2187,41 @@ class OffsetKltAudit(RawAuditCase):
             doc["environment"]["engine_version"] = "45"
             banner = doc["environment"]["remote"]["worker_environment"]["simulator"]["version_banner"]
             doc["environment"]["remote"]["worker_environment"]["simulator"]["version_banner"] = banner.replace("ngspice-47", "ngspice-45")
+            if (doc["environment"].get("engine_build") or {}).get("version_banner"):
+                doc["environment"]["engine_build"]["version_banner"] = (
+                    doc["environment"]["engine_build"]["version_banner"].replace("ngspice-47", "ngspice-45")
+                )
             self.rawfile(kind).write_text(json.dumps(doc), encoding="utf-8")
             self.raw()["files"][kind]["sha256"] = generate.sha256_file(self.rawfile(kind))
         self.fx.save_selection()
         self.assert_error("rejected by sim/pdk.json")
+
+    def test_missing_passed_count_is_rejected_without_crashing(self):
+        doc = json.loads(self.rawfile("null").read_text(encoding="utf-8"))
+        doc.pop("passed", None)
+        self.rawfile("null").write_text(json.dumps(doc), encoding="utf-8")
+        self.raw()["files"]["null"]["sha256"] = generate.sha256_file(self.rawfile("null"))
+        self.fx.save_selection()
+        self.assert_error("offset klt raw evidence", "passed=None")
+
+    def test_version_prefix_and_engine_build_banner_mismatch_are_rejected(self):
+        # Prefix match ("ngspice-470" contains "ngspice-47") must not satisfy version "47".
+        doc = json.loads(self.rawfile("null").read_text(encoding="utf-8"))
+        sim = doc["environment"]["remote"]["worker_environment"]["simulator"]
+        sim["version_banner"] = sim["version_banner"].replace("ngspice-47", "ngspice-470")
+        self.rawfile("null").write_text(json.dumps(doc), encoding="utf-8")
+        self.raw()["files"]["null"]["sha256"] = generate.sha256_file(self.rawfile("null"))
+        self.fx.save_selection()
+        self.assert_error("worker banner does not name ngspice-47")
+
+        # engine_build.version_banner must also agree with engine_version.
+        self.fresh()
+        doc = json.loads(self.rawfile("cl").read_text(encoding="utf-8"))
+        doc["environment"]["engine_build"]["version_banner"] = "** ngspice-46 : mismatch"
+        self.rawfile("cl").write_text(json.dumps(doc), encoding="utf-8")
+        self.raw()["files"]["cl"]["sha256"] = generate.sha256_file(self.rawfile("cl"))
+        self.fx.save_selection()
+        self.assert_error("engine_build banner does not name ngspice-47")
 
     def test_simulated_dut_must_be_the_selected_snapshot(self):
         # A comment-only touch leaves the normalized (design-identity) hash
@@ -2902,6 +2933,20 @@ class SlewKltAudit(RawAuditCase):
             remote.setdefault("worker_environment", {}).setdefault("simulator", {})["version_banner"] = "ngspice-45 : x"
         self.edit_env(mutate)
         self.assert_error("contradictory simulator version")
+
+    def test_version_prefix_and_engine_build_banner_mismatch_are_rejected(self):
+        # Prefix match ("ngspice-460" contains "ngspice-46") must not satisfy version "46".
+        def set_prefix(doc):
+            remote = doc["environment"]["remote"]
+            remote.setdefault("worker_environment", {}).setdefault("simulator", {})["version_banner"] = "ngspice-460 : x"
+        self.edit_env(set_prefix)
+        self.assert_error("worker banner does not name ngspice-46", "contradictory simulator version")
+
+        # engine_build.version_banner must also agree with engine_version.
+        self.fx.close()
+        self.setUp()
+        self.edit_env(lambda d: d["environment"].update(engine_build={"version_banner": "** ngspice-45 : mismatch"}))
+        self.assert_error("engine_build banner does not name ngspice-46", "contradictory simulator version")
 
     def test_envelope_version_must_match_the_record_prose(self):
         self.edit_env(lambda d: d["environment"].update(engine_version="45"))
