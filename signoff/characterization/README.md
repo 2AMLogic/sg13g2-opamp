@@ -40,7 +40,7 @@ command lines above are unchanged, and it re-exports the public surface
 | Module | What it holds | Imports |
 |---|---|---|
 | [`common.py`](common.py) | Generic helpers (`sha256_*`, `canonical_json`, `fmt`, `parse_decimal`, `decimals_of`, `normalized_netlist_hash`, `SelectionError`, `CollisionError`) and the constants read from more than one module. | — (leaf) |
-| [`paths.py`](paths.py) | The six `sys.path` hops onto the shared bench modules (`env_identity`, `draws_contract`, `mc_samples`, `noise_post`, `slew_post`, `swing_post`) and their imports, in one place. | — (leaf) |
+| [`paths.py`](paths.py) | The seven `sys.path` hops onto the shared bench modules (`env_identity`, `draws_contract`, `mc_samples`, `noise_post`, `slew_post`, `swing_post`, `offset_post`) and their imports, in one place. | — (leaf) |
 | [`defchecks.py`](defchecks.py) | The definition checks — per-point identities a record's derived column must obey — and the `DEFINITION_CHECKS` table `load_record` dispatches on. | `common`, `paths` |
 | [`rows.py`](rows.py) | Spec-clause bound parsing, CL/load validation and `evaluate_row`. | `common` |
 | [`records.py`](records.py) | `load_record`, the five `_load_*_population` raw-evidence loaders, and PDK provenance. | `common`, `paths`, `defchecks`, `rows` |

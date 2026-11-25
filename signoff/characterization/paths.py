@@ -9,7 +9,7 @@ logic -- so the generator re-derives each published cell with the bench's own
 post-processing. The hops stay unconditional, as they were: a full report
 needs all of them.
 
-Load-order note: the six hops insert at position 0, i.e. AHEAD of this
+Load-order note: the seven hops insert at position 0, i.e. AHEAD of this
 directory, so a same-named module added to one of them later (a `sim/tools/
 common.py`, `records.py`, `rows.py`, ...) would shadow a sibling of this
 package. `HERE` is therefore re-inserted at 0 after them, which makes this
