@@ -8,6 +8,12 @@
 
 ### 2026-11-25
 
+- **PR #526**: fix: claim record reservations via os.mkdir instead of the mkdir binary
+- **Issue #525** (closed): test flake (6th; uutils mkdir returns 0 twice for one inode): test_overlapping_starts_give_exactly_one_owner fails on T1 signoff register
+- **PR #509**: feat(signoff): select input-offset record from same-DUT batch evidence
+- **Issue #504** (closed): Add batch evidence for the deterministic input-offset null and its closed-loop cross-check
+- **PR #522**: fix: admit slew envelope ngspice version via shared policy
+- **Issue #519** (closed): slew_klt record admission still exact-matches ngspice, bypassing the ngspice_min_major floor
 - **PR #517**: test(sim): add mkdir binary probe and os.mkdir race control to overlap-test failure message
 - **PR #516**: feat(sim): batch systematic-CMRR deck joined to the PSRR direct evidence
 - **PR #507**: test: fold cmrr-psrr envelope builders and Av0 negative controls onto sim/tools helpers
