@@ -10,7 +10,8 @@
     "vos_crossings_n counts sign changes of v(orel) over the 7501-point sweep (mean of the per-interval sign-change indicator times the 7500 intervals; `sum` is a running sum in ngspice and does not reduce to a scalar) and must be exactly 1 (limits 0.5..1.5 only absorb float rounding of mean*7500) (the harness's unique-crossing rule; 0 means the null left the window).",
     "gain_local_vv is the two-point slope dVout/dVid across the sweep interval that brackets the null (the one interval where orel changes sign), must be >= 10 V/V (the harness's >= 20 dB sanity rule); fd1/fd2/ftail at the null reproduce its rail-window rule [0.02, 0.98]*VDD.",
     "The *_dc_v node voltages and gain_local_vv carry/ride no ratified bound beyond the sanity rules: they are reported for compare.py's join against the harness CSV.",
-    "The harness's second method (closed-loop output error referred back through the AC-record gain) is a cross-check, not the ratified number's source, and is NOT in this request.",
+    "vout_null_dc_v is v(out) AT the interpolated null (the harness's vout_sample_v column reads it at the swept sample nearest the null): it completes the harness op_pass rail window's node tuple (Vd1, Vd2, Vtail, Vout) from this envelope alone, and is not compared against the harness (nearest-sample vs interpolated-at-null are different estimators of the same ~Vcm value).",
+    "The harness's second method (closed-loop output error referred back through the AC-record gain) is a cross-check, not the ratified number's source; since issue #504 it runs as the SIBLING request offset_cl.request.json (tb_offset_cl.body.spice, one `op` per corner -- a request declares one analysis and this method needs the Lbreak topology), and compare.py joins both envelopes.",
     "options.timeout_s = 300 s per corner: a 7501-point DC sweep of this circuit takes seconds.",
     "Solver tolerance: ngspice default, no .options reltol/abstol/vntol (DR-0005).",
     "ngspice_init raises the print precision so the envelope values are not rounded to 6 digits."
@@ -158,6 +159,11 @@
     {
       "name": "vtail_dc_v",
       "spice": ".meas dc vtail_dc_v find v(tail) when v(orel)=0 rise=1",
+      "unit": "V"
+    },
+    {
+      "name": "vout_null_dc_v",
+      "spice": ".meas dc vout_null_dc_v find v(out) when v(orel)=0 rise=1",
       "unit": "V"
     },
     {

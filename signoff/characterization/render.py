@@ -273,6 +273,9 @@ def render_markdown(report: dict) -> str:
     klt_rule = content.get("klt_audit_rule")
     if klt_rule and any(src.get("klt_raw") for src in content["sources"].values()):
         w(f"\n{klt_rule}\n\n")
+    offset_klt_rule = content.get("offset_klt_audit_rule")
+    if offset_klt_rule and any(src.get("offset_klt_raw") for src in content["sources"].values()):
+        w(f"\n{offset_klt_rule}\n\n")
     swing_rule = content.get("swing_audit_rule")
     if swing_rule and any(src.get("swing_raw") for src in content["sources"].values()):
         w(f"\n{swing_rule}\n\n")

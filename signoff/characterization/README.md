@@ -40,7 +40,7 @@ command lines above are unchanged, and it re-exports the public surface
 | Module | What it holds | Imports |
 |---|---|---|
 | [`common.py`](common.py) | Generic helpers (`sha256_*`, `canonical_json`, `fmt`, `parse_decimal`, `decimals_of`, `normalized_netlist_hash`, `SelectionError`, `CollisionError`) and the constants read from more than one module. | — (leaf) |
-| [`paths.py`](paths.py) | The six `sys.path` hops onto the shared bench modules (`env_identity`, `draws_contract`, `mc_samples`, `noise_post`, `slew_post`, `swing_post`) and their imports, in one place. | — (leaf) |
+| [`paths.py`](paths.py) | The seven `sys.path` hops onto the shared bench modules (`env_identity`, `draws_contract`, `mc_samples`, `noise_post`, `slew_post`, `swing_post`, `offset_post`) and their imports, in one place. | — (leaf) |
 | [`defchecks.py`](defchecks.py) | The definition checks — per-point identities a record's derived column must obey — and the `DEFINITION_CHECKS` table `load_record` dispatches on. | `common`, `paths` |
 | [`rows.py`](rows.py) | Spec-clause bound parsing, CL/load validation and `evaluate_row`. | `common` |
 | [`records.py`](records.py) | `load_record`, the five `_load_*_population` raw-evidence loaders, and PDK provenance. | `common`, `paths`, `defchecks`, `rows` |
@@ -213,6 +213,52 @@ curves disagree. The record's cross-bench diagnostic columns
 (`vos_offset_record_v`, `vos_delta_v`, `av0_ac_record_db`, `av0_ratio`,
 `ivdd_ac_record_a`, `ivdd_ratio`) are logged, not gated, and stay outside
 the audit. Historical sim records are untouched; only a new report is minted.
+
+## Input-offset batch record (issue #504)
+
+The `input-offset` record can be selected either as the local-harness CSV
+(the committed selection today: `sim/input-offset/records/20260918-203858-90844d2.csv`,
+`op_pass`/`xcheck_pass` written by `run_offset_sweep.sh`) or as the batch
+record minted by `sim/input-offset/klt/run.sh`
+(`records/<id>.csv` derived from two `klt sim` envelopes -- the open-loop
+null sweep and the closed-loop cross-check -- joined per corner with the
+selected open-loop record's Av0). A batch selection names
+`offset_klt_raw` (six sha256-pinned files: both envelopes, both requests,
+both circuit bodies) plus `av0_join` (the selected same-DUT open-loop
+record the closed-loop referral reads Av0 from), and runs definition check
+`offset_klt_audit` (`OFFSET_KLT_AUDIT_RULE` in the generated report, emitted
+only when a record selects the family so the committed reports reproduce
+byte-for-byte). Column mapping:
+
+| CSV column | recomputed from |
+|---|---|
+| `vos_null_v` | null envelope `vos_null_v` (verbatim; the ratified +/- 21.9 mV [DR-2] bound lives in the pinned request's limits) |
+| `vos_abs_v` | `abs(vos_null_v)` (also the `offset_magnitude` check) |
+| `gain_local_db` | `20*log10(gain_local_vv)` |
+| `vout_null_dc_v`, `vd1_dc_v`, `vd2_dc_v`, `vtail_dc_v`, `vibias_dc_v` | null envelope node voltages at the null |
+| `vcm_v` | `vdd/2` |
+| `av0_db_av_record` | the `av0_join` record's own `av0_db` cell (the summary may not carry its own Av0) |
+| `vout_cl_v` | closed-loop envelope `v(out)` |
+| `vout_cl_err_v`, `vos_closed_loop_v`, `vos_method_delta_v` | the referral `-(vout_cl - Vcm)*(1 + Av0)/Av0` |
+| `op_pass` | re-derived: `sim/tools/op_sanity.py` rail window over Vd1/Vd2/Vtail/Vout-at-the-null, gain >= 10 V/V, exactly one crossing |
+| `xcheck_pass` | re-derived: two-method agreement within `max(200 uV, 5% |Vos|)` |
+
+Every cell is compared at the bench writer's printf %.9g serialization by the
+SAME module the bench mints the record with
+(`sim/input-offset/klt/offset_post.py`). Unlike the open-loop family, a
+corner whose LIMIT check failed is admissible evidence (a ratified-bound miss
+is a result the row grades); only errored/inconclusive or
+diagnostic-carrying corners are refused. The simulator version is the
+envelopes' own engine identity held to `sim/pdk.json`'s toolchain floor
+(`ngspice_min_major`, the fleet policy of `sim/tools/env_identity.py`), not
+the legacy exact-string pin -- the batch fleet runs newer ngspice than the
+harness host did. The Av0 join refuses a row whose own columns do not spell
+its point_id, a point with no finite Av0, and a join record whose netlist
+snapshot does not hash-match this record's (an Av0 from another DUT or
+corner is never joined silently). Selecting the batch record is a two-file
+edit: the `input-offset` entry in `selection.json` (same key, so no row
+moves; the harness CSV's `valid_when` flags carry over unchanged) and the
+`Input offset (systematic)` line in `signoff/evidence/testbenches.txt`.
 
 ## Minting a new record, and the item 8 citation
 

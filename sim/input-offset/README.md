@@ -262,33 +262,48 @@ testbench superseding a pre-schematic prediction — is expected, and
 `sim/open-loop-ac/README.md` set the precedent for recording it rather than
 quietly overwriting the guess.
 
-## The `klt sim` path (issue #97, T1 item 5)
+## The `klt sim` path (issues #97 and #504, T1 item 5)
 
-`klt/` re-expresses the **systematic half** of this bench as a `klt sim`
-request, for the T1 item 5 coverage rule in
+`klt/` re-expresses the **systematic half** of this bench as `klt sim`
+requests, for the T1 item 5 coverage rule in
 [`../../signoff/README.md`](../../signoff/README.md). The harness above stays
 the reference; this is a second path to the same ratified row, compared
 against the committed harness record
 `records/20260918-203858-90844d2.csv`. The mismatch Monte Carlo half is not
-here (item 6, `klt yield`).
+here (item 6, `klt yield`). Since issue #504 BOTH harness methods are batch
+requests, so a selected record can carry `op_pass` AND `xcheck_pass`
+re-derived from batch evidence (sub-issue of #497: the report must re-mint
+this row across a netlist change from `klt sim` artifacts alone).
 
 | File | Role |
 |---|---|
-| `klt/offset.request.json` | the 45-point request: grid, analysis, measurements, `limits`, OSDI preload |
-| `klt/tb_offset.body.spice` | the circuit body (one `.include` of `design/netlist/opamp_core.spice`) |
-| `klt/run.sh` | preflight, `klt sim`, validation gate, then writes `klt/records/<UTC>-<sha>.sim.json` and `.compare.json` |
-| `klt/compare.py`, `klt/test_compare.py` | the gate and the join with the harness record; 36 offline tests with negative controls |
+| `klt/offset.request.json` | the 45-point null-sweep request: grid, analysis, measurements, `limits`, OSDI preload |
+| `klt/tb_offset.body.spice` | the null-sweep circuit body (one `.include` of `design/netlist/opamp_core.spice`) |
+| `klt/offset_cl.request.json` | the closed-loop cross-check request: one `op` per corner, `vout_cl_v` |
+| `klt/tb_offset_cl.body.spice` | the closed-loop body (`Lbreak inn out 1e18`, `inp` at Vcm, CL = 2 pF, 10 uA ibias) |
+| `klt/run.sh` | preflight, both `klt sim` runs, validation gates, then writes `klt/records/<UTC>-<sha>.sim.json`, `.cl.sim.json` and `.compare.json`, plus the derived `records/<id>.csv`/`.md` and the DUT snapshot |
+| `klt/offset_post.py` | the shared derivation: the harness's op_pass / xcheck_pass rules and the closed-loop referral, applied by the record writer, `compare.py` and signoff's `offset_klt_audit` |
+| `klt/compare.py`, `klt/test_compare.py` | the gates and the two-envelope join with the harness record; offline tests with negative controls |
 
 ### Which harness method
 
 The committed record's systematic number (`vos_null_v`, the column the bound
 was ratified from) is the **open-loop null sweep** (`tb_offset_null.spice.tmpl`):
-the `Vid` at which `Vout = Vcm`. The request is that same method, so no
+the `Vid` at which `Vout = Vcm`. The null request is that same method, so no
 measurement-method difference needs quantifying beyond the interpolation
 details below. The closed-loop method (`tb_offset_cl.spice.tmpl`,
-`vos_closed_loop_v`) is the harness's cross-check; it refers an output error
-back through a gain taken from a *different* bench's AC record, so it is not
-expressed here.
+`vout_cl_v` / `vos_closed_loop_v` / `xcheck_pass`) is the harness's
+cross-check; since issue #504 it is the sibling request
+`offset_cl.request.json` -- a request declares one analysis and this method
+needs the `Lbreak` topology, so it cannot ride inside the null request. Its
+gain is still taken from a *different* bench's AC record: per corner, the
+**selected** same-DUT `sim/open-loop-ac/` record's `av0_db`
+(`run.sh`'s `AV0_RECORD_CSV`, default `20261015-103057-895d555`), read with
+`offset_post.read_av0_csv`'s corner-binding rules (a row whose
+corner/temp_c/vdd_v columns do not spell its point_id is refused). The
+harness record itself joined the then-latest (inn AC-floating) open-loop
+record; the grounded-inn correction moves `vos_cl` by at most ~3e-3
+relative, covered by the comparison tolerance below.
 
 ### Encoding
 
@@ -314,6 +329,12 @@ expressed here.
 Basis in `klt/compare.py` (`TOLERANCES`). DR-0005 measured 9.9e-4 relative
 between the harness host (macOS/aarch64 ngspice-46) and Linux/x86_64; the
 tolerance for `Vos` is 1 uV + 1e-4 relative, ten times below that figure.
+The closed-loop columns add: `vout_cl_v` is a plain DC node (1e-4 relative +
+50 uV, the DC-node basis); `vos_closed_loop_v` and `vos_method_delta_v`
+additionally carry the documented Av0 JOIN SOURCE swap (floating then,
+grounded now; at most 1.785 dB across the grid, i.e. <= 2.9e-3 relative on
+the referral factor `(1+Av)/Av`), covered by 5e-3 relative and 1e-4 absolute
+respectively -- the full derivation is in the tolerance table's comment.
 
 ### Result (2026-10-15)
 
@@ -361,6 +382,40 @@ Two encoding fixes were found on 4-corner batch probes before the real run
 (the local gain is an `expr` over the sweep instead), and `sum()`/`vecsum()`
 do not reduce to a scalar in ngspice (the crossing count is
 `mean(...)*7500`). Probe envelopes were not committed.
+
+### Result (2026-11-24, both methods)
+
+`klt/records/20261124-235819-4314768.sim.json` (null, batch job
+`klt-sim-49dd4cb7cdbc`) and `.cl.sim.json` (closed-loop, batch job
+`klt-sim-b835f0793166`), both klt 0.9.3 on the fleet, runner ngspice-47
+(>= the `sim/pdk.json` toolchain floor `ngspice_min_major: 46`, the fleet
+policy `sim/tools/env_identity.py` defines). 45 unique points each, nothing
+skipped, no errored, inconclusive or diagnostic-carrying corner. The null
+envelope's status is **fail** -- the same single ratified-bound miss as
+2026-10-15 (a miss is a result, not a gate failure); the closed-loop
+envelope passes (no limits).
+
+- **Ratified row**: binding corner `mos_fs`, 125 C, 1.08 V at
+  **+21.9273527 mV** -- the harness record's own figure to all nine printed
+  digits (a ngspice-47 Linux fleet run reproducing a ngspice-46 macOS
+  harness solve).
+- **Validity flags** (`records/20261124-235819-4314768.csv`, derived by
+  `offset_post.py`): `op_pass = 1` and `xcheck_pass = 1` at all 45 points;
+  worst two-method disagreement 0.318 mV at the binding corner, inside its
+  max(200 uV, 5% |Vos|) = 1.097 mV tolerance.
+- **Comparison with the harness record**
+  (`klt/records/...235819-4314768.compare.json`): 45 points, status
+  `agree`, 0 comparisons out of tolerance (including `vout_cl_v`,
+  `vos_closed_loop_v`, `vos_method_delta_v`), no bound-verdict
+  disagreement, and both flag columns agree per corner.
+
+The derived record `records/20261124-235819-4314768.csv` (+ `.md`,
+`netlist-snapshots/20261124-235819-4314768/opamp_core.spice`) is the
+batch-evidence form the characterization report can select in place of the
+harness CSV (`offset_klt_raw` + `offset_klt_audit`, issue #504): DUT
+identity, requests, bench bodies, simulator version and artifact hashes
+pinned. The harness CSV stays what it always was -- a same-DUT regression
+control for the compare join, not a gate for a new DUT.
 
 ## Monte Carlo mismatch campaign (issue #17)
 

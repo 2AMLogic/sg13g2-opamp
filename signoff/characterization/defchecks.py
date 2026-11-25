@@ -20,7 +20,7 @@ import math
 from decimal import Decimal
 
 from common import SLEW_KLT_LIMITS, parse_decimal
-from paths import mc_samples, noise_post, op_sanity, slew_post, swing_post
+from paths import mc_samples, noise_post, offset_post, op_sanity, slew_post, swing_post
 
 # --------------------------------------------------------------------------
 # definition checks: per-point identities a record's derived column must obey
@@ -536,6 +536,52 @@ def _check_open_loop_klt(point: dict, pop: dict | None) -> str | None:
 # Each entry: (check(point, draws), needs a validated draws population). A
 # draws check runs only where that population loaded cleanly; its load reports
 # its own problems (point, line, reason) as record errors.
+def _check_offset_klt(point: dict, pop: dict | None) -> str | None:
+    """The input-offset batch record's cells must follow from the pinned
+    envelopes and the Av0 join (OFFSET_KLT_AUDIT_RULE): every derived cell is
+    recomputed by the shared offset_post module -- the same derivation
+    sim/input-offset/klt/run.sh mints the record with -- and compared as the
+    bench serializes it (printf %.9g; `nan` where undefined; flags 0/1)."""
+    if pop is None:
+        return "cannot evaluate (no raw offset-klt population available)"
+    pid = (point.get("point_id") or "").strip()
+    raw = pop["points"].get(pid)
+    if raw is None:
+        return "cannot evaluate (no pinned raw values for this point)"
+    d = offset_post.derive_point(raw["null"], raw["vout_cl_v"], raw["vdd"], raw["av0_db"])
+    n = raw["null"]
+    recompute = {
+        "vcm_v": d["vcm_v"],
+        "vos_null_v": n["vos_null_v"],
+        "vos_abs_v": d["vos_abs_v"],
+        "gain_local_db": d["gain_local_db"],
+        "vout_null_dc_v": n["vout_null_dc_v"],
+        "vd1_dc_v": n["vd1_dc_v"],
+        "vd2_dc_v": n["vd2_dc_v"],
+        "vtail_dc_v": n["vtail_dc_v"],
+        "vibias_dc_v": n["vibias_dc_v"],
+        "av0_db_av_record": raw["av0_db"],
+        "vout_cl_v": raw["vout_cl_v"],
+        "vout_cl_err_v": d["vout_cl_err_v"],
+        "vos_closed_loop_v": d["vos_closed_loop_v"],
+        "vos_method_delta_v": d["vos_method_delta_v"],
+    }
+    where = f"(null + cl envelopes of point {pid})"
+    problems = []
+    for field, value in recompute.items():
+        problem = _cell_problem(field, point.get(field), offset_post.serialize(value), "pinned envelopes", 9)
+        if problem:
+            problems.append(f"{problem} {where}")
+    for field, derived in (("op_pass", d["op_pass"]), ("xcheck_pass", d["xcheck_pass"])):
+        cell = (point.get(field) or "").strip()
+        if cell != str(int(derived)):
+            why = "; ".join(d["op_reasons"]) if field == "op_pass" else (d["xcheck_why"] or "the pinned envelopes disagree")
+            problems.append(
+                f"{field} {cell!r} but the pinned envelopes derive {int(derived)} ({why}) {where}"
+            )
+    return "; ".join(problems) or None
+
+
 DEFINITION_CHECKS = {
     "cmrr_linear_3sigma": (_check_cmrr_linear, False),
     "cmrr_mc_statistics": (_check_cmrr_mc_statistics, "samples"),
@@ -547,4 +593,5 @@ DEFINITION_CHECKS = {
     "offset_magnitude": (_check_offset_magnitude, False),
     "offset_mc_statistics": (_check_offset_mc_statistics, "draws"),
     "open_loop_klt_audit": (_check_open_loop_klt, "klt"),
+    "offset_klt_audit": (_check_offset_klt, "offset_klt"),
 }
