@@ -32,6 +32,7 @@ NOISE_PIN_KINDS = ("log", "spectrum")
 SLEW_PIN_KINDS = ("tran", "netlist")
 SWING_PIN_KINDS = ("coarse_csv", "coarse_netlist", "fine_csv", "fine_netlist")
 KLT_RAW_KINDS = ("ac", "op", "measurement", "ac_request", "op_request", "bench_body")
+KLT_RAW_REQUIRED_KINDS = ("ac", "op", "ac_request", "op_request", "bench_body")
 
 
 # --------------------------------------------------------------------------
