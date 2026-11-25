@@ -37,6 +37,20 @@ from common import (
 from defchecks import DEFINITION_CHECKS
 from paths import noise_post, slew_post, swing_post
 
+# population key -> the definition check that audits it. A record that pins a
+# population must run its audit (raw evidence is never pinned and then
+# ignored); the reverse direction is the `need` tag in DEFINITION_CHECKS.
+POPULATION_AUDITS = {
+    "slew_raw": "slew_raw_audit",
+    "noise_raw": "noise_raw_audit",
+    "swing_raw": "swing_raw_audit",
+    "mc_samples": "cmrr_mc_statistics",
+    "draws_csv": "offset_mc_statistics",
+    "slew_klt": "slew_klt_audit",
+    "klt_raw": "open_loop_klt_audit",
+    "offset_klt_raw": "offset_klt_audit",
+}
+
 def load_selection(path: Path) -> dict:
     try:
         selection = json.loads(path.read_text(encoding="utf-8"), object_pairs_hook=_no_duplicate_keys)
@@ -111,24 +125,15 @@ def load_selection(path: Path) -> dict:
             _validate_swing_raw_selection(key, rec["swing_raw"])
         if "slew_klt" in rec:
             _validate_slew_klt_selection(key, rec["slew_klt"])
-            if "slew_klt_audit" not in rec.get("definition_checks", []):
-                raise SelectionError(
-                    f"selection: record {key}: `slew_klt` is named, so the definition check "
-                    "'slew_klt_audit' must run (raw evidence is never pinned and then ignored)"
-                )
         if "klt_raw" in rec:
             _validate_klt_raw_selection(key, rec["klt_raw"], selection["records"])
-            if "open_loop_klt_audit" not in rec.get("definition_checks", []):
-                raise SelectionError(
-                    f"selection: record {key}: `klt_raw` is named, so the definition check "
-                    "'open_loop_klt_audit' must run (raw evidence is never pinned and then ignored)"
-                )
         if "offset_klt_raw" in rec:
             _validate_offset_klt_raw_selection(key, rec["offset_klt_raw"], selection["records"])
-            if "offset_klt_audit" not in rec.get("definition_checks", []):
+        for population, audit in POPULATION_AUDITS.items():
+            if population in rec and audit not in rec.get("definition_checks", []):
                 raise SelectionError(
-                    f"selection: record {key}: `offset_klt_raw` is named, so the definition check "
-                    "'offset_klt_audit' must run (raw evidence is never pinned and then ignored)"
+                    f"selection: record {key}: `{population}` is named, so the definition check "
+                    f"{audit!r} must run (raw evidence is never pinned and then ignored)"
                 )
         for name in rec.get("definition_checks", []):
             if name not in DEFINITION_CHECKS:
