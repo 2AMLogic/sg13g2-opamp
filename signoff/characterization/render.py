@@ -202,7 +202,11 @@ def render_markdown(report: dict) -> str:
         if klt:
             cell = f"{klt['points']} pinned klt-sim corners (`{_short(klt['pins_sha256'])}`, {klt['status']}"
             if klt["status"] == "verified":
-                cell += f": batch jobs {klt['jobs']['ac']} / {klt['jobs']['op']}; DC continuity via `{klt['dc_continuity']}`"
+                cell += f": batch jobs {klt['jobs']['ac']} / {klt['jobs']['op']}"
+                if klt.get("dc_continuity"):
+                    cell += f"; DC continuity via `{klt['dc_continuity']}`"
+                elif klt.get("schematic_op"):
+                    cell += "; schematic OP verified"
             return cell + ")"
         swing = src.get("swing_raw")
         if swing:

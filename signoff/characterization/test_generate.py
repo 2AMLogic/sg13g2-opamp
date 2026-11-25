@@ -1783,10 +1783,17 @@ class KltRawAudit(RawAuditCase):
             self.fx.build()
 
     def test_every_artifact_must_be_pinned(self):
-        for kind in generate.KLT_RAW_KINDS:
-            with self.subTest(kind=kind):
+        for kind in generate.KLT_RAW_REQUIRED_KINDS:
+            with self.subTest(missing=kind):
                 self.fresh()
                 del self.raw()["files"][kind]
+                self.fx.save_selection()
+                with self.assertRaises(generate.SelectionError):
+                    self.fx.build()
+        for kind in generate.KLT_RAW_KINDS:
+            with self.subTest(unpinned=kind):
+                self.fresh()
+                del self.raw()["files"][kind]["sha256"]
                 self.fx.save_selection()
                 with self.assertRaises(generate.SelectionError):
                     self.fx.build()
@@ -1848,13 +1855,39 @@ class KltRawAudit(RawAuditCase):
         self.edit_json("op", lambda d: d["environment"].update(engine_version="45"))
         self.assert_error("disagree on the engine")
 
-    def test_ngspice_must_match_the_pdk_pin(self):
-        def to45(d):
-            d["environment"]["engine_version"] = "45"
-            d["environment"]["remote"]["worker_environment"]["simulator"]["version_banner"] = "ngspice-45"
-        self.edit_json("ac", to45)
-        self.edit_json("op", to45)
-        self.assert_error("sim/pdk.json pins")
+    def test_ngspice_must_satisfy_the_pdk_policy(self):
+        def set_ver(ver):
+            def mut(d):
+                d["environment"]["engine_version"] = str(ver)
+                d["environment"]["remote"]["worker_environment"]["simulator"]["version_banner"] = f"ngspice-{ver}"
+            return mut
+
+        self.edit_json("ac", set_ver(45))
+        self.edit_json("op", set_ver(45))
+        self.assert_error("ngspice-45", "floor ngspice-46")
+
+        for ok in (46, 47):
+            with self.subTest(ok=ok):
+                self.fresh()
+                self.edit_json("ac", set_ver(ok))
+                self.edit_json("op", set_ver(ok))
+                content = self.fx.build()
+                self.assertEqual(self.errors(content), [])
+                self.assertEqual(content["sources"][self.RECORD]["ngspice"], f"ngspice-{ok}")
+                md = generate.render_markdown(generate.make_report(content, None, self.fx.root))
+                self.assertIn(f"| {self.RECORD} |", md)
+                self.assertIn(f"| ngspice-{ok} |", md)
+
+        # Fallback when ngspice_min_major is absent: exact match against ngspice_actually_used.
+        self.fresh()
+        pdk_path = self.fx.root / self.fx.selection["pdk_pin"]
+        pdk = json.loads(pdk_path.read_text(encoding="utf-8"))
+        del pdk["osdi_toolchain"]["ngspice_min_major"]
+        pdk_path.write_text(json.dumps(pdk), encoding="utf-8")
+        self.assertEqual(self.errors(self.fx.build()), [])
+        self.edit_json("ac", set_ver(47))
+        self.edit_json("op", set_ver(47))
+        self.assert_error("ngspice-47", "expected 'ngspice-46'")
 
     def test_wrong_model_deck_is_rejected(self):
         self.edit_json("ac", lambda d: d["environment"].update(models_lib_sha256="0" * 64))
@@ -2679,6 +2712,467 @@ class SwingRawAudit(PointRawPinControlMixin, RawAuditCase):
                               "coarse", str(bad), "0.6"], capture_output=True, text=True)
         self.assertEqual((res.returncode, res.stdout), (1, ""))
         self.assertIn("non-finite", res.stderr)
+
+
+class SchematicOpenLoopAndVersionPolicy(RawAuditCase):
+    """Issue #500: schematic open-loop OP evidence derives directly from pinned
+    AC/OP requests, bench, envelopes and matching DUT across all 45 corners
+    (without floating-inn CSV), and simulator version policy reuses
+    sim/tools/env_identity.py across both admission paths with run-internal
+    agreement checks."""
+
+    RECORD = "open-loop-ac"
+    POINT = "mos_tt_27C_1.20V"
+    KEEP_AUDIT = "keep_klt_audit"
+    RAW_KEY = "klt_raw"
+
+    SCHEMATIC_AC_SIM = "sim/open-loop-ac/klt/records/20261016-161057-8caa272.ac.sim.json"
+    SCHEMATIC_OP_SIM = "sim/open-loop-ac/klt/records/20261016-161057-8caa272.op.sim.json"
+    SCHEMATIC_AC_REQ = "sim/open-loop-ac/klt/openloop_ac.request.json"
+    SCHEMATIC_OP_REQ = "sim/open-loop-ac/klt/openloop_op.request.json"
+    SCHEMATIC_BODY = "sim/open-loop-ac/klt/tb_openloop_ac.body.spice"
+
+    def install_schematic_run(self, rid: str = "20261125-000000-abcdef0", engine_version: str = "47",
+                              include_measurement: bool = False, dc_continuity: str | None = None,
+                              dut_transform=None) -> dict:
+        """Stage a schematic-OP open-loop record in self.fx.root with no
+        dependency on open-loop-ac-floating-inn unless dc_continuity is set."""
+        import importlib.util
+
+        spec = importlib.util.spec_from_file_location(
+            "summarize_klt", REPO / "sim" / "open-loop-ac" / "summarize_klt.py"
+        )
+        summarize_klt = importlib.util.module_from_spec(spec)
+        assert spec.loader is not None
+        spec.loader.exec_module(summarize_klt)
+
+        snap_rel = f"sim/open-loop-ac/netlist-snapshots/{rid}/opamp_core.spice"
+        cdir_rel = f"sim/open-loop-ac/corners/{rid}"
+        csv_rel = f"sim/open-loop-ac/records/{rid}.csv"
+        md_rel = f"sim/open-loop-ac/records/{rid}.md"
+
+        snap = self.fx.root / snap_rel
+        snap.parent.mkdir(parents=True, exist_ok=True)
+        dut_text = (self.fx.root / self.fx.selection["design_netlist"]).read_text(encoding="utf-8")
+        if dut_transform is not None:
+            dut_text = dut_transform(dut_text)
+            (self.fx.root / self.fx.selection["design_netlist"]).write_text(dut_text, encoding="utf-8")
+        snap.write_text(dut_text, encoding="utf-8")
+
+        cdir = self.fx.root / cdir_rel
+        cdir.mkdir(parents=True, exist_ok=True)
+        for src_rel, dst_name in (
+            (self.SCHEMATIC_AC_REQ, "openloop_ac.request.json"),
+            (self.SCHEMATIC_OP_REQ, "openloop_op.request.json"),
+        ):
+            req = json.loads((REPO / src_rel).read_text(encoding="utf-8"))
+            req.pop("_comment", None)
+            req["netlist"] = "tb_openloop_ac.body.spice"
+            (cdir / dst_name).write_text(json.dumps(req, indent=2) + "\n", encoding="utf-8")
+
+        body_rel = f"{cdir_rel}/tb_openloop_ac.body.spice"
+        body_text = (REPO / self.SCHEMATIC_BODY).read_text(encoding="utf-8").replace(
+            ".include ../../../design/netlist/opamp_core.spice",
+            f'.include "../../netlist-snapshots/{rid}/opamp_core.spice"',
+        )
+        body_path = self.fx.root / body_rel
+        body_path.write_text(body_text, encoding="utf-8")
+        body_sha = generate.sha256_file(body_path).split(":", 1)[1]
+        snap_sha = generate.sha256_file(snap).split(":", 1)[1]
+
+        for kind, src_rel in (("ac", self.SCHEMATIC_AC_SIM), ("op", self.SCHEMATIC_OP_SIM)):
+            env = json.loads((REPO / src_rel).read_text(encoding="utf-8"))
+            env["netlist"] = {"path": body_rel, "scope": "repo"}
+            env["environment"]["engine_version"] = str(engine_version)
+            env["environment"]["remote"]["worker_environment"]["simulator"]["version_banner"] = (
+                f"******\n** ngspice-{engine_version} : Circuit level simulation program\n******\n"
+            )
+            env["environment"]["netlist_sha256"] = body_sha
+            env["environment"]["netlist_closure"] = [
+                {"path": body_rel, "scope": "repo", "sha256": body_sha},
+                {"path": snap_rel, "scope": "repo", "sha256": snap_sha},
+            ]
+            (cdir / f"{kind}.envelope.json").write_text(json.dumps(env, indent=2) + "\n", encoding="utf-8")
+
+        out_csv = self.fx.root / csv_rel
+        out_md = self.fx.root / md_rel
+        summarize_klt.main(rid, str(cdir), None, str(out_csv), str(out_md))
+
+        inv_path = self.fx.root / self.fx.selection["inventory"]
+        inv_path.write_text(
+            inv_path.read_text(encoding="utf-8").replace(
+                "sim/open-loop-ac/records/20261015-103057-895d555.csv", csv_rel
+            ),
+            encoding="utf-8",
+        )
+
+        files = {
+            "ac": {"path": f"{cdir_rel}/ac.envelope.json", "sha256": generate.sha256_file(cdir / "ac.envelope.json")},
+            "op": {"path": f"{cdir_rel}/op.envelope.json", "sha256": generate.sha256_file(cdir / "op.envelope.json")},
+            "ac_request": {"path": f"{cdir_rel}/openloop_ac.request.json", "sha256": generate.sha256_file(cdir / "openloop_ac.request.json")},
+            "op_request": {"path": f"{cdir_rel}/openloop_op.request.json", "sha256": generate.sha256_file(cdir / "openloop_op.request.json")},
+            "bench_body": {"path": body_rel, "sha256": generate.sha256_file(body_path)},
+        }
+        if include_measurement:
+            mpath = cdir / "measurement.json"
+            files["measurement"] = {"path": f"{cdir_rel}/measurement.json", "sha256": generate.sha256_file(mpath)}
+        klt_raw: dict = {"files": files}
+        if dc_continuity is not None:
+            klt_raw["dc_continuity"] = dc_continuity
+
+        rec = self.fx.selection["records"][self.RECORD]
+        rec.update({
+            "csv": csv_rel,
+            "csv_sha256": generate.sha256_file(out_csv),
+            "md": md_rel,
+            "md_sha256": generate.sha256_file(out_md),
+            "netlist_snapshot": snap_rel,
+            "klt_raw": klt_raw,
+        })
+        self.fx.save_selection()
+        return {"rid": rid, "cdir": cdir, "csv": out_csv, "md": out_md, "snap": snap}
+
+    def edit_klt_json(self, kind: str, mutate, repin: bool = True) -> None:
+        pin = self.raw()["files"][kind]
+        path = self.fx.root / pin["path"]
+        doc = json.loads(path.read_text(encoding="utf-8"))
+        mutate(doc)
+        path.write_text(json.dumps(doc), encoding="utf-8")
+        if repin:
+            pin["sha256"] = generate.sha256_file(path)
+            self.fx.save_selection()
+
+    def corner(self, doc: dict, pid: str | None = None) -> dict:
+        pid = pid or self.POINT
+        for c in doc["corners"]:
+            if f"{c['process']}_{int(c['temperature_c'])}C_{float(c['supply_v']['vdd']):.2f}V" == pid:
+                return c
+        raise KeyError(pid)
+
+    def set_value(self, doc: dict, name: str, value, status: str | None = None, pid: str | None = None) -> None:
+        for m in self.corner(doc, pid)["measurements"]:
+            if m["name"] == name:
+                m["value"] = value
+                if status is not None:
+                    m["status"] = status
+
+    def make_sidecar(self, record_id: str, ngspice: str) -> dict:
+        sys.path.insert(0, str(REPO / "sim" / "tools"))
+        import env_identity
+        import test_env_identity
+
+        with tempfile.TemporaryDirectory() as pdk_tmp:
+            test_env_identity.make_install(Path(pdk_tmp))
+            pin = json.loads((self.fx.root / self.fx.selection["pdk_pin"]).read_text(encoding="utf-8"))
+            return env_identity.capture(Path(pdk_tmp), "ihp-sg13g2", pin, record_id, ngspice)
+
+    def attach_sidecar(self, key: str, sidecar: dict) -> None:
+        rec = self.fx.selection["records"][key]
+        side_rel = str(Path(rec["csv"]).with_suffix(".env.json"))
+        path = self.fx.root / side_rel
+        path.write_text(json.dumps(sidecar), encoding="utf-8")
+        rec["env_sidecar"] = side_rel
+        rec["env_sidecar_sha256"] = generate.sha256_file(path)
+        self.fx.save_selection()
+
+    def test_schematic_op_verifies_46_and_47_without_floating_inn_csv(self):
+        for ver in ("46", "47"):
+            with self.subTest(ver=ver):
+                self.fresh()
+                self.install_schematic_run(engine_version=ver)
+                # Delete the floating-inn CSV bytes unless cmrr-mismatch reads them:
+                # verify open-loop-ac itself has zero dependency on floating-inn by
+                # loading open-loop-ac directly when floating-inn is absent from records.
+                from records import load_record
+                pdk = json.loads((self.fx.root / self.fx.selection["pdk_pin"]).read_text(encoding="utf-8"))
+                env = {
+                    "ngspice": pdk["osdi_toolchain"]["ngspice_actually_used"],
+                    "pdk": f"{pdk['source']} {pdk['release_tag']}",
+                    "pin": pdk,
+                    "netlist_normalized_sha256": generate.normalized_netlist_hash(
+                        self.fx.root / self.fx.selection["design_netlist"]
+                    ),
+                }
+                only_openloop = {self.RECORD: self.fx.selection["records"][self.RECORD]}
+                state = load_record(
+                    self.fx.root, self.RECORD, only_openloop[self.RECORD],
+                    self.fx.selection["grids"]["pvt45"], env, only_openloop
+                )
+                self.assertEqual(state["errors"], [])
+                self.assertEqual(state["valid_ids"].__len__(), 45)
+                self.assertEqual(state["source"]["ngspice"], f"ngspice-{ver}")
+
+                # Full report also builds cleanly while cmrr-mismatch keeps its av0_join provenance.
+                content = self.fx.build()
+                self.assertEqual(self.errors(content), [])
+                self.assertEqual(content["sources"][self.RECORD]["ngspice"], f"ngspice-{ver}")
+                self.assertEqual(content["sources"]["cmrr-mismatch"]["samples"]["av0_join"], "open-loop-ac-floating-inn")
+                rows = rows_by_id(content)
+                for rid in ("dc_gain", "gbw", "phase_margin", "quiescent_current"):
+                    self.assertEqual(rows[rid]["verdict"], "PASS", rid)
+
+    def test_markdown_admission_path_accepts_46_and_47_and_rejects_below_floor_and_floor_absent_mismatch(self):
+        rec = self.fx.selection["records"]["input-noise"]
+        md = self.fx.root / rec["md"]
+        orig = md.read_text(encoding="utf-8")
+
+        for ver in ("ngspice-46", "ngspice-47"):
+            md.write_text(orig.replace("ngspice-46", ver), encoding="utf-8")
+            rec["md_sha256"] = generate.sha256_file(md)
+            self.fx.save_selection()
+            content = self.fx.build()
+            self.assertEqual(self.errors(content), [])
+            self.assertEqual(content["sources"]["input-noise"]["ngspice"], ver)
+
+        md.write_text(orig.replace("ngspice-46", "ngspice-45"), encoding="utf-8")
+        rec["md_sha256"] = generate.sha256_file(md)
+        self.fx.save_selection()
+        self.assert_error("input-noise", "ngspice-45", "floor ngspice-46")
+
+        # Floor absent -> exact match against ngspice_actually_used (ngspice-46).
+        pdk_path = self.fx.root / self.fx.selection["pdk_pin"]
+        pdk = json.loads(pdk_path.read_text(encoding="utf-8"))
+        del pdk["osdi_toolchain"]["ngspice_min_major"]
+        pdk_path.write_text(json.dumps(pdk), encoding="utf-8")
+        md.write_text(orig.replace("ngspice-46", "ngspice-47"), encoding="utf-8")
+        rec["md_sha256"] = generate.sha256_file(md)
+        self.fx.save_selection()
+        self.assert_error("input-noise", "ngspice-47", "expected 'ngspice-46'")
+
+    def test_conflicting_versions_within_one_run_are_rejected(self):
+        # (a) summary md (46) vs sidecar (47) on a harness record
+        rec = self.fx.selection["records"]["input-noise"]
+        rid = Path(rec["csv"]).stem
+        self.attach_sidecar("input-noise", self.make_sidecar(rid, "ngspice-47"))
+        self.assert_error("input-noise", "ngspice-46", "ngspice-47")
+
+        # (b) summary md (46) vs klt envelopes (47)
+        self.fresh()
+        info = self.install_schematic_run(engine_version="47")
+        info["md"].write_text(
+            info["md"].read_text(encoding="utf-8").replace("ngspice-47", "ngspice-46"), encoding="utf-8"
+        )
+        self.fx.selection["records"][self.RECORD]["md_sha256"] = generate.sha256_file(info["md"])
+        self.fx.save_selection()
+        self.assert_error("ngspice-46", "ngspice-47")
+
+        # (c) sidecar (46) vs klt envelopes (47) when md omits version
+        self.fresh()
+        info = self.install_schematic_run(engine_version="47")
+        info["md"].write_text(
+            info["md"].read_text(encoding="utf-8").replace("ngspice-47", "batch-fleet"), encoding="utf-8"
+        )
+        self.fx.selection["records"][self.RECORD]["md_sha256"] = generate.sha256_file(info["md"])
+        self.attach_sidecar(self.RECORD, self.make_sidecar(info["rid"], "ngspice-46"))
+        self.assert_error("sidecar", "ngspice-46", "ngspice-47")
+
+        # (d) envelope engine_version (47) vs worker banner (ngspice-46)
+        self.fresh()
+        self.install_schematic_run(engine_version="47")
+        self.edit_klt_json(
+            "op",
+            lambda d: d["environment"]["remote"]["worker_environment"]["simulator"].update(
+                version_banner="******\n** ngspice-46 : Circuit level simulation program\n******\n"
+            ),
+        )
+        self.assert_error("worker banner does not name ngspice-47")
+
+        # (e) sidecar + md + envelopes all agreeing on 47 passes
+        self.fresh()
+        info = self.install_schematic_run(engine_version="47")
+        self.attach_sidecar(self.RECORD, self.make_sidecar(info["rid"], "ngspice-47"))
+        content = self.fx.build()
+        self.assertEqual(self.errors(content), [])
+        self.assertEqual(content["sources"][self.RECORD]["ngspice"], "ngspice-47")
+        self.assertEqual(content["sources"][self.RECORD]["pdk_provenance"]["status"], "verified")
+
+    def test_slew_klt_and_klt_raw_envelopes_must_agree_on_version(self):
+        """Issue #511 merge control: a record pinning BOTH slew_klt (envelope 46)
+        and klt_raw (envelopes 47) whose summary md names no version must be
+        rejected -- the klt_raw block may not silently overwrite the version the
+        slew block established in src["ngspice"]."""
+        info = self.install_schematic_run(engine_version="47")
+        info["md"].write_text(
+            info["md"].read_text(encoding="utf-8").replace("ngspice-47", "batch-fleet"), encoding="utf-8"
+        )
+        rec = self.fx.selection["records"][self.RECORD]
+        rec["md_sha256"] = generate.sha256_file(info["md"])
+        pins = {}
+        for kind, rel in SlewKltAudit.FILES.items():
+            dst = self.fx.root / rel
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(REPO / rel, dst)
+            pins[kind] = {"path": rel, "sha256": generate.sha256_file(dst)}
+        rec["slew_klt"] = {"files": pins}
+        rec["definition_checks"] = [*rec.get("definition_checks", []), "slew_klt_audit"]
+        self.fx.save_selection()
+        errors = self.assert_error("but the pinned envelopes ran ngspice-47")
+        self.assertTrue(any("names ngspice-46" in e for e in errors), errors)
+
+    def test_port_only_op_without_dc_continuity_is_rejected(self):
+        del self.raw()["dc_continuity"]
+        self.fx.save_selection()
+        self.assert_error("vd1_dc_v")
+
+    def test_bad_internal_node_op_is_rejected(self):
+        for node, frac_name, bad_v in (
+            ("vd1_dc_v", "op_vd1_rail_frac", 0.01),
+            ("vd2_dc_v", "op_vd2_rail_frac", 1.19),
+            ("vtail_dc_v", "op_vtail_rail_frac", 0.005),
+        ):
+            with self.subTest(node=node):
+                self.fresh()
+                self.install_schematic_run(engine_version="47")
+                self.fx.set_cell(self.RECORD, self.POINT, node, f"{bad_v:.6g}")
+
+                def rail_internal(d, n=node, fn=frac_name, v=bad_v):
+                    self.set_value(d, n, v)
+                    self.set_value(d, fn, v / 1.2, status="fail")
+                    self.corner(d)["status"] = "fail"
+                    d.update(status="fail", passed=44, failed=1)
+
+                self.edit_klt_json("op", rail_internal)
+                errors = self.assert_error(f"point {self.POINT} fails definition check open_loop_klt_audit")
+                self.assertTrue(any("operating point" in e for e in errors), errors)
+
+    def test_tampered_internal_node_cell_or_fraction_is_rejected(self):
+        self.install_schematic_run(engine_version="47")
+        self.fx.set_cell(self.RECORD, self.POINT, "vibias_dc_v", "0.5")
+        self.assert_error(f"point {self.POINT} fails definition check open_loop_klt_audit", "vibias_dc_v")
+
+        self.fresh()
+        self.install_schematic_run(engine_version="47")
+        self.edit_klt_json("op", lambda d: self.set_value(d, "op_vd1_rail_frac", 0.5))
+        self.assert_error("op_vd1_rail_frac")
+
+    def test_osdi_mismatch_between_envelopes_is_rejected(self):
+        self.install_schematic_run(engine_version="47")
+        self.edit_klt_json("op", lambda d: d["environment"]["osdi_preload"][0].update(sha256="0" * 64))
+        self.assert_error("OSDI")
+
+        # Runner-resolved OSDI preload (klt >= 0.9 batch schema) and engine_build banner:
+        self.fresh()
+        self.install_schematic_run(engine_version="47")
+
+        def to_runner_osdi(d):
+            orig = d["environment"].pop("osdi_preload")
+            d["environment"]["osdi_preload_runner_resolved"] = [
+                {"entry": f"$PDK_ROOT/ihp-sg13g2/libs.tech/ngspice/osdi/{x['name']}", "index": i, "reason": "env_var", "sha256": x["sha256"]}
+                for i, x in enumerate(orig)
+            ]
+            d["environment"]["engine_build"] = {"version_banner": "** ngspice-47 : Circuit level simulation program"}
+
+        self.edit_klt_json("ac", to_runner_osdi)
+        self.edit_klt_json("op", to_runner_osdi)
+        self.assertEqual(self.errors(self.fx.build()), [])
+
+        self.edit_klt_json("op", lambda d: d["environment"]["engine_build"].update(version_banner="** ngspice-46 : mismatch"))
+        self.assert_error("engine_build banner does not name ngspice-47")
+
+    def test_changed_design_requires_new_run_and_rejects_stale_dut_or_stale_continuity(self):
+        # 1. Changed design netlist with stale open-loop snapshot/envelopes -> rejected.
+        self.install_schematic_run(engine_version="47")
+        design = self.fx.root / self.fx.selection["design_netlist"]
+        design.write_text(design.read_text(encoding="utf-8") + "\nRdummy vdd vss 1e9\n", encoding="utf-8")
+        self.assert_error("open-loop-ac", "not the committed design netlist")
+
+        # 2. Updated snapshot for changed design, but stale OP envelope closure -> rejected.
+        self.fresh()
+        info = self.install_schematic_run(engine_version="47")
+        for p in (self.fx.root / self.fx.selection["design_netlist"], info["snap"]):
+            p.write_text(p.read_text(encoding="utf-8") + "\nRdummy vdd vss 1e9\n", encoding="utf-8")
+        self.assert_error("is not the selected netlist snapshot")
+
+        # 3. Changed design with fresh schematic run for open-loop-ac, but dc_continuity
+        #    pointing at an older circuit's record -> rejected.
+        self.fresh()
+        self.install_schematic_run(
+            engine_version="47",
+            dc_continuity="open-loop-ac-floating-inn",
+            dut_transform=lambda t: t + "\nRdummy vdd vss 1e9\n",
+        )
+        self.assert_error("dc_continuity record open-loop-ac-floating-inn", "same circuit")
+
+        # 4. Changed design with its own fresh schematic-OP run (no older dc_continuity):
+        #    open-loop-ac derives its OP verdict and graded rows from the new run alone.
+        self.fresh()
+        self.install_schematic_run(
+            engine_version="47",
+            dut_transform=lambda t: t + "\nRdummy vdd vss 1e9\n",
+        )
+        from records import load_record
+        pdk = json.loads((self.fx.root / self.fx.selection["pdk_pin"]).read_text(encoding="utf-8"))
+        env = {
+            "ngspice": pdk["osdi_toolchain"]["ngspice_actually_used"],
+            "pdk": f"{pdk['source']} {pdk['release_tag']}",
+            "pin": pdk,
+            "netlist_normalized_sha256": generate.normalized_netlist_hash(
+                self.fx.root / self.fx.selection["design_netlist"]
+            ),
+        }
+        only_openloop = {self.RECORD: self.fx.selection["records"][self.RECORD]}
+        state = load_record(
+            self.fx.root, self.RECORD, only_openloop[self.RECORD],
+            self.fx.selection["grids"]["pvt45"], env, only_openloop
+        )
+        self.assertEqual(state["errors"], [])
+        self.assertEqual(len(state["valid_ids"]), 45)
+
+    def test_two_configuration_continuity_comparison_is_preserved_at_10uv_and_10na(self):
+        # Note: 20261016-161057-8caa272 ran on batch Linux x86_64 while
+        # 20260910-221601-22feaba ran on macOS aarch64 (~0.5 mV cross-host solver
+        # delta), so align the reference CSV's vout_dc_v / ivdd_total_a to the
+        # schematic OP envelope first, then perturb by 5 uV / 11 uV and 5 nA / 11 nA.
+        info = self.install_schematic_run(engine_version="47", dc_continuity="open-loop-ac-floating-inn")
+        op_doc = json.loads((info["cdir"] / "op.envelope.json").read_text(encoding="utf-8"))
+        op_by_pid = {
+            f"{c['process']}_{int(c['temperature_c'])}C_{float(c['supply_v']['vdd']):.2f}V": {
+                m["name"]: m["value"] for m in c["measurements"]
+            }
+            for c in op_doc["corners"]
+        }
+        header, rows = generate.read_csv_rows(self.fx.csv_path("open-loop-ac-floating-inn"))
+        for r in rows:
+            vals = op_by_pid[r["point_id"]]
+            r["vout_dc_v"] = f"{vals['vout_dc_v']:.9g}"
+            r["ivdd_total_a"] = f"{vals['ivdd_total_a']:.9g}"
+        cpath = self.fx.csv_path("open-loop-ac-floating-inn")
+        cpath.write_text(
+            ",".join(header) + "\n" + "\n".join(",".join(r[c] for c in header) for r in rows) + "\n",
+            encoding="utf-8",
+        )
+        self.fx.selection["records"]["open-loop-ac-floating-inn"]["csv_sha256"] = generate.sha256_file(cpath)
+        self.fx.save_selection()
+        self.assertEqual(self.errors(self.fx.build()), [])
+
+        base_vout = op_by_pid[self.POINT]["vout_dc_v"]
+        base_ivdd = op_by_pid[self.POINT]["ivdd_total_a"]
+        self.fx.set_cell("open-loop-ac-floating-inn", self.POINT, "vout_dc_v", f"{base_vout + 5e-6:.9g}")
+        self.fx.set_cell("open-loop-ac-floating-inn", self.POINT, "ivdd_total_a", f"{base_ivdd + 5e-9:.9g}")
+        self.assertEqual(self.errors(self.fx.build()), [])
+
+        self.fx.set_cell("open-loop-ac-floating-inn", self.POINT, "vout_dc_v", f"{base_vout + 1.1e-5:.9g}")
+        self.assert_error("Vout", "differs from the dc_continuity record")
+
+        self.fx.set_cell("open-loop-ac-floating-inn", self.POINT, "vout_dc_v", f"{base_vout:.9g}")
+        self.fx.set_cell("open-loop-ac-floating-inn", self.POINT, "ivdd_total_a", f"{base_ivdd + 1.1e-8:.9g}")
+        self.assert_error("total VDD current", "differs from the dc_continuity record")
+
+    def test_genuine_spec_limit_miss_in_envelope_grades_row_fail_not_error(self):
+        self.install_schematic_run(engine_version="47")
+        self.fx.set_cell(self.RECORD, self.POINT, "av0_db", "35")
+
+        def miss_av0(d):
+            self.set_value(d, "av0_db", 35.0, status="fail")
+            self.corner(d)["status"] = "fail"
+            d.update(status="fail", passed=44, failed=1)
+
+        self.edit_klt_json("ac", miss_av0)
+        content = self.fx.build()
+        self.assertEqual(self.errors(content), [])
+        row = rows_by_id(content)["dc_gain"]
+        self.assertEqual(row["verdict"], "FAIL")
+        self.assertEqual(row["violating_points"], [self.POINT])
 
 
 if __name__ == "__main__":
