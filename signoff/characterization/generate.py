@@ -69,7 +69,7 @@ from selection import load_selection
 # sibling that holds its own `from ... import X` binding would not see it.
 # The four names test_generate.py patches (_dt, git_head, _link_no_clobber,
 # _replace_text_atomically) and every caller of them stay in this file.
-from common import KLT_RAW_KINDS, OFFSET_KLT_RAW_KINDS  # noqa: F401
+from common import KLT_RAW_KINDS, KLT_RAW_REQUIRED_KINDS, OFFSET_KLT_RAW_KINDS  # noqa: F401
 from defchecks import (  # noqa: F401
     _cell_problem,
     _check_cmrr_linear,

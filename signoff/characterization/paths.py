@@ -25,9 +25,10 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 DEFAULT_REPO_ROOT = HERE.parent.parent
-# Shared sidecar contract/helper (issue #191); pure functions, stdlib only.
+# Shared sidecar contract/helper (issue #191) and OP sanity gate (issue #380); pure functions, stdlib only.
 sys.path.insert(0, str(DEFAULT_REPO_ROOT / "sim" / "tools"))
 import env_identity  # noqa: E402
+import op_sanity  # noqa: E402
 # Shared draws-population contract (issue #141); pure functions, stdlib only.
 sys.path.insert(0, str(DEFAULT_REPO_ROOT / "signoff" / "yield-inputs"))
 import offset_draws_to_sampleset as draws_contract  # noqa: E402

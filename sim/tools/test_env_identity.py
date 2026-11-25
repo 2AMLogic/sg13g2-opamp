@@ -163,6 +163,24 @@ class EnvIdentity(unittest.TestCase):
         self.assertEqual(self.with_ngspice("ngspice-46", pin), [])
         self.assertTrue(any("expected" in e for e in self.with_ngspice("ngspice-47", pin)))
 
+    def test_check_ngspice_version_helper_enforces_floor_and_exact_fallback(self):
+        for ok in ("ngspice-46", "ngspice-47", "ngspice-100"):
+            self.assertIsNone(ei.check_ngspice_version(ok, PIN, "ngspice-46"), ok)
+        for bad in ("ngspice-45", "ngspice-4", "garbage", "", None):
+            err = ei.check_ngspice_version(bad, PIN, "ngspice-46")
+            self.assertIsNotNone(err, bad)
+            self.assertIn("floor ngspice-46", err)
+
+        no_floor = copy.deepcopy(PIN)
+        del no_floor["osdi_toolchain"]["ngspice_min_major"]
+        self.assertIsNone(ei.check_ngspice_version("ngspice-46", no_floor))
+        err = ei.check_ngspice_version("ngspice-47", no_floor)
+        self.assertIsNotNone(err)
+        self.assertIn("expected 'ngspice-46'", err)
+        self.assertIsNone(ei.check_ngspice_version("ngspice-47", no_floor, "ngspice-47"))
+        self.assertIsNone(ei.check_ngspice_version("ngspice-46", None, "ngspice-46"))
+        self.assertIsNotNone(ei.check_ngspice_version("ngspice-47", None, "ngspice-46"))
+
     def test_cli_capture_refuses_overwrite_and_verify_roundtrips(self):
         make_install(self.tmp / "c")
         out = self.tmp / "side.env.json"

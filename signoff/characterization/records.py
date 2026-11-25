@@ -56,7 +56,25 @@ KLT_AC_MEASUREMENTS = {
     "gbw_hz": ".meas ac gbw_hz when vdb(out)=0",
     "phase_at_ugf_rad": ".meas ac phase_at_ugf_rad find vp(out) when vdb(out)=0",
 }
-KLT_OP_MEASUREMENTS = {"ivdd_total_a": "-i(vdd)", "vout_dc_v": "v(out)"}
+KLT_OP_PORT_MEASUREMENTS = {
+    "ivdd_total_a": "-i(vdd)",
+    "vout_dc_v": "v(out)",
+    "op_vcm_frac": "v(inp)/v(vdd)",
+    "op_vout_offset_frac": "abs(v(out) - v(vdd)/2)/v(vdd)",
+    "op_vout_rail_frac": "v(out)/v(vdd)",
+}
+KLT_OP_INTERNAL_MEASUREMENTS = {
+    "vd1_dc_v": "v(d1)",
+    "vd2_dc_v": "v(d2)",
+    "vtail_dc_v": "v(tail)",
+    "vibias_dc_v": "v(ibias)",
+    "op_vd1_rail_frac": "v(d1)/v(vdd)",
+    "op_vd2_rail_frac": "v(d2)/v(vdd)",
+    "op_vtail_rail_frac": "v(tail)/v(vdd)",
+}
+KLT_OP_MEASUREMENTS = KLT_OP_PORT_MEASUREMENTS
+KLT_REQUIRED_OSDI = ("psp103.osdi", "psp103_nqs.osdi", "mosvar.osdi", "r3_cmc.osdi")
+_HEX64_RE = re.compile(r"^[0-9a-f]{64}$")
 KLT_BENCH_ELEMENTS = {
     "Lbreak": r"Lbreak\s+inn\s+out\s+1e18",
     "Cinn_acgnd": r"Cinn_acgnd\s+inn\s+vss\s+1",
@@ -68,7 +86,7 @@ _KLT_CLOAD_RE = re.compile(r"^Cload\s+out\s+vss\s+(\S+)\s*$", re.IGNORECASE | re
 
 def _klt_corner_ids(env: dict, label: str, expected_ids: list, problems: list) -> dict:
     """{point_id: corner} for an envelope, refusing duplicates, missing or
-    extra points, and any corner that is not a clean pass."""
+    extra points, and any errored, inconclusive or diagnostic-bearing corner."""
     out: dict = {}
     for corner in env.get("corners") or []:
         try:
@@ -79,7 +97,7 @@ def _klt_corner_ids(env: dict, label: str, expected_ids: list, problems: list) -
         if pid in out:
             problems.append(f"{label}: duplicate corner {pid}")
         out[pid] = corner
-        if corner.get("status") != "pass" or corner.get("diagnostics"):
+        if corner.get("status") not in ("pass", "fail") or corner.get("diagnostics"):
             problems.append(f"{label}: point {pid} is not a clean pass (status {corner.get('status')!r}, {len(corner.get('diagnostics') or [])} diagnostic(s))")
     for pid in expected_ids:
         if pid not in out:
@@ -94,6 +112,44 @@ def _klt_values(corner: dict, wanted) -> dict:
     return {name: got.get(name) for name in wanted}
 
 
+def _klt_osdi_map(env: dict, label: str, problems: list) -> dict[str, str]:
+    environment = env.get("environment") or {}
+    entries = environment.get("osdi_preload")
+    runner_entries = environment.get("osdi_preload_runner_resolved")
+    raw_list = entries if isinstance(entries, list) else runner_entries if isinstance(runner_entries, list) else None
+    if raw_list is None:
+        problems.append(f"{label}: missing OSDI preload hashes (osdi_preload / osdi_preload_runner_resolved)")
+        return {}
+    by_name: dict[str, str] = {}
+    for item in raw_list:
+        if not isinstance(item, dict):
+            problems.append(f"{label}: malformed OSDI preload entry")
+            continue
+        name = item.get("name")
+        if not isinstance(name, str) and isinstance(item.get("entry"), str):
+            name = Path(item["entry"]).name
+        if not isinstance(name, str) or not name:
+            problems.append(f"{label}: malformed OSDI preload entry")
+            continue
+        sha = item.get("sha256")
+        if not isinstance(sha, str) or not _HEX64_RE.match(sha):
+            problems.append(f"{label}: OSDI binary {name!r} lacks a sha256")
+            continue
+        by_name[name] = sha
+    if isinstance(entries, list) and isinstance(runner_entries, list):
+        runner_map = {
+            Path(i["entry"]).name: i.get("sha256")
+            for i in runner_entries
+            if isinstance(i, dict) and isinstance(i.get("entry"), str)
+        }
+        if runner_map != by_name:
+            problems.append(f"{label}: osdi_preload and osdi_preload_runner_resolved disagree")
+    missing = [m for m in KLT_REQUIRED_OSDI if m not in by_name]
+    if missing:
+        problems.append(f"{label}: missing required OSDI preload model(s) {missing}")
+    return by_name
+
+
 def _load_klt_population(repo: Path, key: str, kr: dict, expected: list, snapshot_rel: str,
                          md_text: str, records: dict, errors: list) -> dict | None:
     """Pin-check and strictly cross-check the open-loop `klt sim` evidence and
@@ -103,6 +159,8 @@ def _load_klt_population(repo: Path, key: str, kr: dict, expected: list, snapsho
     expected_ids = [pid for pid, _ in expected]
     docs: dict = {}
     for kind in KLT_RAW_KINDS:
+        if kind not in kr["files"]:
+            continue
         pin = kr["files"][kind]
         path = repo / pin["path"]
         if not path.is_file():
@@ -125,6 +183,7 @@ def _load_klt_population(repo: Path, key: str, kr: dict, expected: list, snapsho
     problems: list[str] = []
     snap = repo / snapshot_rel
     snap_hash = sha256_file(snap) if snap.is_file() else None
+    snap_norm = normalized_netlist_hash(snap) if snap.is_file() else None
     body_pin = kr["files"]["bench_body"]
     envs = {}
     for kind in ("ac", "op"):
@@ -133,10 +192,7 @@ def _load_klt_population(repo: Path, key: str, kr: dict, expected: list, snapsho
         if not isinstance(env, dict):
             problems.append(f"{label}: not an object")
             continue
-        count = env.get("corner_count")
-        if env.get("status") != "pass" or count != len(expected_ids) or env.get("passed") != count:
-            problems.append(f"{label}: status {env.get('status')!r}, {env.get('passed')} of {count} passed (need all {len(expected_ids)})")
-        for field in ("failed", "errored", "inconclusive"):
+        for field in ("errored", "inconclusive"):
             if env.get(field) != 0:
                 problems.append(f"{label}: {field} = {env.get(field)!r}")
         if (env.get("diagnostic_counts") or {}).get("corners_with_diagnostics") != 0:
@@ -144,7 +200,24 @@ def _load_klt_population(repo: Path, key: str, kr: dict, expected: list, snapsho
         remote = (env.get("environment") or {}).get("remote") or {}
         if not remote.get("job_id"):
             problems.append(f"{label}: no environment.remote.job_id (not a batch run)")
-        envs[kind] = {"env": env, "corners": _klt_corner_ids(env, label, expected_ids, problems), "label": label}
+        corners = _klt_corner_ids(env, label, expected_ids, problems)
+        count = env.get("corner_count")
+        n_pass = sum(1 for c in corners.values() if c.get("status") == "pass")
+        n_fail = sum(1 for c in corners.values() if c.get("status") == "fail")
+        if (
+            env.get("status") not in ("pass", "fail")
+            or count != len(expected_ids)
+            or n_pass + n_fail != len(expected_ids)
+            or env.get("passed") != n_pass
+            or env.get("failed") != n_fail
+            or env.get("status") != ("pass" if n_fail == 0 else "fail")
+        ):
+            problems.append(
+                f"{label}: status {env.get('status')!r}, passed={env.get('passed')!r}, "
+                f"failed={env.get('failed')!r} of {count!r} disagrees with the {len(expected_ids)}-corner grid "
+                f"({n_pass} pass, {n_fail} fail)"
+            )
+        envs[kind] = {"env": env, "corners": corners, "label": label}
     if problems:
         errors.extend(f"record {key}: klt raw evidence: {p}" for p in problems)
         return None
@@ -153,14 +226,27 @@ def _load_klt_population(repo: Path, key: str, kr: dict, expected: list, snapsho
     ea, eo = ac_env["environment"], op_env["environment"]
     if ea.get("engine") != "ngspice" or ea.get("engine") != eo.get("engine") or ea.get("engine_version") != eo.get("engine_version"):
         problems.append(f"the two envelopes disagree on the engine ({ea.get('engine')} {ea.get('engine_version')} vs {eo.get('engine')} {eo.get('engine_version')})")
-    version = str(ea.get("engine_version"))
+    version = str(ea.get("engine_version") or "")
+    if not re.fullmatch(r"\d+", version):
+        problems.append(f"unreadable engine_version {ea.get('engine_version')!r}")
     for kind, env in (("ac", ac_env), ("op", op_env)):
         e = env["environment"]
-        banner = ((e.get("remote") or {}).get("worker_environment") or {}).get("simulator", {}).get("version_banner")
-        if banner is not None and f"ngspice-{version}" not in banner:
-            problems.append(f"{kind} envelope: worker banner does not name ngspice-{version}")
+        for b_label, banner in (
+            ("worker banner", ((e.get("remote") or {}).get("worker_environment") or {}).get("simulator", {}).get("version_banner")),
+            ("engine_build banner", (e.get("engine_build") or {}).get("version_banner")),
+        ):
+            if banner is not None and sorted(set(NGSPICE_RE.findall(banner))) != [version]:
+                problems.append(f"{kind} envelope: {b_label} does not name ngspice-{version}")
     if ea.get("models_lib_sha256") != eo.get("models_lib_sha256") or not ea.get("models_lib_sha256"):
         problems.append("the two envelopes disagree on the model deck hash")
+    ac_osdi = _klt_osdi_map(ac_env, "ac envelope", problems)
+    op_osdi = _klt_osdi_map(op_env, "op envelope", problems)
+    if ac_osdi and op_osdi and ac_osdi != op_osdi:
+        problems.append("the two envelopes disagree on the preloaded OSDI binary hashes")
+    ac_csl = {(x.get("name"), x.get("sha256")) for x in ea.get("corner_section_libs") or [] if isinstance(x, dict)}
+    op_csl = {(x.get("name"), x.get("sha256")) for x in eo.get("corner_section_libs") or [] if isinstance(x, dict)}
+    if ac_csl != op_csl:
+        problems.append("the two envelopes disagree on corner_section_libs")
     for kind, env in (("ac", ac_env), ("op", op_env)):
         prov = env.get("provenance") or {}
         if (prov.get("pdk") or {}).get("name") != "ihp-sg13g2":
@@ -173,6 +259,8 @@ def _load_klt_population(repo: Path, key: str, kr: dict, expected: list, snapsho
             problems.append(f"{kind} envelope: simulated DUT {snapshot_rel} (closure sha256 {closure.get(snapshot_rel)}) is not the selected netlist snapshot ({snap_hash})")
         if "sha256:" + str(closure.get(body_pin["path"])) != body_pin["sha256"] or "sha256:" + str(env["environment"].get("netlist_sha256")) != body_pin["sha256"]:
             problems.append(f"{kind} envelope: simulated bench body is not the pinned {body_pin['path']}")
+        if set(closure) - {body_pin["path"], snapshot_rel}:
+            problems.append(f"{kind} envelope: unexpected extra netlist_closure entries {sorted(set(closure) - {body_pin['path'], snapshot_rel})}")
         if (env.get("netlist") or {}).get("path") != body_pin["path"]:
             problems.append(f"{kind} envelope: netlist path {(env.get('netlist') or {}).get('path')!r} is not the pinned bench body")
     # requests: the measurement definitions the audit relies on
@@ -185,8 +273,15 @@ def _load_klt_population(repo: Path, key: str, kr: dict, expected: list, snapsho
     for name, spice in KLT_AC_MEASUREMENTS.items():
         if ac_defs.get(name) != spice:
             problems.append(f"ac request: measurement {name} is {ac_defs.get(name)!r}, not {spice!r}")
+    cont_key = kr.get("dc_continuity")
     op_defs = {m.get("name"): m.get("expr") for m in op_req.get("measurements") or []}
-    for name, expr in KLT_OP_MEASUREMENTS.items():
+    schematic_op = (cont_key is None) or any(name in op_defs for name in KLT_OP_INTERNAL_MEASUREMENTS)
+    required_op_defs = (
+        {**KLT_OP_PORT_MEASUREMENTS, **KLT_OP_INTERNAL_MEASUREMENTS}
+        if schematic_op
+        else KLT_OP_PORT_MEASUREMENTS
+    )
+    for name, expr in required_op_defs.items():
         if op_defs.get(name) != expr:
             problems.append(f"op request: measurement {name} is {op_defs.get(name)!r}, not {expr!r}")
     for kind, req in (("ac", ac_req), ("op", op_req)):
@@ -209,36 +304,53 @@ def _load_klt_population(repo: Path, key: str, kr: dict, expected: list, snapsho
         if len(re.findall(r"^" + pattern + r"\s*$", body, re.MULTILINE | re.IGNORECASE)) != 1:
             problems.append(f"bench body: element {name} is not present exactly once as `{pattern}`")
 
-    # DC continuity record (the stated stand-in for the internal-node check)
-    cont_key = kr["dc_continuity"]
-    cont = records.get(cont_key) or {}
+    # Optional DC continuity record (when comparing two configurations on the same DUT,
+    # or standing in for internal-node OP on the archived port-only record).
     cont_rows: dict = {}
-    cpath = repo / cont["csv"] if isinstance(cont.get("csv"), str) else None
-    if cpath is None or not cpath.is_file():
-        problems.append(f"dc_continuity record {cont_key}: CSV is missing")
-    elif sha256_file(cpath) != cont.get("csv_sha256"):
-        problems.append(f"dc_continuity record {cont_key}: {cont['csv']} does not match its selection pin")
-    else:
-        try:
-            _, crows = read_csv_rows(cpath)
-            cont_rows = {(r.get("point_id") or "").strip(): r for r in crows}
-        except (OSError, UnicodeDecodeError, csv.Error) as exc:
-            problems.append(f"dc_continuity record {cont_key}: cannot parse {cont['csv']} ({exc})")
+    if cont_key is not None:
+        cont = records.get(cont_key) or {}
+        cpath = repo / cont["csv"] if isinstance(cont.get("csv"), str) else None
+        if cpath is None or not cpath.is_file():
+            problems.append(f"dc_continuity record {cont_key}: CSV is missing")
+        elif sha256_file(cpath) != cont.get("csv_sha256"):
+            problems.append(f"dc_continuity record {cont_key}: {cont['csv']} does not match its selection pin")
+        else:
+            try:
+                _, crows = read_csv_rows(cpath)
+                cont_rows = {(r.get("point_id") or "").strip(): r for r in crows}
+            except (OSError, UnicodeDecodeError, csv.Error) as exc:
+                problems.append(f"dc_continuity record {cont_key}: cannot parse {cont['csv']} ({exc})")
+        cont_snap_rel = cont.get("netlist_snapshot")
+        cont_snap = repo / cont_snap_rel if isinstance(cont_snap_rel, str) else None
+        if cont_snap is None or not cont_snap.is_file():
+            problems.append(f"dc_continuity record {cont_key}: netlist_snapshot is missing")
+        elif snap_norm is not None and normalized_netlist_hash(cont_snap) != snap_norm:
+            problems.append(
+                f"dc_continuity record {cont_key}: simulated netlist {cont_snap_rel} is not the same circuit as {snapshot_rel}"
+            )
 
+    has_measurement = "measurement" in docs
     measurement = {}
-    for corner in docs["measurement"].get("corners") or []:
-        try:
-            proc, vdd_s, temp_s = corner["corner_id"].split("/")
-            pid = f"{proc}_{int(temp_s[:-1])}C_{float(vdd_s[:-1]):.2f}V"
-        except (KeyError, ValueError, AttributeError):
-            problems.append(f"measurement document: unreadable corner id {corner.get('corner_id')!r}")
-            continue
-        measurement[pid] = {m.get("name"): m.get("value") for m in corner.get("measurements") or []}
+    if has_measurement:
+        for corner in docs["measurement"].get("corners") or []:
+            try:
+                proc, vdd_s, temp_s = corner["corner_id"].split("/")
+                pid = f"{proc}_{int(temp_s[:-1])}C_{float(vdd_s[:-1]):.2f}V"
+            except (KeyError, ValueError, AttributeError):
+                problems.append(f"measurement document: unreadable corner id {corner.get('corner_id')!r}")
+                continue
+            measurement[pid] = {m.get("name"): m.get("value") for m in corner.get("measurements") or []}
+    op_wanted = tuple(required_op_defs)
+    frac_keys = (
+        ("op_vcm_frac", "op_vout_offset_frac", "op_vout_rail_frac", "op_vd1_rail_frac", "op_vd2_rail_frac", "op_vtail_rail_frac")
+        if schematic_op
+        else ("op_vcm_frac", "op_vout_offset_frac", "op_vout_rail_frac")
+    )
     points: dict = {}
     for pid in expected_ids:
         a = _klt_values(envs["ac"]["corners"][pid], KLT_AC_MEASUREMENTS)
         o_corner = envs["op"]["corners"][pid]
-        o = _klt_values(o_corner, ("ivdd_total_a", "vout_dc_v", "op_vcm_frac", "op_vout_offset_frac", "op_vout_rail_frac"))
+        o = _klt_values(o_corner, op_wanted)
         bad = [n for n, v in (*a.items(), *o.items()) if not isinstance(v, (int, float)) or isinstance(v, bool) or not math.isfinite(v)]
         if bad:
             problems.append(f"point {pid}: missing or non-finite raw value(s) {bad}")
@@ -246,17 +358,36 @@ def _load_klt_population(repo: Path, key: str, kr: dict, expected: list, snapsho
         sup = o_corner.get("supply_v") or {}
         if envs["ac"]["corners"][pid].get("supply_v") != sup:
             problems.append(f"point {pid}: the AC and OP envelopes use different supplies")
-        points[pid] = {
+        op_statuses = {
+            m.get("name"): m.get("status")
+            for m in o_corner.get("measurements") or []
+            if isinstance(m, dict) and str(m.get("name") or "").startswith("op_")
+        }
+        pt_entry = {
             "av0_db": a["av0_db"], "gbw_hz": a["gbw_hz"], "phase_rad": a["phase_at_ugf_rad"],
             "ivdd": o["ivdd_total_a"], "vout": o["vout_dc_v"], "vdd": sup.get("vdd"), "vinp": sup.get("vinp"),
-            "reported": {k: o[k] for k in ("op_vcm_frac", "op_vout_offset_frac", "op_vout_rail_frac")},
-            "measurement": measurement.get(pid), "continuity": cont_rows.get(pid),
+            "schematic_op": schematic_op,
+            "reported": {k: o[k] for k in frac_keys},
+            "op_statuses": op_statuses,
+            "has_measurement": has_measurement,
+            "measurement": measurement.get(pid) if has_measurement else None,
+            "continuity": cont_rows.get(pid) if cont_key is not None else None,
         }
+        if schematic_op:
+            pt_entry.update({
+                "vout_dc_v": o["vout_dc_v"],
+                "vd1_dc_v": o["vd1_dc_v"],
+                "vd2_dc_v": o["vd2_dc_v"],
+                "vtail_dc_v": o["vtail_dc_v"],
+                "vibias_dc_v": o["vibias_dc_v"],
+            })
+        points[pid] = pt_entry
     if problems:
         errors.extend(f"record {key}: klt raw evidence: {p}" for p in problems)
         return None
     return {
         "points": points, "version": version, "continuity_record": cont_key,
+        "schematic_op": schematic_op,
         "jobs": {k: envs[k]["env"]["environment"]["remote"]["job_id"] for k in ("ac", "op")},
         "ibias_a": 10e-6, "cload_f": float(loads[0]),
     }
@@ -356,6 +487,14 @@ def check_pdk_provenance(repo: Path, key: str, spec: dict, env: dict, state: dic
         for problem in problems:
             errors.append(f"record {key}: PDK provenance error: {rel}: {problem}")
         return
+    sidecar_ngspice = sidecar["observed"].get("ngspice")
+    state["sidecar_ngspice"] = sidecar_ngspice
+    if state["source"].get("ngspice") is not None and sidecar_ngspice != state["source"]["ngspice"]:
+        errors.append(
+            f"record {key}: {spec['md']} names {state['source']['ngspice']}, "
+            f"but sidecar {rel} observed {sidecar_ngspice!r}"
+        )
+        return
     prov.update(
         {
             "status": PROV_VERIFIED,
@@ -366,6 +505,16 @@ def check_pdk_provenance(repo: Path, key: str, spec: dict, env: dict, state: dic
             "osdi_manifest_sha256": sidecar["osdi"]["manifest_sha256"],
         }
     )
+
+
+def _admit_ngspice_version(key: str, actual: str, env: dict, errors: list) -> None:
+    """Apply the shared simulator policy in sim/tools/env_identity.py."""
+    problem = env_identity.check_ngspice_version(actual, env.get("pin"), env.get("ngspice"))
+    if problem:
+        errors.append(
+            f"record {key}: ran on {actual}, rejected by sim/pdk.json ({problem}) -- "
+            "mixed simulation environments are not combined silently"
+        )
 
 
 def _load_sample_population(repo: Path, key: str, ms: dict, expected: list, records: dict, errors: list) -> dict | None:
@@ -928,7 +1077,7 @@ def load_record(repo: Path, key: str, spec: dict, grid: dict, env: dict, records
     if errors:
         return state
 
-    # 2. environment: same ngspice as the pin, same circuit as design/
+    # 2. environment: simulator policy (env_identity.py), same circuit as design/
     md_text = (repo / spec["md"]).read_text(encoding="utf-8")
     state["stated_cl"] = source_cl_statements(md_text)
     versions = sorted(set(NGSPICE_RE.findall(md_text)))
@@ -938,14 +1087,9 @@ def load_record(repo: Path, key: str, spec: dict, grid: dict, env: dict, records
             f"({', '.join('ngspice-' + v for v in versions) or 'none'}) -- the "
             "simulation environment is not identifiable"
         )
-    elif versions:
+    elif len(versions) == 1:
         src["ngspice"] = f"ngspice-{versions[0]}"
-        if env.get("ngspice") and src["ngspice"] != env["ngspice"]:
-            errors.append(
-                f"record {key}: ran on {src['ngspice']}, but sim/pdk.json pins "
-                f"{env['ngspice']} -- mixed simulation environments are not "
-                "combined silently"
-            )
+        _admit_ngspice_version(key, src["ngspice"], env, errors)
     check_pdk_provenance(repo, key, spec, env, state)
     snapshot_norm = normalized_netlist_hash(repo / spec["netlist_snapshot"])
     if env.get("netlist_normalized_sha256") and snapshot_norm != env["netlist_normalized_sha256"]:
@@ -1129,8 +1273,6 @@ def load_record(repo: Path, key: str, spec: dict, grid: dict, env: dict, records
             "config": swr["config"],
         }
 
-    # 3g. raw `klt sim` envelopes (issue #101): the AC and OP envelopes, the
-    # measurement document, both requests and the bench body, cross-checked.
     # 3h. the input-offset `klt sim` family (issue #504): the null and
     # closed-loop envelopes, both requests and both bench bodies, joined with
     # the selected open-loop record's per-corner Av0.
@@ -1162,6 +1304,8 @@ def load_record(repo: Path, key: str, spec: dict, grid: dict, env: dict, records
                         "combined silently"
                     )
 
+    # 3g. raw `klt sim` envelopes (issue #101 / #500): the AC and OP envelopes,
+    # both requests and the bench body (plus optional measurement document), cross-checked.
     klt_pop: dict | None = None
     kr = spec.get("klt_raw")
     if kr is not None:
@@ -1170,23 +1314,32 @@ def load_record(repo: Path, key: str, spec: dict, grid: dict, env: dict, records
             "status": "verified" if klt_pop is not None else "error",
             "points": len(expected),
             "pins_sha256": sha256_bytes(canonical_json(kr["files"]).encode("utf-8")),
-            "dc_continuity": kr["dc_continuity"],
         }
+        if "dc_continuity" in kr:
+            src["klt_raw"]["dc_continuity"] = kr["dc_continuity"]
         if klt_pop is not None:
             src["klt_raw"]["jobs"] = klt_pop["jobs"]
             src["klt_raw"]["ibias_a"] = klt_pop["ibias_a"]
             src["klt_raw"]["cload_f"] = klt_pop["cload_f"]
+            if klt_pop["schematic_op"] and "dc_continuity" not in kr:
+                src["klt_raw"]["schematic_op"] = True
             envelope_ngspice = f"ngspice-{klt_pop['version']}"
+            # One carrier for the invariant: src["ngspice"] is set by the summary
+            # .md or by the slew envelope (3e), whichever came first; every later
+            # evidence kind must agree with it, never overwrite it.
             if src["ngspice"] is None:
                 src["ngspice"] = envelope_ngspice
-            if src["ngspice"] != envelope_ngspice:
+                _admit_ngspice_version(key, envelope_ngspice, env, errors)
+            elif src["ngspice"] != envelope_ngspice:
                 errors.append(f"record {key}: {spec['md']} names {src['ngspice']}, but the pinned envelopes ran {envelope_ngspice}")
-            if env.get("ngspice") and src["ngspice"] != env["ngspice"]:
+                _admit_ngspice_version(key, envelope_ngspice, env, errors)
+            sidecar_ngspice = state.get("sidecar_ngspice")
+            if sidecar_ngspice is not None and sidecar_ngspice != envelope_ngspice:
                 errors.append(
-                    f"record {key}: ran on {src['ngspice']}, but sim/pdk.json pins "
-                    f"{env['ngspice']} -- mixed simulation environments are not "
-                    "combined silently"
+                    f"record {key}: sidecar {spec.get('env_sidecar')} observed {sidecar_ngspice!r}, "
+                    f"but the pinned envelopes ran {envelope_ngspice}"
                 )
+                src["pdk_provenance"]["status"] = PROV_ERROR
 
     # 4. validity flags and definitions, per point
     conditions = spec.get("valid_when", [])

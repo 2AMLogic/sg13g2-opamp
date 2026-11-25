@@ -16,7 +16,6 @@ circuit -- a committed envelope in records/ would be.
 from __future__ import annotations
 
 import copy
-import csv
 import json
 import os
 import shutil
@@ -39,16 +38,9 @@ SIM = os.path.dirname(BENCH)
 REPO = os.path.dirname(SIM)
 HARNESS_CSV = os.path.join(BENCH, "records", "20260921-151815-707b34c.csv")
 OPENLOOP_CSV = os.path.join(SIM, "open-loop-ac", "records", "20260910-221601-22feaba.csv")
+OPENLOOP_REQUEST = os.path.join(SIM, "open-loop-ac", "klt", "openloop_ac.request.json")
 REQUEST = os.path.join(HERE, "psrr.request.json")
 BODY = os.path.join(HERE, "tb_psrr.body.spice")
-
-
-def _rows(path):
-    with open(path, newline="") as f:
-        return list(csv.DictReader(f))
-
-
-_status = F.grade
 
 
 def _request():
@@ -56,52 +48,41 @@ def _request():
         return json.load(f)
 
 
+def _vals(r):
+    """This bench's measurement dict for one harness row."""
+    avs0 = float(r["avs0_db"])
+    delta = float(r["psrr_plateau_delta_db"])
+    return {"avs0_db": avs0, "avs_plateau_db": avs0 + delta, "avs_plateau_delta_db": delta,
+            "avs_1khz_db": float(r["avs_1khz_db"])}
+
+
 def _envelope(rows):
-    limits = {m["name"]: m.get("limits") for m in _request()["measurements"]}
-    corners = []
-    for r in rows:
-        avs0 = float(r["avs0_db"])
-        delta = float(r["psrr_plateau_delta_db"])
-        vals = {"avs0_db": avs0, "avs_plateau_db": avs0 + delta, "avs_plateau_delta_db": delta,
-                "avs_1khz_db": float(r["avs_1khz_db"])}
-        vdd = float(r["vdd_v"])
-        corners.append({
-            "corner_id": f"{r['corner']}/vdd={vdd:.3f}/{r['temp_c']}C",
-            "process": r["corner"], "temperature_c": float(r["temp_c"]),
-            "supply_v": {"vdd": vdd, "vinp": vdd / 2},
-            "status": "pass" if all(_status(vals[n], limits[n]) == "pass" for n in vals) else "fail",
-            "measurements": [{"name": n, "value": v, "status": _status(v, limits[n]), "limits": limits[n]}
-                             for n, v in vals.items()],
-        })
-    status = "pass" if all(c["status"] == "pass" for c in corners) else "fail"
-    return {"schema_version": 1, "status": status, "corner_count": len(corners), "corners": corners,
-            "measurements": [{"name": "avs_plateau_delta_db", "status": status, "limits": limits["avs_plateau_delta_db"]}],
-            "coverage": {"nothing_checked": False, "skipped": [], "checked": ["x"]}}
+    """A synthetic klt-sim-shaped envelope carrying the harness's own numbers,
+    plus the top-level measurements[] rollup klt sim writes for the request's
+    one graded limit (compare.py's tool_plateau_guard summary reads it)."""
+    limits = F.request_limits(REQUEST)
+    env = F.build_envelope(rows, _vals, C.make_key, limits)
+    env["measurements"] = [{"name": "avs_plateau_delta_db", "status": env["status"],
+                            "limits": limits["avs_plateau_delta_db"]}]
+    return env
 
 
 def _openloop_envelope(rows):
-    """A synthetic open-loop `klt sim` AC envelope (av0_db only) built from the open-loop CSV rows."""
-    corners = []
-    for r in rows:
-        vdd = float(r["vdd_v"])
-        v = float(r["av0_db"])
-        corners.append({
-            "corner_id": f"{r['corner']}/vdd={vdd:.3f}/{r['temp_c']}C",
-            "process": r["corner"], "temperature_c": float(r["temp_c"]),
-            "supply_v": {"vdd": vdd, "vinp": vdd / 2}, "status": "pass",
-            "measurements": [{"name": "av0_db", "value": v, "status": "pass", "limits": {"min": 37.8}}],
-        })
-    return {"schema_version": 1, "status": "pass", "corner_count": len(corners), "corners": corners,
-            "coverage": {"nothing_checked": False, "skipped": [], "checked": ["x"]}}
+    """A synthetic open-loop `klt sim` AC envelope (av0_db only) built from the
+    open-loop CSV rows, graded against the open-loop bench's own ratified Av0
+    bound: the historical 37.78 dB miss at mos_fs_125C_1.08V stays a 'fail'
+    corner, as in a real run -- a miss is a result, not a gate failure."""
+    return F.build_envelope(rows, lambda r: {"av0_db": float(r["av0_db"])}, C.make_key,
+                            F.request_limits(OPENLOOP_REQUEST))
 
 
 class Base(unittest.TestCase):
     def setUp(self):
-        self.h_rows = _rows(HARNESS_CSV)
+        self.h_rows = F.harness_rows(HARNESS_CSV)
         self.env = _envelope(self.h_rows)
         self.harness = C.load_harness_csv(HARNESS_CSV)
         self.openloop = C.load_openloop_csv(OPENLOOP_CSV)
-        self.ol_env = _openloop_envelope(_rows(OPENLOOP_CSV))
+        self.ol_env = _openloop_envelope(F.harness_rows(OPENLOOP_CSV))
 
     def tool(self, env=None):
         return C.index_envelope(env if env is not None else self.env)
@@ -109,14 +90,12 @@ class Base(unittest.TestCase):
     def run_compare(self, env=None, harness=None, openloop=None):
         return C.compare(self.tool(env), harness or self.harness, openloop or self.openloop)
 
-    def corner(self, env, key):
-        for c in env["corners"]:
-            if C.make_key(c["process"], c["temperature_c"], c["supply_v"]["vdd"]) == key:
-                return c
-        raise KeyError(key)
+    @staticmethod
+    def find(env, point, name):
+        return F.find(env, point, name, C.make_key)
 
     def meas(self, env, key, name):
-        return next(m for m in self.corner(env, key)["measurements"] if m["name"] == name)
+        return self.find(env, key, name)[1]
 
 
 class TestRequest(Base):
@@ -174,35 +153,18 @@ class TestHarnessInputs(M.HarnessCsvControlMixin, Base):
         for k in C.expected_keys():
             self.assertAlmostEqual(self.harness[k]["psrr_db"], self.openloop[k]["av0_db"] - self.harness[k]["avs0_db"], places=3)
 
-    def _write(self, rows, cols):
-        fd, path = tempfile.mkstemp(suffix=".csv")
-        with os.fdopen(fd, "w", newline="") as f:
-            w = csv.DictWriter(f, fieldnames=cols)
-            w.writeheader()
-            w.writerows(rows)
-        self.addCleanup(os.unlink, path)
-        return path
 
-    def test_missing_openloop_row_rejected(self):
-        rows = _rows(OPENLOOP_CSV)[1:]
-        p = self._write(rows, list(rows[0]))
-        with self.assertRaisesRegex(C.InputError, "missing from open-loop CSV"):
-            C.load_openloop_csv(p)
+class TestOpenLoopCsvInputs(M.HarnessCsvControlMixin, Base):
+    """The shared loader's four generic harness-CSV refusals, run through this
+    bench's own open-loop Av0 loader (csv_label: load_openloop_csv names the
+    file 'open-loop CSV', not 'harness CSV')."""
 
-    def test_nonfinite_openloop_av0_rejected(self):
-        rows = _rows(OPENLOOP_CSV)
-        rows[3]["av0_db"] = "nan"
-        p = self._write(rows, list(rows[0]))
-        with self.assertRaisesRegex(C.InputError, "av0_db 'nan'"):
-            C.load_openloop_csv(p)
+    harness_csv = OPENLOOP_CSV
+    nonfinite_col = "av0_db"
+    csv_label = "open-loop CSV"
 
-    def test_openloop_short_or_malformed_row_is_input_error(self):
-        """A truncated row or an unparsable temp_c is exit-2 material (an
-        InputError), never a raw KeyError/ValueError (issue #181)."""
-        with F.malformed_csv_paths(OPENLOOP_CSV) as paths:
-            for p in paths:
-                with self.assertRaises(C.InputError):
-                    C.load_openloop_csv(p)
+    def load_csv(self, path):
+        return C.load_openloop_csv(path)
 
 
 class TestBaselineControl(Base):
@@ -255,7 +217,7 @@ class TestEnvelopeNegativeControls(M.EnvelopeControlMixin, Base):
 
     def test_inconclusive_corner_is_not_evidence(self):
         env = copy.deepcopy(self.env)
-        self.corner(env, ("mos_tt", 27, 1.2))["status"] = "inconclusive"
+        self.find(env, ("mos_tt", 27, 1.2), "avs0_db")[0]["status"] = "inconclusive"
         with self.assertRaisesRegex(C.InputError, "corner status 'inconclusive'"):
             self.tool(env)
 
@@ -366,8 +328,18 @@ class TestBoundVerdicts(Base):
         self.assertEqual(rep["unexplained_bound_verdict_disagreements"], 0)
 
 
-class TestOpenLoopEnvelopeSource(Base):
-    """Av0 from the open-loop `klt sim` envelope (issue #99): same gate, fail closed."""
+class TestOpenLoopEnvelopeSource(M.EnvelopeControlMixin, Base):
+    """Av0 from the open-loop `klt sim` envelope (issue #99): same gate, fail
+    closed. The shared gate's thirteen generic envelope refusals
+    (envelope_control_mixin) run through this bench's open-loop gate; the
+    PSRR-specific join/status/bound controls stay below."""
+
+    WORST = ("mos_tt", 27, 1.2)
+    null_meas = nonfinite_meas = absent_meas = "av0_db"
+
+    def control(self, name):
+        # Base.ol_env is an attribute rebuilt per test, not a factory method.
+        return copy.deepcopy(self.ol_env), self.ol
 
     def ol(self, env=None):
         return C.index_openloop_envelope(env if env is not None else self.ol_env)
@@ -388,53 +360,10 @@ class TestOpenLoopEnvelopeSource(Base):
     def test_without_crosscheck_there_is_no_av0_join_points(self):
         self.assertNotIn("points", self.run_env(cross=False)["av0_join"])
 
-    def test_missing_point(self):
-        env = copy.deepcopy(self.ol_env)
-        del env["corners"][7]
-        env["corner_count"] = 44
-        with self.assertRaisesRegex(C.InputError, "missing from open-loop envelope"):
-            self.ol(env)
-
-    def test_duplicate_point(self):
-        env = copy.deepcopy(self.ol_env)
-        env["corners"][1] = copy.deepcopy(env["corners"][0])
-        with self.assertRaisesRegex(C.InputError, "duplicate corner"):
-            self.ol(env)
-
-    def test_wrong_grid_key(self):
-        env = copy.deepcopy(self.ol_env)
-        env["corners"][0]["supply_v"] = {"vdd": 1.1, "vinp": 0.55}
-        with self.assertRaisesRegex(C.InputError, "1.10V"):
-            self.ol(env)
-
-    def test_absent_av0_measurement(self):
-        env = copy.deepcopy(self.ol_env)
-        env["corners"][3]["measurements"] = []
-        with self.assertRaisesRegex(C.InputError, "measurement av0_db missing"):
-            self.ol(env)
-
-    def test_nonfinite_av0(self):
-        env = copy.deepcopy(self.ol_env)
-        env["corners"][3]["measurements"][0]["value"] = None
-        with self.assertRaisesRegex(C.InputError, "av0_db value None is missing or non-finite"):
-            self.ol(env)
-
-    def test_nothing_checked(self):
-        env = copy.deepcopy(self.ol_env)
-        env["coverage"]["nothing_checked"] = True
-        with self.assertRaisesRegex(C.InputError, "nothing_checked"):
-            self.ol(env)
-
-    def test_errored_corner(self):
-        env = copy.deepcopy(self.ol_env)
-        env["corners"][2]["status"] = "error"
-        with self.assertRaisesRegex(C.InputError, "corner status 'error'"):
-            self.ol(env)
-
     def test_skipped_av0_measurement(self):
         env = copy.deepcopy(self.ol_env)
         env["corners"][2]["measurements"][0]["status"] = "skipped"
-        with self.assertRaisesRegex(C.InputError, "status 'skipped'"):
+        with self.assertRaisesRegex(C.InputError, "open-loop envelope:.*status 'skipped'"):
             self.ol(env)
 
     def test_av0_bound_miss_is_not_a_gate_failure(self):
