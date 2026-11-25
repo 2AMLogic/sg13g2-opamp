@@ -357,7 +357,7 @@ authorized new evidence).
 
 ### CMRR and PSRR from batch evidence (issue #514)
 
-`cmrr-psrr` selects `sim/cmrr-psrr/records/20261125-011804-02d78dd.{csv,md}`,
+`cmrr-psrr` selects `sim/cmrr-psrr/records/20261125-103814-7fb5ff0.{csv,md}`,
 produced by `sim/cmrr-psrr/klt/summarize_batch.py` from the CMRR and PSRR direct
 decks' `klt sim` envelopes. `cmrr_psrr_klt` = `{control, files}` pins, each with
 its sha256, the envelope, request and bench body of both decks, plus definition

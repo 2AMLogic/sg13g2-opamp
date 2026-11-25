@@ -264,10 +264,10 @@
       "definition_checks": ["offset_mc_statistics"]
     },
     "cmrr-psrr": {
-      "csv": "sim/cmrr-psrr/records/20261125-011804-02d78dd.csv",
+      "csv": "sim/cmrr-psrr/records/20261125-103814-7fb5ff0.csv",
       "csv_sha256": "sha256:7e9cb43277b93d5d47f0a5d862c60a63a2df4c7831a355441c3a4c85d2558b0b",
-      "md": "sim/cmrr-psrr/records/20261125-011804-02d78dd.md",
-      "md_sha256": "sha256:85c4abc4bb6e0583e406af810cf1f9a5df47a11c68b94c67ccad68d750cf936e",
+      "md": "sim/cmrr-psrr/records/20261125-103814-7fb5ff0.md",
+      "md_sha256": "sha256:94a711596c8afaadbda0eb3506eb4a6759d8a82e0b281d235138a26ec06f205a",
       "netlist_snapshot": "sim/cmrr-psrr/netlist-snapshots/20260921-151815-707b34c/opamp_core.spice",
       "grid": "pvt45",
       "valid_when": [],
@@ -818,7 +818,7 @@
       "extremum": "min",
       "bound": {"op": ">=", "value": "1.87"},
       "load_condition": {"cl": "2 pF", "applicability": "applies", "note": "no resistive load"},
-      "conditions": "Av0 - Avs0 in dB from one batch deck (two DUT copies, Av0 with inn AC-grounded, VDD-to-output gain on the other; PSRR+, vss is ground), DC shelf (10 mHz read), plateau guard 0.05 dB; ideal external 10 µA ibias contributes no supply ripple. No 1 kHz context figure: no batch deck reads 1 kHz and the only one on file is the superseded floating-inn harness figure (see the record .md)"
+      "conditions": "Av0 - Avs0 in dB from one batch deck (two DUT copies, Av0 with inn AC-grounded, VDD-to-output gain on the other; PSRR+, vss is ground), DC shelf (10 mHz read), plateau guard 0.05 dB; ideal external 10 µA ibias contributes no supply ripple. The selected November direct deck reports the DC shelf and its plateau guard. The October AC-grounded batch record 20261015-103521-0f41068 reports 1 kHz PSRR with Av0 joined from a separate open-loop run. The row uses only measurements from the selected direct deck."
     },
     {
       "id": "swing_headroom_vdd",

@@ -40,7 +40,7 @@ and, additionally, at **1 kHz** to document in-band behavior. The full
 ## Batch record and the harness as regression control (issue #514)
 
 `signoff/characterization/selection.json` reads `cmrr_db` and `psrr_db` (and the
-plateau guards) from `records/20261125-011804-02d78dd.{csv,md}`, derived from the
+plateau guards) from `records/20261125-103814-7fb5ff0.{csv,md}`, derived from the
 same-DUT batch envelopes `klt/records/20261125-011804-02d78dd.cmrr.sim.json` and
 `20261125-011604-02d78dd.direct.sim.json` (45 corners, ngspice-47). `cmrr_db`
 stays `Av0 - Acm0` in dB. The audit `cmrr_psrr_klt_audit` re-derives every cell
@@ -51,11 +51,13 @@ The harness record `records/20260921-151815-707b34c.*` stays selected as
 (within 1e-3 dB) against the batch deck. Its `av0_db` is the superseded
 floating-`inn` gain, so its CMRR and PSRR are never compared or reported.
 
-Two decisions, recorded in `records/20261125-011804-02d78dd.md`: the PSRR row has
-**no 1 kHz context figure** (no batch deck reads 1 kHz; the only one on file is the
-superseded floating-`inn` harness figure, which would mix constructions), and the
-**operating-point consistency check is not carried over** (neither deck prints an
-operating point; the harness `op_pass` describes the superseded construction).
+The PSRR row uses the DC shelf and plateau guard measured by the November direct
+deck. The October AC-grounded batch run measured supply gain at 1 kHz and joined
+Av0 from a separate open-loop run, giving 26.90–36.33 dB across 45 corners.
+That result is available in the [October record](klt/records/20261015-103521-0f41068.md).
+The selected row carries only November in-deck measurements. Neither direct deck
+prints an operating point, so the operating-point consistency check remains
+in the harness record.
 
 ## Superseded by the inn-AC-grounded PSRR record (issue #241)
 
@@ -507,13 +509,11 @@ the same superseded record, and the batch Av0 equals the PSRR direct deck's to
 6e-9 dB. The shift is reported in the compare record, not tolerated away. Only
 Acm0 is checked against the harness record.
 
-Not done here: the characterization selection (`signoff/characterization/
-selection.json`) still points `cmrr-psrr` at the harness record. Binding these
-envelopes needs the simulator-identity admission of #500 (the pinned check
-accepts only the exact pin `ngspice-46`, the fleet now runs 47), and the
-selection files are being edited by that work. The operating-point consistency
-check of the harness is not re-measured by either direct deck, and the
-PSRR row's 1 kHz context figure has no batch source.
+The characterization selection now binds these November envelopes to the DC
+rows. Neither direct deck measures operating-point consistency or 1 kHz PSRR.
+The October batch comparison obtained the 1 kHz figure using a separate Av0
+run. The selected evidence and its provenance are described in the
+[batch record section](#batch-record-and-the-harness-as-regression-control-issue-514).
 
 ### Av0 from the open-loop envelope: measured join check (issue #99)
 
