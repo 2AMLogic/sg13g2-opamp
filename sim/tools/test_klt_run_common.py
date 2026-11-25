@@ -205,8 +205,12 @@ class Reservation(unittest.TestCase):
         (the mkdir(2) syscall, no shell, no mkdir binary) against a fresh
         path in the same TMPDIR, `trials` times, and report the worst
         per-trial success count. >1 means the filesystem or kernel breaks
-        mkdir atomicity; exactly 1 with a shell double-success points at
-        the mkdir binary or a harness artifact. The count is reported only
+        mkdir atomicity. Exactly 1 with two shell children printing BEGUN
+        means the claim primitive was not the failing layer: since #526
+        the reservation goes through Python's os.mkdir
+        (sg13g2_exclusive_mkdir) and the external mkdir binary takes no
+        part in the claim. Investigate the reservation helper, its
+        caller and the test harness next. The count is reported only
         when every worker recorded success or EEXIST; any other outcome
         (startup failure, barrier abort, unexpected errno) is reported as
         inconclusive. Runs only inside a private TemporaryDirectory, never
@@ -318,10 +322,12 @@ class Reservation(unittest.TestCase):
                          '"${BASH_VERSION:-unknown}" "$a" "$b" '
                          '"$(stat -f -c %T "${TMPDIR:-/tmp}" 2>/dev/null '
                          '|| echo stat-failed)"; '
-                         # #515: the external mkdir the driver's `command mkdir`
-                         # resolves to (`type -P` skips functions/aliases), and
-                         # its version (BSD/busybox have no --version: fall
-                         # back to unknown).
+                         # #515: runner context only, not the claim primitive
+                         # (since #526 the driver reserves via Python's
+                         # os.mkdir and never calls this binary): the external
+                         # mkdir on PATH (`type -P` skips functions/aliases)
+                         # and its version (BSD/busybox have no --version:
+                         # fall back to unknown).
                          'mk="$(type -P mkdir || echo unknown)"; '
                          'printf " mkdir=%s mkdir_version=%s" "$mk" '
                          '"$([[ $mk != unknown ]] && "$mk" --version '
