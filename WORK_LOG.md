@@ -8,6 +8,8 @@
 
 ### 2026-11-25
 
+- **PR #511**: feat: audit schematic open-loop OP and ngspice floor policy
+- **Issue #500** (closed): Audit schematic open-loop AC and DC continuity on the batch simulator
 - **PR #510**: feat(signoff): audit the slew row from pinned batch klt envelope crossings
 - **Issue #501** (closed): Derive the slew-rate characterization row from batch transient evidence
 - **PR #508**: test(sim): share Tree.setup_preflight fixture across the three offline suites
