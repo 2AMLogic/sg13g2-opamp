@@ -24,6 +24,7 @@ from common import (
     KLT_RAW_KINDS,
     KLT_RAW_REQUIRED_KINDS,
     NOISE_PIN_KINDS,
+    OFFSET_KLT_RAW_KINDS,
     ROW_CLASSES,
     SELECTION_SCHEMA,
     SLEW_KLT_KINDS,
@@ -122,6 +123,13 @@ def load_selection(path: Path) -> dict:
                     f"selection: record {key}: `klt_raw` is named, so the definition check "
                     "'open_loop_klt_audit' must run (raw evidence is never pinned and then ignored)"
                 )
+        if "offset_klt_raw" in rec:
+            _validate_offset_klt_raw_selection(key, rec["offset_klt_raw"], selection["records"])
+            if "offset_klt_audit" not in rec.get("definition_checks", []):
+                raise SelectionError(
+                    f"selection: record {key}: `offset_klt_raw` is named, so the definition check "
+                    "'offset_klt_audit' must run (raw evidence is never pinned and then ignored)"
+                )
         for name in rec.get("definition_checks", []):
             if name not in DEFINITION_CHECKS:
                 raise SelectionError(f"selection: record {key}: unknown definition check {name!r}")
@@ -155,6 +163,12 @@ def load_selection(path: Path) -> dict:
                 raise SelectionError(
                     f"selection: record {key}: definition check {name!r} verifies the raw "
                     "`klt sim` envelopes; name hash-pinned `klt_raw` beside the summary"
+                )
+            if need == "offset_klt" and rec.get("offset_klt_raw") is None:
+                raise SelectionError(
+                    f"selection: record {key}: definition check {name!r} verifies the raw "
+                    "input-offset `klt sim` envelopes; name hash-pinned `offset_klt_raw` "
+                    "beside the summary"
                 )
             if need == "swing" and rec.get("swing_raw") is None:
                 raise SelectionError(
@@ -285,6 +299,24 @@ def _validate_klt_raw_selection(key: str, kr, records: dict) -> None:
     required = set(KLT_RAW_REQUIRED_KINDS)
     if not isinstance(files, dict) or not required.issubset(files) or set(files) - set(KLT_RAW_KINDS):
         raise SelectionError(f"{where}.files must have {sorted(required)} (within {list(KLT_RAW_KINDS)})")
+    for kind, pin in files.items():
+        if not (isinstance(pin, dict) and isinstance(pin.get("path"), str) and isinstance(pin.get("sha256"), str)):
+            raise SelectionError(f"{where}.files.{kind} needs string `path` and `sha256` (a raw artifact is never named without its pin)")
+
+
+def _validate_offset_klt_raw_selection(key: str, kr, records: dict) -> None:
+    """Shape of a record's `offset_klt_raw` pin (issue #504): one pinned file
+    per kind (both envelopes, both requests, both circuit bodies), plus the
+    selected same-DUT open-loop record the closed-loop referral joins Av0
+    from."""
+    where = f"selection: record {key}: `offset_klt_raw`"
+    if not isinstance(kr, dict) or sorted(kr) != ["av0_join", "files"]:
+        raise SelectionError(f"{where} must be an object with exactly `files` and `av0_join`")
+    if kr["av0_join"] not in records or kr["av0_join"] == key:
+        raise SelectionError(f"{where}.av0_join must name another selected record")
+    files = kr["files"]
+    if not isinstance(files, dict) or sorted(files) != sorted(OFFSET_KLT_RAW_KINDS):
+        raise SelectionError(f"{where}.files must have exactly {list(OFFSET_KLT_RAW_KINDS)}")
     for kind, pin in files.items():
         if not (isinstance(pin, dict) and isinstance(pin.get("path"), str) and isinstance(pin.get("sha256"), str)):
             raise SelectionError(f"{where}.files.{kind} needs string `path` and `sha256` (a raw artifact is never named without its pin)")

@@ -23,7 +23,10 @@ import unittest
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
+# The shared envelope fixtures live in sim/tools (issue #358).
+sys.path.insert(0, os.path.normpath(os.path.join(HERE, "..", "..", "tools")))
 import compare as C  # noqa: E402
+import envelope_fixtures as F  # noqa: E402
 import shard as S  # noqa: E402
 import test_compare as T  # noqa: E402
 
@@ -33,7 +36,7 @@ class ShardBase(unittest.TestCase):
     def setUpClass(cls):
         cls.dir = tempfile.TemporaryDirectory()
         cls.manifest = S.gen(cls.dir.name, "/opt/pdk")
-        full = T._envelope(T._rows(T.HARNESS_CSV))
+        full = T._envelope(F.harness_rows(T.HARNESS_CSV))
         cls.full = full
         cls.reports = {}
         for proc in C.PROCESSES:
@@ -128,7 +131,9 @@ class TestMerge(ShardBase):
         merged = S.merge(self.manifest, reps, self.digests())
         guard = [m for m in merged["measurements"] if m["name"] == "avs_plateau_delta_db"][0]
         self.assertEqual(guard["status"], "fail")
-        self.assertEqual(guard["worst_case"]["corner_id"], "mos_ss/vdd=1.080/-40C")
+        # envelope_fixtures.build_envelope's corner_id spelling, same as the
+        # real committed klt envelopes'.
+        self.assertEqual(guard["worst_case"]["corner_id"], "mos_ss/vdd=1.080_vinp=0.540V/-40C")
         self.assertNotIn("STALE", json.dumps(merged["measurements"]))
         self.assertEqual(merged["metrics"]["sim__corner__count"], 45)
         self.assertEqual(merged["metrics"]["sim__corner__failed_count"], merged["failed"])

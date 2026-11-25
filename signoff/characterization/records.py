@@ -26,6 +26,7 @@ from pathlib import Path
 from common import (
     KLT_RAW_KINDS,
     NGSPICE_RE,
+    OFFSET_KLT_RAW_KINDS,
     NOISE_PIN_KINDS,
     SLEW_KLT_KINDS,
     SLEW_KLT_LIMITS,
@@ -514,6 +515,21 @@ def _admit_ngspice_version(key: str, actual: str, env: dict, errors: list) -> No
             f"record {key}: ran on {actual}, rejected by sim/pdk.json ({problem}) -- "
             "mixed simulation environments are not combined silently"
         )
+
+
+def _carry_ngspice_version(key: str, src: dict, envelope_ngspice: str, origin_phrase: str, spec: dict, env: dict, errors: list) -> None:
+    """Carry an envelope's simulator version into src["ngspice"]: establish it
+    when nothing has yet (summary .md or an earlier envelope, whichever came
+    first), otherwise require agreement, never overwrite. The envelope's
+    version goes through the shared admission policy when it establishes or
+    disagrees; on agreement the establishing site already admitted it, so a
+    second admit would only duplicate the error."""
+    if src["ngspice"] is None:
+        src["ngspice"] = envelope_ngspice
+        _admit_ngspice_version(key, envelope_ngspice, env, errors)
+    elif src["ngspice"] != envelope_ngspice:
+        errors.append(f"record {key}: {spec['md']} names {src['ngspice']}, but {origin_phrase} ran {envelope_ngspice}")
+        _admit_ngspice_version(key, envelope_ngspice, env, errors)
 
 
 def _load_sample_population(repo: Path, key: str, ms: dict, expected: list, records: dict, errors: list) -> dict | None:
@@ -1080,7 +1096,7 @@ def load_record(repo: Path, key: str, spec: dict, grid: dict, env: dict, records
     md_text = (repo / spec["md"]).read_text(encoding="utf-8")
     state["stated_cl"] = source_cl_statements(md_text)
     versions = sorted(set(NGSPICE_RE.findall(md_text)))
-    if len(versions) != 1 and not (not versions and (spec.get("klt_raw") is not None or spec.get("slew_klt") is not None)):
+    if len(versions) != 1 and not (not versions and (spec.get("klt_raw") is not None or spec.get("slew_klt") is not None or spec.get("offset_klt_raw") is not None)):
         errors.append(
             f"record {key}: {spec['md']} names {len(versions)} ngspice versions "
             f"({', '.join('ngspice-' + v for v in versions) or 'none'}) -- the "
@@ -1252,12 +1268,10 @@ def load_record(repo: Path, key: str, spec: dict, grid: dict, env: dict, records
             src["slew_klt"]["job"] = slew_klt_pop["job"]
             src["slew_klt"]["cload_f"] = slew_klt_pop["cload_f"]
             envelope_ngspice = f"ngspice-{slew_klt_pop['version']}"
-            if src["ngspice"] is None:
-                src["ngspice"] = envelope_ngspice
-            if src["ngspice"] != envelope_ngspice:
-                errors.append(f"record {key}: {spec['md']} names {src['ngspice']}, but the pinned slew envelope ran {envelope_ngspice}")
-            if env.get("ngspice") and src["ngspice"] != env["ngspice"]:
-                errors.append(f"record {key}: ran on {src['ngspice']}, but sim/pdk.json pins {env['ngspice']} -- mixed simulation environments are not combined silently")
+            # Same carrier as the klt_raw path (3g): the summary .md already went
+            # through the shared policy; a versionless summary leaves the envelope
+            # as the only source, so admit it here instead of exact-matching.
+            _carry_ngspice_version(key, src, envelope_ngspice, "the pinned slew envelope", spec, env, errors)
 
     # 3f. raw DC transfer curves (issue #230): both passes' pinned wrdata
     # curves and rendered netlists per grid point, strictly parsed.
@@ -1271,6 +1285,37 @@ def load_record(repo: Path, key: str, spec: dict, grid: dict, env: dict, records
             "pins_sha256": sha256_bytes(canonical_json(swr["files"]).encode("utf-8")),
             "config": swr["config"],
         }
+
+    # 3h. the input-offset `klt sim` family (issue #504): the null and
+    # closed-loop envelopes, both requests and both bench bodies, joined with
+    # the selected open-loop record's per-corner Av0.
+    offset_klt_pop: dict | None = None
+    okr = spec.get("offset_klt_raw")
+    if okr is not None:
+        offset_klt_pop = _load_offset_klt_population(repo, key, okr, expected, spec["netlist_snapshot"], md_text, records or {}, env, errors)
+        src["offset_klt_raw"] = {
+            "status": "verified" if offset_klt_pop is not None else "error",
+            "points": len(expected),
+            "pins_sha256": sha256_bytes(canonical_json(okr["files"]).encode("utf-8")),
+            "av0_join": okr["av0_join"],
+        }
+        if offset_klt_pop is not None:
+            src["offset_klt_raw"]["jobs"] = offset_klt_pop["jobs"]
+            src["offset_klt_raw"]["av0_join_csv"] = offset_klt_pop["join_csv"]
+            envelope_ngspice = f"ngspice-{offset_klt_pop['version']}"
+            if src["ngspice"] is None:
+                src["ngspice"] = envelope_ngspice
+            if src["ngspice"] != envelope_ngspice:
+                errors.append(f"record {key}: {spec['md']} names {src['ngspice']}, but the pinned envelopes ran {envelope_ngspice}")
+            floor = ((env.get("pin") or {}).get("osdi_toolchain") or {}).get("ngspice_min_major")
+            if not (isinstance(floor, int) and not isinstance(floor, bool)):
+                # no floor stated: the legacy exact-pin rule applies here too
+                if env.get("ngspice") and src["ngspice"] != env["ngspice"]:
+                    errors.append(
+                        f"record {key}: ran on {src['ngspice']}, but sim/pdk.json pins "
+                        f"{env['ngspice']} -- mixed simulation environments are not "
+                        "combined silently"
+                    )
 
     # 3g. raw `klt sim` envelopes (issue #101 / #500): the AC and OP envelopes,
     # both requests and the bench body (plus optional measurement document), cross-checked.
@@ -1295,12 +1340,7 @@ def load_record(repo: Path, key: str, spec: dict, grid: dict, env: dict, records
             # One carrier for the invariant: src["ngspice"] is set by the summary
             # .md or by the slew envelope (3e), whichever came first; every later
             # evidence kind must agree with it, never overwrite it.
-            if src["ngspice"] is None:
-                src["ngspice"] = envelope_ngspice
-                _admit_ngspice_version(key, envelope_ngspice, env, errors)
-            elif src["ngspice"] != envelope_ngspice:
-                errors.append(f"record {key}: {spec['md']} names {src['ngspice']}, but the pinned envelopes ran {envelope_ngspice}")
-                _admit_ngspice_version(key, envelope_ngspice, env, errors)
+            _carry_ngspice_version(key, src, envelope_ngspice, "the pinned envelopes", spec, env, errors)
             sidecar_ngspice = state.get("sidecar_ngspice")
             if sidecar_ngspice is not None and sidecar_ngspice != envelope_ngspice:
                 errors.append(
@@ -1315,7 +1355,7 @@ def load_record(repo: Path, key: str, spec: dict, grid: dict, env: dict, records
     def run_definition_checks(pid: str, row: dict) -> None:
         for name in spec.get("definition_checks", []):
             check, needs = DEFINITION_CHECKS[name]
-            pop = {"draws": draws_pass, "samples": sample_pop, "noise": noise_pop, "slew": slew_pop, "swing": swing_pop, "klt": klt_pop, "slew_klt": slew_klt_pop}.get(needs)
+            pop = {"draws": draws_pass, "samples": sample_pop, "noise": noise_pop, "slew": slew_pop, "swing": swing_pop, "klt": klt_pop, "slew_klt": slew_klt_pop, "offset_klt": offset_klt_pop}.get(needs)
             if needs and pop is None:
                 continue  # the population load above already reported why
             problem = check(row, pop)
@@ -1349,3 +1389,295 @@ def load_record(repo: Path, key: str, spec: dict, grid: dict, env: dict, records
     src["missing_points"] = sorted(state["missing"])
     src["invalid_points"] = {pid: state["invalid"][pid] for pid in sorted(state["invalid"])}
     return state
+
+
+# --------------------------------------------------------------------------
+# the input-offset `klt sim` family (issue #504): the null-sweep and
+# closed-loop envelopes, their requests and bodies, and the Av0 join.
+
+# The measurement definitions the audit relies on: name -> (spice | expr,
+# limits). The ratified bound (vos_null_v +/- 21.9 mV [DR-2]) lives in the
+# REQUEST, so a pinned request that grades anything else is refused.
+OFFSET_NULL_MEASUREMENTS = {
+    "vos_null_v": (".meas dc vos_null_v when v(orel)=0 rise=1", {"min": -0.0219, "max": 0.0219}),
+    "vos_crossings_n": ("mean((v(orel)[1,7500]*v(orel)[0,7499]) lt 0)*7500", {"min": 0.5, "max": 1.5}),
+    "gain_local_vv": ("vecmax(((v(orel)[1,7500]*v(orel)[0,7499]) lt 0)*((v(out)[1,7500]-v(out)[0,7499])/4e-6))", {"min": 10.0}),
+    "vd1_dc_v": (".meas dc vd1_dc_v find v(d1) when v(orel)=0 rise=1", None),
+    "vd2_dc_v": (".meas dc vd2_dc_v find v(d2) when v(orel)=0 rise=1", None),
+    "vtail_dc_v": (".meas dc vtail_dc_v find v(tail) when v(orel)=0 rise=1", None),
+    "vout_null_dc_v": (".meas dc vout_null_dc_v find v(out) when v(orel)=0 rise=1", None),
+    "vibias_dc_v": (".meas dc vibias_dc_v find v(ibias) when v(orel)=0 rise=1", None),
+    "op_vd1_rail_frac": (".meas dc op_vd1_rail_frac find v(fd1) when v(orel)=0 rise=1", {"min": 0.02, "max": 0.98}),
+    "op_vd2_rail_frac": (".meas dc op_vd2_rail_frac find v(fd2) when v(orel)=0 rise=1", {"min": 0.02, "max": 0.98}),
+    "op_vtail_rail_frac": (".meas dc op_vtail_rail_frac find v(ftail) when v(orel)=0 rise=1", {"min": 0.02, "max": 0.98}),
+}
+OFFSET_CL_MEASUREMENTS = {"vout_cl_v": ("v(out)", None)}
+OFFSET_BENCH_ELEMENTS = {
+    "null:Vid": r"Vid\s+id\s+0\s+dc\s+\S+",
+    "null:Vinp(cm)": r"Vinp\s+cm\s+0\s+dc\s+\S+",
+    "null:Binp": r"Binp\s+inp\s+0\s+v\s*=\s*v\(cm\)\s*\+\s*v\(id\)/2",
+    "null:Binn": r"Binn\s+inn\s+0\s+v\s*=\s*v\(cm\)\s*-\s*v\(id\)/2",
+    "null:Borel": r"Borel\s+orel\s+0\s+v\s*=\s*v\(out\)-v\(cm\)",
+    "cl:Lbreak": r"Lbreak\s+inn\s+out\s+1e18",
+    "cl:Vinp(inp)": r"Vinp\s+inp\s+0\s+dc\s+\S+",
+    "both:Iibias": r"Iibias\s+vdd\s+ibias\s+dc\s+10u",
+}
+
+
+def _offset_klt_corner_ids(env: dict, label: str, expected_ids: list, problems: list) -> dict:
+    """{point_id: corner} for one envelope, refusing duplicates, missing or
+    extra points, errored/inconclusive corners and corner diagnostics. Unlike
+    the open-loop family, a corner whose status is `fail` IS evidence here: a
+    ratified-bound miss (vos_null_v outside +/- 21.9 mV) is a result the row
+    grades, never a reason to refuse the envelope."""
+    out: dict = {}
+    for corner in env.get("corners") or []:
+        try:
+            pid = f"{corner['process']}_{int(corner['temperature_c'])}C_{float(corner['supply_v']['vdd']):.2f}V"
+        except (KeyError, TypeError, ValueError):
+            problems.append(f"{label}: a corner has no process/temperature/vdd identity")
+            continue
+        if pid in out:
+            problems.append(f"{label}: duplicate corner {pid}")
+        out[pid] = corner
+        if corner.get("status") not in ("pass", "fail"):
+            problems.append(f"{label}: point {pid} is not a completed run (status {corner.get('status')!r})")
+        if corner.get("diagnostics"):
+            problems.append(f"{label}: point {pid} carries {len(corner['diagnostics'])} diagnostic(s)")
+    for pid in expected_ids:
+        if pid not in out:
+            problems.append(f"{label}: no corner for point {pid}")
+    for pid in sorted(set(out) - set(expected_ids)):
+        problems.append(f"{label}: corner {pid} is outside the expected grid")
+    return out
+
+
+def _ngspice_major(version) -> int | None:
+    m = NGSPICE_RE.match(f"ngspice-{version}")
+    return int(m.group(1)) if m else None
+
+
+def _load_offset_klt_population(repo: Path, key: str, kr: dict, expected: list, snapshot_rel: str,
+                                md_text: str, records: dict, env: dict, errors: list) -> dict | None:
+    """Pin-check and strictly cross-check the input-offset `klt sim` evidence
+    (both envelopes, both requests, both bodies, the Av0 join) and return the
+    per-point raw values the definition check re-derives every cell from.
+    None when anything is wrong; problems name the artifact and point."""
+    n_err = len(errors)
+    expected_ids = [pid for pid, _ in expected]
+    docs: dict = {}
+    for kind in OFFSET_KLT_RAW_KINDS:
+        pin = kr["files"][kind]
+        path = repo / pin["path"]
+        if not path.is_file():
+            errors.append(f"record {key}: missing raw offset-klt artifact {kind} {pin['path']}")
+            continue
+        actual = sha256_file(path)
+        if actual != pin["sha256"]:
+            errors.append(
+                f"record {key}: {pin['path']} does not match its selection pin "
+                f"(pinned {pin['sha256']}, actual {actual}) -- re-select deliberately, never re-read silently"
+            )
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+            docs[kind] = text if kind.endswith("_body") else json.loads(text)
+        except (OSError, UnicodeDecodeError, ValueError) as exc:
+            errors.append(f"record {key}: cannot read {pin['path']} ({exc})")
+    if len(errors) > n_err:
+        return None
+    problems: list[str] = []
+    snap = repo / snapshot_rel
+    snap_hash = sha256_file(snap) if snap.is_file() else None
+    envs = {}
+    for kind in ("null", "cl"):
+        doc = docs[kind]
+        label = f"{kind} envelope {kr['files'][kind]['path']}"
+        if not isinstance(doc, dict):
+            problems.append(f"{label}: not an object")
+            continue
+        count = doc.get("corner_count")
+        if doc.get("status") not in ("pass", "fail"):
+            problems.append(f"{label}: status {doc.get('status')!r} -- only a complete pass/fail run is evidence")
+        if count != len(expected_ids) or doc.get("passed") + doc.get("failed", 0) != count:
+            problems.append(f"{label}: {doc.get('passed')} passed + {doc.get('failed', 0)} failed of {count} corners (need all {len(expected_ids)} accounted for)")
+        for field in ("errored", "inconclusive"):
+            if doc.get(field) != 0:
+                problems.append(f"{label}: {field} = {doc.get(field)!r}")
+        if (doc.get("diagnostic_counts") or {}).get("corners_with_diagnostics") != 0:
+            problems.append(f"{label}: corners carry diagnostics")
+        remote = (doc.get("environment") or {}).get("remote") or {}
+        if not remote.get("job_id"):
+            problems.append(f"{label}: no environment.remote.job_id (not a batch run)")
+        envs[kind] = {"env": doc, "corners": _offset_klt_corner_ids(doc, label, expected_ids, problems), "label": label}
+    if problems:
+        errors.extend(f"record {key}: offset klt raw evidence: {p}" for p in problems)
+        return None
+
+    null_env, cl_env = envs["null"]["env"], envs["cl"]["env"]
+    en, ec = null_env["environment"], cl_env["environment"]
+    if en.get("engine") != "ngspice" or en.get("engine") != ec.get("engine") or en.get("engine_version") != ec.get("engine_version"):
+        problems.append(f"the two envelopes disagree on the engine ({en.get('engine')} {en.get('engine_version')} vs {ec.get('engine')} {ec.get('engine_version')})")
+    version = str(en.get("engine_version"))
+    for kind, doc in (("null", null_env), ("cl", cl_env)):
+        e = doc["environment"]
+        banner = ((e.get("remote") or {}).get("worker_environment") or {}).get("simulator", {}).get("version_banner")
+        if banner is not None and f"ngspice-{version}" not in banner:
+            problems.append(f"{kind} envelope: worker banner does not name ngspice-{version}")
+    if en.get("models_lib_sha256") != ec.get("models_lib_sha256") or not en.get("models_lib_sha256"):
+        problems.append("the two envelopes disagree on the model deck hash")
+    for kind, doc in (("null", null_env), ("cl", cl_env)):
+        prov = doc.get("provenance") or {}
+        if (prov.get("pdk") or {}).get("name") != "ihp-sg13g2":
+            problems.append(f"{kind} envelope: PDK is {(prov.get('pdk') or {}).get('name')!r}, not ihp-sg13g2")
+        deck = prov.get("deck") or {}
+        if deck.get("name") != "cornerMOSlv.lib" or deck.get("content_hash") != "sha256:" + str(doc["environment"].get("models_lib_sha256")):
+            problems.append(f"{kind} envelope: model deck identity {deck.get('name')!r} {deck.get('content_hash')!r} is not cornerMOSlv.lib at the recorded models_lib_sha256")
+        closure = {c.get("path"): c.get("sha256") for c in doc["environment"].get("netlist_closure") or []}
+        # The bodies' single .include names design/netlist/opamp_core.spice,
+        # so THAT closure entry is the simulated DUT; run.sh copied the same
+        # bytes to the selected snapshot before publishing, so their hashes
+        # must agree (the snapshot is the copy the selection pins).
+        dut_entries = {p: s for p, s in closure.items() if Path(str(p)).name == "opamp_core.spice"}
+        if len(dut_entries) != 1 or "sha256:" + str(next(iter(dut_entries.values()))) != snap_hash:
+            problems.append(
+                f"{kind} envelope: simulated DUT (closure entries {sorted(dut_entries)}) is not the "
+                f"selected netlist snapshot {snapshot_rel} ({snap_hash})"
+            )
+        body_pin = kr["files"][f"{kind}_body"]
+        if "sha256:" + str(closure.get(body_pin["path"])) != body_pin["sha256"] or "sha256:" + str(doc["environment"].get("netlist_sha256")) != body_pin["sha256"]:
+            problems.append(f"{kind} envelope: simulated bench body is not the pinned {body_pin['path']}")
+        if (doc.get("netlist") or {}).get("path") != body_pin["path"]:
+            problems.append(f"{kind} envelope: netlist path {(doc.get('netlist') or {}).get('path')!r} is not the pinned bench body")
+
+    # Simulator version: the fleet policy sim/tools/env_identity.py defines
+    # (#348, and #497 item 6 tracks the legacy exact-string check) -- a FLOOR
+    # on the ngspice major when the pin states one, an exact match otherwise.
+    floor = ((env.get("pin") or {}).get("osdi_toolchain") or {}).get("ngspice_min_major")
+    if isinstance(floor, int) and not isinstance(floor, bool):
+        major = _ngspice_major(version)
+        if major is None or major < floor:
+            problems.append(f"the envelopes ran ngspice-{version}, below the sim/pdk.json toolchain floor ngspice-{floor}")
+    elif env.get("ngspice") and f"ngspice-{version}" != env["ngspice"]:
+        problems.append(f"the envelopes ran ngspice-{version}, but sim/pdk.json pins {env['ngspice']} -- mixed simulation environments are not combined silently")
+
+    # requests: the measurement definitions and analyses the audit relies on
+    null_req, cl_req = docs["null_request"], docs["cl_request"]
+    if (null_req.get("analysis") or {}).get("kind") != "dc" or (null_req.get("analysis") or {}).get("args") != "Vid 0.004 0.034 4u":
+        problems.append("null request: analysis is not `dc Vid 0.004 0.034 4u` (the 4 uV fine-step window)")
+    if (cl_req.get("analysis") or {}).get("kind") != "op":
+        problems.append("cl request: analysis is not `op`")
+    for kind, req, defs in (("null", null_req, OFFSET_NULL_MEASUREMENTS), ("cl", cl_req, OFFSET_CL_MEASUREMENTS)):
+        got = {m.get("name"): (m.get("spice") or m.get("expr"), m.get("limits")) for m in req.get("measurements") or []}
+        if set(got) != set(defs):
+            problems.append(f"{kind} request: measurements {sorted(got)} are not exactly {sorted(defs)}")
+        else:
+            for name, (definition, limits) in defs.items():
+                if got[name][0] != definition:
+                    problems.append(f"{kind} request: measurement {name} is {got[name][0]!r}, not {definition!r}")
+                if (got[name][1] or None) != limits:
+                    problems.append(f"{kind} request: measurement {name} limits {got[name][1]!r} are not the pinned {limits!r}")
+        if Path(str(req.get("netlist"))).name != Path(kr["files"][f"{kind}_body"]["path"]).name:
+            problems.append(f"{kind} request: netlist {req.get('netlist')!r} is not the pinned bench body")
+
+    # bench bodies: the harness topologies, element for element
+    stated = {parse_capacitance(s)[0] for s in source_cl_statements(md_text)} - {None}
+    for kind in ("null", "cl"):
+        body = "\n".join(line for line in docs[f"{kind}_body"].splitlines() if not line.lstrip().startswith("*"))
+        loads = _KLT_CLOAD_RE.findall(body)
+        if len(loads) != 1:
+            problems.append(f"{kind} bench body: {len(loads)} Cload elements (need exactly one)")
+        else:
+            try:
+                cload = Decimal(loads[0])
+            except InvalidOperation:
+                cload = None
+            if cload is None or cload not in stated:
+                problems.append(f"{kind} bench body: Cload {loads[0]} is not a CL the record's own prose states ({sorted(source_cl_statements(md_text))})")
+        if sum(line.lower().startswith(".include") for line in body.splitlines()) != 1:
+            problems.append(f"{kind} bench body: needs exactly one .include of the DUT netlist")
+    for name, pattern in OFFSET_BENCH_ELEMENTS.items():
+        scope, element = name.split(":")
+        kinds = ("null", "cl") if scope == "both" else (scope,)
+        for kind in kinds:
+            body = "\n".join(line for line in docs[f"{kind}_body"].splitlines() if not line.lstrip().startswith("*"))
+            if len(re.findall(r"^" + pattern + r"\s*$", body, re.MULTILINE | re.IGNORECASE)) != 1:
+                problems.append(f"{kind} bench body: element {element} is not present exactly once as `{pattern}`")
+
+    # the Av0 join: the explicitly selected same-DUT open-loop record, by pin
+    join_key = kr["av0_join"]
+    join = records.get(join_key) or {}
+    av0: dict[str, float] = {}
+    join_csv = join.get("csv")
+    jpath = repo / join_csv if isinstance(join_csv, str) else None
+    if jpath is None or not jpath.is_file():
+        problems.append(f"av0_join record {join_key}: CSV is missing")
+    elif sha256_file(jpath) != join.get("csv_sha256"):
+        problems.append(f"av0_join record {join_key}: {join_csv} does not match its selection pin")
+    else:
+        join_snap = join.get("netlist_snapshot")
+        if isinstance(join_snap, str) and (repo / join_snap).is_file():
+            if normalized_netlist_hash(repo / join_snap) != normalized_netlist_hash(snap):
+                problems.append(
+                    f"av0_join record {join_key}: simulated a different DUT ({join_snap}) than "
+                    f"record {key} ({snapshot_rel}) -- an Av0 from another circuit is never joined silently"
+                )
+        else:
+            problems.append(f"av0_join record {join_key}: netlist snapshot {join_snap!r} is missing")
+        try:
+            _, jrows = read_csv_rows(jpath)
+        except (OSError, UnicodeDecodeError, csv.Error) as exc:
+            problems.append(f"av0_join record {join_key}: cannot parse {join_csv} ({exc})")
+            jrows = []
+        for row in jrows:
+            jid = (row.get("point_id") or "").strip()
+            try:
+                spelled = f"{(row.get('corner') or '').strip()}_{int(float(row['temp_c']))}C_{float(row['vdd_v']):.2f}V"
+            except (TypeError, ValueError, OverflowError):
+                problems.append(f"av0_join record {join_key}: point {jid}: unreadable corner/temp_c/vdd_v columns")
+                continue
+            if jid != spelled:
+                problems.append(
+                    f"av0_join record {join_key}: point {jid}: its corner/temp_c/vdd_v columns spell {spelled!r} "
+                    "-- an Av0 bound to the wrong corner"
+                )
+                continue
+            try:
+                value = float(row["av0_db"])
+            except (KeyError, TypeError, ValueError):
+                value = float("nan")
+            if jid in av0:
+                problems.append(f"av0_join record {join_key}: duplicate point {jid}")
+            av0[jid] = value
+        for pid in expected_ids:
+            if pid not in av0:
+                problems.append(f"av0_join record {join_key}: point {pid}: no row in the joined record {join_csv}")
+            elif not math.isfinite(av0[pid]):
+                problems.append(f"av0_join record {join_key}: point {pid}: no finite Av0 in the joined record {join_csv}")
+    if problems:
+        errors.extend(f"record {key}: offset klt raw evidence: {p}" for p in problems)
+        return None
+
+    points: dict = {}
+    for pid in expected_ids:
+        n = _klt_values(envs["null"]["corners"][pid], OFFSET_NULL_MEASUREMENTS)
+        c = _klt_values(envs["cl"]["corners"][pid], OFFSET_CL_MEASUREMENTS)
+        bad = [name for name, v in (*n.items(), *c.items()) if not isinstance(v, (int, float)) or isinstance(v, bool) or not math.isfinite(v)]
+        if bad:
+            problems.append(f"point {pid}: missing or non-finite raw value(s) {bad}")
+            continue
+        sup = envs["null"]["corners"][pid].get("supply_v") or {}
+        if envs["cl"]["corners"][pid].get("supply_v") != sup:
+            problems.append(f"point {pid}: the null and cl envelopes use different supplies")
+            continue
+        points[pid] = {
+            "null": dict(n), "vout_cl_v": c["vout_cl_v"], "vdd": sup.get("vdd"),
+            "av0_db": av0.get(pid),
+        }
+    if problems:
+        errors.extend(f"record {key}: offset klt raw evidence: {p}" for p in problems)
+        return None
+    return {
+        "points": points, "version": version, "av0_join": join_key, "join_csv": join_csv,
+        "jobs": {k: envs[k]["env"]["environment"]["remote"]["job_id"] for k in ("null", "cl")},
+    }

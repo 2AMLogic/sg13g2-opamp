@@ -1,0 +1,56 @@
+* sg13g2-opamp -- input-offset closed-loop cross-check bench as a `klt sim`
+* circuit body (issue #504)
+*
+* The SAME test circuit as ../testbench/tb_offset_cl.spice.tmpl (the harness
+* path's SECOND method, sim/input-offset/run_offset_sweep.sh pass 3),
+* re-expressed in the shape `klt sim` requires: a circuit body with no
+* .control/.end of its own (klayout-tools docs/cli/sim.md, "Netlist
+* convention"). klt generates the per-corner wrapper deck around this file
+* and adds, per corner: the process `.lib` cards (cornerMOSlv.lib
+* mos_<corner> plus cornerCAP.lib cap_typ / cornerRES.lib res_typ), `.temp`,
+* `alter vdd=<V>` and `alter vinp=<V/2>` (swept together by index, so inp
+* sits at exactly Vcm = VDD/2 as the harness's @@VCM_V@@ = vdd/2 does),
+* `pre_osdi` for the four OSDI libraries, and the one analysis the request
+* declares (`op`).
+*
+* Element-for-element the template's circuit: flat DUT include (no X
+* instance), Lbreak = 1e18 H from inn to out -- an ideal inductor is a dead
+* short at DC, closing the unity-gain buffer loop inn = out while inp is
+* held at Vcm -- CL = 2 pF [DR-1] and the 10 uA external ibias sunk from
+* vdd, exactly the null bench's environment. NO differential source, NO
+* AC-ground capacitor: the input common mode of this method is
+* (Vcm + Vout)/2 = Vcm - Vos/2 (inn follows the output), the one structural
+* difference between the two methods, documented in ../README.md "Two
+* methods". The common-mode source is named Vinp (its node here IS inp) so
+* klt's per-corner `vinp` sweep sets Vcm = VDD/2 by index.
+*
+* The request reads one number: vout_cl_v = v(out) of this operating point.
+* vos_cl = -(vout_cl - Vcm) * (1 + Av0)/Av0, with Av0 the SAME-CORNER
+* open-loop DC gain of the selected sim/open-loop-ac/ record, is derived
+* offline by offset_post.py / compare.py -- the harness evaluates the same
+* expression in run_offset_sweep.sh -- and must agree with the null method
+* to max(200 uV, 5% |Vos|) (xcheck_pass).
+*
+* No solver option is set (DR-0005: ngspice default tolerance).
+*
+* Exactly one .include, of the committed DUT netlist, by a path relative to
+* this file (ngspice resolves a nested .include against the including file's
+* directory; klt's off-host backends stage the same closure).
+
+.include ../../../design/netlist/opamp_core.spice
+
+.options tnom=27
+
+* ngspice's OpenMP device-evaluation threads oversubscribe a batch-fleet
+* instance (2AMLogic/klayout-tools#2970, see tb_offset.body.spice);
+* scheduling only, the solution is unchanged.
+.control
+set num_threads=1
+.endc
+
+Vdd vdd 0 dc 1.2
+Vss vss 0 dc 0
+Iibias vdd ibias dc 10u
+Vinp inp 0 dc 0.6
+Lbreak inn out 1e18
+Cload out vss 2e-12

@@ -435,6 +435,60 @@ disagreement; `klt/records/20261027-011449-f8ef0ba.direct.compare.json`. Before
 the fleet run a one-corner local probe (ngspice-46, `mos_fs`/125 °C/1.08 V)
 gave 26.9010753 dB against the join's 26.9010754.
 
+### Direct systematic CMRR: one measurement, two DUT copies (issue #505)
+
+`klt/cmrr_direct.request.json` + `klt/tb_cmrr_direct.body.spice` give the
+systematic CMRR row the same batch evidence the PSRR half has. Same
+construction as the direct PSRR deck: copy A has `Vinp ac 1` and a quiet rail
+(`vdb(outa)` is Av0); copy B's input rides on the quiet VDD/2 divider through
+an in-phase common-mode source `Vcmb` (dc 0, `ac 1`) and its `inn` follows
+`inp` through `Ccmb` = 1 F (open at DC, so the `Lbreak` loop is untouched), as
+in `testbench/tb_cmrr.spice.tmpl`; the supply is quiet (`vdb(outb)` is Acm0).
+`cmrr_db = (vdb(outa) - vdb(outb))[0]` in dB (positive, `Av0 - Acm0`),
+`av0_db` and `acm0_db` are read separately, and
+`cmrr_plateau_delta_db = |CMRR(0.1 Hz) - CMRR(10 mHz)| <= 0.05 dB` is graded
+by the tool (a miss is a result). No bound is graded in the deck: the
+systematic floor is the superseded DR-2 row (30.75 dB, context). Grid, models,
+cap/res sections, analysis and options are those of `psrr_direct.request.json`
+(the offline test asserts they are equal), so Av0 of both decks has the same
+DUT, corner, temperature, VDD and `.options`.
+
+`klt/run_cmrr_direct.sh` submits it to the fleet (`--wait-for-capacity 600`),
+validates, and writes `klt/records/<id>.cmrr.sim.json` and
+`<id>.cmrr.compare.json`. Run 2026-11-25 on the fleet image `ami-09c14f55df4958cbd`
+(ngspice-47): CMRR `20261125-011804-02d78dd`, joined to the PSRR direct
+re-run `20261125-011604-02d78dd` on the same image (the October PSRR direct
+envelope `20261027-011449-f8ef0ba` ran ngspice-46 and stays as is). 45 of 45
+corners pass; same DUT hash (`4cddebec…`), model deck hash and engine in both.
+Worst CMRR 31.1986 dB at `mos_fs`/125 °C/1.08 V (floor 30.75 dB, context);
+worst plateau delta 5.8e-12 dB.
+
+`compare_cmrr_direct.py` (tests `klt/test_compare_cmrr_direct.py`, offline):
+
+| Check | Tolerance / rule | Basis |
+|---|---|---|
+| Av0, CMRR deck vs PSRR deck | 1e-4 dB per point | same circuit text; observed 6e-9 dB across ngspice-46/47; adjacent corners differ by >0.1 dB so a misjoined point cannot hide |
+| `cmrr_db == av0_db - acm0_db` | 1e-6 dB | derived expression |
+| Acm0 vs harness record `20260921-151815-707b34c` | 1e-3 dB | same common-mode circuit; the CSV prints 6 digits; observed max 4.3e-5 dB |
+| engine, model deck, DUT hash, bench-body hash | exact | otherwise "misjoined", refused |
+| stimulus | exactly `Vcmb`+`Vinp` carry AC in the CMRR body, `Vsrip`+`Vinp` in the PSRR body | refuses a swapped common-mode/supply stimulus |
+
+**The harness record's Av0 (hence CMRR) is not a regression control.** Its Av0
+is the floating-`inn` open-loop gain; the batch Av0 is AC-grounded. The batch
+minus harness Av0 shift is +0.2199 … +1.785 dB at the 45 points, identical to
+the shift `sim/open-loop-ac/records/20261015-103057-895d555.md` records against
+the same superseded record, and the batch Av0 equals the PSRR direct deck's to
+6e-9 dB. The shift is reported in the compare record, not tolerated away. Only
+Acm0 is checked against the harness record.
+
+Not done here: the characterization selection (`signoff/characterization/
+selection.json`) still points `cmrr-psrr` at the harness record. Binding these
+envelopes needs the simulator-identity admission of #500 (the pinned check
+accepts only the exact pin `ngspice-46`, the fleet now runs 47), and the
+selection files are being edited by that work. The operating-point consistency
+check of the harness is not re-measured by either direct deck, and the
+PSRR row's 1 kHz context figure has no batch source.
+
 ### Av0 from the open-loop envelope: measured join check (issue #99)
 
 `klt/records/20261016-171154-ff5ee9a.compare.json` joins the grounded-`inn` supply-gain envelope
