@@ -203,6 +203,29 @@ SLEW_AUDIT_RULE = (
     "while the pinned waveforms disagree."
 )
 
+SLEW_KLT_AUDIT_RULE = (
+    "Slew-rate batch-envelope audit (issue #501): a record that selects the "
+    "batch `klt sim` evidence (`slew_klt`: the sha256-pinned envelope, the "
+    "request it ran and the bench body) is audited offline against it without "
+    "the local harness's waveforms. The envelope must decide all 45 grid "
+    "corners exactly once (a corner that misses a limit is a failing row, "
+    "never an error; an errored, inconclusive, duplicate, missing or "
+    "out-of-grid corner is), come from a batch job, name one consistent "
+    "ngspice version, and have simulated the selected DUT snapshot and the "
+    "pinned bench body at the pinned model deck; the request must carry the "
+    "documented crossing definitions and integrity limits unrelaxed. Per "
+    "point both edge rates and the inner rates are recomputed from the "
+    "measured window crossings (0.3 V outer, 0.15 V inner span), with the "
+    "linearity ratios, the worse edge min(rise, fall) and the four validity "
+    "flags derived from the reported quantities and the request's limits. "
+    "Summary rates must match within the sim/slew-rate/klt/compare.py "
+    "tolerance (2e-3 relative), DC node voltages within 1e-6 V + 1e-3 relative, "
+    "and flags exactly; a missing or non-positive crossing, an edited worst "
+    "edge, a stale DUT hash or a contradictory simulator version is an error "
+    "naming the corner and field. The load is the bench body's single Cload, "
+    "which must be one the record's prose states."
+)
+
 SWING_AUDIT_RULE = (
     "Output-swing raw-evidence audit (issue #230): a record that selects raw "
     "DC evidence (`swing_raw`, one sha256-pinned coarse and one fine "
@@ -396,6 +419,7 @@ def build_content(repo: Path, selection_path: Path) -> dict:
         "samples_audit_rule": SAMPLES_AUDIT_RULE,
         "noise_audit_rule": NOISE_AUDIT_RULE,
         "slew_audit_rule": SLEW_AUDIT_RULE,
+        **({"slew_klt_audit_rule": SLEW_KLT_AUDIT_RULE} if any("slew_klt" in r for r in selection["records"].values()) else {}),
         "swing_audit_rule": SWING_AUDIT_RULE,
         "klt_audit_rule": KLT_AUDIT_RULE,
         "environment": {

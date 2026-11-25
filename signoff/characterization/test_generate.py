@@ -2141,6 +2141,222 @@ class SlewRawAudit(PointRawPinControlMixin, RawAuditCase):
         self.assertIn("non-finite", res.stderr)
 
 
+class SlewKltAudit(RawAuditCase):
+    """Issue #501: the slew-rate summary audited against the hash-pinned batch
+    `klt sim` envelope (crossings, not waveforms), definition check
+    slew_klt_audit. The committed selection still pins the local waveforms;
+    these tests select the committed same-DUT envelope in a fixture copy."""
+
+    RECORD = "slew-rate"
+    POINT = "mos_tt_27C_1.20V"
+    RAW_KEY = "slew_klt"
+    DEFINITION_CHECK = "slew_klt_audit"
+    FILES = {
+        "envelope": "sim/slew-rate/klt/records/20261015-063443-80878d7.sim.json",
+        "request": "sim/slew-rate/klt/slew.request.json",
+        "bench_body": "sim/slew-rate/klt/tb_slew.body.spice",
+    }
+
+    def setUp(self) -> None:
+        super().setUp()
+        rec = self.fx.selection["records"][self.RECORD]
+        pins = {}
+        for kind, rel in self.FILES.items():
+            dst = self.fx.root / rel
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(REPO / rel, dst)
+            pins[kind] = {"path": rel, "sha256": generate.sha256_file(dst)}
+        # the pure batch scenario: no local waveforms, the envelope instead
+        rec.pop("slew_raw")
+        rec["definition_checks"] = ["slew_worse_edge", "slew_klt_audit"]
+        rec["slew_klt"] = {"files": pins}
+        self.fx.save_selection()
+
+    def edit_env(self, mutate, kind="envelope", repin=True) -> None:
+        pin = self.raw()["files"][kind]
+        path = self.fx.root / pin["path"]
+        doc = json.loads(path.read_text(encoding="utf-8"))
+        mutate(doc)
+        path.write_text(json.dumps(doc), encoding="utf-8")
+        if repin:
+            pin["sha256"] = generate.sha256_file(path)
+            self.fx.save_selection()
+
+    def corner(self, doc, pid=None):
+        pid = pid or self.POINT
+        for c in doc["corners"]:
+            if f"{c['process']}_{c['temperature_c']}C_{c['supply_v']['vdd']:.2f}V" == pid:
+                return c
+        raise KeyError(pid)
+
+    def meas(self, doc, name, pid=None):
+        return next(m for m in self.corner(doc, pid)["measurements"] if m["name"] == name)
+
+    # --- same-DUT control ----------------------------------------------------
+
+    def test_same_dut_envelope_reproduces_the_harness_record(self):
+        content = self.fx.build()
+        self.assertEqual(self.errors(content), [])
+        src = content["sources"][self.RECORD]
+        self.assertEqual((src["slew_klt"]["status"], src["slew_klt"]["points"]), ("verified", 45))
+        self.assertEqual(src["slew_klt"]["job"], "klt-sim-9649fa050398")
+        self.assertEqual((src["valid_points"], src["ngspice"]), (45, "ngspice-46"))
+        self.assertIn("Slew-rate batch-envelope audit", content["slew_klt_audit_rule"])
+        row = rows_by_id(content)["slew_rate"]
+        self.assertEqual(row["verdict"], "PASS")
+        self.assertTrue(row["load"].startswith("CL = 2 pF"), row["load"])
+
+    def test_unselected_report_carries_no_batch_rule(self):
+        fx = Fixture()
+        try:
+            self.assertNotIn("slew_klt_audit_rule", fx.build())
+        finally:
+            fx.close()
+
+    def test_tolerances_equal_the_compare_script(self):
+        sys.path.insert(0, str(REPO / "sim" / "slew-rate" / "klt"))
+        import compare  # noqa: E402
+        import defchecks  # noqa: E402
+        self.assertEqual(compare.TOLERANCES["sr_rise_v_per_us"]["rel"], defchecks.SLEW_KLT_RATE_REL)
+        self.assertEqual(compare.TOLERANCES["vout_dc_v"]["abs"], defchecks.SLEW_KLT_DC_ABS)
+        self.assertEqual(compare.TOLERANCES["vout_dc_v"]["rel"], defchecks.SLEW_KLT_DC_REL)
+
+    # --- selection shape ----------------------------------------------------
+
+    def test_envelope_without_its_audit_is_refused(self):
+        self.fx.selection["records"][self.RECORD]["definition_checks"] = ["slew_worse_edge"]
+        self.fx.save_selection()
+        with self.assertRaises(generate.SelectionError):
+            self.fx.build()
+
+    def test_audit_without_pinned_envelope_is_refused(self):
+        del self.fx.selection["records"][self.RECORD]["slew_klt"]
+        self.fx.save_selection()
+        with self.assertRaises(generate.SelectionError):
+            self.fx.build()
+
+    def test_every_artifact_must_be_pinned(self):
+        for kind in self.FILES:
+            with self.subTest(kind=kind):
+                self.tearDown()
+                self.setUp()
+                del self.raw()["files"][kind]
+                self.fx.save_selection()
+                with self.assertRaises(generate.SelectionError):
+                    self.fx.build()
+
+    def test_drifted_envelope_is_refused(self):
+        self.edit_env(lambda d: d.update(note="x"), repin=False)
+        self.assert_error("does not match its selection pin")
+
+    # --- tamper / missing / stale / incomplete ------------------------------
+
+    def test_missing_crossing_names_corner_and_field(self):
+        def mutate(doc):
+            self.corner(doc)["measurements"] = [m for m in self.corner(doc)["measurements"] if m["name"] != "t_fall_inner_s"]
+        self.edit_env(mutate)
+        self.assert_error(f"point {self.POINT}: missing or non-finite measurement(s) ['t_fall_inner_s']")
+
+    def test_nan_crossing_names_corner_and_field(self):
+        self.edit_env(lambda d: self.meas(d, "t_rise_outer_s").update(value=None))
+        self.assert_error(f"point {self.POINT}: missing or non-finite measurement(s) ['t_rise_outer_s']")
+
+    def test_reported_rate_must_follow_its_crossings(self):
+        self.edit_env(lambda d: self.meas(d, "sr_rise_v_per_us").update(value=20.0))
+        self.assert_error(f"point {self.POINT} fails definition check slew_klt_audit", "sr_rise_v_per_us: envelope reports 20.0")
+
+    def test_tampered_worst_edge(self):
+        self.fx.set_cell(self.RECORD, self.POINT, "sr_worst_v_per_us", "9.5")
+        self.assert_error(f"point {self.POINT} fails definition check slew_worse_edge")
+        self.fresh()
+        self.setUp()
+        # rise/fall/worst moved together: only the envelope can refuse it
+        for col in ("sr_rise_v_per_us", "sr_fall_v_per_us", "sr_worst_v_per_us"):
+            self.fx.set_cell(self.RECORD, self.POINT, col, "9.5")
+        self.assert_error(f"point {self.POINT} fails definition check slew_klt_audit", "recomputed from the pinned envelope crossings")
+
+    def test_validity_flag_is_derived_not_trusted(self):
+        # a drive excursion outside the request's limit, reported coherently
+        def mutate(doc):
+            self.meas(doc, "vinn_max_v")["value"] += 0.05
+            self.meas(doc, "drive_pp_v")["value"] += 0.05
+            self.meas(doc, "drive_centre_err_v")["value"] += 0.025
+        self.edit_env(mutate)
+        self.assert_error("drive_pass '1' but the pinned envelope's reported quantities")
+
+    def test_stale_dut_hash(self):
+        def mutate(doc):
+            for c in doc["environment"]["netlist_closure"]:
+                if c["path"] == "design/netlist/opamp_core.spice":
+                    c["sha256"] = "0" * 64
+        self.edit_env(mutate)
+        self.assert_error("is not the selected netlist snapshot")
+
+    def test_stale_bench_body(self):
+        self.edit_env(lambda d: d["environment"].update(netlist_sha256="1" * 64))
+        self.assert_error("simulated bench body")
+
+    def test_incomplete_corner_set(self):
+        self.edit_env(lambda d: d["corners"].pop())
+        self.assert_error("no corner for point mos_fs_125C_1.32V")
+
+    def test_duplicate_corner(self):
+        self.edit_env(lambda d: d["corners"].append(json.loads(json.dumps(d["corners"][0]))))
+        self.assert_error("duplicate corner mos_tt_-40C_1.08V")
+
+    def test_errored_corner_is_not_evidence(self):
+        self.edit_env(lambda d: self.corner(d).update(status="error"))
+        self.assert_error(f"point {self.POINT} is not a decided corner")
+
+    def test_contradictory_simulator_version(self):
+        def mutate(doc):
+            remote = doc["environment"]["remote"]
+            remote.setdefault("worker_environment", {}).setdefault("simulator", {})["version_banner"] = "ngspice-45 : x"
+        self.edit_env(mutate)
+        self.assert_error("contradictory simulator version")
+
+    def test_envelope_version_must_match_the_record_prose(self):
+        self.edit_env(lambda d: d["environment"].update(engine_version="45"))
+        self.assert_error("ran ngspice-45 but the selected record's prose names ngspice-46")
+
+    def test_relaxed_request_limit_is_refused(self):
+        def mutate(doc):
+            next(m for m in doc["measurements"] if m["name"] == "lin_rise_ratio")["limits"] = {"min": 0.5, "max": 1.5}
+        self.edit_env(mutate, kind="request")
+        self.assert_error("lin_rise_ratio limits are")
+
+    def test_load_must_be_a_stated_cl(self):
+        def edit(text):
+            return text.replace("Cload out vss 2e-12", "Cload out vss 5e-12")
+        pin = self.raw()["files"]["bench_body"]
+        path = self.fx.root / pin["path"]
+        path.write_text(edit(path.read_text(encoding="utf-8")), encoding="utf-8")
+        pin["sha256"] = generate.sha256_file(path)
+        self.fx.save_selection()
+        self.assert_error("Cload 5e-12 is not a CL the record's own prose states")
+
+    # --- limit miss is a result, not an error ---------------------------------
+
+    def test_genuine_limit_miss_stays_a_failing_row(self):
+        def mutate(doc):
+            for name in ("t_rise_outer_s", "t_rise_inner_s"):
+                self.meas(doc, name)["value"] *= 1.2
+            for name in ("sr_rise_v_per_us", "sr_rise_inner_v_per_us"):
+                self.meas(doc, name)["value"] /= 1.2
+            self.meas(doc, "sr_rise_v_per_us")["status"] = "fail"
+            self.corner(doc)["status"] = "fail"
+            doc.update(status="fail", passed=44, failed=1)
+        self.edit_env(mutate)
+        rate = float(self.cell("sr_rise_v_per_us")) / 1.2
+        for col, value in (("sr_rise_v_per_us", rate), ("sr_worst_v_per_us", rate),
+                           ("sr_rise_inner_v_per_us", float(self.cell("sr_rise_inner_v_per_us")) / 1.2)):
+            self.fx.set_cell(self.RECORD, self.POINT, col, f"{value:.6g}")
+        content = self.fx.build()
+        self.assertEqual(self.errors(content), [])
+        row = rows_by_id(content)["slew_rate"]
+        self.assertEqual((row["verdict"], row["measured_worst"]["point"]), ("FAIL", self.POINT))
+
+
 class SwingRawAudit(PointRawPinControlMixin, RawAuditCase):
     """Issue #230: the output-swing summary is audited against hash-pinned
     coarse/fine DC transfer curves and rendered netlists with the SAME
