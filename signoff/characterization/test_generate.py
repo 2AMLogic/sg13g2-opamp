@@ -3157,7 +3157,7 @@ class PinnedPopulationNeedsItsAudit(unittest.TestCase):
         self.assertEqual(
             set(selection.POPULATION_AUDITS),
             {"slew_raw", "noise_raw", "swing_raw", "mc_samples", "draws_csv",
-             "slew_klt", "klt_raw", "offset_klt_raw"},
+             "slew_klt", "klt_raw", "offset_klt_raw", "cmrr_psrr_klt"},
         )
         for audit in selection.POPULATION_AUDITS.values():
             self.assertIn(audit, selection.DEFINITION_CHECKS)
