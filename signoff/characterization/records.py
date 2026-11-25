@@ -72,6 +72,9 @@ KLT_OP_INTERNAL_MEASUREMENTS = {
     "op_vtail_rail_frac": "v(tail)/v(vdd)",
 }
 KLT_OP_MEASUREMENTS = KLT_OP_PORT_MEASUREMENTS
+# Issue #513: the slew summary columns the batch envelope cannot derive (it
+# returns crossings, not a waveform); only slew_raw_audit recomputes them.
+SLEW_WAVEFORM_ONLY_COLUMNS = ("vout_min_v", "vout_max_v", "window_lo_v", "window_hi_v")
 KLT_REQUIRED_OSDI = ("psp103.osdi", "psp103_nqs.osdi", "mosvar.osdi", "r3_cmc.osdi")
 _HEX64_RE = re.compile(r"^[0-9a-f]{64}$")
 KLT_BENCH_ELEMENTS = {
@@ -1241,6 +1244,16 @@ def load_record(repo: Path, key: str, spec: dict, grid: dict, env: dict, records
     # 3e'. batch slew `klt sim` envelope (issue #501), cross-checked.
     slew_klt_pop: dict | None = None
     sk = spec.get("slew_klt")
+    if sk is not None and sr is None:
+        # Issue #513: the envelope returns no waveform, so only slew_raw_audit
+        # covers these columns; a pure-batch record must not declare them.
+        unaudited = [c for c in SLEW_WAVEFORM_ONLY_COLUMNS if c in header]
+        if unaudited:
+            errors.append(
+                f"record {key}: pins slew_klt without slew_raw, but {spec['csv']} declares "
+                f"{', '.join(unaudited)}, which only the pinned waveform (slew_raw) audits -- "
+                "pin slew_raw beside slew_klt or drop the columns"
+            )
     if sk is not None:
         slew_klt_pop = _load_slew_klt_population(repo, key, sk, expected, spec["netlist_snapshot"], md_text, errors)
         src["slew_klt"] = {

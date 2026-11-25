@@ -31,6 +31,7 @@ from unittest import mock
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
+import common  # noqa: E402
 import generate  # noqa: E402
 
 sys.path.insert(0, str(HERE.parent.parent / "sim" / "cmrr-mismatch"))
@@ -2204,6 +2205,19 @@ class SlewKltAudit(RawAuditCase):
         rec["definition_checks"] = ["slew_worse_edge", "slew_klt_audit"]
         rec["slew_klt"] = {"files": pins}
         self.fx.save_selection()
+        self.drop_waveform_only_columns()
+
+    WAVEFORM_ONLY = ("vout_min_v", "vout_max_v", "window_lo_v", "window_hi_v")
+
+    def drop_waveform_only_columns(self) -> None:
+        """A pure-batch record cannot declare the columns only slew_raw audits
+        (issue #513); the control fixture drops them from the signed-off CSV."""
+        path = self.fx.csv_path(self.RECORD)
+        rows = [line.split(",") for line in path.read_text(encoding="utf-8").splitlines()]
+        keep = [i for i, c in enumerate(rows[0]) if c not in self.WAVEFORM_ONLY]
+        path.write_text("\n".join(",".join(r[i] for i in keep) for r in rows) + "\n", encoding="utf-8")
+        self.fx.selection["records"][self.RECORD]["csv_sha256"] = generate.sha256_file(path)
+        self.fx.save_selection()
 
     def edit_env(self, mutate, kind="envelope", repin=True) -> None:
         pin = self.raw()["files"][kind]
@@ -2224,6 +2238,64 @@ class SlewKltAudit(RawAuditCase):
 
     def meas(self, doc, name, pid=None):
         return next(m for m in self.corner(doc, pid)["measurements"] if m["name"] == name)
+
+    # --- issue #513: item 1, columns no batch check covers ----------------------
+
+    def test_pure_batch_record_declaring_waveform_only_columns_is_refused(self):
+        self.fresh_pure_batch_with_columns()
+        errors = self.assert_error("pins slew_klt without slew_raw")
+        msg = next(e for e in errors if "pins slew_klt without slew_raw" in e)
+        for col in self.WAVEFORM_ONLY:
+            self.assertIn(col, msg)
+
+    def fresh_pure_batch_with_columns(self) -> None:
+        self.fresh()
+        rec = self.fx.selection["records"][self.RECORD]
+        pins = {}
+        for kind, rel in self.FILES.items():
+            dst = self.fx.root / rel
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(REPO / rel, dst)
+            pins[kind] = {"path": rel, "sha256": generate.sha256_file(dst)}
+        rec.pop("slew_raw", None)
+        rec["definition_checks"] = ["slew_worse_edge", "slew_klt_audit"]
+        rec["slew_klt"] = {"files": pins}
+        self.fx.save_selection()
+
+    def test_pure_batch_record_without_those_columns_passes(self):
+        self.assertEqual(self.errors(self.fx.build()), [])
+
+    # --- issue #513: item 2, every consumed measurement is pinned ----------------
+
+    def edit_request_spice(self, name, old, new) -> None:
+        def mutate(doc):
+            m = next(m for m in doc["measurements"] if m["name"] == name)
+            self.assertIn(old, m["spice"])
+            m["spice"] = m["spice"].replace(old, new)
+        self.edit_env(mutate, kind="request")
+
+    def test_moved_traverse_sample_time_is_refused(self):
+        for name, old, new in (("pre_rise_orel_v", "at=299n", "at=399n"), ("pre_fall_orel_v", "at=549n", "at=649n")):
+            with self.subTest(name=name):
+                self.fx.close()
+                self.setUp()
+                self.edit_request_spice(name, old, new)
+                self.assert_error(f"slew request: measurement {name} is")
+
+    def test_redefined_drive_and_dc_measurements_are_refused(self):
+        for name, old, new in (
+            ("vinn_max_v", "max v(inn)", "min v(inn)"),
+            ("vout_dc_v", "at=0", "at=1n"),
+            ("op_vout_rail_frac", "v(fout)", "v(fd1)"),
+        ):
+            with self.subTest(name=name):
+                self.fx.close()
+                self.setUp()
+                self.edit_request_spice(name, old, new)
+                self.assert_error(f"slew request: measurement {name} is")
+
+    def test_every_limited_measurement_has_a_pinned_definition(self):
+        self.assertLessEqual(set(common.SLEW_KLT_LIMITS), set(common.SLEW_KLT_SPICE))
 
     # --- same-DUT control ----------------------------------------------------
 
@@ -2272,6 +2344,7 @@ class SlewKltAudit(RawAuditCase):
         for kind in self.FILES:
             with self.subTest(kind=kind):
                 self.tearDown()
+                self.fx.close()
                 self.setUp()
                 del self.raw()["files"][kind]
                 self.fx.save_selection()
