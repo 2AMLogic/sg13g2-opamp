@@ -16,6 +16,7 @@ import json
 import os
 import subprocess
 import tempfile
+import threading
 import time
 import unittest
 from pathlib import Path
@@ -178,6 +179,43 @@ class Reservation(unittest.TestCase):
             self.assertEqual(snap[f"{RID}.sim.json"], b'{"from": "first"}\n')
             self.assertEqual(list(fx.tmp.iterdir()), [])
 
+    @staticmethod
+    def _os_mkdir_race_control(procs=6, trials=50):
+        """#515: no-shell control for the double-owner flake. Race `procs`
+        threads on os.mkdir (the mkdir(2) syscall, no shell, no mkdir
+        binary) against a fresh path in the same TMPDIR, `trials` times, and
+        report the worst per-trial success count. >1 means the filesystem or
+        kernel breaks mkdir atomicity; exactly 1 with a shell double-success
+        points at the mkdir binary or a harness artifact. Runs only inside a
+        private TemporaryDirectory, never against records/."""
+        try:
+            worst = 0
+            with tempfile.TemporaryDirectory() as d:
+                for n in range(trials):
+                    target = os.path.join(d, f".reserve-{n}")
+                    barrier = threading.Barrier(procs)
+                    wins = []
+
+                    def attempt():
+                        barrier.wait()
+                        try:
+                            os.mkdir(target)
+                            wins.append(1)
+                        except FileExistsError:
+                            pass
+
+                    ts = [threading.Thread(target=attempt)
+                          for _ in range(procs)]
+                    for t in ts:
+                        t.start()
+                    for t in ts:
+                        t.join()
+                    worst = max(worst, len(wins))
+            return (f"os.mkdir race control ({procs} racers x {trials} "
+                    f"trials in TMPDIR): max successes per trial={worst}")
+        except Exception as e:
+            return f"os.mkdir race control failed: {e!r}"
+
     def test_overlapping_starts_give_exactly_one_owner(self):
         with tempfile.TemporaryDirectory() as d:
             fx = Fixture(d)
@@ -227,7 +265,14 @@ class Reservation(unittest.TestCase):
                          'printf "BASH_VERSION=%s t1=%s t2=%s fstype=%s" '
                          '"${BASH_VERSION:-unknown}" "$a" "$b" '
                          '"$(stat -f -c %T "${TMPDIR:-/tmp}" 2>/dev/null '
-                         '|| echo stat-failed)"'],
+                         '|| echo stat-failed)"; '
+                         # #515: which mkdir the driver's `command mkdir`
+                         # resolves to, and its version (BSD/busybox have no
+                         # --version: fall back to unknown).
+                         'printf " mkdir=%s mkdir_version=%s" '
+                         '"$(command -v mkdir || echo unknown)" '
+                         '"$(mkdir --version 2>/dev/null | head -n 1 '
+                         '| grep . || echo unknown)"'],
                         capture_output=True, text=True, timeout=30)
                     runner = (f"runner probe ({probe.stdout.strip()}); "
                               f"rc={probe.returncode} "
@@ -237,6 +282,7 @@ class Reservation(unittest.TestCase):
                 self.fail(f"{exited} != 5 children exited after "
                           f"{time.monotonic() - t0:.1f}s of a 30s deadline; "
                           f"BEGUN owners={owners}; {runner}; "
+                          f"{self._os_mkdir_race_control()}; "
                           + "; ".join(states) + "\n" + "\n".join(diag))
             self.assertEqual(fx.klt_calls(), 0)  # nobody ran klt yet
             hold.write_text("go")
