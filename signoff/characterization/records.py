@@ -34,6 +34,7 @@ from common import (
     SLEW_KLT_SPICE,
     SLEW_PIN_KINDS,
     SWING_PIN_KINDS,
+    SWING_TWO_PASS_KINDS,
     canonical_json,
     normalized_netlist_hash,
     parse_decimal,
@@ -48,6 +49,7 @@ from paths import (
     noise_post,
     slew_post,
     swing_post,
+    swing_two_pass,
 )
 from rows import parse_capacitance, source_cl_statements
 
@@ -1029,6 +1031,58 @@ def _load_swing_population(repo: Path, key: str, sw: dict, expected: list, error
     return None if len(errors) > n_err else points
 
 
+def _load_swing_two_pass_population(repo: Path, key: str, sw: dict, expected: list, errors: list) -> dict | None:
+    """Pin-check each grid point's coarse/fine pass-evidence JSON, pair them
+    (same DUT, bench, simulator and PVT point; fine window = the coarse
+    crossing +- half-span; both clipping plateaus; one crossing) and measure
+    with the shared swing definitions (sim/output-swing/klt/two_pass.py).
+    Returns the population `_check_swing_raw` consumes, or None; problems
+    name point and file (issue #503)."""
+    n_err = len(errors)
+    files = sw["files"]
+    expected_ids = [pid for pid, _ in expected]
+    _check_raw_pins(
+        key, "swing two-pass", files, expected_ids, SWING_TWO_PASS_KINDS,
+        lambda pid, kind: f"{pid}_{kind}.json", errors)
+    passes: dict = {"coarse": [], "fine": []}
+    for pid in expected_ids:
+        entry = files.get(pid)
+        texts = _read_pinned_raw(
+            repo, key, pid, "swing two-pass", "coarse/fine evidence (every grid point needs both)",
+            entry, SWING_TWO_PASS_KINDS, errors)
+        if texts is None:
+            continue
+        for kind in SWING_TWO_PASS_KINDS:
+            rel = entry[kind]["path"]
+            try:
+                doc = json.loads(texts[kind])
+            except ValueError as exc:
+                errors.append(f"record {key}: point {pid}: {rel} is not valid JSON ({exc})")
+                continue
+            if not isinstance(doc, dict):
+                errors.append(f"record {key}: point {pid}: {rel} must be a JSON object")
+            elif doc.get("pid") != pid:
+                errors.append(f"record {key}: point {pid}: {rel} is evidence for point {doc.get('pid')!r}")
+            else:
+                passes[kind].append(doc)
+    if len(errors) > n_err:
+        return None
+    audited, problems = swing_two_pass.audit_population(expected_ids, passes["coarse"], passes["fine"])
+    errors.extend(f"record {key}: swing two-pass evidence: {p}" for p in problems)
+    if problems:
+        return None
+    return {
+        pid: {
+            "coarse": a["coarse"], "fine": a["fine"],
+            "vdd": float(a["fields"]["vdd_v"]), "vcm": float(a["fields"]["vcm_v"]),
+            "criterion": float(swing_post.CONFIG["criterion_frac"]),
+            "coarse_csv": files[pid]["coarse"]["path"], "fine_csv": files[pid]["fine"]["path"],
+            "coarse_netlist": files[pid]["coarse"]["path"], "fine_netlist": files[pid]["fine"]["path"],
+        }
+        for pid, a in audited.items()
+    }
+
+
 def load_record(repo: Path, key: str, spec: dict, grid: dict, env: dict, records: dict | None = None) -> dict:
     """Read and audit one selected record. Never raises on bad evidence."""
     state = {
@@ -1286,9 +1340,19 @@ def load_record(repo: Path, key: str, spec: dict, grid: dict, env: dict, records
             # as the only source, so admit it here instead of exact-matching.
             _carry_ngspice_version(key, src, envelope_ngspice, "the pinned slew envelope", spec, env, errors)
 
+    # 3f'. batch two-pass swing evidence (issue #503), the klt-era alternative.
+    swing_pop: dict | None = None
+    swtp = spec.get("swing_two_pass")
+    if swtp is not None:
+        swing_pop = _load_swing_two_pass_population(repo, key, swtp, expected, errors)
+        src["swing_two_pass"] = {
+            "status": "verified" if swing_pop is not None else "error",
+            "points": len(swtp["files"]),
+            "pins_sha256": sha256_bytes(canonical_json(swtp["files"]).encode("utf-8")),
+        }
+
     # 3f. raw DC transfer curves (issue #230): both passes' pinned wrdata
     # curves and rendered netlists per grid point, strictly parsed.
-    swing_pop: dict | None = None
     swr = spec.get("swing_raw")
     if swr is not None:
         swing_pop = _load_swing_population(repo, key, swr, expected, errors)
