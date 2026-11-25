@@ -62,6 +62,7 @@ SLEW_KLT_SPICE = {
     "vinn_max_v": ".meas tran vinn_max_v max v(inn)",
     "vinn_min_v": ".meas tran vinn_min_v min v(inn)",
     "vout_dc_v": ".meas tran vout_dc_v find v(out) at=0",
+    "vibias_dc_v": ".meas tran vibias_dc_v find v(ibias) at=0",
     "drive_pp_v": ".meas tran drive_pp_v param='vinn_max_v-vinn_min_v'",
     "drive_centre_err_v": ".meas tran drive_centre_err_v param='abs((vinn_max_v+vinn_min_v)/2-vout_dc_v)'",
     "op_vout_offset_frac": ".meas tran op_vout_offset_frac find v(ofrac) at=0",

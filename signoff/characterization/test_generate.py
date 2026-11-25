@@ -2960,6 +2960,7 @@ class SlewKltAudit(RawAuditCase):
             ("vinn_max_v", "max v(inn)", "min v(inn)"),
             ("vout_dc_v", "at=0", "at=1n"),
             ("op_vout_rail_frac", "v(fout)", "v(fd1)"),
+            ("vibias_dc_v", "v(ibias)", "v(tail)"),
         ):
             with self.subTest(name=name):
                 self.fx.close()
@@ -2969,6 +2970,27 @@ class SlewKltAudit(RawAuditCase):
 
     def test_every_limited_measurement_has_a_pinned_definition(self):
         self.assertLessEqual(set(common.SLEW_KLT_LIMITS), set(common.SLEW_KLT_SPICE))
+
+    def test_record_pinning_both_waveform_and_envelope_passes(self):
+        """Positive control for the `sk is not None and sr is None` guard
+        (issue #532): slew_raw kept beside slew_klt, both audits declared and
+        the waveform-only columns left in the CSV."""
+        self.fresh()
+        rec = self.fx.selection["records"][self.RECORD]
+        self.assertIn("slew_raw", rec)
+        pins = {}
+        for kind, rel in self.FILES.items():
+            dst = self.fx.root / rel
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(REPO / rel, dst)
+            pins[kind] = {"path": rel, "sha256": generate.sha256_file(dst)}
+        rec["definition_checks"] = ["slew_worse_edge", "slew_raw_audit", "slew_klt_audit"]
+        rec["slew_klt"] = {"files": pins}
+        self.fx.save_selection()
+        header = self.fx.csv_path(self.RECORD).read_text(encoding="utf-8").splitlines()[0].split(",")
+        for col in self.WAVEFORM_ONLY:
+            self.assertIn(col, header)
+        self.assertEqual(self.errors(self.fx.build()), [])
 
     # --- same-DUT control ----------------------------------------------------
 
