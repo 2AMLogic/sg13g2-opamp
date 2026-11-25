@@ -461,7 +461,7 @@ re-run `20261125-011604-02d78dd` on the same image (the October PSRR direct
 envelope `20261027-011449-f8ef0ba` ran ngspice-46 and stays as is). 45 of 45
 corners pass; same DUT hash (`4cddebec…`), model deck hash and engine in both.
 Worst CMRR 31.1986 dB at `mos_fs`/125 °C/1.08 V (floor 30.75 dB, context);
-worst plateau delta 6.1e-13 dB.
+worst plateau delta 5.8e-12 dB.
 
 `compare_cmrr_direct.py` (tests `klt/test_compare_cmrr_direct.py`, offline):
 
