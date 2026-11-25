@@ -3138,6 +3138,56 @@ class SlewKltAudit(RawAuditCase):
         self.assertEqual((row["verdict"], row["measured_worst"]["point"]), ("FAIL", self.POINT))
 
 
+class PinnedPopulationNeedsItsAudit(unittest.TestCase):
+    """population => check (issue #533): a record that pins a raw population
+    must run the definition check that audits it, for every population in
+    `selection.POPULATION_AUDITS`, not only the klt ones."""
+
+    # (record, population, audit) for each population the committed selection pins.
+    CASES = (
+        ("slew-rate", "slew_raw", "slew_raw_audit"),
+        ("input-noise", "noise_raw", "noise_raw_audit"),
+        ("output-swing", "swing_raw", "swing_raw_audit"),
+        ("cmrr-mismatch", "mc_samples", "cmrr_mc_statistics"),
+        ("input-offset-mc", "draws_csv", "offset_mc_statistics"),
+    )
+
+    def test_table_covers_every_pinned_population(self):
+        import selection
+        self.assertEqual(
+            set(selection.POPULATION_AUDITS),
+            {"slew_raw", "noise_raw", "swing_raw", "mc_samples", "draws_csv",
+             "slew_klt", "klt_raw", "offset_klt_raw"},
+        )
+        for audit in selection.POPULATION_AUDITS.values():
+            self.assertIn(audit, selection.DEFINITION_CHECKS)
+
+    def test_population_without_its_audit_is_refused(self):
+        for record, population, audit in self.CASES:
+            with self.subTest(population=population):
+                fx = Fixture()
+                try:
+                    rec = fx.selection["records"][record]
+                    self.assertIn(population, rec)
+                    rec["definition_checks"] = [c for c in rec["definition_checks"] if c != audit]
+                    fx.save_selection()
+                    with self.assertRaisesRegex(generate.SelectionError, "never pinned and then ignored"):
+                        fx.build()
+                finally:
+                    fx.close()
+
+    def test_one_audit_does_not_cover_a_second_population(self):
+        fx = Fixture()
+        try:
+            slew = fx.selection["records"]["slew-rate"]
+            slew["noise_raw"] = fx.selection["records"]["input-noise"]["noise_raw"]
+            fx.save_selection()
+            with self.assertRaisesRegex(generate.SelectionError, "noise_raw_audit"):
+                fx.build()
+        finally:
+            fx.close()
+
+
 class SwingRawAudit(PointRawPinControlMixin, RawAuditCase):
     """Issue #230: the output-swing summary is audited against hash-pinned
     coarse/fine DC transfer curves and rendered netlists with the SAME
