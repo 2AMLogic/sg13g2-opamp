@@ -208,6 +208,23 @@ class TwoPassNegativeControls(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "crossings"):
             T.fine_window(cvid, [VCM + 0.3] * len(cvid), VCM)
 
+    def test_coarse_curve_from_another_window_is_refused(self):
+        # Right sample count and step, but the axis is shifted 0.2 V from the declared window.
+        coarse, fine = make_pair(tanh_curve(0.45, 0.003, 0.015))
+        n = len(coarse["vid"])
+        coarse["vid"] = grid(CS - 0.2, CE - 0.2, CSTEP)[:n]
+        coarse["vout"] = [tanh_curve(0.45, 0.003, 0.015)(x) for x in coarse["vid"]]
+        with self.assertRaisesRegex(T.PairError, "coarse curve spans .* not the declared sweep"):
+            T.audit_pair(PID, coarse, fine)
+
+    def test_fine_curve_from_another_window_is_refused(self):
+        coarse, fine = make_pair(tanh_curve(0.45, 0.003, 0.015))
+        other = tanh_curve(0.45, 0.003, 0.070)
+        fine["vid"] = grid(fine["start"] + 0.055, fine["stop"] + 0.055, FSTEP)[:len(fine["vid"])]
+        fine["vout"] = [other(x) for x in fine["vid"]]
+        with self.assertRaisesRegex(T.PairError, "fine curve spans .* not the declared sweep"):
+            T.audit_pair(PID, coarse, fine)
+
     def test_op_pass_rule_failure_is_refused(self):
         coarse, fine = make_pair(tanh_curve(0.45, 0.003, 0.015))
         real = T.swing_post.fine_measure

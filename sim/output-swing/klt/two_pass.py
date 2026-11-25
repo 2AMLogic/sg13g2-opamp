@@ -120,6 +120,12 @@ def audit_pair(pid, coarse, fine, criterion=None):
             if len(p[k]) != want:
                 raise PairError(pid, f"{label} curve has {len(p[k])} samples; its sweep declares {want}"
                                      + ("" if k == "vid" else f" ({k})"))
+        # The count pins (stop-start)/step, not start: reconcile the declared
+        # window with the sweep axis the curve actually carries.
+        tol = 0.5 * p["step"]
+        if abs(p["vid"][0] - p["start"]) > tol or abs(p["vid"][-1] - p["stop"]) > tol:
+            raise PairError(pid, f"{label} curve spans {p['vid'][0]!r}..{p['vid'][-1]!r}, "
+                                 f"not the declared sweep {p['start']!r}..{p['stop']!r}")
     if abs(2.0 * coarse["vcm_v"] - coarse["vdd_v"]) > 1e-9:
         raise PairError(pid, "common mode is not VDD/2")
     c = swing_post.coarse_measure(coarse["vid"], coarse["vout"], coarse["vcm_v"])
