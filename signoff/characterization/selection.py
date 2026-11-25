@@ -27,6 +27,7 @@ from common import (
     ROW_CLASSES,
     SELECTION_SCHEMA,
     SLEW_KLT_KINDS,
+    CMRR_PSRR_KLT_KINDS,
     SLEW_PIN_KINDS,
     SWING_PIN_KINDS,
     VALID_OPS,
@@ -115,6 +116,13 @@ def load_selection(path: Path) -> dict:
                     f"selection: record {key}: `slew_klt` is named, so the definition check "
                     "'slew_klt_audit' must run (raw evidence is never pinned and then ignored)"
                 )
+        if "cmrr_psrr_klt" in rec:
+            _validate_cmrr_psrr_klt_selection(key, rec["cmrr_psrr_klt"], selection["records"])
+            if "cmrr_psrr_klt_audit" not in rec.get("definition_checks", []):
+                raise SelectionError(
+                    f"selection: record {key}: `cmrr_psrr_klt` is named, so the definition check "
+                    "'cmrr_psrr_klt_audit' must run (raw evidence is never pinned and then ignored)"
+                )
         if "klt_raw" in rec:
             _validate_klt_raw_selection(key, rec["klt_raw"], selection["records"])
             if "open_loop_klt_audit" not in rec.get("definition_checks", []):
@@ -135,6 +143,11 @@ def load_selection(path: Path) -> dict:
                 raise SelectionError(
                     f"selection: record {key}: definition check {name!r} verifies the batch "
                     "`klt sim` slew envelope; name hash-pinned `slew_klt` beside the summary"
+                )
+            if need == "cmrr_psrr_klt" and rec.get("cmrr_psrr_klt") is None:
+                raise SelectionError(
+                    f"selection: record {key}: definition check {name!r} verifies the batch "
+                    "CMRR/PSRR `klt sim` envelopes; name hash-pinned `cmrr_psrr_klt` beside the summary"
                 )
             if need == "draws" and rec.get("draws_csv") is None:
                 raise SelectionError(
@@ -252,6 +265,23 @@ def _validate_slew_klt_selection(key: str, sk) -> None:
     files = sk["files"]
     if not isinstance(files, dict) or sorted(files) != sorted(SLEW_KLT_KINDS):
         raise SelectionError(f"{where}.files must have exactly {list(SLEW_KLT_KINDS)}")
+    for kind, pin in files.items():
+        if not (isinstance(pin, dict) and isinstance(pin.get("path"), str) and isinstance(pin.get("sha256"), str)):
+            raise SelectionError(f"{where}.files.{kind} needs string `path` and `sha256` (a raw artifact is never named without its pin)")
+
+
+def _validate_cmrr_psrr_klt_selection(key: str, ck, records: dict) -> None:
+    """Shape of a record's `cmrr_psrr_klt` pin: both decks' envelope, request and
+    bench body with their sha256, plus the harness record kept as regression
+    control (issue #514)."""
+    where = f"selection: record {key}: `cmrr_psrr_klt`"
+    if not isinstance(ck, dict) or sorted(ck) != ["control", "files"]:
+        raise SelectionError(f"{where} must be an object with exactly `files` and `control`")
+    if ck["control"] not in records or ck["control"] == key:
+        raise SelectionError(f"{where}.control must name another selected record")
+    files = ck["files"]
+    if not isinstance(files, dict) or sorted(files) != sorted(CMRR_PSRR_KLT_KINDS):
+        raise SelectionError(f"{where}.files must have exactly {list(CMRR_PSRR_KLT_KINDS)}")
     for kind, pin in files.items():
         if not (isinstance(pin, dict) and isinstance(pin.get("path"), str) and isinstance(pin.get("sha256"), str)):
             raise SelectionError(f"{where}.files.{kind} needs string `path` and `sha256` (a raw artifact is never named without its pin)")

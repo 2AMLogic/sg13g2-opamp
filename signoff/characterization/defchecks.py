@@ -439,6 +439,56 @@ def _check_offset_mc_statistics(point: dict, draws: dict | None) -> str | None:
     )
 
 
+# Issue #514: tolerances of the cmrr-psrr batch audit. Basis: the two direct decks
+# share their Av0 copy verbatim (same DUT, corner, options), so Av0 agrees to solver
+# noise (observed 6e-9 dB; sim/cmrr-psrr/klt/compare_cmrr_direct.py uses 1e-4 dB);
+# cmrr_db/psrr_db are in-deck differences of the two operands (12-digit
+# serialization); Acm0 against the harness regression control prints 6 digits
+# (observed max 4.3e-5 dB); the record's cells are %.9g serializations.
+CMRR_PSRR_AV0_JOIN_DB = 1e-4
+CMRR_PSRR_DERIVE_DB = 1e-6
+CMRR_PSRR_CONTROL_DB = 1e-3
+CMRR_PSRR_CELL_DB = 1e-6
+CMRR_PSRR_PLATEAU_DB = 0.05
+
+
+def _check_cmrr_psrr_klt(point: dict, pop: dict | None) -> str | None:
+    """The record's cells must follow from the pinned batch envelopes
+    (CMRR_PSRR_KLT_AUDIT_RULE): operands, the in-deck differences, the two
+    decks' shared Av0, the plateau guards, and Acm0 against the harness control."""
+    if pop is None:
+        return "cannot evaluate (no batch cmrr-psrr envelope population available)"
+    pid = (point.get("point_id") or "").strip()
+    raw = pop["points"].get(pid)
+    if raw is None:
+        return "cannot evaluate (no pinned batch cmrr-psrr values for this point)"
+    c, p = raw["cmrr"], raw["psrr"]
+    problems = []
+    if abs(c["av0_db"] - p["av0_db"]) > CMRR_PSRR_AV0_JOIN_DB:
+        problems.append(f"Av0 of the CMRR deck {c['av0_db']:.9g} and the PSRR deck {p['av0_db']:.9g} differ by more than {CMRR_PSRR_AV0_JOIN_DB:g} dB (different DUT, corner or options)")
+    for what, d, a, b, out in (("cmrr_db", c, "av0_db", "acm0_db", "cmrr_db"), ("psrr_db", p, "av0_db", "avs0_db", "psrr_db")):
+        want = d[a] - d[b]
+        if abs(d[out] - want) > CMRR_PSRR_DERIVE_DB:
+            problems.append(f"envelope {what} {d[out]:.9g} is not {a} - {b} = {want:.9g} (the dB difference Av0 - rejection operand)")
+    for deck, d, name in (("CMRR", c, "cmrr_plateau_delta_db"), ("PSRR", p, "psrr_plateau_delta_db")):
+        if not 0 <= d[name] <= CMRR_PSRR_PLATEAU_DB:
+            problems.append(f"{deck} {name} {d[name]:.6g} dB is outside [0, {CMRR_PSRR_PLATEAU_DB}] (the 10 mHz figure is not a flat DC shelf)")
+    for field, want in (
+        ("av0_db", c["av0_db"]), ("acm0_db", c["acm0_db"]), ("cmrr_db", c["cmrr_db"]),
+        ("cmrr_plateau_delta_db", c["cmrr_plateau_delta_db"]), ("avs0_db", p["avs0_db"]),
+        ("psrr_db", p["psrr_db"]), ("psrr_plateau_delta_db", p["psrr_plateau_delta_db"]),
+    ):
+        value, why = parse_decimal(point.get(field))
+        if value is None:
+            problems.append(f"{field}: {why}")
+        elif abs(float(value) - want) > CMRR_PSRR_CELL_DB:
+            problems.append(f"{field} {value} is not {want:.9g} recomputed from the pinned envelopes (tolerance {CMRR_PSRR_CELL_DB:g} dB)")
+    ctrl = pop["control_acm0"].get(pid)
+    if ctrl is None or abs(ctrl - c["acm0_db"]) > CMRR_PSRR_CONTROL_DB:
+        problems.append(f"Acm0 {c['acm0_db']:.9g} dB disagrees with the harness regression control {pop['control_csv']} ({ctrl}) by more than {CMRR_PSRR_CONTROL_DB:g} dB (wrong common-mode stimulus?)")
+    return "; ".join(problems) or None
+
+
 KLT_VOUT_TOL_V = 1e-5
 KLT_IVDD_TOL_A = 1e-8
 KLT_VCM_FRAC_TOL = 1e-4
@@ -543,6 +593,7 @@ DEFINITION_CHECKS = {
     "slew_worse_edge": (_check_slew_worse_edge, False),
     "slew_raw_audit": (_check_slew_raw, "slew"),
     "slew_klt_audit": (_check_slew_klt, "slew_klt"),
+    "cmrr_psrr_klt_audit": (_check_cmrr_psrr_klt, "cmrr_psrr_klt"),
     "swing_raw_audit": (_check_swing_raw, "swing"),
     "offset_magnitude": (_check_offset_magnitude, False),
     "offset_mc_statistics": (_check_offset_mc_statistics, "draws"),

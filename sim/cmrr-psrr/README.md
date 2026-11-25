@@ -37,6 +37,26 @@ and, additionally, at **1 kHz** to document in-band behavior. The full
 10 mHz – 1 GHz spectra for both harnesses are committed per point under
 `corners/<record-id>/`.
 
+## Batch record and the harness as regression control (issue #514)
+
+`signoff/characterization/selection.json` reads `cmrr_db` and `psrr_db` (and the
+plateau guards) from `records/20261125-011804-02d78dd.{csv,md}`, derived from the
+same-DUT batch envelopes `klt/records/20261125-011804-02d78dd.cmrr.sim.json` and
+`20261125-011604-02d78dd.direct.sim.json` (45 corners, ngspice-47). `cmrr_db`
+stays `Av0 - Acm0` in dB. The audit `cmrr_psrr_klt_audit` re-derives every cell
+from the pinned envelopes and requests.
+
+The harness record `records/20260921-151815-707b34c.*` stays selected as
+`cmrr-psrr-harness`, **the regression control**: only its `acm0_db` is compared
+(within 1e-3 dB) against the batch deck. Its `av0_db` is the superseded
+floating-`inn` gain, so its CMRR and PSRR are never compared or reported.
+
+Two decisions, recorded in `records/20261125-011804-02d78dd.md`: the PSRR row has
+**no 1 kHz context figure** (no batch deck reads 1 kHz; the only one on file is the
+superseded floating-`inn` harness figure, which would mix constructions), and the
+**operating-point consistency check is not carried over** (neither deck prints an
+operating point; the harness `op_pass` describes the superseded construction).
+
 ## Superseded by the inn-AC-grounded PSRR record (issue #241)
 
 The PSRR bench below measured with `inn` AC-floating (`Lbreak` only). That
@@ -159,8 +179,14 @@ the two op-point cross-checks above (`op_xcheck_psrr_delta_v`,
 export PDK_ROOT=/path/to/ihp-open-pdk   # parent dir containing ihp-sg13g2/
 export PDK=ihp-sg13g2
 sim/tools/build-osdi.sh                 # one-time; idempotent (--check to verify only)
-sim/cmrr-psrr/run_cmrr_psrr_sweep.sh
+sim/cmrr-psrr/run_cmrr_psrr_sweep.sh   # harness record (regression control)
+sim/cmrr-psrr/run_klt_record.sh        # batch record the characterization report selects
 ```
+
+`run_klt_record.sh` (issue #514) submits the two direct decks to the batch fleet
+(`klt/run_direct.sh`, `klt/run_cmrr_direct.sh`; no local grid fallback) and
+summarizes the newest envelope pair with `klt/summarize_batch.py` into
+`records/<id>.{csv,md}`; `SKIP_RUN=1` summarizes the committed envelopes only.
 
 Requires `ngspice` on `PATH` (developed and run against `ngspice-46`)
 plus the OSDI models `sim/tools/build-osdi.sh` builds; does **not**

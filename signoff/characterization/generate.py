@@ -203,6 +203,25 @@ SLEW_AUDIT_RULE = (
     "while the pinned waveforms disagree."
 )
 
+CMRR_PSRR_KLT_AUDIT_RULE = (
+    "CMRR/PSRR batch-envelope audit (issue #514): a record that selects the batch "
+    "`klt sim` evidence (`cmrr_psrr_klt`: for each of the CMRR and PSRR direct decks "
+    "the sha256-pinned envelope, the request it ran and the bench body) is audited "
+    "offline against it. Each envelope must decide all 45 grid corners exactly once, "
+    "come from a batch job, name one ngspice version shared by both envelopes and "
+    "the record's prose, and have simulated the selected DUT snapshot and the pinned "
+    "bench body at the same pinned model deck; each request must carry the documented "
+    "measurement definitions and limits unrelaxed and each bench body one CL the "
+    "record states. Per point every cell is recomputed from the envelopes (CMRR = "
+    "Av0 - Acm0 and PSRR+ = Av0 - Avs0, in dB, read at the 10 mHz shelf), the two "
+    "decks' Av0 must agree (1e-4 dB), both plateau guards must hold (0.05 dB), and "
+    "Acm0 must agree with the selected harness record kept as regression control "
+    "(`control`, 1e-3 dB; its Av0, CMRR and PSRR are the superseded floating-inn "
+    "figures and are never used). A stale DUT or bench hash, an edited request, "
+    "an envelope/record mismatch or a contradictory simulator version is an error "
+    "naming the corner and field."
+)
+
 SLEW_KLT_AUDIT_RULE = (
     "Slew-rate batch-envelope audit (issue #501): a record that selects the "
     "batch `klt sim` evidence (`slew_klt`: the sha256-pinned envelope, the "
@@ -419,6 +438,7 @@ def build_content(repo: Path, selection_path: Path) -> dict:
         "samples_audit_rule": SAMPLES_AUDIT_RULE,
         "noise_audit_rule": NOISE_AUDIT_RULE,
         "slew_audit_rule": SLEW_AUDIT_RULE,
+        **({"cmrr_psrr_klt_audit_rule": CMRR_PSRR_KLT_AUDIT_RULE} if any("cmrr_psrr_klt" in r for r in selection["records"].values()) else {}),
         **({"slew_klt_audit_rule": SLEW_KLT_AUDIT_RULE} if any("slew_klt" in r for r in selection["records"].values()) else {}),
         "swing_audit_rule": SWING_AUDIT_RULE,
         "klt_audit_rule": KLT_AUDIT_RULE,

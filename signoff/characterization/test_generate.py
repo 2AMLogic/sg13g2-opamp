@@ -88,6 +88,7 @@ POPULATION_AUDITS = (
     ("klt",   "open-loop-ac",  "klt_raw",    "open_loop_klt_audit"),
     ("noise", "input-noise",   "noise_raw",  "noise_raw_audit"),
     ("swing", "output-swing",  "swing_raw",  "swing_raw_audit"),
+    ("cmrr_psrr", "cmrr-psrr",  "cmrr_psrr_klt", "cmrr_psrr_klt_audit"),
 )
 
 
@@ -111,6 +112,8 @@ class Fixture:
                         files.update(pin["path"] for pin in entry.values())
             if "klt_raw" in rec:
                 files.update(pin["path"] for pin in rec["klt_raw"]["files"].values())
+            if "cmrr_psrr_klt" in rec:
+                files.update(pin["path"] for pin in rec["cmrr_psrr_klt"]["files"].values())
         files.update({generate.SELECTION_REL, generate.GENERATOR_REL})
         for rel in files:
             dst = self.root / rel
@@ -161,6 +164,14 @@ class Fixture:
         md.write_text(md.read_text(encoding="utf-8") + "\nRan on ngspice-46.\n", encoding="utf-8")
         rec["md_sha256"] = generate.sha256_file(md)
         self.save_selection()
+
+    keep_cmrr_psrr_audit = False
+
+    def detach_cmrr_psrr_population(self) -> None:
+        """Controls that perturb the cmrr-psrr summary for THEIR OWN purpose
+        (a bound comparison) drop the batch-envelope audit (issue #514);
+        CmrrPsrrKltAudit tests that audit itself."""
+        self.detach_population("cmrr_psrr")
 
     keep_noise_audit = False
 
@@ -310,7 +321,9 @@ class CommittedEvidence(unittest.TestCase):
         rows = rows_by_id(self.content)
         self.assertEqual(rows["dc_gain"]["measured_worst"]["point"], "mos_fs_125C_1.08V")
         self.assertEqual(rows["cmrr_mismatch"]["measured_worst"]["point"], "mos_ss_-40C_1.08V")
-        self.assertEqual(rows["psrr"]["measured_worst"]["point"], "mos_ff_125C_1.32V")
+        # The spec prose still names the superseded floating-inn harness corner
+        # (FF / 125 C / 1.32 V); the batch record (issue #514) binds at FS / 125 C / 1.08 V.
+        self.assertEqual(rows["psrr"]["measured_worst"]["point"], "mos_fs_125C_1.08V")
         self.assertEqual(rows["quiescent_current"]["measured_worst"]["point"], "mos_ss_-40C_1.32V")
 
     def test_literal_failures_are_graded_fail_and_disclosed(self):
@@ -1885,7 +1898,9 @@ class KltRawAudit(RawAuditCase):
         pdk = json.loads(pdk_path.read_text(encoding="utf-8"))
         del pdk["osdi_toolchain"]["ngspice_min_major"]
         pdk_path.write_text(json.dumps(pdk), encoding="utf-8")
-        self.assertEqual(self.errors(self.fx.build()), [])
+        # The committed cmrr-psrr batch record ran ngspice-47 (issue #514), which the
+        # exact-pin fallback rightly refuses; this control is about the open-loop record.
+        self.assertEqual([e for e in self.errors(self.fx.build()) if not e.startswith("record cmrr-psrr:")], [])
         self.edit_json("ac", set_ver(47))
         self.edit_json("op", set_ver(47))
         self.assert_error("ngspice-47", "expected 'ngspice-46'")
@@ -1954,6 +1969,206 @@ class KltRawAudit(RawAuditCase):
     def test_continuity_requires_dc_agreement(self):
         self.fx.set_cell("open-loop-ac-floating-inn", self.POINT, "vout_dc_v", "0.5")
         self.assert_error("differs from the dc_continuity record")
+
+
+class CmrrPsrrKltAudit(RawAuditCase):
+    """Issue #514: the cmrr-psrr record audited against the hash-pinned batch
+    CMRR and PSRR direct-deck `klt sim` envelopes (definition check
+    cmrr_psrr_klt_audit), with the harness record as the Acm0 regression
+    control."""
+
+    KEEP_AUDIT = "keep_cmrr_psrr_audit"
+    RECORD = "cmrr-psrr"
+    POINT = "mos_tt_27C_1.20V"
+    RAW_KEY = "cmrr_psrr_klt"
+    DEFINITION_CHECK = "cmrr_psrr_klt_audit"
+
+    def edit_env(self, kind, mutate, repin=True) -> None:
+        pin = self.raw()["files"][kind]
+        path = self.fx.root / pin["path"]
+        if kind.endswith("_body"):
+            path.write_text(mutate(path.read_text(encoding="utf-8")), encoding="utf-8")
+        else:
+            doc = json.loads(path.read_text(encoding="utf-8"))
+            mutate(doc)
+            path.write_text(json.dumps(doc), encoding="utf-8")
+        if repin:
+            pin["sha256"] = generate.sha256_file(path)
+            self.fx.save_selection()
+
+    @staticmethod
+    def corner(doc, pid):
+        for c in doc["corners"]:
+            if f"{c['process']}_{c['temperature_c']}C_{c['supply_v']['vdd']:.2f}V" == pid:
+                return c
+        raise KeyError(pid)
+
+    def meas(self, doc, name, pid=None):
+        return next(m for m in self.corner(doc, pid or self.POINT)["measurements"] if m["name"] == name)
+
+    def test_committed_selection_binds_the_batch_envelopes(self):
+        content = self.fx.build()
+        self.assertEqual(self.errors(content), [])
+        src = content["sources"][self.RECORD]
+        self.assertEqual((src["cmrr_psrr_klt"]["status"], src["cmrr_psrr_klt"]["points"]), ("verified", 45))
+        self.assertEqual(src["cmrr_psrr_klt"]["control"], "cmrr-psrr-harness")
+        self.assertEqual(len(src["cmrr_psrr_klt"]["jobs"]["cmrr"]), 5)
+        self.assertEqual((src["valid_points"], src["ngspice"]), (45, "ngspice-47"))
+        self.assertIn("CMRR/PSRR batch-envelope audit", content["cmrr_psrr_klt_audit_rule"])
+        rows = rows_by_id(content)
+        self.assertEqual(rows["psrr"]["verdict"], "PASS")
+        self.assertNotIn("context", rows["psrr"])
+        self.assertEqual(rows["cmrr_systematic"]["verdict"], "PASS")
+        self.assertTrue(rows["psrr"]["load"].startswith("CL = 2 pF"), rows["psrr"]["load"])
+
+    def test_cmrr_db_is_the_av0_minus_acm0_difference_in_db(self):
+        doc = json.loads((REPO / self.raw()["files"]["cmrr_envelope"]["path"]).read_text(encoding="utf-8"))
+        want = self.meas(doc, "av0_db")["value"] - self.meas(doc, "acm0_db")["value"]
+        self.assertAlmostEqual(float(self.cell("cmrr_db")), want, places=6)
+        self.assertAlmostEqual(float(self.cell("av0_db")) - float(self.cell("acm0_db")), want, places=6)
+
+    def test_harness_record_stays_selected_as_the_control(self):
+        self.assertIn("cmrr-psrr-harness", self.fx.selection["records"])
+        self.assertEqual(self.raw()["control"], "cmrr-psrr-harness")
+
+    def test_edited_summary_cell_is_an_error(self):
+        self.fx.set_cell(self.RECORD, self.POINT, "psrr_db", "1.0")
+        self.definition_error()
+
+    def test_cmrr_summary_not_av0_minus_acm0_is_an_error(self):
+        self.fx.set_cell(self.RECORD, self.POINT, "cmrr_db", str(float(self.cell("cmrr_db")) + 1))
+        self.definition_error()
+
+    def test_stale_dut_hash_is_an_error(self):
+        def stale(doc):
+            for c in doc["environment"]["netlist_closure"]:
+                if c["path"].endswith("opamp_core.spice"):
+                    c["sha256"] = "0" * 64
+
+        self.edit_env("cmrr_envelope", stale)
+        self.assert_error("cmrr-psrr klt evidence", "is not the selected netlist snapshot")
+
+    def test_stale_dut_hash_in_one_deck_only_is_not_the_same_run_conditions(self):
+        # the PSRR envelope keeps the right DUT; only the CMRR one is stale
+        def stale(doc):
+            for c in doc["environment"]["netlist_closure"]:
+                if c["path"].endswith("opamp_core.spice"):
+                    c["sha256"] = "1" * 64
+
+        self.edit_env("cmrr_envelope", stale)
+        errors = self.assert_error("not the selected netlist snapshot")
+        self.assertTrue(any("not the same run conditions" in e for e in errors), errors)
+
+    def test_envelope_not_matching_its_request_is_an_error(self):
+        # the request's measurement definition no longer says what the envelope reports
+        def swap(doc):
+            for m in doc["measurements"]:
+                if m["name"] == "acm0_db":
+                    m["spice"] = ".meas ac acm0_db find vdb(outa) at=0.01"
+
+        self.edit_env("cmrr_request", swap)
+        self.assert_error("cmrr request: measurement acm0_db is")
+
+    def test_relaxed_request_limit_is_an_error(self):
+        def relax(doc):
+            for m in doc["measurements"]:
+                if m["name"] == "psrr_db":
+                    m["limits"] = {"min": 0.0}
+
+        self.edit_env("psrr_request", relax)
+        self.assert_error("limits are", "a validity bound is never relaxed")
+
+    def test_request_naming_another_bench_body_is_an_error(self):
+        self.edit_env("cmrr_request", lambda d: d.__setitem__("netlist", "tb_psrr_direct.body.spice"))
+        self.assert_error("is not the pinned bench body")
+
+    def test_bench_body_not_the_simulated_one_is_an_error(self):
+        self.edit_env("psrr_body", lambda t: t + "* edited after the run\n")
+        self.assert_error("is not the pinned")
+
+    def test_bench_load_not_stated_by_the_record_is_an_error(self):
+        self.edit_env("cmrr_body", lambda t: t.replace("Cloada outa vss 2e-12", "Cloada outa vss 5e-12"))
+        self.assert_error("not one CL the record's own prose states")
+
+    def test_pinned_envelope_edited_without_repin_is_refused(self):
+        self.edit_env("psrr_envelope", lambda d: d.__setitem__("status", "fail"), repin=False)
+        self.assert_error("does not match its selection pin")
+
+    def test_missing_corner_is_an_error(self):
+        self.edit_env("psrr_envelope", lambda d: d["corners"].pop(0))
+        self.assert_error("no corner for point")
+
+    def test_errored_corner_is_an_error(self):
+        def err(doc):
+            self.corner(doc, self.POINT)["status"] = "error"
+
+        self.edit_env("cmrr_envelope", err)
+        self.assert_error("is not a decided corner")
+
+    def test_missing_measurement_is_an_error(self):
+        def drop(doc):
+            c = self.corner(doc, self.POINT)
+            c["measurements"] = [m for m in c["measurements"] if m["name"] != "avs0_db"]
+
+        self.edit_env("psrr_envelope", drop)
+        self.assert_error("missing or non-finite measurement")
+
+    def test_missing_plateau_guard_cell_is_an_error(self):
+        def drop(doc):
+            c = self.corner(doc, self.POINT)
+            c["measurements"] = [m for m in c["measurements"] if m["name"] != "cmrr_plateau_delta_db"]
+
+        self.edit_env("cmrr_envelope", drop)
+        self.assert_error("missing or non-finite measurement")
+
+    def test_plateau_guard_miss_is_an_error(self):
+        self.edit_env("cmrr_envelope", lambda d: self.meas(d, "cmrr_plateau_delta_db").__setitem__("value", 0.2))
+        errors = self.definition_error()
+        self.assertTrue(any("not a flat DC shelf" in e for e in errors), errors)
+
+    def test_av0_disagreeing_between_decks_is_an_error(self):
+        self.edit_env("psrr_envelope", lambda d: self.meas(d, "av0_db").__setitem__("value", self.meas(d, "av0_db")["value"] + 0.5))
+        errors = self.definition_error()
+        self.assertTrue(any("differ by more than" in e for e in errors), errors)
+
+    def test_acm0_off_the_harness_control_is_an_error(self):
+        self.edit_env("cmrr_envelope", lambda d: self.meas(d, "acm0_db").__setitem__("value", self.meas(d, "acm0_db")["value"] + 0.5))
+        errors = self.assert_error("disagrees with the harness regression control")
+        self.assertTrue(any("regression control" in e for e in errors), errors)
+
+    def test_control_record_edit_without_repin_is_refused(self):
+        path = self.fx.root / self.fx.selection["records"]["cmrr-psrr-harness"]["csv"]
+        path.write_text(path.read_text(encoding="utf-8") + "\n", encoding="utf-8")
+        self.assert_error("control record", "does not match its selection pin")
+
+    def test_inconsistent_simulator_version_is_an_error(self):
+        def ver(doc):
+            doc["environment"]["engine_version"] = "46"
+
+        self.edit_env("cmrr_envelope", ver)
+        self.assert_error("not the same run conditions")
+
+    def test_envelope_not_from_a_batch_job_is_an_error(self):
+        self.edit_env("cmrr_envelope", lambda d: d["environment"].pop("remote"))
+        self.assert_error("no environment.remote batch job")
+
+    def test_cmrr_psrr_klt_without_its_audit_is_refused(self):
+        self.fx.selection["records"][self.RECORD]["definition_checks"] = []
+        self.fx.save_selection()
+        with self.assertRaises(generate.SelectionError):
+            self.fx.build()
+
+    def test_control_must_name_another_selected_record(self):
+        self.raw()["control"] = self.RECORD
+        self.fx.save_selection()
+        with self.assertRaises(generate.SelectionError):
+            self.fx.build()
+
+    def test_unselected_report_carries_no_cmrr_psrr_rule(self):
+        self.fx.selection["records"][self.RECORD].pop("cmrr_psrr_klt")
+        self.fx.selection["records"][self.RECORD]["definition_checks"] = []
+        self.fx.save_selection()
+        self.assertNotIn("cmrr_psrr_klt_audit_rule", self.fx.build())
 
 
 class SlewRawAudit(PointRawPinControlMixin, RawAuditCase):

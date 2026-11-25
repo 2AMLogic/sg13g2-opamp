@@ -24,6 +24,9 @@ from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
 from common import (
+    CMRR_PSRR_ANALYSIS,
+    CMRR_PSRR_KLT_DECKS,
+    CMRR_PSRR_KLT_KINDS,
     KLT_RAW_KINDS,
     NGSPICE_RE,
     NOISE_PIN_KINDS,
@@ -886,6 +889,202 @@ def _load_slew_klt_population(repo: Path, key: str, sk: dict, expected: list, sn
     }
 
 
+_CMRR_PSRR_CLOAD_RE = re.compile(r"^Cload[ab]\s+out[ab]\s+vss\s+(\S+)\s*$", re.IGNORECASE | re.MULTILINE)
+
+
+def _batch_jobs(env: dict) -> list[str]:
+    """Every batch job id an envelope names (a sharded run has `remote.fleet[]`
+    and no single `remote.job_id`)."""
+    remote = (env.get("environment") or {}).get("remote") or {}
+    ids = [remote["job_id"]] if remote.get("job_id") else []
+    ids += [f["job_id"] for f in remote.get("fleet") or [] if isinstance(f, dict) and f.get("job_id")]
+    return sorted(set(ids))
+
+
+def _load_cmrr_psrr_klt_population(repo: Path, key: str, ck: dict, expected: list, snapshot_rel: str,
+                                   md_text: str, records: dict, errors: list) -> dict | None:
+    """Pin-check and strictly cross-check the CMRR and PSRR direct-deck `klt sim`
+    envelopes (issue #514) and return the per-point raw values
+    (CMRR_PSRR_KLT_AUDIT_RULE). Every defect is an error naming the artifact,
+    corner and field: a missing/duplicate/outside/undecided corner, a missing or
+    non-finite measurement, a stale DUT or bench hash, an edited request
+    definition or limit, two envelopes that are not the same run conditions, or
+    an inconsistent simulator version. The harness record named as `control`
+    contributes its Acm0 column only."""
+    n_err = len(errors)
+    expected_ids = [pid for pid, _ in expected]
+    docs: dict = {}
+    for kind in CMRR_PSRR_KLT_KINDS:
+        pin = ck["files"][kind]
+        path = repo / pin["path"]
+        if not path.is_file():
+            errors.append(f"record {key}: missing batch cmrr-psrr artifact {kind} {pin['path']}")
+            continue
+        actual = sha256_file(path)
+        if actual != pin["sha256"]:
+            errors.append(
+                f"record {key}: {pin['path']} does not match its selection pin "
+                f"(pinned {pin['sha256']}, actual {actual}) -- re-select deliberately, never re-read silently"
+            )
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+            docs[kind] = text if kind.endswith("_body") else json.loads(text)
+        except (OSError, UnicodeDecodeError, ValueError) as exc:
+            errors.append(f"record {key}: cannot read {pin['path']} ({exc})")
+    control_acm0: dict[str, float] = {}
+    control_key = ck["control"]
+    control = records.get(control_key) or {}
+    cpath = repo / control["csv"] if isinstance(control.get("csv"), str) else None
+    if cpath is None or not cpath.is_file():
+        errors.append(f"record {key}: control record {control_key!r} csv {control.get('csv')} is missing")
+    elif sha256_file(cpath) != control.get("csv_sha256"):
+        errors.append(f"record {key}: control record {control['csv']} does not match its selection pin")
+    else:
+        try:
+            _, crows = read_csv_rows(cpath)
+        except (OSError, UnicodeDecodeError, csv.Error) as exc:
+            errors.append(f"record {key}: cannot parse control record {control['csv']} ({exc})")
+            crows = []
+        for row in crows:
+            try:
+                value = float(row["acm0_db"])
+            except (KeyError, TypeError, ValueError):
+                continue
+            if math.isfinite(value):
+                control_acm0[(row.get("point_id") or "").strip()] = value
+        for pid in expected_ids:
+            if pid not in control_acm0:
+                errors.append(f"record {key}: control record {control['csv']}: no finite acm0_db for point {pid}")
+    if len(errors) > n_err:
+        return None
+    problems: list[str] = []
+    decks: dict = {}
+    snap = repo / snapshot_rel
+    snap_hash = sha256_file(snap) if snap.is_file() else None
+    cl_stated = {parse_capacitance(s)[0] for s in source_cl_statements(md_text)} - {None}
+    for deck, spec in CMRR_PSRR_KLT_DECKS.items():
+        env, req = docs[f"{deck}_envelope"], docs[f"{deck}_request"]
+        pins = ck["files"]
+        label = f"envelope {pins[f'{deck}_envelope']['path']}"
+        if not isinstance(env, dict) or not isinstance(req, dict):
+            problems.append(f"{deck}: envelope and request must be JSON objects")
+            continue
+        count = env.get("corner_count")
+        if count != len(expected_ids) or env.get("status") not in ("pass", "fail") \
+                or (env.get("passed") or 0) + (env.get("failed") or 0) != count:
+            problems.append(f"{label}: status {env.get('status')!r}, {env.get('passed')} passed + {env.get('failed')} failed of {count} corners (need all {len(expected_ids)} decided)")
+        for field in ("errored", "inconclusive"):
+            if env.get(field) != 0:
+                problems.append(f"{label}: {field} = {env.get(field)!r}")
+        if (env.get("diagnostic_counts") or {}).get("corners_with_diagnostics") != 0:
+            problems.append(f"{label}: corners carry diagnostics")
+        e = env.get("environment") or {}
+        if not _batch_jobs(env):
+            problems.append(f"{label}: no environment.remote batch job (not a batch run)")
+        version = e.get("engine_version")
+        if e.get("engine") != "ngspice" or not version:
+            problems.append(f"{label}: engine {e.get('engine')!r} {version!r} is not an identified ngspice")
+        version = str(version)
+        banner = (e.get("engine_build") or {}).get("version_banner")
+        if banner is not None and f"ngspice-{version}" not in banner:
+            problems.append(f"{label}: engine banner does not name ngspice-{version} (contradictory simulator version)")
+        stated = sorted(set(NGSPICE_RE.findall(md_text)))
+        if stated and stated != [version]:
+            problems.append(f"{label}: ran ngspice-{version} but the selected record's prose names {', '.join('ngspice-' + s for s in stated)}")
+        prov = env.get("provenance") or {}
+        if (prov.get("pdk") or {}).get("name") != "ihp-sg13g2":
+            problems.append(f"{label}: PDK is {(prov.get('pdk') or {}).get('name')!r}, not ihp-sg13g2")
+        deck_prov = prov.get("deck") or {}
+        if deck_prov.get("name") != "cornerMOSlv.lib" or deck_prov.get("content_hash") != "sha256:" + str(e.get("models_lib_sha256")):
+            problems.append(f"{label}: model deck identity {deck_prov.get('name')!r} {deck_prov.get('content_hash')!r} is not cornerMOSlv.lib at the recorded models_lib_sha256")
+        closure = {c.get("path"): c.get("sha256") for c in e.get("netlist_closure") or []}
+        dut = {p: "sha256:" + str(h) for p, h in closure.items() if Path(p).name == Path(snapshot_rel).name}
+        if not dut or set(dut.values()) != {snap_hash}:
+            problems.append(f"{label}: simulated DUT {dut or sorted(closure)} is not the selected netlist snapshot {snapshot_rel} ({snap_hash})")
+        body_pin = pins[f"{deck}_body"]
+        body_path = (env.get("netlist") or {}).get("path")
+        if body_path is None or "sha256:" + str(closure.get(body_path)) != body_pin["sha256"]:
+            problems.append(f"{label}: simulated bench body {body_path!r} is not the pinned {body_pin['path']}")
+        if Path(str(req.get("netlist"))).name != Path(body_pin["path"]).name:
+            problems.append(f"{deck} request: netlist {req.get('netlist')!r} is not the pinned bench body")
+        if req.get("analysis") != CMRR_PSRR_ANALYSIS:
+            problems.append(f"{deck} request: analysis is not {CMRR_PSRR_ANALYSIS}")
+        defs = {m.get("name"): m for m in req.get("measurements") or []}
+        for name in spec["names"]:
+            if name not in defs:
+                problems.append(f"{deck} request: measurement {name} is not declared")
+                continue
+            if "spice" in spec and name in spec["spice"] and defs[name].get("spice") != spec["spice"][name]:
+                problems.append(f"{deck} request: measurement {name} is {defs[name].get('spice')!r}, not {spec['spice'][name]!r}")
+            if name in spec["expr"] and defs[name].get("expr") != spec["expr"][name]:
+                problems.append(f"{deck} request: measurement {name} is {defs[name].get('expr')!r}, not {spec['expr'][name]!r}")
+            if defs[name].get("limits") != spec["limits"].get(name):
+                problems.append(f"{deck} request: measurement {name} limits are {defs[name].get('limits')!r}, not {spec['limits'].get(name)!r} (a validity bound is never relaxed)")
+        body = "\n".join(line for line in docs[f"{deck}_body"].splitlines() if not line.lstrip().startswith("*"))
+        loads = _CMRR_PSRR_CLOAD_RE.findall(body)
+        try:
+            cloads = {Decimal(x) for x in loads}
+        except InvalidOperation:
+            cloads = set()
+        if len(loads) != 2 or len(cloads) != 1 or not cloads <= cl_stated:
+            problems.append(f"{deck} bench body: Cloada/Cloadb {loads} are not one CL the record's own prose states ({sorted(source_cl_statements(md_text))})")
+        corners: dict = {}
+        for corner in env.get("corners") or []:
+            try:
+                pid = f"{corner['process']}_{int(corner['temperature_c'])}C_{float(corner['supply_v']['vdd']):.2f}V"
+            except (KeyError, TypeError, ValueError):
+                problems.append(f"{label}: a corner has no process/temperature/vdd identity")
+                continue
+            if pid in corners:
+                problems.append(f"{label}: duplicate corner {pid}")
+            corners[pid] = corner
+        for pid in expected_ids:
+            if pid not in corners:
+                problems.append(f"{label}: no corner for point {pid}")
+        for pid in sorted(set(corners) - set(expected_ids)):
+            problems.append(f"{label}: corner {pid} is outside the expected grid")
+        points: dict = {}
+        for pid in expected_ids:
+            corner = corners.get(pid)
+            if corner is None:
+                continue
+            if corner.get("status") not in ("pass", "fail") or corner.get("diagnostics"):
+                problems.append(f"{label}: point {pid} is not a decided corner (status {corner.get('status')!r}, {len(corner.get('diagnostics') or [])} diagnostic(s))")
+                continue
+            got = {m.get("name"): m.get("value") for m in corner.get("measurements") or []}
+            bad = [n for n in spec["names"]
+                   if not isinstance(got.get(n), (int, float)) or isinstance(got.get(n), bool) or not math.isfinite(got[n])]
+            if bad:
+                problems.append(f"point {pid}: {deck} deck: missing or non-finite measurement(s) {bad}")
+                continue
+            sup = corner.get("supply_v") or {}
+            vdd, vinp = sup.get("vdd"), sup.get("vinp")
+            if not all(isinstance(x, (int, float)) and math.isfinite(x) for x in (vdd, vinp)) or vdd <= 0 or abs(vinp - vdd / 2) > 1e-9:
+                problems.append(f"point {pid}: {deck} deck: supplies {sup!r} do not put Vcm at VDD/2")
+                continue
+            points[pid] = {n: float(got[n]) for n in spec["names"]}
+        decks[deck] = {"points": points, "version": version, "models": e.get("models_lib_sha256"),
+                       "dut": dict(dut), "jobs": _batch_jobs(env), "envelope": pins[f"{deck}_envelope"]["path"],
+                       "cload_f": float(loads[0]) if loads else None}
+    if len(decks) == 2:
+        a, b = decks["cmrr"], decks["psrr"]
+        for field in ("version", "models", "dut"):
+            if a[field] != b[field]:
+                problems.append(f"the CMRR and PSRR envelopes are not the same run conditions: {field} {a[field]!r} vs {b[field]!r}")
+    if problems:
+        errors.extend(f"record {key}: cmrr-psrr klt evidence: {p}" for p in problems)
+        return None
+    return {
+        "points": {pid: {"cmrr": decks["cmrr"]["points"][pid], "psrr": decks["psrr"]["points"][pid]} for pid in expected_ids},
+        "version": decks["cmrr"]["version"],
+        "jobs": {"cmrr": decks["cmrr"]["jobs"], "psrr": decks["psrr"]["jobs"]},
+        "envelopes": {"cmrr": decks["cmrr"]["envelope"], "psrr": decks["psrr"]["envelope"]},
+        "cload_f": decks["cmrr"]["cload_f"],
+        "control": control_key, "control_csv": control["csv"], "control_acm0": control_acm0,
+    }
+
+
 _SWING_PID_RE = re.compile(r"^(?P<corner>.+)_(?P<temp>-?\d+(?:\.\d+)?)C_(?P<vdd>\d+(?:\.\d+)?)V$")
 
 
@@ -1080,7 +1279,7 @@ def load_record(repo: Path, key: str, spec: dict, grid: dict, env: dict, records
     md_text = (repo / spec["md"]).read_text(encoding="utf-8")
     state["stated_cl"] = source_cl_statements(md_text)
     versions = sorted(set(NGSPICE_RE.findall(md_text)))
-    if len(versions) != 1 and not (not versions and (spec.get("klt_raw") is not None or spec.get("slew_klt") is not None)):
+    if len(versions) != 1 and not (not versions and (spec.get("klt_raw") is not None or spec.get("slew_klt") is not None or spec.get("cmrr_psrr_klt") is not None)):
         errors.append(
             f"record {key}: {spec['md']} names {len(versions)} ngspice versions "
             f"({', '.join('ngspice-' + v for v in versions) or 'none'}) -- the "
@@ -1262,6 +1461,28 @@ def load_record(repo: Path, key: str, spec: dict, grid: dict, env: dict, records
                 errors.append(f"record {key}: {spec['md']} names {src['ngspice']}, but the pinned slew envelope ran {envelope_ngspice}")
                 _admit_ngspice_version(key, envelope_ngspice, env, errors)
 
+    # 3e''. batch cmrr-psrr `klt sim` envelopes (issue #514), cross-checked.
+    cmrr_psrr_pop: dict | None = None
+    ck = spec.get("cmrr_psrr_klt")
+    if ck is not None:
+        cmrr_psrr_pop = _load_cmrr_psrr_klt_population(repo, key, ck, expected, spec["netlist_snapshot"], md_text, records or {}, errors)
+        src["cmrr_psrr_klt"] = {
+            "status": "verified" if cmrr_psrr_pop is not None else "error",
+            "points": len(expected),
+            "pins_sha256": sha256_bytes(canonical_json(ck["files"]).encode("utf-8")),
+            "control": ck["control"],
+        }
+        if cmrr_psrr_pop is not None:
+            src["cmrr_psrr_klt"]["jobs"] = cmrr_psrr_pop["jobs"]
+            src["cmrr_psrr_klt"]["cload_f"] = cmrr_psrr_pop["cload_f"]
+            envelope_ngspice = f"ngspice-{cmrr_psrr_pop['version']}"
+            if src["ngspice"] is None:
+                src["ngspice"] = envelope_ngspice
+                _admit_ngspice_version(key, envelope_ngspice, env, errors)
+            elif src["ngspice"] != envelope_ngspice:
+                errors.append(f"record {key}: {spec['md']} names {src['ngspice']}, but the pinned cmrr-psrr envelopes ran {envelope_ngspice}")
+                _admit_ngspice_version(key, envelope_ngspice, env, errors)
+
     # 3f. raw DC transfer curves (issue #230): both passes' pinned wrdata
     # curves and rendered netlists per grid point, strictly parsed.
     swing_pop: dict | None = None
@@ -1318,7 +1539,7 @@ def load_record(repo: Path, key: str, spec: dict, grid: dict, env: dict, records
     def run_definition_checks(pid: str, row: dict) -> None:
         for name in spec.get("definition_checks", []):
             check, needs = DEFINITION_CHECKS[name]
-            pop = {"draws": draws_pass, "samples": sample_pop, "noise": noise_pop, "slew": slew_pop, "swing": swing_pop, "klt": klt_pop, "slew_klt": slew_klt_pop}.get(needs)
+            pop = {"draws": draws_pass, "samples": sample_pop, "noise": noise_pop, "slew": slew_pop, "swing": swing_pop, "klt": klt_pop, "slew_klt": slew_klt_pop, "cmrr_psrr_klt": cmrr_psrr_pop}.get(needs)
             if needs and pop is None:
                 continue  # the population load above already reported why
             problem = check(row, pop)

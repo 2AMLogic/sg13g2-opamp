@@ -264,6 +264,27 @@
       "definition_checks": ["offset_mc_statistics"]
     },
     "cmrr-psrr": {
+      "csv": "sim/cmrr-psrr/records/20261125-011804-02d78dd.csv",
+      "csv_sha256": "sha256:7e9cb43277b93d5d47f0a5d862c60a63a2df4c7831a355441c3a4c85d2558b0b",
+      "md": "sim/cmrr-psrr/records/20261125-011804-02d78dd.md",
+      "md_sha256": "sha256:85c4abc4bb6e0583e406af810cf1f9a5df47a11c68b94c67ccad68d750cf936e",
+      "netlist_snapshot": "sim/cmrr-psrr/netlist-snapshots/20260921-151815-707b34c/opamp_core.spice",
+      "grid": "pvt45",
+      "valid_when": [],
+      "definition_checks": ["cmrr_psrr_klt_audit"],
+      "cmrr_psrr_klt": {
+        "control": "cmrr-psrr-harness",
+        "files": {
+          "cmrr_envelope": {"path": "sim/cmrr-psrr/klt/records/20261125-011804-02d78dd.cmrr.sim.json", "sha256": "sha256:c1683ab6443470f86ab52fba8c64f56d35b3dcecefa9d6c79eeabff3e3ee2c68"},
+          "cmrr_request": {"path": "sim/cmrr-psrr/klt/cmrr_direct.request.json", "sha256": "sha256:4b1776743b48823ea95aef023f96790df6e813e8f11d558f9b01989ba948ec17"},
+          "cmrr_body": {"path": "sim/cmrr-psrr/klt/tb_cmrr_direct.body.spice", "sha256": "sha256:12056cd6470b63613e994dfd263a6f6318282d9864fe74ed9560a0601d507e9f"},
+          "psrr_envelope": {"path": "sim/cmrr-psrr/klt/records/20261125-011604-02d78dd.direct.sim.json", "sha256": "sha256:1d1b687c4f23c6027b4efd72ded6829ac4af74db86ab1053177aeb7004a13820"},
+          "psrr_request": {"path": "sim/cmrr-psrr/klt/psrr_direct.request.json", "sha256": "sha256:3712746f320229bc5d400e9856d8af13a2785097636cdc3284aef5764728242d"},
+          "psrr_body": {"path": "sim/cmrr-psrr/klt/tb_psrr_direct.body.spice", "sha256": "sha256:c397df20adccd6f1f9b6eb65818a175cecdac0ae234b2b49a75ec07e529b477c"}
+        }
+      }
+    },
+    "cmrr-psrr-harness": {
       "csv": "sim/cmrr-psrr/records/20260921-151815-707b34c.csv",
       "csv_sha256": "sha256:ede23361c795e73e0476da9ea4f3f05140af1a6927fb6878fca2ee2c4f728c6a",
       "md": "sim/cmrr-psrr/records/20260921-151815-707b34c.md",
@@ -780,7 +801,7 @@
       "extremum": "min",
       "bound": {"op": ">=", "value": "30.75"},
       "load_condition": {"cl": "2 pF", "applicability": "applies", "note": "no resistive load"},
-      "conditions": "perfectly matched devices; joined open-loop Av0 divided by the in-phase common-mode gain; DC shelf (10 mHz read)"
+      "conditions": "perfectly matched devices; Av0 - Acm0 in dB from one batch deck (two DUT copies, Av0 with inn AC-grounded, in-phase common-mode gain on the other); DC shelf (10 mHz read), plateau guard 0.05 dB; Acm0 cross-checked against the harness regression control"
     },
     {
       "id": "psrr",
@@ -797,10 +818,7 @@
       "extremum": "min",
       "bound": {"op": ">=", "value": "1.87"},
       "load_condition": {"cl": "2 pF", "applicability": "applies", "note": "no resistive load"},
-      "conditions": "joined open-loop Av0 divided by the VDD-to-output gain (PSRR+; vss is ground), DC shelf (10 mHz read); ideal external 10 µA ibias contributes no supply ripple. Strongly frequency-dependent: the in-band figure below is part of the ratified number's context",
-      "context": [
-        {"label": "in-band PSRR+ at 1 kHz, worst", "column": "psrr_1khz_db", "extremum": "min", "unit": "dB", "scale": "1"}
-      ]
+      "conditions": "Av0 - Avs0 in dB from one batch deck (two DUT copies, Av0 with inn AC-grounded, VDD-to-output gain on the other; PSRR+, vss is ground), DC shelf (10 mHz read), plateau guard 0.05 dB; ideal external 10 µA ibias contributes no supply ripple. No 1 kHz context figure: no batch deck reads 1 kHz and the only one on file is the superseded floating-inn harness figure (see the record .md)"
     },
     {
       "id": "swing_headroom_vdd",

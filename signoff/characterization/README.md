@@ -309,6 +309,20 @@ presented as recomputed against the corrected Av0 (the same dependency holds
 for any other result that joined the old Av0; new numbers need separately
 authorized new evidence).
 
+### CMRR and PSRR from batch evidence (issue #514)
+
+`cmrr-psrr` selects `sim/cmrr-psrr/records/20261125-011804-02d78dd.{csv,md}`,
+produced by `sim/cmrr-psrr/klt/summarize_batch.py` from the CMRR and PSRR direct
+decks' `klt sim` envelopes. `cmrr_psrr_klt` = `{control, files}` pins, each with
+its sha256, the envelope, request and bench body of both decks, plus definition
+check `cmrr_psrr_klt_audit` (`CMRR_PSRR_KLT_AUDIT_RULE` in the generated
+report): every cell is re-derived from the envelopes (`cmrr_db` = `Av0 - Acm0`,
+`psrr_db` = `Av0 - Avs0`, dB), the two decks must share DUT, model deck and
+simulator version and agree on Av0, and both plateau guards must hold. `control`
+names the superseded harness record, kept selected as `cmrr-psrr-harness`: only
+its Acm0 is compared. The record carries no `op_pass` and no 1 kHz columns, so
+the PSRR row has no 1 kHz context figure (reasons: `sim/cmrr-psrr/README.md`).
+
 ### Slew-rate from batch evidence (issue #501)
 
 A slew record may pin the batch `klt sim` evidence instead of (or beside) the

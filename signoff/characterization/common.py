@@ -58,6 +58,41 @@ SLEW_KLT_SPICE = {
     "lin_rise_ratio": ".meas tran lin_rise_ratio param='sr_rise_inner_v_per_us/sr_rise_v_per_us'",
     "lin_fall_ratio": ".meas tran lin_fall_ratio param='sr_fall_inner_v_per_us/sr_fall_v_per_us'",
 }
+# Issue #514: the cmrr-psrr batch evidence (sim/cmrr-psrr/klt/): the CMRR and
+# PSRR direct decks' envelopes, requests and bench bodies.
+CMRR_PSRR_KLT_KINDS = (
+    "cmrr_envelope", "cmrr_request", "cmrr_body",
+    "psrr_envelope", "psrr_request", "psrr_body",
+)
+# deck -> (measurement names, request measurement definitions that must not be edited)
+CMRR_PSRR_KLT_DECKS = {
+    "cmrr": {
+        "names": ("av0_db", "acm0_db", "cmrr_db", "cmrr_plateau_delta_db"),
+        "spice": {
+            "av0_db": ".meas ac av0_db find vdb(outa) at=0.01",
+            "acm0_db": ".meas ac acm0_db find vdb(outb) at=0.01",
+        },
+        "expr": {
+            "cmrr_db": "(vdb(outa) - vdb(outb))[0]",
+            "cmrr_plateau_delta_db": "abs((vdb(outa) - vdb(outb))[20] - cmrr_db)",
+        },
+        "limits": {"cmrr_plateau_delta_db": {"max": 0.05}},
+    },
+    "psrr": {
+        "names": ("av0_db", "avs0_db", "psrr_db", "psrr_plateau_delta_db"),
+        "spice": {
+            "av0_db": ".meas ac av0_db find vdb(outa) at=0.01",
+            "avs0_db": ".meas ac avs0_db find vdb(outb) at=0.01",
+        },
+        "expr": {
+            "psrr_db": "(vdb(outa) - vdb(outb))[0]",
+            "psrr_plateau_delta_db": "abs((vdb(outa) - vdb(outb))[20] - psrr_db)",
+        },
+        # the ratified PSRR bound is the request's own limit on psrr_db
+        "limits": {"psrr_db": {"min": 1.87}, "psrr_plateau_delta_db": {"max": 0.05}},
+    },
+}
+CMRR_PSRR_ANALYSIS = {"kind": "ac", "args": "dec 20 10m 1g"}
 SLEW_KLT_LIMITS = {
     "lin_rise_ratio": {"min": 0.98, "max": 1.02}, "lin_fall_ratio": {"min": 0.98, "max": 1.02},
     "pre_rise_orel_v": {"max": -0.15}, "pre_fall_orel_v": {"min": 0.15},
