@@ -3061,6 +3061,22 @@ class SchematicOpenLoopAndVersionPolicy(RawAuditCase):
         errors = self.assert_error("but the pinned envelopes ran ngspice-47")
         self.assertTrue(any("names ngspice-46" in e for e in errors), errors)
 
+    def test_agreeing_sub_floor_summary_and_envelopes_are_rejected_exactly_once(self):
+        """Issue #523: the summary names ngspice-45 and the klt_raw envelopes
+        agree (45, below the floor). The summary site admits-as-it-sets; the
+        envelope carrier must not admit again on agreement, or the same policy
+        error reaches the signoff report twice."""
+        self.install_schematic_run(engine_version="45")
+        self.assert_error("ran on ngspice-45", "floor ngspice-46")
+        content = self.fx.build()
+        hit_rows = 0
+        for row in content["rows"]:
+            rejected = [e for e in row["errors"] if "rejected by sim/pdk.json" in e]
+            self.assertLessEqual(len(rejected), 1, (row.get("id"), rejected))
+            hit_rows += bool(rejected)
+        self.assertGreater(hit_rows, 0)
+        self.assertEqual([e for e in content["errors"] if "rejected by sim/pdk.json" in e], [])
+
     def test_port_only_op_without_dc_continuity_is_rejected(self):
         del self.raw()["dc_continuity"]
         self.fx.save_selection()

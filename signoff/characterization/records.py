@@ -519,13 +519,16 @@ def _admit_ngspice_version(key: str, actual: str, env: dict, errors: list) -> No
 def _carry_ngspice_version(key: str, src: dict, envelope_ngspice: str, origin_phrase: str, spec: dict, env: dict, errors: list) -> None:
     """Carry an envelope's simulator version into src["ngspice"]: establish it
     when nothing has yet (summary .md or an earlier envelope, whichever came
-    first), otherwise require agreement, never overwrite. Either way the
-    envelope's version goes through the shared admission policy."""
+    first), otherwise require agreement, never overwrite. The envelope's
+    version goes through the shared admission policy when it establishes or
+    disagrees; on agreement the establishing site already admitted it, so a
+    second admit would only duplicate the error."""
     if src["ngspice"] is None:
         src["ngspice"] = envelope_ngspice
+        _admit_ngspice_version(key, envelope_ngspice, env, errors)
     elif src["ngspice"] != envelope_ngspice:
         errors.append(f"record {key}: {spec['md']} names {src['ngspice']}, but {origin_phrase} ran {envelope_ngspice}")
-    _admit_ngspice_version(key, envelope_ngspice, env, errors)
+        _admit_ngspice_version(key, envelope_ngspice, env, errors)
 
 
 def _load_sample_population(repo: Path, key: str, ms: dict, expected: list, records: dict, errors: list) -> dict | None:
