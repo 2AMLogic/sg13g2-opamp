@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import os
 import sys
+from decimal import Decimal, InvalidOperation
 
 sys.path.insert(0, os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")))
 import swing_post  # noqa: E402
@@ -54,7 +55,10 @@ def waveform_to_pass_curves(wf, vectors, pid="waveform"):
     ({"variables": [...], "points": [[x, y...]...]}); the sweep variable is
     variables[0]. Every requested vector must be present, finite and the
     sweep strictly increasing -- the strict wrdata rules, via swing_post."""
-    names = [v.get("name") for v in wf.get("variables") or []]
+    variables = wf.get("variables") or []
+    if not all(isinstance(v, dict) for v in variables):
+        raise PairError(pid, f"waveform variables must be objects with a name, got {variables!r}")
+    names = [v.get("name") for v in variables]
     try:
         cols = [names.index(v) for v in vectors]
     except ValueError as exc:
@@ -164,12 +168,27 @@ def audit_pair(pid, coarse, fine, criterion=None):
     return {"fields": fields, "verdicts": verdicts, "valid": True}
 
 
+def _cell_matches(cell, printed):
+    """The summary cell is the reproduced %.9g serialization compared
+    numerically (Decimal), as signoff/characterization/defchecks._cell_problem
+    does: '1.20' and '1.2' are the same cell; a nan matches only a nan."""
+    text = (str(cell) if cell is not None else "").strip()
+    if printed == "nan":
+        return text.lower() == "nan"
+    try:
+        return Decimal(text) == Decimal(printed)
+    except InvalidOperation:
+        return False
+
+
 def check_summary(pid, summary, audited):
-    """Compare a summary row (field -> cell text) to the audited cells; the
-    serialization IS the tolerance. Returns the problems, naming corner and field."""
+    """Compare a summary row (field -> cell text) to the audited cells, each
+    numerically at the 9-digit serialization (no tolerance beyond it); this
+    also covers the authored vdd_v/vcm_v texts ('1.20'). Returns the problems,
+    naming corner and field."""
     bad = []
     for f in swing_post.AUDIT_FIELDS:
-        if str(summary.get(f)) != audited["fields"][f]:
+        if not _cell_matches(summary.get(f), audited["fields"][f]):
             bad.append(f"point {pid}: {f} summary {summary.get(f)!r} != reproduced {audited['fields'][f]!r}")
     return bad
 

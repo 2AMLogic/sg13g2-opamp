@@ -13,6 +13,7 @@ Live (batch) evidence is NOT exercised here.
 """
 from __future__ import annotations
 
+import csv
 import math
 import os
 import sys
@@ -240,6 +241,62 @@ class TwoPassNegativeControls(unittest.TestCase):
         wf["points"] = [[0.0, 0.1], [1.0, "x"]]
         with self.assertRaisesRegex(T.PairError, "short or non-numeric"):
             T.waveform_to_pass_curves(wf, ("v(out)",))
+
+    def test_summary_cells_compare_numerically_not_as_bytes(self):
+        a = T.audit_pair(PID, *make_pair(tanh_curve(0.45, 0.003, 0.015)))
+        # authored vdd_v/vcm_v texts and a trailing-zero cell are the same cells
+        row = dict(a["fields"], vdd_v="1.20", vcm_v="0.600", headroom_hi_v=a["fields"]["headroom_hi_v"] + "0")
+        self.assertEqual(T.check_summary(PID, row, a), [])
+        for bad in ("", None, "x", "1.3", "nan"):
+            self.assertEqual(len(T.check_summary(PID, dict(a["fields"], vdd_v=bad), a)), 1, bad)
+        # a nan reproduced cell is matched only by a nan cell
+        a2 = {"fields": dict(a["fields"], vos_crossing_v="nan")}
+        self.assertEqual(T.check_summary(PID, dict(a["fields"], vos_crossing_v="NaN"), a2), [])
+        self.assertEqual(len(T.check_summary(PID, dict(a["fields"], vos_crossing_v="0"), a2)), 1)
+
+    def test_waveform_variables_must_be_objects(self):
+        with self.assertRaisesRegex(T.PairError, "variables must be objects"):
+            T.waveform_to_pass_curves({"variables": ["vid", "v(out)"], "points": []}, ("v(out)",))
+
+    def test_limits_are_the_ratified_literals(self):
+        import compare as C
+        self.assertEqual(T.LIMITS, {n: l["min"] for n, l in C.RATIFIED_LIMITS.items()})
+
+
+SWING = os.path.normpath(os.path.join(HERE, ".."))
+RECORD = os.path.join(SWING, "records", "20260921-151759-707b34c.csv")
+CORNERS = os.path.join(SWING, "corners", "20260921-151759-707b34c")
+
+
+class ArchivedEvidence(unittest.TestCase):
+    """Replays the committed 45-corner record: the summary row comes from the
+    record, never from the audit, so the comparison rule is not circular."""
+
+    def test_committed_record_reproduces_with_no_false_tamper(self):
+        with open(RECORD, newline="") as fh:
+            rows = list(csv.DictReader(fh))
+        self.assertEqual(len(rows), 45)
+        bad, failing = [], []
+        for r in rows:
+            pid = r["point_id"]
+            with open(os.path.join(CORNERS, f"{pid}_coarse.csv")) as fh:
+                cvid, (cvout,) = T.swing_post.parse_wrdata(fh.read(), T.swing_post.COARSE_VECTORS, pid)
+            with open(os.path.join(CORNERS, f"{pid}_fine.csv")) as fh:
+                fvid, (fvout, fivdd) = T.swing_post.parse_wrdata(fh.read(), T.swing_post.FINE_VECTORS, pid)
+            vdd, vcm = float(r["vdd_v"]), float(r["vcm_v"])
+            start, stop, _ = T.fine_window(cvid, cvout, vcm)
+            ident = dict(dut_sha256="a" * 64, bench_sha256="b" * 64, simulator="ngspice", pid=pid,
+                         process=r["corner"], temp_c=float(r["temp_c"]), vdd_v=vdd, vcm_v=vcm)
+            coarse = dict(ident, start=CS, stop=CE, step=CSTEP, vid=cvid, vout=cvout)
+            fine = dict(ident, start=start, stop=stop, step=FSTEP, vid=fvid, vout=fvout, ivdd=fivdd)
+            out, problems = T.audit_population([pid], [coarse], [fine])
+            bad += problems
+            if pid in out:
+                bad += T.check_summary(pid, r, out[pid])
+                failing += [(pid, n) for n, ok in out[pid]["verdicts"].items() if not ok]
+        self.assertEqual(bad, [])
+        # the one genuine literal miss documented in compare.py
+        self.assertEqual(failing, [("mos_ss_125C_1.08V", "swing_span_v")])
 
 
 if __name__ == "__main__":
