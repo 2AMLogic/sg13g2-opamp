@@ -66,6 +66,9 @@ SLEW_KLT_LIMITS = {
     "op_vout_rail_frac": {"min": 0.02, "max": 0.98}, "op_vd1_rail_frac": {"min": 0.02, "max": 0.98},
     "op_vd2_rail_frac": {"min": 0.02, "max": 0.98}, "op_vtail_rail_frac": {"min": 0.02, "max": 0.98},
 }
+# The input-offset bench's own `klt sim` family (issue #504): the null-sweep
+# and closed-loop envelopes, both requests and both circuit bodies.
+OFFSET_KLT_RAW_KINDS = ("null", "cl", "null_request", "cl_request", "null_body", "cl_body")
 
 
 # --------------------------------------------------------------------------
