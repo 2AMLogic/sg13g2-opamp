@@ -4,7 +4,7 @@ Issue #171: klt_begin_record must claim the record destinations (sim +
 compare, honoring RECORD_SUFFIX) atomically BEFORE klt is invoked, and
 envelope / comparison publication must never replace an existing file. This
 is the klt-wrapper counterpart of the #140 reservation tested in
-test_record_paths.py (same primitive: an atomic un-`-p` mkdir). The #209
+test_record_paths.py (same primitive: sg13g2_exclusive_mkdir). The #209
 identity lifecycle is stubbed here and tested in test_env_drift_lifecycle.py.
 
 Every test builds a throwaway repo tree in a TemporaryDirectory and drives the
@@ -77,14 +77,17 @@ SCRIPT_DIR="$1"; REPO_ROOT="$2"; SUFFIX="${3:-}"
 SIM_DIR="${REPO_ROOT}/sim"
 date() { echo "${FAKE_TS}"; }
 git() { echo "${FAKE_SHA}"; }
-# #488: capture the reserving mkdir's own exit status and the reservation
+export NGSPICE_VERSION=stub PDK=pdk PDK_ROOT="${REPO_ROOT}/nopdk"
+# shellcheck source=/dev/null
+source "${COMMON}"
+# #488/#525: capture the reserving claim's own exit status and the reservation
 # path's stat without touching klt_begin_record: a test-only wrapper that
-# delegates to the real mkdir and, for .reserve- paths only, records the
-# literal rc plus `stat -c '%h %i'` taken immediately after the call. The
-# wrapper's return value is the real rc, so owner/loser branching (and the
-# loser's exit 3) is byte-identical to an unwrapped mkdir.
-mkdir() {
-  command mkdir "$@"
+# delegates to the real sg13g2_exclusive_mkdir and, for .reserve- paths only,
+# records the literal rc plus `stat -c '%h %i'` taken immediately after the
+# call. It returns the real rc, so owner/loser branching is unchanged.
+eval "_real_$(declare -f sg13g2_exclusive_mkdir)"
+sg13g2_exclusive_mkdir() {
+  _real_sg13g2_exclusive_mkdir "$@"
   local rc=$?
   if [[ "$*" == *.reserve-* ]]; then
     RESERVE_MKDIR_RC="${rc}"
@@ -92,9 +95,6 @@ mkdir() {
   fi
   return "${rc}"
 }
-export NGSPICE_VERSION=stub PDK=pdk PDK_ROOT="${REPO_ROOT}/nopdk"
-# shellcheck source=/dev/null
-source "${COMMON}"
 # preflight.sh (not sourced here: it needs a PDK) provides the identity
 # lifecycle klt_begin_record / klt_write_envelope call (issues #191, #209).
 # Stub it here; the real sim/env-identity.sh is driven against a fake PDK
