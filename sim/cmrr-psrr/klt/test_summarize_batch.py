@@ -75,6 +75,18 @@ class BatchRecordWriter(unittest.TestCase):
                     self.assertIn("outside the expected grid", result.stderr)
                     self.assertEqual(list(self.out.iterdir()), [])
 
+    def test_extra_supply_axis_publishes_neither_file(self):
+        for path in (CMRR, PSRR):
+            with self.subTest(path=path.name):
+                self.restore_inputs()
+                doc = json.loads(path.read_text())
+                doc["corners"][0]["supply_v"]["vss"] = 0.12
+                (self.inputs / path.name).write_text(json.dumps(doc))
+                result = self.publish(RECORD_ID=path.stem)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn("vss", result.stderr)
+                self.assertEqual(list(self.out.iterdir()), [])
+
     def test_second_publication_failure_rolls_back_only_our_csv(self):
         # Create a competing destination after the reservation and preflight.
         real_ln = shutil.which("ln")

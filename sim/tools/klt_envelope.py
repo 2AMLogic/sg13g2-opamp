@@ -119,6 +119,8 @@ def exact_pvt_key(corner: dict) -> Key:
     supply = corner.get("supply_v") if isinstance(corner, dict) else None
     if not isinstance(supply, dict):
         raise InputError(f"corner lacks supply_v: {supply!r}")
+    if set(supply) != {"vdd", "vinp"}:
+        raise InputError(f"corner supply_v must contain exactly vdd and vinp, got {supply!r}")
     process, temp, vdd = corner.get("process"), corner.get("temperature_c"), supply.get("vdd")
     if process not in PROCESSES or temp not in TEMPERATURES or vdd not in SUPPLIES:
         raise InputError(f"corner {(process, temp, vdd)!r} is outside the expected grid")

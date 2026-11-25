@@ -2164,6 +2164,14 @@ class CmrrPsrrKltAudit(RawAuditCase):
         self.edit_env("cmrr_envelope", lambda d: self.meas(d, "acm0_db").update(unit="V"))
         self.assert_error(self.POINT, "acm0_db", "unit")
 
+    def test_envelope_cannot_add_a_supply_to_the_requested_grid(self):
+        for deck in ("cmrr", "psrr"):
+            with self.subTest(deck=deck):
+                self.fresh()
+                self.edit_env(f"{deck}_envelope",
+                              lambda d: self.corner(d, self.POINT)["supply_v"].update(vss=0.12))
+                self.assert_error("supply_v", "vss")
+
     def test_fractional_corner_coordinates_cannot_alias_a_selected_point(self):
         for deck in ("cmrr", "psrr"):
             for field in ("temperature_c", "vdd"):
