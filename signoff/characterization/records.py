@@ -205,9 +205,15 @@ def _check_klt_envelope_provenance(
     """Verify simulator banners, PDK, model deck, DUT closure, and bench-body
     provenance on one batch `klt sim` envelope."""
     e = env.get("environment") or {}
+    engine_build = e.get("engine_build")
+    build_banner = None
+    if isinstance(engine_build, dict):
+        build_banner = engine_build.get("version_banner")
+    elif engine_build is not None:
+        problems.append(f"{label}: environment.engine_build must be an object or null")
     for b_label, banner in (
         ("worker banner", (((e.get("remote") or {}).get("worker_environment") or {}).get("simulator") or {}).get("version_banner")),
-        ("engine_build banner", (e.get("engine_build") or {}).get("version_banner")),
+        ("engine_build banner", build_banner),
     ):
         if banner is not None and (not isinstance(banner, str) or sorted(set(NGSPICE_RE.findall(banner))) != [version]):
             problems.append(f"{label}: {b_label} does not name ngspice-{version} (contradictory simulator version)")

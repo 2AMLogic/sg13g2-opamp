@@ -1096,6 +1096,20 @@ class RawAuditCase(unittest.TestCase):
         errors = self.errors(content)
         self.assertTrue(any("malformed netlist_closure entry" in e for e in errors), errors)
 
+    def assert_klt_engine_build_validation(self, kind):
+        for value in ("legacy-build", []):
+            with self.subTest(kind=kind, engine_build=value):
+                self.edit_json(kind, lambda doc, value=value: doc["environment"].update(engine_build=value))
+                content = self.fx.build()
+                self.assertEqual(content["sources"][self.RECORD][self.RAW_KEY]["status"], "error")
+                errors = self.errors(content)
+                self.assertTrue(any("environment.engine_build must be an object" in e for e in errors), errors)
+
+        self.edit_json(kind, lambda doc: doc["environment"].update(engine_build=None))
+        self.assertEqual(self.fx.build()["sources"][self.RECORD][self.RAW_KEY]["status"], "verified")
+        self.edit_json(kind, lambda doc: doc["environment"].pop("engine_build"))
+        self.assertEqual(self.fx.build()["sources"][self.RECORD][self.RAW_KEY]["status"], "verified")
+
     def _edit_pinned_lines(self, entry, transform, repin=True) -> None:
         path = self.fx.root / entry["path"]
         lines = path.read_text(encoding="utf-8").splitlines()
@@ -1970,6 +1984,10 @@ class KltRawAudit(RawAuditCase):
                 self.fresh()
                 self.assert_malformed_klt_closure_rejected(kind)
 
+    def test_engine_build_is_an_optional_object(self):
+        for kind in ("ac", "op"):
+            self.assert_klt_engine_build_validation(kind)
+
     def test_simulated_dut_must_be_the_selected_snapshot(self):
         snap = self.fx.root / self.fx.selection["records"][self.RECORD]["netlist_snapshot"]
         snap.write_text(snap.read_text(encoding="utf-8") + "* touched\n", encoding="utf-8")
@@ -2249,6 +2267,10 @@ class OffsetKltAudit(RawAuditCase):
             with self.subTest(kind=kind):
                 self.fresh()
                 self.assert_malformed_klt_closure_rejected(kind)
+
+    def test_engine_build_is_an_optional_object(self):
+        for kind in ("null", "cl"):
+            self.assert_klt_engine_build_validation(kind)
 
     def test_bench_dut_is_verified_against_a_renamed_snapshot(self):
         record = self.fx.selection["records"][self.RECORD]
@@ -2941,6 +2963,9 @@ class SlewKltAudit(RawAuditCase):
 
     def test_malformed_closure_entry_is_rejected(self):
         self.assert_malformed_klt_closure_rejected("envelope")
+
+    def test_engine_build_is_an_optional_object(self):
+        self.assert_klt_engine_build_validation("envelope")
 
     def test_all_matching_dut_paths_must_have_the_snapshot_hash(self):
         self.add_klt_dut_copy("envelope")
