@@ -6,6 +6,11 @@
 
 - [2026-09](work_log/WORK_LOG_2026-09.md)
 
+### 2026-11-26
+
+- **PR #544**: refactor: share batch klt envelope validation helpers and drop dead constants
+- **Issue #543** (closed): Factor duplicated batch klt envelope loaders and drop two unused constants in signoff/characterization/records.py
+
 ### 2026-11-25
 
 - **Issue #532** (closed): Pin vibias_dc_v's slew_klt definition, and cover the both-pinned slew record with a test
