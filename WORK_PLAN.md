@@ -36,7 +36,6 @@ Human-approved issues ready for implementation (`loom:issue`).
 
 - **#332**: DR-0011: re-derive CMRR bound, re-check gain/swing vs market comps, restate swing headroom (PR #303 operator ruling)
 - **#428**: sim preflight: on batch-fleet runs take OSDI identity from the runner-reported digests, not a locally built .build-manifest, then write the #325 input-cmr record
-- **#429**: post-layout: attribute the klt 0.9.0 extracted phase-margin miss (ff / 1.32 V / 125 C) and the tt / 1.08 V / 27 C non-convergence, then route #312 to a design or klt follow-up
 
 ## In Progress
 
@@ -44,16 +43,13 @@ Issues currently being built (`loom:building`).
 
 - **#503**: Reproduce the output-swing audit from batch DC sweeps
 - **#514**: Bind batch CMRR and PSRR envelopes into the cmrr-psrr characterization record
-- **#529**: Carry #525's unmeasured external-mkdir diagnostic forward, and fix the two interpretation comments PR #526 left stale
-- **#530**: Fourth ngspice envelope carrier (3h offset_klt_raw) does not use _carry_ngspice_version
-- **#532**: Pin vibias_dc_v's slew_klt definition, and cover the both-pinned slew record with a test
+- **#543**: Factor duplicated batch klt envelope loaders and drop two unused constants in signoff/characterization/records.py
 
 ## PRs Awaiting Review
 
 PRs waiting on Judge (`loom:review-requested`).
 
-- **#535**: test: pin vibias_dc_v slew request and add both-pinned slew control
-- **#538**: feat(signoff): admit batch two-pass swing evidence via swing_raw_audit
+- **#544**: refactor: share batch klt envelope validation helpers and drop dead constants
 
 ## Approved (Awaiting Merge)
 
@@ -62,8 +58,8 @@ PRs that passed review and are queued for Champion auto-merge (`loom:pr`).
 - **#303**: docs: submit DR-0011 for two-key ratification (status flip)
 - **#333**: docs(DR-0011): revision 5 restates swing as output range, discloses CMRR/gain gaps
 - **#490**: docs: record the open TT tie measurements and replacement procedure
-- **#536**: refactor: route offset klt ngspice version through shared carrier
-- **#537**: docs: align reservation-race diagnostics with os.mkdir claim primitive
+- **#528**: characterization: bind batch CMRR/PSRR envelopes behind a cmrr_psrr_klt audit
+- **#538**: feat(signoff): admit batch two-pass swing evidence via swing_raw_audit
 
 ## Proposed
 
@@ -83,9 +79,6 @@ Issues carrying `loom:curated`.
 - **#503**: Reproduce the output-swing audit from batch DC sweeps *(curated)*
 - **#505**: Measure systematic CMRR and PSRR+ for the same DUT on the batch fleet *(curated)*
 - **#514**: Bind batch CMRR and PSRR envelopes into the cmrr-psrr characterization record *(curated)*
-- **#529**: Carry #525's unmeasured external-mkdir diagnostic forward, and fix the two interpretation comments PR #526 left stale *(curated)*
-- **#530**: Fourth ngspice envelope carrier (3h offset_klt_raw) does not use _carry_ngspice_version *(curated)*
-- **#532**: Pin vibias_dc_v's slew_klt definition, and cover the both-pinned slew record with a test *(curated)*
 
 ## Proposed (Architect / Hermit)
 
@@ -102,11 +95,11 @@ _None._
 | Operator merge-risk holds | 1 |
 | Very important | 2 |
 | Important | 9 |
-| Ready (`loom:issue`) | 3 |
-| In Progress (`loom:building`) | 5 |
-| PRs awaiting review | 2 |
+| Ready (`loom:issue`) | 2 |
+| In Progress (`loom:building`) | 3 |
+| PRs awaiting review | 1 |
 | Approved PRs awaiting merge | 5 |
-| Curated | 17 |
+| Curated | 14 |
 | Architect / Hermit proposals | 1 |
 | Active epics | 0 |
 <!-- guide:plan-body:end -->
