@@ -8,6 +8,12 @@
 
 ### 2026-11-25
 
+- **Issue #532** (closed): Pin vibias_dc_v's slew_klt definition, and cover the both-pinned slew record with a test
+- **PR #535**: test: pin vibias_dc_v slew request and add both-pinned slew control
+- **Issue #530** (closed): Fourth ngspice envelope carrier (3h offset_klt_raw) does not use _carry_ngspice_version
+- **PR #536**: refactor: route offset klt ngspice version through shared carrier
+- **Issue #529** (closed): Carry #525's unmeasured external-mkdir diagnostic forward, and fix the two interpretation comments PR #526 left stale
+- **PR #537**: docs: align reservation-race diagnostics with os.mkdir claim primitive
 - **Issue #533** (closed): Enforce "pinned evidence is never ignored" for all 7 populations, not just slew_klt and klt_raw
 - **PR #534**: fix: refuse any pinned raw population whose audit does not run
 - **PR #512**: feat(sim): pair and audit two-pass swing batch evidence offline
