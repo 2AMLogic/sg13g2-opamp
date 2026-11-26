@@ -1071,6 +1071,31 @@ class RawAuditCase(unittest.TestCase):
         return next(r for r in generate.read_csv_rows(self.fx.csv_path(self.RECORD))[1]
                     if r["point_id"] == (pid or self.POINT))[column]
 
+    def edit_json(self, kind, mutate, repin=True) -> None:
+        pin = self.raw()["files"][kind]
+        path = self.fx.root / pin["path"]
+        doc = json.loads(path.read_text(encoding="utf-8"))
+        mutate(doc)
+        path.write_text(json.dumps(doc), encoding="utf-8")
+        if repin:
+            pin["sha256"] = generate.sha256_file(path)
+            self.fx.save_selection()
+
+    def add_klt_dut_copy(self, kind):
+        def add_copy(doc):
+            closure = doc["environment"]["netlist_closure"]
+            dut = next(entry for entry in closure if entry["path"] == "design/netlist/opamp_core.spice")
+            closure.append(dict(dut, path="copy/opamp_core.spice"))
+
+        self.edit_json(kind, add_copy)
+
+    def assert_malformed_klt_closure_rejected(self, kind):
+        self.edit_json(kind, lambda doc: doc["environment"]["netlist_closure"].append(None))
+        content = self.fx.build()
+        self.assertEqual(content["sources"][self.RECORD][self.RAW_KEY]["status"], "error")
+        errors = self.errors(content)
+        self.assertTrue(any("malformed netlist_closure entry" in e for e in errors), errors)
+
     def _edit_pinned_lines(self, entry, transform, repin=True) -> None:
         path = self.fx.root / entry["path"]
         lines = path.read_text(encoding="utf-8").splitlines()
@@ -1756,16 +1781,6 @@ class KltRawAudit(RawAuditCase):
     KEEP_AUDIT = "keep_klt_audit"
     RAW_KEY = "klt_raw"
 
-    def edit_json(self, kind, mutate, repin=True) -> None:
-        pin = self.raw()["files"][kind]
-        path = self.fx.root / pin["path"]
-        doc = json.loads(path.read_text(encoding="utf-8"))
-        mutate(doc)
-        path.write_text(json.dumps(doc), encoding="utf-8")
-        if repin:
-            pin["sha256"] = generate.sha256_file(path)
-            self.fx.save_selection()
-
     def edit_text(self, kind, transform, repin=True) -> None:
         pin = self.raw()["files"][kind]
         path = self.fx.root / pin["path"]
@@ -1948,6 +1963,12 @@ class KltRawAudit(RawAuditCase):
     def test_wrong_model_deck_is_rejected(self):
         self.edit_json("ac", lambda d: d["environment"].update(models_lib_sha256="0" * 64))
         self.assert_error("model deck")
+
+    def test_malformed_closure_entry_is_rejected(self):
+        for kind in ("ac", "op"):
+            with self.subTest(kind=kind):
+                self.fresh()
+                self.assert_malformed_klt_closure_rejected(kind)
 
     def test_simulated_dut_must_be_the_selected_snapshot(self):
         snap = self.fx.root / self.fx.selection["records"][self.RECORD]["netlist_snapshot"]
@@ -2222,6 +2243,28 @@ class OffsetKltAudit(RawAuditCase):
         self.raw()["files"]["cl"]["sha256"] = generate.sha256_file(self.rawfile("cl"))
         self.fx.save_selection()
         self.assert_error("engine_build banner does not name ngspice-47")
+
+    def test_malformed_closure_entry_is_rejected(self):
+        for kind in ("null", "cl"):
+            with self.subTest(kind=kind):
+                self.fresh()
+                self.assert_malformed_klt_closure_rejected(kind)
+
+    def test_bench_dut_is_verified_against_a_renamed_snapshot(self):
+        record = self.fx.selection["records"][self.RECORD]
+        snapshot = self.fx.root / record["netlist_snapshot"]
+        renamed = snapshot.rename(snapshot.with_name("offset-snapshot.spice"))
+        record["netlist_snapshot"] = renamed.relative_to(self.fx.root).as_posix()
+        self.fx.save_selection()
+
+        content = self.fx.build()
+        self.assertEqual(self.errors(content), [])
+        audit = content["sources"][self.RECORD][self.RAW_KEY]
+        self.assertEqual((audit["status"], audit["points"]), ("verified", 45))
+
+    def test_multiple_bench_dut_entries_are_rejected_even_with_the_same_hash(self):
+        self.add_klt_dut_copy("null")
+        self.assert_error("is not the selected netlist snapshot")
 
     def test_simulated_dut_must_be_the_selected_snapshot(self):
         # A comment-only touch leaves the normalized (design-identity) hash
@@ -2660,14 +2703,7 @@ class SlewKltAudit(RawAuditCase):
         self.fx.save_selection()
 
     def edit_env(self, mutate, kind="envelope", repin=True) -> None:
-        pin = self.raw()["files"][kind]
-        path = self.fx.root / pin["path"]
-        doc = json.loads(path.read_text(encoding="utf-8"))
-        mutate(doc)
-        path.write_text(json.dumps(doc), encoding="utf-8")
-        if repin:
-            pin["sha256"] = generate.sha256_file(path)
-            self.fx.save_selection()
+        self.edit_json(kind, mutate, repin)
 
     def corner(self, doc, pid=None):
         pid = pid or self.POINT
@@ -2902,6 +2938,19 @@ class SlewKltAudit(RawAuditCase):
             self.meas(doc, "drive_centre_err_v")["value"] += 0.025
         self.edit_env(mutate)
         self.assert_error("drive_pass '1' but the pinned envelope's reported quantities")
+
+    def test_malformed_closure_entry_is_rejected(self):
+        self.assert_malformed_klt_closure_rejected("envelope")
+
+    def test_all_matching_dut_paths_must_have_the_snapshot_hash(self):
+        self.add_klt_dut_copy("envelope")
+        content = self.fx.build()
+        self.assertEqual(self.errors(content), [])
+        audit = content["sources"][self.RECORD][self.RAW_KEY]
+        self.assertEqual((audit["status"], audit["points"]), ("verified", 45))
+
+        self.edit_env(lambda doc: doc["environment"]["netlist_closure"][-1].update(sha256="0" * 64))
+        self.assert_error("is not the selected netlist snapshot")
 
     def test_stale_dut_hash(self):
         def mutate(doc):

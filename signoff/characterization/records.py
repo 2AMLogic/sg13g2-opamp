@@ -22,6 +22,7 @@ import math
 import re
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
+from typing import Literal
 
 from common import (
     KLT_RAW_KINDS,
@@ -199,8 +200,7 @@ def _check_klt_envelope_provenance(
     body_pin: dict,
     problems: list,
     *,
-    exact_dut_path: bool = False,
-    exact_body_path: bool = True,
+    family: Literal["open-loop", "slew", "offset"],
 ) -> None:
     """Verify simulator banners, PDK, model deck, DUT closure, and bench-body
     provenance on one batch `klt sim` envelope."""
@@ -220,41 +220,45 @@ def _check_klt_envelope_provenance(
             f"{label}: model deck identity {deck.get('name')!r} {deck.get('content_hash')!r} "
             "is not cornerMOSlv.lib at the recorded models_lib_sha256"
         )
-    closure = {c.get("path"): c.get("sha256") for c in e.get("netlist_closure") or [] if isinstance(c, dict)}
-    if exact_dut_path:
-        if closure.get(snapshot_rel) is None or "sha256:" + str(closure[snapshot_rel]) != snap_hash:
-            problems.append(
-                f"{label}: simulated DUT {snapshot_rel} (closure sha256 {closure.get(snapshot_rel)}) "
-                f"is not the selected netlist snapshot ({snap_hash})"
-            )
-    else:
-        dut_name = Path(snapshot_rel).name
-        dut_entries = {p: s for p, s in closure.items() if isinstance(p, str) and Path(p).name == dut_name}
-        if len(dut_entries) != 1 or "sha256:" + str(next(iter(dut_entries.values()))) != snap_hash:
-            problems.append(
-                f"{label}: simulated DUT (closure entries {sorted(dut_entries) or sorted(str(p) for p in closure)}) "
-                f"is not the selected netlist snapshot {snapshot_rel} ({snap_hash})"
-            )
-    body_path = (env.get("netlist") or {}).get("path")
-    if exact_body_path:
+    entries = e.get("netlist_closure")
+    if not isinstance(entries, list):
+        problems.append(f"{label}: netlist_closure must be a list")
+        return
+    closure: list[tuple[str, str]] = []
+    for index, entry in enumerate(entries):
         if (
-            "sha256:" + str(closure.get(body_pin["path"])) != body_pin["sha256"]
-            or "sha256:" + str(e.get("netlist_sha256")) != body_pin["sha256"]
+            not isinstance(entry, dict)
+            or not isinstance(entry.get("path"), str)
+            or not entry["path"]
+            or not isinstance(entry.get("sha256"), str)
+            or not _HEX64_RE.fullmatch(entry["sha256"])
         ):
-            problems.append(f"{label}: simulated bench body is not the pinned {body_pin['path']}")
-        if body_path != body_pin["path"]:
-            problems.append(f"{label}: netlist path {body_path!r} is not the pinned bench body")
-    else:
-        if (
-            body_path is None
-            or "sha256:" + str(e.get("netlist_sha256")) != body_pin["sha256"]
-            or "sha256:" + str(closure.get(body_path)) != body_pin["sha256"]
-        ):
-            problems.append(f"{label}: simulated bench body {body_path!r} is not the pinned {body_pin['path']}")
-    if exact_dut_path:
-        extra = set(closure) - {body_pin["path"], snapshot_rel}
+            problems.append(f"{label}: malformed netlist_closure entry at index {index} (expected a path and SHA-256)")
+            return
+        closure.append((entry["path"], "sha256:" + entry["sha256"]))
+
+    if family == "open-loop":
+        dut = [(path, digest) for path, digest in closure if path == snapshot_rel]
+        extra = {path for path, _ in closure} - {snapshot_rel, body_pin["path"]}
         if extra:
-            problems.append(f"{label}: unexpected extra netlist_closure entries {sorted(extra, key=str)}")
+            problems.append(f"{label}: unexpected extra netlist_closure entries {sorted(extra)}")
+    else:
+        # Both offset benches include opamp_core.spice even when the selected copy is renamed.
+        name = "opamp_core.spice" if family == "offset" else Path(snapshot_rel).name
+        dut = [(path, digest) for path, digest in closure if Path(path).name == name]
+    if not dut or (family == "offset" and len(dut) != 1) or any(digest != snap_hash for _, digest in dut):
+        problems.append(
+            f"{label}: simulated DUT (closure entries {dut}) "
+            f"is not the selected netlist snapshot {snapshot_rel} ({snap_hash})"
+        )
+
+    body_path = (env.get("netlist") or {}).get("path")
+    expected_path = body_path if family == "slew" else body_pin["path"]
+    if family != "slew" and body_path != expected_path:
+        problems.append(f"{label}: netlist path {body_path!r} is not the pinned bench body")
+    body_hashes = {digest for path, digest in closure if path == expected_path}
+    if body_hashes != {body_pin["sha256"]} or "sha256:" + str(e.get("netlist_sha256")) != body_pin["sha256"]:
+        problems.append(f"{label}: simulated bench body is not the pinned {body_pin['path']}")
 
 
 def _check_klt_bench_cload(body_text: str, body_label: str, md_text: str, problems: list) -> Decimal | None:
@@ -368,7 +372,7 @@ def _load_klt_population(repo: Path, key: str, kr: dict, expected: list, snapsho
     for kind, env in (("ac", ac_env), ("op", op_env)):
         _check_klt_envelope_provenance(
             env, f"{kind} envelope", version, snapshot_rel, snap_hash, body_pin, problems,
-            exact_dut_path=True, exact_body_path=True,
+            family="open-loop",
         )
     # requests: the measurement definitions the audit relies on
     ac_req, op_req = docs["ac_request"], docs["op_request"]
@@ -886,7 +890,7 @@ def _load_slew_klt_population(repo: Path, key: str, sk: dict, expected: list, sn
     body_pin = sk["files"]["bench_body"]
     _check_klt_envelope_provenance(
         env, label, version, snapshot_rel, snap_hash, body_pin, problems,
-        exact_dut_path=False, exact_body_path=False,
+        family="slew",
     )
     if Path(str(req.get("netlist"))).name != Path(body_pin["path"]).name:
         problems.append(f"slew request: netlist {req.get('netlist')!r} is not the pinned bench body")
@@ -1490,7 +1494,7 @@ def _load_offset_klt_population(repo: Path, key: str, kr: dict, expected: list, 
     for kind, doc in (("null", null_env), ("cl", cl_env)):
         _check_klt_envelope_provenance(
             doc, f"{kind} envelope", version, snapshot_rel, snap_hash, kr["files"][f"{kind}_body"], problems,
-            exact_dut_path=False, exact_body_path=True,
+            family="offset",
         )
 
     # Simulator version admission (floor / exact pin) is applied by the caller
