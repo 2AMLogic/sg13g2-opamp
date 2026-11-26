@@ -1096,19 +1096,33 @@ class RawAuditCase(unittest.TestCase):
         errors = self.errors(content)
         self.assertTrue(any("malformed netlist_closure entry" in e for e in errors), errors)
 
-    def assert_klt_engine_build_validation(self, kind):
-        for value in ("legacy-build", []):
-            with self.subTest(kind=kind, engine_build=value):
-                self.edit_json(kind, lambda doc, value=value: doc["environment"].update(engine_build=value))
-                content = self.fx.build()
-                self.assertEqual(content["sources"][self.RECORD][self.RAW_KEY]["status"], "error")
-                errors = self.errors(content)
-                self.assertTrue(any("environment.engine_build must be an object" in e for e in errors), errors)
+    def assert_klt_optional_object(self, kind, path, invalid_string):
+        *parents, field = path.split(".")
 
-        self.edit_json(kind, lambda doc: doc["environment"].update(engine_build=None))
-        self.assertEqual(self.fx.build()["sources"][self.RECORD][self.RAW_KEY]["status"], "verified")
-        self.edit_json(kind, lambda doc: doc["environment"].pop("engine_build"))
-        self.assertEqual(self.fx.build()["sources"][self.RECORD][self.RAW_KEY]["status"], "verified")
+        def parent(doc):
+            for key in parents:
+                doc = doc.setdefault(key, {})
+            return doc
+
+        for value in (invalid_string, [], None):
+            with self.subTest(kind=kind, path=path, value=value):
+                self.edit_json(kind, lambda doc, value=value: parent(doc).update({field: value}))
+                content = self.fx.build()
+                audit = content["sources"][self.RECORD][self.RAW_KEY]
+                if value is None:
+                    self.assertEqual(audit["status"], "verified")
+                else:
+                    self.assertEqual(audit["status"], "error")
+                    errors = self.errors(content)
+                    self.assertTrue(any(f"{path} must be an object" in e for e in errors), errors)
+
+        with self.subTest(kind=kind, missing=path):
+            self.edit_json(kind, lambda doc: parent(doc).pop(field))
+            self.assertEqual(self.fx.build()["sources"][self.RECORD][self.RAW_KEY]["status"], "verified")
+
+    def assert_klt_worker_simulator_validation(self, kind):
+        self.assert_klt_optional_object(kind, "environment.remote.worker_environment.simulator", "ngspice-460")
+        self.assert_klt_optional_object(kind, "environment.remote.worker_environment", "legacy-worker")
 
     def _edit_pinned_lines(self, entry, transform, repin=True) -> None:
         path = self.fx.root / entry["path"]
@@ -1986,7 +2000,11 @@ class KltRawAudit(RawAuditCase):
 
     def test_engine_build_is_an_optional_object(self):
         for kind in ("ac", "op"):
-            self.assert_klt_engine_build_validation(kind)
+            self.assert_klt_optional_object(kind, "environment.engine_build", "legacy-build")
+
+    def test_worker_simulator_metadata_is_optional(self):
+        for kind in ("ac", "op"):
+            self.assert_klt_worker_simulator_validation(kind)
 
     def test_simulated_dut_must_be_the_selected_snapshot(self):
         snap = self.fx.root / self.fx.selection["records"][self.RECORD]["netlist_snapshot"]
@@ -2270,7 +2288,11 @@ class OffsetKltAudit(RawAuditCase):
 
     def test_engine_build_is_an_optional_object(self):
         for kind in ("null", "cl"):
-            self.assert_klt_engine_build_validation(kind)
+            self.assert_klt_optional_object(kind, "environment.engine_build", "legacy-build")
+
+    def test_worker_simulator_metadata_is_optional(self):
+        for kind in ("null", "cl"):
+            self.assert_klt_worker_simulator_validation(kind)
 
     def test_bench_dut_is_verified_against_a_renamed_snapshot(self):
         record = self.fx.selection["records"][self.RECORD]
@@ -2965,7 +2987,10 @@ class SlewKltAudit(RawAuditCase):
         self.assert_malformed_klt_closure_rejected("envelope")
 
     def test_engine_build_is_an_optional_object(self):
-        self.assert_klt_engine_build_validation("envelope")
+        self.assert_klt_optional_object("envelope", "environment.engine_build", "legacy-build")
+
+    def test_worker_simulator_metadata_is_optional(self):
+        self.assert_klt_worker_simulator_validation("envelope")
 
     def test_all_matching_dut_paths_must_have_the_snapshot_hash(self):
         self.add_klt_dut_copy("envelope")

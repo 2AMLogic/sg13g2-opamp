@@ -191,6 +191,14 @@ def _check_klt_envelope_shell(env, label: str, expected_ids: list, problems: lis
     return corners
 
 
+def _klt_optional_object(value, label: str, problems: list) -> dict:
+    if isinstance(value, dict):
+        return value
+    if value is not None:
+        problems.append(f"{label} must be an object or null")
+    return {}
+
+
 def _check_klt_envelope_provenance(
     env: dict,
     label: str,
@@ -205,15 +213,14 @@ def _check_klt_envelope_provenance(
     """Verify simulator banners, PDK, model deck, DUT closure, and bench-body
     provenance on one batch `klt sim` envelope."""
     e = env.get("environment") or {}
-    engine_build = e.get("engine_build")
-    build_banner = None
-    if isinstance(engine_build, dict):
-        build_banner = engine_build.get("version_banner")
-    elif engine_build is not None:
-        problems.append(f"{label}: environment.engine_build must be an object or null")
+    remote = e.get("remote") or {}
+    worker_label = f"{label}: environment.remote.worker_environment"
+    worker = _klt_optional_object(remote.get("worker_environment"), worker_label, problems)
+    simulator = _klt_optional_object(worker.get("simulator"), f"{worker_label}.simulator", problems)
+    engine_build = _klt_optional_object(e.get("engine_build"), f"{label}: environment.engine_build", problems)
     for b_label, banner in (
-        ("worker banner", (((e.get("remote") or {}).get("worker_environment") or {}).get("simulator") or {}).get("version_banner")),
-        ("engine_build banner", build_banner),
+        ("worker banner", simulator.get("version_banner")),
+        ("engine_build banner", engine_build.get("version_banner")),
     ):
         if banner is not None and (not isinstance(banner, str) or sorted(set(NGSPICE_RE.findall(banner))) != [version]):
             problems.append(f"{label}: {b_label} does not name ngspice-{version} (contradictory simulator version)")
