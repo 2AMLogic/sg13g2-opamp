@@ -43,13 +43,12 @@ Issues currently being built (`loom:building`).
 
 - **#503**: Reproduce the output-swing audit from batch DC sweeps
 - **#514**: Bind batch CMRR and PSRR envelopes into the cmrr-psrr characterization record
-- **#543**: Factor duplicated batch klt envelope loaders and drop two unused constants in signoff/characterization/records.py
 
 ## PRs Awaiting Review
 
 PRs waiting on Judge (`loom:review-requested`).
 
-- **#544**: refactor: share batch klt envelope validation helpers and drop dead constants
+_None._
 
 ## Approved (Awaiting Merge)
 
@@ -96,8 +95,8 @@ _None._
 | Very important | 2 |
 | Important | 9 |
 | Ready (`loom:issue`) | 2 |
-| In Progress (`loom:building`) | 3 |
-| PRs awaiting review | 1 |
+| In Progress (`loom:building`) | 2 |
+| PRs awaiting review | 0 |
 | Approved PRs awaiting merge | 5 |
 | Curated | 14 |
 | Architect / Hermit proposals | 1 |
