@@ -2190,6 +2190,53 @@ class CmrrPsrrKltAudit(RawAuditCase):
         self.edit_env("psrr_request", relax)
         self.assert_error("limits are", "a validity bound is never relaxed")
 
+    def test_model_input_hashes_must_match_across_decks(self):
+        # Keep each job consistent with its own envelope. Only the cross-deck join can fail.
+        for deck in ("cmrr", "psrr"):
+            for name in ("sg13g2_moslv_mod.lib", "psp103.osdi"):
+                with self.subTest(deck=deck, name=name):
+                    self.fresh()
+
+                    def change_hash(doc):
+                        env = doc["environment"]
+                        manifests = [env["staged_model_inputs"], env["osdi_preload_runner_resolved"]]
+                        for job in env["remote"]["fleet"]:
+                            manifests.extend((job["runner_model_inputs"], job["worker_environment"]["model_inputs"],
+                                              job["runner_osdi_preload"]))
+                        for manifest in manifests:
+                            for item in manifest:
+                                if Path(item.get("entry") or item["name"]).name == name:
+                                    item["sha256"] = "0" * 64
+                                    if "source_sha256" in item:
+                                        item["source_sha256"] = "1" * 64
+
+                    self.edit_json(f"{deck}_envelope", change_hash)
+                    self.assert_error("CMRR and PSRR", name)
+
+    def test_request_must_match_the_recorded_execution(self):
+        for deck in ("cmrr", "psrr"):
+            body = f"tb_{deck}_direct.body.spice"
+            for field, mutate in (
+                ("models.lib", lambda r: r["models"].update(lib="libs.tech/ngspice/models/cornerMOShv.lib")),
+                ("models.lib", lambda r: r["models"].update(lib="other/cornerMOSlv.lib")),
+                ("models.pdk", lambda r: r["models"].update(pdk="other-pdk")),
+                ("engine", lambda r: r.update(engine="xyce")),
+                ("backend", lambda r: r.update(backend="local")),
+                ("netlist_source", lambda r: r.update(netlist_source="extracted")),
+                ("options.stage_model_inputs", lambda r: r["options"].update(stage_model_inputs=False)),
+                ("options.osdi_preload", lambda r: r["options"]["osdi_preload"].pop()),
+                ("netlist", lambda r: r.update(netlist=f"other/{body}")),
+            ):
+                with self.subTest(deck=deck, field=field):
+                    self.fresh()
+                    if field == "netlist":
+                        bench = self.fx.root / self.raw()["files"][f"{deck}_body"]["path"]
+                        other = bench.parent / "other" / bench.name
+                        other.parent.mkdir()
+                        shutil.copyfile(bench, other)
+                    self.edit_json(f"{deck}_request", mutate)
+                    self.assert_error(f"{deck} request", field)
+
     def test_request_axes_must_cover_the_envelope_grid(self):
         for deck in ("cmrr", "psrr"):
             for axis, mutate in (

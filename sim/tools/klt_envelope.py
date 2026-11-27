@@ -52,7 +52,9 @@ import csv
 import hashlib
 import json
 import math
+import re
 import sys
+from pathlib import Path
 from typing import Callable, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
 
 # ---------------------------------------------------------------- the grid
@@ -112,6 +114,96 @@ def batch_job_ids(env: dict) -> List[str]:
     if isinstance(fleet, list):
         ids.extend(f.get("job_id") for f in fleet if isinstance(f, dict))
     return sorted({job for job in ids if isinstance(job, str) and job})
+
+
+def _named_hashes(entries, label: str, *, osdi=False, hash_key="sha256") -> dict[str, str]:
+    """Read a manifest by file name. Duplicate or absent evidence cannot establish identity."""
+    if not isinstance(entries, list) or not entries:
+        raise InputError(f"{label}: missing file hashes")
+    hashes = {}
+    for item in entries:
+        name = item.get("name") if isinstance(item, dict) else None
+        if osdi and not isinstance(name, str) and isinstance(item, dict) and isinstance(item.get("entry"), str):
+            name = Path(item["entry"]).name
+        if not isinstance(name, str) or not name:
+            raise InputError(f"{label}: missing file name")
+        if name in hashes:
+            raise InputError(f"{label}: duplicate file {name}")
+        digest = item.get(hash_key)
+        if not isinstance(digest, str) or not re.fullmatch(r"[0-9a-f]{64}", digest):
+            raise InputError(f"{label}: {name} lacks a valid {hash_key}")
+        hashes[name] = digest
+    return hashes
+
+
+def _check_same_hashes(left: dict, right: dict, label: str) -> None:
+    different = sorted(name for name in left.keys() | right.keys() if left.get(name) != right.get(name))
+    if different:
+        raise InputError(f"{label}: file hashes differ for {', '.join(different)}")
+
+
+def osdi_hashes(environment: dict, label: str) -> dict[str, str]:
+    """Read either KLT preload manifest, checking agreement when both are present."""
+    preloads = environment.get("osdi_preload")
+    resolved = environment.get("osdi_preload_runner_resolved")
+    if resolved is None:
+        return _named_hashes(preloads, f"{label} OSDI preload", osdi=True)
+    hashes = _named_hashes(resolved, f"{label} runner-resolved OSDI preload", osdi=True)
+    if preloads is not None:
+        _check_same_hashes(hashes, _named_hashes(preloads, f"{label} OSDI preload", osdi=True), f"{label} OSDI manifests")
+    return hashes
+
+
+def _batch_model_hashes(env: dict, label: str) -> dict[str, dict[str, str]]:
+    environment = env.get("environment") or {}
+    inputs = environment.get("staged_model_inputs")
+    source = _named_hashes(inputs, f"{label} model sources", hash_key="source_sha256")
+    staged = _named_hashes(inputs, f"{label} staged models")
+    osdi = osdi_hashes(environment, label)
+
+    # A rewritten .include gives a library different source and staged hashes.
+    # The client identifies its source library and each worker attests the staged bytes.
+    deck = (env.get("provenance") or {}).get("deck") or {}
+    root = deck.get("name")
+    if not isinstance(root, str) or root not in source or source[root] != environment.get("models_lib_sha256"):
+        raise InputError(f"{label}: model deck {root!r} disagrees with the staged source identity")
+    if deck.get("content_hash") != "sha256:" + source[root]:
+        raise InputError(f"{label}: model deck {root!r} disagrees with its provenance hash")
+    sections = _named_hashes(environment.get("corner_section_libs"), f"{label} corner section libraries")
+    for name, digest in sections.items():
+        if source.get(name) != digest:
+            raise InputError(f"{label}: corner section library {name} disagrees with its staged source identity")
+
+    remote = environment.get("remote") or {}
+    jobs = remote.get("fleet") if isinstance(remote, dict) else None
+    if jobs is None:
+        jobs = [remote]
+    if not isinstance(jobs, list):
+        raise InputError(f"{label}: malformed fleet")
+    for job in jobs:
+        if not isinstance(job, dict):
+            raise InputError(f"{label}: malformed fleet job")
+        job_label = f"{label} job {job.get('job_id')}"
+        if "runner_models_lib_sha256" in job and job["runner_models_lib_sha256"] != staged[root]:
+            raise InputError(f"{job_label}: {root} disagrees with its staged hash")
+        for field, expected in (("runner_model_inputs", staged), ("runner_osdi_preload", osdi),
+                                ("runner_corner_section_libs", {name: staged[name] for name in sections})):
+            if field in job:
+                _check_same_hashes(expected, _named_hashes(job[field], field), f"{job_label} {field}")
+        worker = job.get("worker_environment") or {}
+        if not isinstance(worker, dict):
+            raise InputError(f"{job_label}: malformed worker environment")
+        if "model_inputs" in worker:
+            _check_same_hashes(staged, _named_hashes(worker["model_inputs"], job_label), f"{job_label} worker models")
+    return {"model sources": source, "staged models": staged, "OSDI preload": osdi}
+
+
+def check_batch_model_inputs(cmrr: dict, psrr: dict) -> None:
+    """Require the same model sources, staged dependencies and preloaded binaries for a join."""
+    left = _batch_model_hashes(cmrr, "CMRR envelope")
+    right = _batch_model_hashes(psrr, "PSRR envelope")
+    for label in left:
+        _check_same_hashes(left[label], right[label], f"CMRR and PSRR {label}")
 
 
 def exact_pvt_key(corner: dict) -> Key:

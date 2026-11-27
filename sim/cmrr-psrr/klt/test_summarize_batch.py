@@ -75,6 +75,22 @@ class BatchRecordWriter(unittest.TestCase):
                     self.assertIn("outside the expected grid", result.stderr)
                     self.assertEqual(list(self.out.iterdir()), [])
 
+    def test_model_input_mismatch_publishes_neither_file(self):
+        for path in (CMRR, PSRR):
+            for field, name in (("staged_model_inputs", "sg13g2_moslv_mod.lib"),
+                                ("osdi_preload_runner_resolved", "psp103.osdi")):
+                with self.subTest(path=path.name, name=name):
+                    self.restore_inputs()
+                    doc = json.loads(path.read_text())
+                    entries = doc["environment"][field]
+                    item = next(e for e in entries if Path(e.get("entry") or e["name"]).name == name)
+                    item["sha256"] = "0" * 64
+                    (self.inputs / path.name).write_text(json.dumps(doc))
+                    result = self.publish()
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertIn(name, result.stderr)
+                    self.assertEqual(list(self.out.iterdir()), [])
+
     def test_extra_supply_axis_publishes_neither_file(self):
         for path in (CMRR, PSRR):
             with self.subTest(path=path.name):

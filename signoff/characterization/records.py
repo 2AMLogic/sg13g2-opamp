@@ -305,37 +305,11 @@ def _klt_values(corner: dict, wanted) -> dict:
 
 
 def _klt_osdi_map(env: dict, label: str, problems: list) -> dict[str, str]:
-    environment = env.get("environment") or {}
-    entries = environment.get("osdi_preload")
-    runner_entries = environment.get("osdi_preload_runner_resolved")
-    raw_list = entries if isinstance(entries, list) else runner_entries if isinstance(runner_entries, list) else None
-    if raw_list is None:
-        problems.append(f"{label}: missing OSDI preload hashes (osdi_preload / osdi_preload_runner_resolved)")
+    try:
+        by_name = klt_envelope.osdi_hashes(env.get("environment") or {}, label)
+    except klt_envelope.InputError as exc:
+        problems.append(str(exc))
         return {}
-    by_name: dict[str, str] = {}
-    for item in raw_list:
-        if not isinstance(item, dict):
-            problems.append(f"{label}: malformed OSDI preload entry")
-            continue
-        name = item.get("name")
-        if not isinstance(name, str) and isinstance(item.get("entry"), str):
-            name = Path(item["entry"]).name
-        if not isinstance(name, str) or not name:
-            problems.append(f"{label}: malformed OSDI preload entry")
-            continue
-        sha = item.get("sha256")
-        if not isinstance(sha, str) or not _HEX64_RE.match(sha):
-            problems.append(f"{label}: OSDI binary {name!r} lacks a sha256")
-            continue
-        by_name[name] = sha
-    if isinstance(entries, list) and isinstance(runner_entries, list):
-        runner_map = {
-            Path(i["entry"]).name: i.get("sha256")
-            for i in runner_entries
-            if isinstance(i, dict) and isinstance(i.get("entry"), str)
-        }
-        if runner_map != by_name:
-            problems.append(f"{label}: osdi_preload and osdi_preload_runner_resolved disagree")
     missing = [m for m in KLT_REQUIRED_OSDI if m not in by_name]
     if missing:
         problems.append(f"{label}: missing required OSDI preload model(s) {missing}")
@@ -954,6 +928,58 @@ def _load_slew_klt_population(repo: Path, key: str, sk: dict, expected: list, sn
 _CMRR_PSRR_CLOAD_RE = re.compile(r"^Cload[ab]\s+out[ab]\s+vss\s+(\S+)\s*$", re.IGNORECASE | re.MULTILINE)
 
 
+def _check_direct_request_identity(req: dict, env: dict, deck: str, repo: Path,
+                                   pins: dict, problems: list) -> None:
+    """Bind the request's PDK-relative library and request-relative bench to the recorded run."""
+    label = f"{deck} request"
+    e = env.get("environment") or {}
+    prov = env.get("provenance") or {}
+    models = _klt_optional_object(req.get("models"), f"{label}: models", problems)
+    backend = _klt_optional_object(e.get("backend"), f"{deck} envelope: backend", problems)
+    recorded_deck = (prov.get("deck") or {}).get("name")
+    for field, requested, recorded in (
+        ("models.pdk", models.get("pdk"), (prov.get("pdk") or {}).get("name")),
+        ("models.lib", models.get("lib"), f"libs.tech/ngspice/models/{recorded_deck}"),
+        ("engine", req.get("engine"), e.get("engine")),
+        ("netlist_source", req.get("netlist_source"), e.get("netlist_source")),
+    ):
+        if requested is None or requested != recorded:
+            problems.append(f"{label}: {field} {requested!r} disagrees with the recorded run ({recorded!r})")
+    if not (req.get("backend") == backend.get("requested") == backend.get("resolved") == "batch"):
+        problems.append(f"{label}: backend {req.get('backend')!r} disagrees with the batch execution {backend}")
+    if e.get("netlist_source") != "schematic":
+        problems.append(f"{deck} envelope: netlist_source must identify the selected schematic")
+
+    options = _klt_optional_object(req.get("options"), f"{label}: options", problems)
+    if options.get("stage_model_inputs") is not True:
+        problems.append(f"{label}: options.stage_model_inputs must agree with the recorded staged models")
+    preloads = options.get("osdi_preload")
+    resolved = e.get("osdi_preload_runner_resolved")
+    if not isinstance(preloads, list) or not all(isinstance(path, str) for path in preloads):
+        problems.append(f"{label}: options.osdi_preload must name the recorded OSDI binaries")
+    elif isinstance(resolved, list):
+        # Jobs record the original request paths by index, even when the manifest is reordered.
+        entries = {item["index"]: item.get("entry") for item in resolved
+                   if isinstance(item, dict) and type(item.get("index")) is int}
+        if entries != dict(enumerate(preloads)) or len(entries) != len(resolved):
+            problems.append(f"{label}: options.osdi_preload disagrees with the runner-resolved preload list")
+    else:
+        try:
+            names = klt_envelope.osdi_hashes(e, f"{deck} envelope")
+        except klt_envelope.InputError as exc:
+            problems.append(str(exc))
+        else:
+            if [Path(path).name for path in preloads] != list(names):
+                problems.append(f"{label}: options.osdi_preload disagrees with the recorded OSDI binaries")
+
+    body = repo / pins[f"{deck}_body"]["path"]
+    directory = (repo / pins[f"{deck}_request"]["path"]).parent
+    netlist = req.get("netlist")
+    if (not isinstance(netlist, str) or Path(netlist).is_absolute() or not (directory / netlist).is_file()
+            or (directory / netlist).resolve() != body.resolve()):
+        problems.append(f"{label}: netlist {netlist!r} is not the pinned bench body")
+
+
 def _check_direct_request_grid(req: dict, deck: str, problems: list) -> None:
     """PVT45 sweeps process and temperature independently, and pairs VINP with VDD by index."""
     axes = req.get("corners")
@@ -1101,10 +1127,11 @@ def _load_cmrr_psrr_klt_population(repo: Path, key: str, ck: dict, expected: lis
             problems.append(f"{label}: simulated DUT {dut or sorted(closure)} is not the selected netlist snapshot {snapshot_rel} ({snap_hash})")
         body_pin = pins[f"{deck}_body"]
         body_path = (env.get("netlist") or {}).get("path")
-        if body_path is None or "sha256:" + str(closure.get(body_path)) != body_pin["sha256"]:
+        if (body_path != body_pin["path"] or "sha256:" + str(closure.get(body_path)) != body_pin["sha256"]
+                or "sha256:" + str(e.get("netlist_sha256")) != body_pin["sha256"]
+                or (prov.get("input") or {}).get("content_hash") != body_pin["sha256"]):
             problems.append(f"{label}: simulated bench body {body_path!r} is not the pinned {body_pin['path']}")
-        if Path(str(req.get("netlist"))).name != Path(body_pin["path"]).name:
-            problems.append(f"{deck} request: netlist {req.get('netlist')!r} is not the pinned bench body")
+        _check_direct_request_identity(req, env, deck, repo, pins, problems)
         if req.get("analysis") != CMRR_PSRR_ANALYSIS:
             problems.append(f"{deck} request: analysis is not {CMRR_PSRR_ANALYSIS}")
         _check_direct_request_grid(req, deck, problems)
@@ -1172,12 +1199,16 @@ def _load_cmrr_psrr_klt_population(repo: Path, key: str, ck: dict, expected: lis
                 problems.append(f"point {pid}: {deck} deck: missing or non-finite measurement(s) {bad}")
                 continue
             points[pid] = {n: float(got[n]) for n in spec["names"]}
-        decks[deck] = {"points": points, "version": version, "models": e.get("models_lib_sha256"),
+        decks[deck] = {"points": points, "version": version,
                        "dut": dict(dut), "jobs": jobs, "envelope": pins[f"{deck}_envelope"]["path"],
                        "cload_f": float(next(iter(cloads))) if len(cloads) == 1 else None}
     if len(decks) == 2:
         a, b = decks["cmrr"], decks["psrr"]
-        for field in ("version", "models", "dut"):
+        try:
+            klt_envelope.check_batch_model_inputs(docs["cmrr_envelope"], docs["psrr_envelope"])
+        except klt_envelope.InputError as exc:
+            problems.append(str(exc))
+        for field in ("version", "dut"):
             if a[field] != b[field]:
                 problems.append(f"the CMRR and PSRR envelopes are not the same run conditions: {field} {a[field]!r} vs {b[field]!r}")
     if problems:

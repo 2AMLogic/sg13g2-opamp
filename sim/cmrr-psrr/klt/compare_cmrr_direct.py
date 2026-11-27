@@ -95,6 +95,7 @@ def check_conditions(cmrr: dict, psrr: dict) -> None:
     for f in ("engine", "engine_version", "models_lib_sha256"):
         if ec.get(f) != ep.get(f):
             problems.append(f"{f} differs (CMRR {ec.get(f)!r} vs PSRR {ep.get(f)!r})")
+    E.check_batch_model_inputs(cmrr, psrr)
     cc, cp = _closure(cmrr), _closure(psrr)
     if DUT not in cc or DUT not in cp:
         problems.append(f"{DUT} missing from a netlist closure")
