@@ -2720,19 +2720,29 @@ class SlewKltAudit(RawAuditCase):
 
     def setUp(self) -> None:
         super().setUp()
-        rec = self.fx.selection["records"][self.RECORD]
+        self.select_pure_batch()
+        self.drop_waveform_only_columns()
+
+    def fresh_batch(self) -> None:
+        self.fresh()
+        self.select_pure_batch()
+        self.drop_waveform_only_columns()
+
+    def install_batch_artifacts(self) -> None:
         pins = {}
         for kind, rel in self.FILES.items():
             dst = self.fx.root / rel
             dst.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(REPO / rel, dst)
             pins[kind] = {"path": rel, "sha256": generate.sha256_file(dst)}
-        # the pure batch scenario: no local waveforms, the envelope instead
+        self.fx.selection["records"][self.RECORD]["slew_klt"] = {"files": pins}
+
+    def select_pure_batch(self) -> None:
+        self.install_batch_artifacts()
+        rec = self.fx.selection["records"][self.RECORD]
         rec.pop("slew_raw")
         rec["definition_checks"] = ["slew_worse_edge", "slew_klt_audit"]
-        rec["slew_klt"] = {"files": pins}
         self.fx.save_selection()
-        self.drop_waveform_only_columns()
 
     WAVEFORM_ONLY = ("vout_min_v", "vout_max_v", "window_lo_v", "window_hi_v")
 
@@ -2762,25 +2772,12 @@ class SlewKltAudit(RawAuditCase):
     # --- issue #513: item 1, columns no batch check covers ----------------------
 
     def test_pure_batch_record_declaring_waveform_only_columns_is_refused(self):
-        self.fresh_pure_batch_with_columns()
+        self.fresh()
+        self.select_pure_batch()
         errors = self.assert_error("pins slew_klt without slew_raw")
         msg = next(e for e in errors if "pins slew_klt without slew_raw" in e)
         for col in self.WAVEFORM_ONLY:
             self.assertIn(col, msg)
-
-    def fresh_pure_batch_with_columns(self) -> None:
-        self.fresh()
-        rec = self.fx.selection["records"][self.RECORD]
-        pins = {}
-        for kind, rel in self.FILES.items():
-            dst = self.fx.root / rel
-            dst.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(REPO / rel, dst)
-            pins[kind] = {"path": rel, "sha256": generate.sha256_file(dst)}
-        rec.pop("slew_raw", None)
-        rec["definition_checks"] = ["slew_worse_edge", "slew_klt_audit"]
-        rec["slew_klt"] = {"files": pins}
-        self.fx.save_selection()
 
     def test_pure_batch_record_without_those_columns_passes(self):
         self.assertEqual(self.errors(self.fx.build()), [])
@@ -2797,8 +2794,7 @@ class SlewKltAudit(RawAuditCase):
     def test_moved_traverse_sample_time_is_refused(self):
         for name, old, new in (("pre_rise_orel_v", "at=299n", "at=399n"), ("pre_fall_orel_v", "at=549n", "at=649n")):
             with self.subTest(name=name):
-                self.fx.close()
-                self.setUp()
+                self.fresh_batch()
                 self.edit_request_spice(name, old, new)
                 self.assert_error(f"slew request: measurement {name} is")
 
@@ -2810,8 +2806,7 @@ class SlewKltAudit(RawAuditCase):
             ("vibias_dc_v", "v(ibias)", "v(tail)"),
         ):
             with self.subTest(name=name):
-                self.fx.close()
-                self.setUp()
+                self.fresh_batch()
                 self.edit_request_spice(name, old, new)
                 self.assert_error(f"slew request: measurement {name} is")
 
@@ -2825,14 +2820,8 @@ class SlewKltAudit(RawAuditCase):
         self.fresh()
         rec = self.fx.selection["records"][self.RECORD]
         self.assertIn("slew_raw", rec)
-        pins = {}
-        for kind, rel in self.FILES.items():
-            dst = self.fx.root / rel
-            dst.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(REPO / rel, dst)
-            pins[kind] = {"path": rel, "sha256": generate.sha256_file(dst)}
+        self.install_batch_artifacts()
         rec["definition_checks"] = ["slew_worse_edge", "slew_raw_audit", "slew_klt_audit"]
-        rec["slew_klt"] = {"files": pins}
         self.fx.save_selection()
         header = self.fx.csv_path(self.RECORD).read_text(encoding="utf-8").splitlines()[0].split(",")
         for col in self.WAVEFORM_ONLY:
@@ -2936,9 +2925,7 @@ class SlewKltAudit(RawAuditCase):
     def test_every_artifact_must_be_pinned(self):
         for kind in self.FILES:
             with self.subTest(kind=kind):
-                self.tearDown()
-                self.fx.close()
-                self.setUp()
+                self.fresh_batch()
                 del self.raw()["files"][kind]
                 self.fx.save_selection()
                 with self.assertRaises(generate.SelectionError):
@@ -2967,8 +2954,7 @@ class SlewKltAudit(RawAuditCase):
     def test_tampered_worst_edge(self):
         self.fx.set_cell(self.RECORD, self.POINT, "sr_worst_v_per_us", "9.5")
         self.assert_error(f"point {self.POINT} fails definition check slew_worse_edge")
-        self.fresh()
-        self.setUp()
+        self.fresh_batch()
         # rise/fall/worst moved together: only the envelope can refuse it
         for col in ("sr_rise_v_per_us", "sr_fall_v_per_us", "sr_worst_v_per_us"):
             self.fx.set_cell(self.RECORD, self.POINT, col, "9.5")
@@ -3042,8 +3028,7 @@ class SlewKltAudit(RawAuditCase):
         self.assert_error("worker banner does not name ngspice-46", "contradictory simulator version")
 
         # engine_build.version_banner must also agree with engine_version.
-        self.fx.close()
-        self.setUp()
+        self.fresh_batch()
         self.edit_env(lambda d: d["environment"].update(engine_build={"version_banner": "** ngspice-45 : mismatch"}))
         self.assert_error("engine_build banner does not name ngspice-46", "contradictory simulator version")
 
