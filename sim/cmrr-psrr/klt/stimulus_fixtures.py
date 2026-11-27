@@ -1,4 +1,4 @@
-"""Replay a halved AC excitation on scratch copies of the direct-deck evidence."""
+"""Offline regression fixtures for the direct CMRR and PSRR decks."""
 import hashlib
 import json
 import math
@@ -33,3 +33,22 @@ def halve_stimulus(root, envelope, source):
             result["margin"] += value - result["value"]
         result["value"] = value
     envelope.write_text(json.dumps(doc))
+
+
+def disabled_bench_cards(deck, load_diagnostic):
+    """Wrap one claimed card in a false branch, retaining DC bias for each source."""
+    source_b = "Vcmb inpb midb dc 0 ac 1" if deck == "cmrr" else "Vsrip vddb vdd dc 0 ac 1"
+    coupling_b = "Ccmb innb inpb 1" if deck == "cmrr" else "Cinnb_acgnd innb vss 1"
+    for card, guard in (("Cinna_acgnd inna vss 1", ".if(0)"), (coupling_b, ".if(0)"),
+                        ("Vinp inpa 0 dc 0.6 ac 1", ".if(0)"), (source_b, ".if (0)"),
+                        ("Cloada outa vss 2e-12", ".if (0)"), ("Cloadb outb vss 2e-12", ".if(0)")):
+        lines = [guard, card]
+        name, node, *_ = card.split()
+        if name.startswith("V"):
+            lines.extend([".else", card.removesuffix(" ac 1")])
+            diagnostic = f"{deck.upper()} body: {name} must be an unconditional AC source"
+        elif name.startswith("Cload"):
+            diagnostic = load_diagnostic
+        else:
+            diagnostic = f"{deck.upper()} body: {node} must connect"
+        yield card, "\n".join([*lines, ".endif"]), diagnostic

@@ -11,7 +11,7 @@ import unittest
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-from stimulus_fixtures import halve_stimulus  # noqa: E402
+from stimulus_fixtures import disabled_bench_cards, halve_stimulus  # noqa: E402
 
 CMRR = HERE / "records/20261125-011804-02d78dd.cmrr.sim.json"
 PSRR = HERE / "records/20261125-011604-02d78dd.direct.sim.json"
@@ -211,6 +211,13 @@ esac
                     self.assertIn(card, body)
                     self.assert_body_refused(path, body.replace(card, "* " + card),
                                              f"{deck} body: {card.split()[1]}")
+
+    def test_conditional_bench_cards_publish_neither_file(self):
+        for deck, path in (("cmrr", CMRR), ("psrr", PSRR)):
+            body = (HERE / f"tb_{deck}_direct.body.spice").read_text()
+            for card, disabled, diagnostic in disabled_bench_cards(deck, f"{deck.upper()} bench body: expected a 2 pF load"):
+                with self.subTest(deck=deck, card=card):
+                    self.assert_body_refused(path, body.replace(card, disabled), diagnostic)
 
     def test_halved_stimulus_publishes_neither_file(self):
         for source, paths in (("Vsrip", (PSRR,)), ("Vinp", (CMRR, PSRR))):

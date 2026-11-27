@@ -130,18 +130,49 @@ def check_body_hash(env: dict, body_path: str, label: str) -> str:
     return text
 
 
+_BenchCard = tuple[list[str], bool]  # fields and whether the element is conditional
+
+
+def _bench_cards(body: str) -> list[_BenchCard]:
+    """Read circuit-level element cards, marking those inside any conditional branch."""
+    text = re.sub(r"^[ \t]*\*.*|(?:\$|;|//).*", "", body, flags=re.M)
+    text = re.sub(r"(?:\r?\n[ \t]*)+\+", " ", text)
+    cards = []
+    block_ends = []
+    conditional_depth = 0
+    for line in text.lower().splitlines():
+        fields = line.split()
+        if not fields:
+            continue
+        name = fields[0]
+        if name in (".subckt", ".control"):
+            block_ends.append(".ends" if name == ".subckt" else ".endc")
+        elif block_ends:
+            if name == block_ends[-1]:
+                block_ends.pop()
+        elif name == ".end":
+            break
+        elif name == ".if" or name.startswith(".if("):
+            conditional_depth += 1
+        elif name == ".endif" and conditional_depth:
+            conditional_depth -= 1
+        elif name[0].isalpha():
+            cards.append((fields, conditional_depth > 0))
+    return cards
+
+
 def output_load_f(body: str) -> Decimal | None:
     """Read one identical numeric load from each output to vss in the direct bench."""
     terminals = {"cloada": "outa", "cloadb": "outb"}
     loads = {}
-    for line in body.lower().splitlines():
-        fields = line.split()
-        if not fields or not fields[0].startswith("c"):
+    for fields, conditional in _bench_cards(body):
+        if not fields[0].startswith("c"):
             continue
         name = fields[0]
         if name not in terminals and not any(pin in terminals.values() for pin in fields[1:3]):
             continue
-        if name not in terminals or name in loads or len(fields) != 4 or fields[1:3] != [terminals[name], "vss"]:
+        if (conditional or name not in terminals or name in loads
+                or len(fields) != 4 or fields[1:3] != [terminals[name], "vss"]):
             return None
         try:
             value = Decimal(fields[3])
@@ -177,23 +208,26 @@ def _is_one(value: str) -> bool:
         return False
 
 
-def _card_fields(body: str) -> list[list[str]]:
-    """Tokenize logical cards after stripping inline comments and joining continuations."""
-    cards = re.sub(r"(?:\$|;|//).*", "", body)
-    cards = re.sub(r"\n[ \t]*\+", " ", cards)
-    return [line.split() for line in cards.lower().splitlines() if line.strip()]
-
-
-def _check_ac_sources(cards: list[list[str]], deck: str, expected: dict[str, str], problems: list[str]) -> None:
+def _check_ac_sources(cards: list[_BenchCard], deck: str, expected: dict[str, str], problems: list[str]) -> None:
     sources = []
-    for fields in cards:
-        if fields[0][0] not in "vi" or "ac" not in fields[3:]:
-            continue
+    for fields, conditional in cards:
         name = fields[0]
+        if (deck == "CMRR" and name == "vsrip") or (deck == "PSRR" and name == "vcmb"):
+            problems.append(f"{deck} body carries {name.capitalize()}: swapped stimulus")
+        if name[0] not in "vi":
+            continue
+        if "ac" not in fields[3:]:
+            if name in expected:
+                problems.append(f"{deck} body: {name.capitalize()} must have unit AC magnitude")
+            continue
         sources.append(name)
         if name not in expected:
             continue
         label = name.capitalize()
+        if conditional:
+            problems.append(f"{deck} body: {label} must be an unconditional AC source")
+        if name == "vcmb" and fields[3:] != ["dc", "0", "ac", "1"]:
+            problems.append("CMRR body: common-mode source must be `Vcmb inpb midb dc 0 ac 1` (input of copy B)")
         terminals = expected[name]
         if fields[1:3] != terminals.split():
             problems.append(f"{deck} body: {label} must drive {terminals}")
@@ -205,31 +239,18 @@ def _check_ac_sources(cards: list[list[str]], deck: str, expected: dict[str, str
         problems.append(f"{deck} body AC sources are {sorted(sources)}, need exactly {sorted(expected)}")
 
 
-def _check_input_coupling(cards: list[list[str]], deck: str, copy_b_reference: str, problems: list[str]) -> None:
+def _check_input_coupling(cards: list[_BenchCard], deck: str, copy_b_reference: str, problems: list[str]) -> None:
     """Require exactly one unconditional 1 F bench capacitor on each inverting input."""
     references = {"inna": "vss", "innb": copy_b_reference}
     connections = {node: [] for node in references}
-    nested = conditional = 0
-    for fields in cards:
-        name = fields[0]
-        if name in (".subckt", ".control"):
-            nested += 1
-        elif name in (".ends", ".endc"):
-            nested -= 1
-        elif nested:
+    for fields, conditional in cards:
+        if not fields[0].startswith("c"):
             continue
-        elif name == ".end":
-            break
-        elif name == ".if":
-            conditional += 1
-        elif name == ".endif":
-            conditional -= 1
-        elif name.startswith("c"):
-            for node, reference in references.items():
-                if node in fields[1:3]:
-                    valid = (conditional == 0 and len(fields) == 4
-                             and reference in fields[1:3] and _is_one(fields[3]))
-                    connections[node].append(valid)
+        for node, reference in references.items():
+            if node in fields[1:3]:
+                valid = (not conditional and len(fields) == 4
+                         and reference in fields[1:3] and _is_one(fields[3]))
+                connections[node].append(valid)
     for node, reference in references.items():
         if connections[node] != [True]:
             problems.append(f"{deck} body: {node} must connect through one 1 F capacitor to {reference}")
@@ -238,18 +259,12 @@ def _check_input_coupling(cards: list[list[str]], deck: str, copy_b_reference: s
 def check_stimulus(cmrr_body: str, psrr_body: str) -> None:
     """Check each gain's unit excitation and inverting-input AC connection."""
     problems = []
-    cmrr = _card_fields(cmrr_body)
-    psrr = _card_fields(psrr_body)
+    cmrr = _bench_cards(cmrr_body)
+    psrr = _bench_cards(psrr_body)
     _check_ac_sources(cmrr, "CMRR", {"vinp": "inpa 0", "vcmb": "inpb midb"}, problems)
     _check_ac_sources(psrr, "PSRR", {"vinp": "inpa 0", "vsrip": "vddb vdd"}, problems)
     _check_input_coupling(cmrr, "CMRR", "inpb", problems)
     _check_input_coupling(psrr, "PSRR", "vss", problems)
-    if not re.search(r"^Vcmb\s+inpb\s+midb\s+dc\s+0\s+ac\s+1\s*$", cmrr_body, re.M | re.I):
-        problems.append("CMRR body: common-mode source must be `Vcmb inpb midb dc 0 ac 1` (input of copy B)")
-    if re.search(r"^Vsrip\b", cmrr_body, re.M | re.I):
-        problems.append("CMRR body carries a supply AC source (Vsrip): swapped stimulus")
-    if re.search(r"^Vcmb\b", psrr_body, re.M | re.I):
-        problems.append("PSRR body carries a common-mode AC source (Vcmb): swapped stimulus")
     if problems:
         raise InputError("stimulus check: " + "; ".join(problems))
 

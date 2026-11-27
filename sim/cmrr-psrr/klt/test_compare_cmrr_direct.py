@@ -101,6 +101,11 @@ class CompareCmrrDirect(unittest.TestCase):
                 with self.assertRaisesRegex(InputError, "PSRR body: Vsrip must have unit AC magnitude"):
                     C.check_stimulus(self.cbody, changed)
         C.check_stimulus(self.cbody, self.pbody.replace(card, "Vsrip vddb vdd dc 0\n+ AC 0.1E1 $ ac 0.5"))
+        commented = "Vsrip vddb vdd dc 0\r\n* AC specifications follow\r\n+ AC 1"
+        C.check_stimulus(self.cbody, self.pbody.replace(card, commented))
+        conditional_dc = card + "\n.if(1)\nVsrip vddb vdd dc 0\n.endif"
+        with self.assertRaisesRegex(InputError, "PSRR body: Vsrip must have unit AC magnitude"):
+            C.check_stimulus(self.cbody, self.pbody.replace(card, conditional_dc))
 
     def test_unit_sources_must_drive_the_expected_nodes(self):
         for label, cmrr, psrr in (
@@ -124,6 +129,33 @@ class CompareCmrrDirect(unittest.TestCase):
                 C.check_stimulus(self.cbody.replace(card, replacement), self.pbody)
         reversed_pins = "Cinna_acgnd VSS INNA\n+ 1.0E0 $ 1 F"
         C.check_stimulus(self.cbody.replace(card, reversed_pins), self.pbody)
+
+    def test_sources_and_loads_must_be_in_the_top_level_circuit(self):
+        source = "Vsrip vddb vdd dc 0 ac 1"
+        load = "Cloadb outb vss 2e-12"
+        for block in (".subckt unused a b\n{}\n.ends", ".control\n{}\n.endc", ".end\n{}"):
+            with self.subTest(block=block):
+                # Move both cards out of the circuit, keeping their text intact.
+                body = self.pbody.replace(source, "").replace(load, "")
+                body += block.format(source + "\n" + load) + "\n"
+                with self.assertRaisesRegex(InputError, "PSRR body AC sources"):
+                    C.check_stimulus(self.cbody, body)
+                self.assertIsNone(C.output_load_f(body))
+
+                # The same out-of-scope copies cannot shadow valid circuit cards.
+                body = self.pbody + block.format(source + "\n" + load) + "\n"
+                C.check_stimulus(self.cbody, body)
+                self.assertEqual(C.output_load_f(body), C.output_load_f(self.pbody))
+
+    def test_nested_branches_keep_the_outer_condition_until_endif(self):
+        card = "Cinna_acgnd inna vss 1"
+        inner = ".IF(0)\nRinner inpa 0 1k\n.ENDIF"
+        for branch in (".elseif (0)", ".else"):
+            with self.subTest(branch=branch):
+                prefix = f".if (0)\n{inner}\n{branch}\n"
+                with self.assertRaisesRegex(InputError, "CMRR body: inna"):
+                    C.check_stimulus(self.cbody.replace(card, prefix + card + "\n.endif"), self.pbody)
+                C.check_stimulus(self.cbody.replace(card, prefix + "Router inpa 0 1k\n.endif\n" + card), self.pbody)
 
     def test_swapped_stimulus_values_are_out_of_tolerance(self):
         env = copy.deepcopy(self.cmrr)

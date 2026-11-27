@@ -2345,6 +2345,18 @@ class CmrrPsrrKltAudit(RawAuditCase):
                     self.edit_simulated_body(deck, lambda text: text.replace(card, f"{name} {node} vdd 1"))
                     self.assert_error(f"{deck.upper()} body: {node}")
 
+    def test_conditional_cards_in_a_pinned_bench_are_an_error(self):
+        bench = REPO / "sim/cmrr-psrr/klt"
+        with mock.patch.object(sys, "path", [*sys.path, str(bench)]):
+            from stimulus_fixtures import disabled_bench_cards
+
+        for deck in ("cmrr", "psrr"):
+            for card, disabled, diagnostic in disabled_bench_cards(deck, f"{deck} bench body: Cloada/Cloadb"):
+                with self.subTest(deck=deck, card=card):
+                    self.fresh()
+                    self.edit_simulated_body(deck, lambda text: text.replace(card, disabled))
+                    self.assert_error(diagnostic)
+
     def test_halved_stimulus_with_consistent_gains_is_an_error(self):
         bench = REPO / "sim/cmrr-psrr/klt"
         with mock.patch.object(sys, "path", [*sys.path, str(bench)]):
