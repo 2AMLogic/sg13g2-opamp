@@ -22,7 +22,7 @@ points:
   * Av0 of the CMRR deck equals Av0 of the PSRR direct deck at every point
     (same DUT, corner, temperature, VDD and options, so a stale or misjoined
     Av0 point shows as a named out-of-tolerance point);
-  * cmrr_db == av0_db - acm0_db (internal consistency);
+  * cmrr_db == av0_db - acm0_db and psrr_db == av0_db - avs0_db;
   * Acm0 against the superseded fixed-harness record (regression control).
 
 The harness record's Av0 (hence its CMRR) is NOT a regression control: its Av0
@@ -36,8 +36,10 @@ Exit status: 0 agree; 1 outside tolerance; 2 inputs unusable.
 
 from __future__ import annotations
 
+from decimal import Decimal, InvalidOperation
 import hashlib
 import os
+from pathlib import Path
 import re
 import sys
 from typing import Dict, List, Optional
@@ -79,11 +81,6 @@ def index_envelope(env: dict, label: str = "envelope", measurements=MEASUREMENTS
     return idx
 
 
-def _body_path(env: dict) -> str:
-    n = env.get("netlist")
-    return n.get("path") if isinstance(n, dict) else str(n)
-
-
 def check_conditions(cmrr: dict, psrr: dict, *, require_build_banner: bool = False) -> dict:
     """Return the run conditions shared by both decks after checking their evidence."""
     problems: List[str] = []
@@ -106,17 +103,68 @@ def check_conditions(cmrr: dict, psrr: dict, *, require_build_banner: bool = Fal
             "dut_netlist_sha256": cc[DUT], "models_lib_sha256": ec["models_lib_sha256"]}
 
 
-def _sha(path: str) -> str:
-    with open(path, "rb") as f:
-        return hashlib.sha256(f.read()).hexdigest()
+def check_body_identity(env: dict, closure: dict, rel: str, digest: str, label: str) -> None:
+    netlist = env.get("netlist")
+    provenance = (env.get("provenance") or {}).get("input")
+    for field, actual, expected in (
+            ("netlist.path", netlist.get("path") if isinstance(netlist, dict) else None, rel),
+            ("netlist_closure", closure.get(rel), digest),
+            ("netlist_sha256", env["environment"].get("netlist_sha256"), digest),
+            ("input.content_hash", provenance.get("content_hash") if isinstance(provenance, dict) else None,
+             "sha256:" + digest)):
+        if actual != expected:
+            raise InputError(f"{label}: simulated bench body is not the pinned {rel}: {field} is {actual!r}, "
+                             f"expected {expected!r} (stale or different body)")
 
 
-def check_body_hash(env: dict, body_path: str, label: str) -> None:
-    got = E.netlist_closure(env, label).get("sim/cmrr-psrr/klt/" + os.path.basename(body_path))
-    if got is None:
-        raise InputError(f"{label}: envelope closure does not name {os.path.basename(body_path)}")
-    if got != _sha(body_path):
-        raise InputError(f"{label}: simulated bench body hash {got[:12]} is not the committed {os.path.basename(body_path)} ({_sha(body_path)[:12]}): stale or different body")
+def check_body_hash(env: dict, body_path: str, label: str) -> str:
+    """Return the same bench text whose bytes were verified against the envelope."""
+    path = Path(body_path)
+    try:
+        body = path.read_bytes()
+        text = body.decode("utf-8")
+    except (OSError, UnicodeError) as exc:
+        raise InputError(f"{label}: unreadable bench body {path} ({exc})") from exc
+    rel = "sim/cmrr-psrr/klt/" + path.name
+    check_body_identity(env, E.netlist_closure(env, label), rel, hashlib.sha256(body).hexdigest(), label)
+    return text
+
+
+def output_load_f(body: str) -> Decimal | None:
+    """Read one identical numeric load from each output to vss in the direct bench."""
+    terminals = {"cloada": "outa", "cloadb": "outb"}
+    loads = {}
+    for line in body.lower().splitlines():
+        fields = line.split()
+        if not fields or not fields[0].startswith("c"):
+            continue
+        name = fields[0]
+        if name not in terminals and not any(pin in terminals.values() for pin in fields[1:3]):
+            continue
+        if name not in terminals or name in loads or len(fields) != 4 or fields[1:3] != [terminals[name], "vss"]:
+            return None
+        try:
+            value = Decimal(fields[3])
+        except InvalidOperation:
+            return None
+        if not value.is_finite() or value <= 0:
+            return None
+        loads[name] = value
+    load_a = loads.get("cloada")
+    return load_a if load_a == loads.get("cloadb") else None
+
+
+def gain_problems(cmrr: dict, psrr: dict) -> list[str]:
+    """Check the shared Av0 and the two in-deck subtractions at one PVT point."""
+    problems = []
+    if abs(cmrr["av0_db"] - psrr["av0_db"]) > AV0_JOIN_ABS_DB:
+        problems.append(f"av0_db: CMRR and PSRR Av0 ({cmrr['av0_db']:.9g}, {psrr['av0_db']:.9g}) "
+                        f"differ by more than {AV0_JOIN_ABS_DB:g} dB: stale or misjoined Av0")
+    for deck, operand, result in ((cmrr, "acm0_db", "cmrr_db"), (psrr, "avs0_db", "psrr_db")):
+        derived = deck["av0_db"] - deck[operand]
+        if abs(deck[result] - derived) > CONSISTENCY_ABS_DB:
+            problems.append(f"{result}: {deck[result]:.9g} != av0_db - {operand} = {derived:.9g}")
+    return problems
 
 
 _AC_SRC = re.compile(r"^([VI]\w*)\s+.*\bac\s+[0-9.eE+-]+", re.MULTILINE | re.IGNORECASE)
@@ -156,11 +204,7 @@ def compare(cmrr_idx, psrr_idx, harness, cmrr_env: dict, psrr_env: dict, cmrr_bo
     for k in E.expected_keys():
         t, p, h = cmrr_idx[k], psrr_idx[k], harness[k]
         d_av = float(t["av0_db"]) - float(p["av0_db"])
-        if abs(d_av) > AV0_JOIN_ABS_DB:
-            oot.append(f"{key_str(k)} av0_db: CMRR deck {t['av0_db']:.9g} vs PSRR deck {p['av0_db']:.9g} (delta {d_av:.3g} dB): stale or misjoined Av0")
-        d_cons = float(t["cmrr_db"]) - (float(t["av0_db"]) - float(t["acm0_db"]))
-        if abs(d_cons) > CONSISTENCY_ABS_DB:
-            oot.append(f"{key_str(k)} cmrr_db: {t['cmrr_db']:.9g} != av0_db - acm0_db (delta {d_cons:.3g} dB)")
+        oot.extend(f"{key_str(k)} {problem}" for problem in gain_problems(t, p))
         d_acm = float(t["acm0_db"]) - float(h["acm0_db"])
         if abs(d_acm) > ACM0_HARNESS_ABS_DB:
             oot.append(f"{key_str(k)} acm0_db: batch {t['acm0_db']:.9g} vs harness {h['acm0_db']:.9g} (delta {d_acm:.3g} dB): wrong common-mode stimulus?")
@@ -200,20 +244,12 @@ def _summary(rep: dict) -> str:
     return "\n".join(E.summary_tail(lines, rep))
 
 
-def _read(path: str) -> str:
-    try:
-        with open(path) as f:
-            return f.read()
-    except OSError as e:
-        raise InputError(f"{path}: unreadable ({e})")
-
-
 def _run(a, tool, env) -> dict:
     psrr_env = E.read_envelope(a.psrr_envelope)
     psrr_idx = E.index_envelope(psrr_env, "PSRR direct envelope", PSRR_MEASUREMENTS, reject_statuses=REJECT_STATUSES)
-    check_body_hash(env, a.cmrr_body, "CMRR envelope")
-    check_body_hash(psrr_env, a.psrr_body, "PSRR direct envelope")
-    return compare(tool, psrr_idx, load_harness(a.harness_csv), env, psrr_env, _read(a.cmrr_body), _read(a.psrr_body))
+    cmrr_body = check_body_hash(env, a.cmrr_body, "CMRR envelope")
+    psrr_body = check_body_hash(psrr_env, a.psrr_body, "PSRR direct envelope")
+    return compare(tool, psrr_idx, load_harness(a.harness_csv), env, psrr_env, cmrr_body, psrr_body)
 
 
 def main(argv: Optional[List[str]] = None) -> int:

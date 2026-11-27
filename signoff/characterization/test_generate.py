@@ -2314,6 +2314,18 @@ class CmrrPsrrKltAudit(RawAuditCase):
         self.edit_env("psrr_envelope", lambda d: d.__setitem__("status", "fail"), repin=False)
         self.assert_error("does not match its selection pin")
 
+    def test_coverage_must_be_checked_on_each_deck(self):
+        for deck in ("cmrr", "psrr"):
+            for message, mutate in (
+                    ("no coverage block", lambda d: d.pop("coverage")),
+                    ("coverage.nothing_checked", lambda d: d["coverage"].update(nothing_checked=True)),
+                    ("coverage.skipped", lambda d: d["coverage"].update(skipped=["plateau limit"]))):
+                with self.subTest(deck=deck, message=message):
+                    self.fresh()
+                    kind = f"{deck}_envelope"
+                    self.edit_json(kind, mutate)
+                    self.assert_error(self.raw()["files"][kind]["path"], message)
+
     def test_missing_corner_is_an_error(self):
         self.edit_env("psrr_envelope", lambda d: d["corners"].pop(0))
         self.assert_error("no corner for point")

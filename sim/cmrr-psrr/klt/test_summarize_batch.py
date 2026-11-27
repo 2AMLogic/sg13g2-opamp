@@ -1,4 +1,5 @@
 """Exercise the offline record writer with the selected, same-DUT direct envelopes."""
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -24,7 +25,11 @@ class BatchRecordWriter(unittest.TestCase):
         self.runner = bench / "run_klt_record.sh"
         shutil.copy(HERE.parent / self.runner.name, self.runner)
         (bench.parent / "record-paths.sh").symlink_to(HERE.parents[1] / "record-paths.sh")
-        (bench / "klt/summarize_batch.py").symlink_to(HERE / "summarize_batch.py")
+        (bench.parent / "tools").symlink_to(HERE.parents[1] / "tools")
+        (bench / "netlist-snapshots").symlink_to(HERE.parent / "netlist-snapshots")
+        for name in ("summarize_batch.py", "compare_cmrr_direct.py",
+                     "tb_cmrr_direct.body.spice", "tb_psrr_direct.body.spice"):
+            shutil.copy(HERE / name, bench / "klt" / name)
         self.restore_inputs()
 
     def restore_inputs(self):
@@ -50,9 +55,9 @@ class BatchRecordWriter(unittest.TestCase):
         result = self.publish()
         self.assertEqual(result.returncode, 0, result.stderr)
         csv = self.out / "test.csv"
-        self.assertEqual(csv.read_bytes(), (HERE.parent / "records/20261125-011804-02d78dd.csv").read_bytes())
+        self.assertEqual(csv.read_bytes(), (HERE.parent / "records/20261125-103814-7fb5ff0.csv").read_bytes())
         md = self.out / "test.md"
-        self.assertIn("20261015-103521-0f41068", md.read_text())
+        self.assertEqual(md.read_bytes(), (HERE.parent / "records/20261125-103814-7fb5ff0.md").read_bytes())
         before = csv.read_bytes(), md.read_bytes()
         self.assertNotEqual(self.publish().returncode, 0)
         self.assertEqual((csv.read_bytes(), md.read_bytes()), before)
@@ -74,6 +79,69 @@ class BatchRecordWriter(unittest.TestCase):
                     self.assertNotEqual(result.returncode, 0)
                     self.assertIn("outside the expected grid", result.stderr)
                     self.assertEqual(list(self.out.iterdir()), [])
+
+    def assert_refused(self, doc, path, reason):
+        self.restore_inputs()
+        payload = json.dumps(doc).encode()
+        (self.inputs / path.name).write_bytes(payload)
+        record_id = hashlib.sha256(payload).hexdigest()
+        result = self.publish(RECORD_ID=record_id)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn(reason, result.stderr)
+        self.assertFalse((self.out / f"{record_id}.csv").exists())
+        self.assertFalse((self.out / f"{record_id}.md").exists())
+
+    def test_inconsistent_gains_publish_neither_file(self):
+        for path, rejection in ((CMRR, "cmrr_db"), (PSRR, "psrr_db")):
+            for shifted_av0 in (True, False):
+                with self.subTest(path=path.name, shifted_av0=shifted_av0):
+                    doc = json.loads(path.read_text())
+                    corner = doc["corners"][-1]
+                    meas = {m["name"]: m for m in corner["measurements"]}
+                    meas[rejection]["value"] += 0.5
+                    if shifted_av0:
+                        meas["av0_db"]["value"] += 0.5
+                    self.assert_refused(doc, path, "Av0" if shifted_av0 else rejection)
+
+    def test_published_load_requires_the_simulated_bench(self):
+        for path in (CMRR, PSRR):
+            for field in ("all hashes", "netlist.path", "netlist_closure", "netlist_sha256", "input.content_hash"):
+                with self.subTest(path=path.name, field=field):
+                    doc = json.loads(path.read_text())
+                    rel = doc["netlist"]["path"]
+                    body = (self.root / rel).read_bytes().replace(b"vss 2e-12", b"vss 5e-12")
+                    digest = hashlib.sha256(body).hexdigest()
+                    env = doc["environment"]
+                    if field in ("all hashes", "netlist_closure"):
+                        next(e for e in env["netlist_closure"] if e["path"] == rel)["sha256"] = digest
+                    if field in ("all hashes", "netlist_sha256"):
+                        env["netlist_sha256"] = digest
+                    if field in ("all hashes", "input.content_hash"):
+                        doc["provenance"]["input"]["content_hash"] = "sha256:" + digest
+                    if field == "netlist.path":
+                        doc["netlist"]["path"] = "other/" + Path(rel).name
+                    self.assert_refused(doc, path, "netlist_closure" if field == "all hashes" else field)
+
+    def test_matching_body_hashes_require_two_2pf_output_loads(self):
+        for path in (CMRR, PSRR):
+            original = json.loads(path.read_text())["netlist"]["path"]
+            body = self.root / original
+            committed = body.read_text()
+            for name, altered in (
+                    ("both 5 pF", committed.replace("vss 2e-12", "vss 5e-12")),
+                    ("copy B 5 pF", committed.replace("Cloadb outb vss 2e-12", "Cloadb outb vss 5e-12")),
+                    ("duplicated A", committed.replace("Cloadb outb", "Cloada outa")),
+                    ("wrong output", committed.replace("Cloadb outb", "Cloadb outa"))):
+                with self.subTest(path=path.name, case=name):
+                    body.write_text(altered)
+                    doc = json.loads(path.read_text())
+                    digest = hashlib.sha256(body.read_bytes()).hexdigest()
+                    env = doc["environment"]
+                    next(e for e in env["netlist_closure"] if e["path"] == original)["sha256"] = digest
+                    env["netlist_sha256"] = digest
+                    doc["provenance"]["input"]["content_hash"] = "sha256:" + digest
+                    self.assert_refused(doc, path, "2 pF")
+            body.write_text(committed)
 
     def test_model_input_mismatch_publishes_neither_file(self):
         for path in (CMRR, PSRR):

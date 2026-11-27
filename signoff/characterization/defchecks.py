@@ -20,7 +20,7 @@ import math
 from decimal import Decimal
 
 from common import SLEW_KLT_LIMITS, parse_decimal
-from paths import mc_samples, noise_post, offset_post, op_sanity, slew_post, swing_post
+from paths import cmrr_direct, mc_samples, noise_post, offset_post, op_sanity, slew_post, swing_post
 
 # --------------------------------------------------------------------------
 # definition checks: per-point identities a record's derived column must obey
@@ -439,14 +439,8 @@ def _check_offset_mc_statistics(point: dict, draws: dict | None) -> str | None:
     )
 
 
-# Issue #514: tolerances of the cmrr-psrr batch audit. Basis: the two direct decks
-# share their Av0 copy verbatim (same DUT, corner, options), so Av0 agrees to solver
-# noise (observed 6e-9 dB; sim/cmrr-psrr/klt/compare_cmrr_direct.py uses 1e-4 dB);
-# cmrr_db/psrr_db are in-deck differences of the two operands (12-digit
-# serialization); Acm0 against the harness regression control prints 6 digits
-# (observed max 4.3e-5 dB); the record's cells are %.9g serializations.
-CMRR_PSRR_AV0_JOIN_DB = 1e-4
-CMRR_PSRR_DERIVE_DB = 1e-6
+# The harness Acm0 control prints 6 digits (observed max 4.3e-5 dB).
+# The record cells are %.9g serializations of the in-deck measurements.
 CMRR_PSRR_CONTROL_DB = 1e-3
 CMRR_PSRR_CELL_DB = 1e-6
 CMRR_PSRR_PLATEAU_DB = 0.05
@@ -468,12 +462,7 @@ def _check_cmrr_psrr_klt(point: dict, pop: dict | None) -> str | None:
                                 "pinned envelope supply_v.vinp", 9, nan_ok=False)
     if vcm_problem:
         problems.append(vcm_problem)
-    if abs(c["av0_db"] - p["av0_db"]) > CMRR_PSRR_AV0_JOIN_DB:
-        problems.append(f"Av0 of the CMRR deck {c['av0_db']:.9g} and the PSRR deck {p['av0_db']:.9g} differ by more than {CMRR_PSRR_AV0_JOIN_DB:g} dB (different DUT, corner or options)")
-    for what, d, a, b, out in (("cmrr_db", c, "av0_db", "acm0_db", "cmrr_db"), ("psrr_db", p, "av0_db", "avs0_db", "psrr_db")):
-        want = d[a] - d[b]
-        if abs(d[out] - want) > CMRR_PSRR_DERIVE_DB:
-            problems.append(f"envelope {what} {d[out]:.9g} is not {a} - {b} = {want:.9g} (the dB difference Av0 - rejection operand)")
+    problems.extend(cmrr_direct.gain_problems(c, p))
     for deck, d, name in (("CMRR", c, "cmrr_plateau_delta_db"), ("PSRR", p, "psrr_plateau_delta_db")):
         if not 0 <= d[name] <= CMRR_PSRR_PLATEAU_DB:
             problems.append(f"{deck} {name} {d[name]:.6g} dB is outside [0, {CMRR_PSRR_PLATEAU_DB}] (the 10 mHz figure is not a flat DC shelf)")

@@ -20,13 +20,15 @@ a trust anchor.
 from __future__ import annotations
 
 import csv
+from decimal import Decimal
 import io
 import sys
 from pathlib import Path
 
 from compare_cmrr_direct import (
-    CMRR_SYSTEMATIC_BOUND_DB, DUT, MEASUREMENTS as CMRR_NAMES, PLATEAU_MAX_DB,
-    PSRR_MEASUREMENTS as PSRR_NAMES, check_conditions, index_envelope,
+    CMRR_SYSTEMATIC_BOUND_DB, DEFAULT_CMRR_BODY, DEFAULT_PSRR_BODY, DUT,
+    MEASUREMENTS as CMRR_NAMES, PLATEAU_MAX_DB, PSRR_MEASUREMENTS as PSRR_NAMES,
+    check_body_hash, check_conditions, gain_problems, index_envelope, output_load_f,
 )
 from klt_envelope import (
     InputError, batch_job_ids, check_decided_counts, exact_pvt_key, expected_keys,
@@ -75,6 +77,14 @@ def main(argv: list[str]) -> int:
         cenv, cm = load(Path(argv[1]), CMRR_NAMES, "CMRR envelope")
         penv, ps = load(Path(argv[2]), PSRR_NAMES, "PSRR envelope")
         conditions = check_conditions(cenv, penv, require_build_banner=True)
+        for env, body_path, label in ((cenv, DEFAULT_CMRR_BODY, "CMRR"), (penv, DEFAULT_PSRR_BODY, "PSRR")):
+            body = check_body_hash(env, body_path, label)
+            if output_load_f(body) != Decimal("2e-12"):
+                raise InputError(f"{label} bench body: expected a 2 pF load from each output to vss")
+        for key in cm:
+            problems = gain_problems(cm[key], ps[key])
+            if problems:
+                raise InputError(f"{key_str(key)}: " + "; ".join(problems))
         ngspice = f"ngspice-{conditions['engine_version']}"
         snapshot_hash = sha256_file(Path(__file__).resolve().parents[3] / SNAPSHOT)
         if conditions["dut_netlist_sha256"] != snapshot_hash:

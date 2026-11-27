@@ -307,6 +307,20 @@ def check_grid(keys: Iterable[Key], label: str, problems: List[str],
         problems.append(f"{key_str(k)}: {extra}")
 
 
+def check_coverage(env: dict, label: str) -> None:
+    """Require checked coverage with no skipped limits before using the measurements."""
+    cov = env.get("coverage")
+    if not isinstance(cov, dict):
+        raise InputError(f"{label}: no coverage block")
+    if cov.get("nothing_checked") is not False:
+        raise InputError(f"{label}: coverage.nothing_checked is {cov.get('nothing_checked')!r}, expected false")
+    skipped = cov.get("skipped", [])
+    if not isinstance(skipped, list):
+        raise InputError(f"{label}: coverage.skipped must be a list")
+    if skipped:
+        raise InputError(f"{label}: coverage.skipped is non-empty ({len(skipped)} item(s)), e.g. {skipped[0]}")
+
+
 def index_envelope(env: dict, label: str, measurements: Sequence[str], *,
                    reject_statuses: Sequence[str] = (),
                    accept_statuses: Optional[Sequence[str]] = None,
@@ -339,13 +353,7 @@ def index_envelope(env: dict, label: str, measurements: Sequence[str], *,
         raise InputError(f"{label}: no corners[] array")
     if env.get("corner_count") != len(corners):
         raise InputError(f"{label}: corner_count {env.get('corner_count')} != len(corners) {len(corners)}")
-    cov = env.get("coverage")
-    if not isinstance(cov, dict):
-        raise InputError(f"{label}: no coverage block")
-    if cov.get("nothing_checked") is not False:
-        raise InputError(f"{label}: coverage.nothing_checked is {cov.get('nothing_checked')!r}, expected false")
-    if cov.get("skipped"):
-        raise InputError(f"{label}: coverage.skipped is non-empty ({len(cov['skipped'])} item(s)), e.g. {cov['skipped'][0]}")
+    check_coverage(env, label)
     if env.get("status") not in ("pass", "fail"):
         raise InputError(f"{label}: aggregate status {env.get('status')!r} -- only a complete pass/fail run is evidence")
 

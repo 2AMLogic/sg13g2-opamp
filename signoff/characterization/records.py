@@ -47,6 +47,7 @@ from common import (
 )
 from defchecks import DEFINITION_CHECKS
 from paths import (
+    cmrr_direct,
     draws_contract,
     env_identity,
     klt_envelope,
@@ -927,9 +928,6 @@ def _load_slew_klt_population(repo: Path, key: str, sk: dict, expected: list, sn
     }
 
 
-_CMRR_PSRR_CLOAD_RE = re.compile(r"^Cload[ab]\s+out[ab]\s+vss\s+(\S+)\s*$", re.IGNORECASE | re.MULTILINE)
-
-
 def _check_direct_request_identity(req: dict, env: dict, deck: str, repo: Path,
                                    pins: dict, problems: list) -> None:
     """Bind the request's PDK-relative library and request-relative bench to the recorded run."""
@@ -1103,6 +1101,10 @@ def _load_cmrr_psrr_klt_population(repo: Path, key: str, ck: dict, expected: lis
             klt_envelope.check_decided_counts(env, len(expected_ids))
         except klt_envelope.InputError as exc:
             problems.append(f"{label}: {exc}")
+        try:
+            klt_envelope.check_coverage(env, label)
+        except klt_envelope.InputError as exc:
+            problems.append(str(exc))
         e = env.get("environment") or {}
         jobs = klt_envelope.batch_job_ids(env)
         if not jobs:
@@ -1130,11 +1132,10 @@ def _load_cmrr_psrr_klt_population(repo: Path, key: str, ck: dict, expected: lis
         if not dut or set(dut.values()) != {snap_hash}:
             problems.append(f"{label}: simulated DUT {dut or sorted(closure)} is not the selected netlist snapshot {snapshot_rel} ({snap_hash})")
         body_pin = pins[f"{deck}_body"]
-        body_path = (env.get("netlist") or {}).get("path")
-        if (body_path != body_pin["path"] or "sha256:" + str(closure.get(body_path)) != body_pin["sha256"]
-                or "sha256:" + str(e.get("netlist_sha256")) != body_pin["sha256"]
-                or (prov.get("input") or {}).get("content_hash") != body_pin["sha256"]):
-            problems.append(f"{label}: simulated bench body {body_path!r} is not the pinned {body_pin['path']}")
+        try:
+            cmrr_direct.check_body_identity(env, closure, body_pin["path"], body_pin["sha256"].removeprefix("sha256:"), label)
+        except klt_envelope.InputError as exc:
+            problems.append(str(exc))
         _check_direct_request_identity(req, env, deck, repo, pins, problems)
         if req.get("analysis") != CMRR_PSRR_ANALYSIS:
             problems.append(f"{deck} request: analysis is not {CMRR_PSRR_ANALYSIS}")
@@ -1159,14 +1160,9 @@ def _load_cmrr_psrr_klt_population(repo: Path, key: str, ck: dict, expected: lis
                 problems.append(f"{deck} request: measurement {name} is {defs[name].get('expr')!r}, not {spec['expr'][name]!r}")
             if defs[name].get("limits") != spec["limits"].get(name):
                 problems.append(f"{deck} request: measurement {name} limits are {defs[name].get('limits')!r}, not {spec['limits'].get(name)!r} (a validity bound is never relaxed)")
-        body = "\n".join(line for line in docs[f"{deck}_body"].splitlines() if not line.lstrip().startswith("*"))
-        loads = _CMRR_PSRR_CLOAD_RE.findall(body)
-        try:
-            cloads = {Decimal(x) for x in loads}
-        except InvalidOperation:
-            cloads = set()
-        if len(loads) != 2 or len(cloads) != 1 or not cloads <= cl_stated:
-            problems.append(f"{deck} bench body: Cloada/Cloadb {loads} are not one CL the record's own prose states ({sorted(source_cl_statements(md_text))})")
+        cload = cmrr_direct.output_load_f(docs[f"{deck}_body"])
+        if cload not in cl_stated:
+            problems.append(f"{deck} bench body: Cloada/Cloadb are not one CL the record's own prose states ({sorted(source_cl_statements(md_text))})")
         corners: dict = {}
         for corner in env.get("corners") or []:
             try:
@@ -1206,7 +1202,7 @@ def _load_cmrr_psrr_klt_population(repo: Path, key: str, ck: dict, expected: lis
             points[pid]["vcm_v"] = corner["supply_v"]["vinp"]
         decks[deck] = {"points": points, "version": version,
                        "dut": dict(dut), "jobs": jobs, "envelope": pins[f"{deck}_envelope"]["path"],
-                       "cload_f": float(next(iter(cloads))) if len(cloads) == 1 else None}
+                       "cload_f": float(cload) if cload is not None else None}
     if len(decks) == 2:
         a, b = decks["cmrr"], decks["psrr"]
         try:
