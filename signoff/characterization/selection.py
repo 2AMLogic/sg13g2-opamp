@@ -45,6 +45,7 @@ POPULATION_AUDITS = {
     "slew_raw": "slew_raw_audit",
     "noise_raw": "noise_raw_audit",
     "swing_raw": "swing_raw_audit",
+    "swing_two_pass": "swing_raw_audit",
     "mc_samples": "cmrr_mc_statistics",
     "draws_csv": "offset_mc_statistics",
     "slew_klt": "slew_klt_audit",
