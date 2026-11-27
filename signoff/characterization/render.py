@@ -215,6 +215,12 @@ def render_markdown(report: dict) -> str:
                 f"{swing['status']}: criterion {swing['config']['criterion_frac']} x peak, "
                 f"coarse {swing['config']['coarse_step_v']} V step, fine +/-{swing['config']['fine_halfspan_v']} V)"
             )
+        two_pass = src.get("swing_two_pass")
+        if two_pass:
+            return (
+                f"{two_pass['points']} pinned coarse/fine pass-evidence pairs (`{_short(two_pass['pins_sha256'])}`, "
+                f"{two_pass['status']})"
+            )
         slew = src.get("slew_raw")
         if slew:
             return (
@@ -277,7 +283,7 @@ def render_markdown(report: dict) -> str:
     if offset_klt_rule and any(src.get("offset_klt_raw") for src in content["sources"].values()):
         w(f"\n{offset_klt_rule}\n\n")
     swing_rule = content.get("swing_audit_rule")
-    if swing_rule and any(src.get("swing_raw") for src in content["sources"].values()):
+    if swing_rule and any(src.get("swing_raw") or src.get("swing_two_pass") for src in content["sources"].values()):
         w(f"\n{swing_rule}\n\n")
     w("\nSpec section 2 rows covered: ")
     w(", ".join(f"{r['row']}{'' if r['covered'] else ' (NOT COVERED)'}" for r in content["spec_coverage"]) + ".\n")
