@@ -116,6 +116,22 @@ class CompareCmrrDirect(unittest.TestCase):
             with self.subTest(source=label), self.assertRaisesRegex(InputError, label + " must drive"):
                 C.check_stimulus(cmrr, psrr)
 
+    def test_solver_options_in_the_netlist_and_control_commands(self):
+        for card in (
+            ".OPT tnom=27,RELTOL = 0.01",
+            '.option "reltol"=0.01',
+            ".option tnom=27 $ nominal temperature\n* continued below\n+ reltol=0.01",
+            ".options tnom=27 \\\\\n reltol=0.01",
+            ".subckt child a\n.opt reltol=0.01\nr1 a 0 1k\n.ends\nx1 vdd child",
+            ".if (1)\n.options reltol=0.01\n.endif",
+            ".control\nset r=0.01\noption reltol=$r\n.endc",
+            "*# set reltol=0.01",
+        ):
+            with self.subTest(card=card), self.assertRaisesRegex(InputError, "CMRR body: reltol"):
+                C.check_stimulus(self.cbody + card + "\n", self.pbody)
+        comments = "* .options reltol=0.01\n.option tnom=27 $ reltol=0.01\n*# echo reltol=0.01\n"
+        C.check_stimulus(self.cbody + comments + '*# set label="default reltol=0.001"\n', self.pbody)
+
     def test_input_coupling_requires_one_top_level_unit_capacitor(self):
         card = "Cinna_acgnd inna vss 1"
         for replacement in (

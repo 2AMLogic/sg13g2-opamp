@@ -2604,6 +2604,15 @@ class CmrrPsrrKltAudit(RawAuditCase):
                     self.edit_simulated_body(deck, lambda text: text.replace(card, f"{name} {node} vdd 1"))
                     self.assert_error(f"{deck.upper()} body: {node}")
 
+    def test_bench_tolerance_override_is_an_error(self):
+        for deck in ("cmrr", "psrr"):
+            for setting in ("reltol=0.01", "abstol=1e-9", "vntol=1e-3"):
+                with self.subTest(deck=deck, setting=setting):
+                    self.fresh()
+                    self.edit_simulated_body(deck, lambda text: text.replace(
+                        ".options tnom=27", f".options tnom=27 {setting}"))
+                    self.assert_error(f"{deck.upper()} body: {setting.split('=')[0]}")
+
     def test_conditional_cards_in_a_pinned_bench_are_an_error(self):
         bench = REPO / "sim/cmrr-psrr/klt"
         with mock.patch.object(sys, "path", [*sys.path, str(bench)]):

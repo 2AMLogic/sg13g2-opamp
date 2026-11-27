@@ -231,6 +231,14 @@ esac
                 body = (HERE / f"tb_{other}_direct.body.spice").read_text()
                 self.assert_body_refused(path, body, f"stimulus check: {deck} body")
 
+    def test_bench_tolerance_override_publishes_neither_file(self):
+        for deck, path in (("cmrr", CMRR), ("psrr", PSRR)):
+            body = (HERE / f"tb_{deck}_direct.body.spice").read_text()
+            for setting in ("reltol=0.01", "abstol=1e-9", "vntol=1e-3"):
+                with self.subTest(deck=deck, setting=setting):
+                    altered = body.replace(".options tnom=27", f".options tnom=27 {setting}")
+                    self.assert_body_refused(path, altered, f"{deck.upper()} body: {setting.split('=')[0]}")
+
     def test_missing_inverting_input_capacitor_publishes_neither_file(self):
         for path, deck, copy_b in ((CMRR, "CMRR", "Ccmb innb inpb 1"), (PSRR, "PSRR", "Cinnb_acgnd innb vss 1")):
             body = (HERE / f"tb_{deck.lower()}_direct.body.spice").read_text()

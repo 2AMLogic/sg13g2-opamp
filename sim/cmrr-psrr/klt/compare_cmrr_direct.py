@@ -181,27 +181,56 @@ def check_body_hash(env: dict, body_path: str, label: str) -> str:
 
 
 _BenchCard = tuple[list[str], bool]  # fields and whether the element is conditional
+_TOLERANCE_ASSIGNMENT = re.compile(
+    r"""(?:^|[\s,(])["']?(reltol|abstol|vntol)["']?\s*=|"[^"]*"|'[^']*'"""
+)
 
 
-def _bench_cards(body: str) -> list[_BenchCard]:
-    """Read circuit-level element cards, marking those inside any conditional branch."""
-    text = re.sub(r"^[ \t]*\*.*|(?:\$|;|//).*", "", body, flags=re.M)
-    text = re.sub(r"(?:\r?\n[ \t]*)+\+", " ", text)
-    cards = []
-    block_ends = []
-    conditional_depth = 0
-    for line in text.lower().splitlines():
-        fields = line.split()
-        if not fields:
+def _bench_lines(body: str) -> list[tuple[str, bool]]:
+    """Join SPICE continuations and distinguish circuit cards from control commands."""
+    lines = []
+    control = False
+    for raw in body.lower().splitlines():
+        line = raw.strip()
+        command = control or line.startswith("*#")
+        if line.startswith("*#"):
+            line = line[2:].lstrip()
+        elif line.startswith("*"):
             continue
-        name = fields[0]
-        if name in (".subckt", ".control"):
-            block_ends.append(".ends" if name == ".subckt" else ".endc")
-        elif block_ends:
-            if name == block_ends[-1]:
-                block_ends.pop()
-        elif name == ".end":
+        if not command:
+            line = line.partition("$")[0]  # In control commands $ expands variables.
+        line = re.split(r";|//", line, maxsplit=1)[0].strip()
+        if not line:
+            continue
+        name = line.split(maxsplit=1)[0]
+        if name in (".control", ".endc"):
+            control = name == ".control"
+        elif not command and name == ".end":
             break
+        elif lines and lines[-1][1] == command and line.startswith("+"):
+            lines[-1] = (lines[-1][0] + " " + line[1:], command)
+        elif lines and lines[-1][1] == command and lines[-1][0].endswith("\\\\"):
+            lines[-1] = (lines[-1][0][:-2] + " " + line, command)
+        else:
+            lines.append((line, command))
+    return lines
+
+
+def _bench_cards(lines: list[tuple[str, bool]]) -> list[_BenchCard]:
+    """Read circuit-level element cards, marking those inside any conditional branch."""
+    cards = []
+    subckt_depth = 0
+    conditional_depth = 0
+    for line, command in lines:
+        if command:
+            continue
+        fields = line.split()
+        name = fields[0]
+        if name == ".subckt":
+            subckt_depth += 1
+        elif subckt_depth:
+            if name == ".ends":
+                subckt_depth -= 1
         elif name == ".if" or name.startswith(".if("):
             conditional_depth += 1
         elif name == ".endif" and conditional_depth:
@@ -215,7 +244,7 @@ def output_load_f(body: str) -> Decimal | None:
     """Read one identical numeric load from each output to vss in the direct bench."""
     terminals = {"cloada": "outa", "cloadb": "outb"}
     loads = {}
-    for fields, conditional in _bench_cards(body):
+    for fields, conditional in _bench_cards(_bench_lines(body)):
         if not fields[0].startswith("c"):
             continue
         name = fields[0]
@@ -306,15 +335,29 @@ def _check_input_coupling(cards: list[_BenchCard], deck: str, copy_b_reference: 
             problems.append(f"{deck} body: {node} must connect through one 1 F capacitor to {reference}")
 
 
+def _check_solver_tolerances(lines: list[tuple[str, bool]], deck: str, problems: list[str]) -> None:
+    # ngspice accepts .opt* cards even inside subcircuits and conditionals.
+    for line, command in lines:
+        name = line.split(maxsplit=1)[0]
+        option_card = name in ("option", "options", "set") if command else name.startswith(".opt")
+        if option_card:
+            for match in _TOLERANCE_ASSIGNMENT.finditer(line):
+                if tolerance := match[1]:  # Skip quoted values that merely mention a tolerance.
+                    problems.append(f"{deck} body: {tolerance} override violates DR-0005 default solver tolerances")
+
+
 def check_stimulus(cmrr_body: str, psrr_body: str) -> None:
-    """Check each gain's unit excitation and inverting-input AC connection."""
+    """Check the default solver tolerances, unit excitation and AC input connections."""
     problems = []
-    cmrr = _bench_cards(cmrr_body)
-    psrr = _bench_cards(psrr_body)
-    _check_ac_sources(cmrr, "CMRR", {"vinp": "inpa 0", "vcmb": "inpb midb"}, problems)
-    _check_ac_sources(psrr, "PSRR", {"vinp": "inpa 0", "vsrip": "vddb vdd"}, problems)
-    _check_input_coupling(cmrr, "CMRR", "inpb", problems)
-    _check_input_coupling(psrr, "PSRR", "vss", problems)
+    for deck, body, sources, reference in (
+        ("CMRR", cmrr_body, {"vinp": "inpa 0", "vcmb": "inpb midb"}, "inpb"),
+        ("PSRR", psrr_body, {"vinp": "inpa 0", "vsrip": "vddb vdd"}, "vss"),
+    ):
+        lines = _bench_lines(body)
+        _check_solver_tolerances(lines, deck, problems)
+        cards = _bench_cards(lines)
+        _check_ac_sources(cards, deck, sources, problems)
+        _check_input_coupling(cards, deck, reference, problems)
     if problems:
         raise InputError("stimulus check: " + "; ".join(problems))
 
