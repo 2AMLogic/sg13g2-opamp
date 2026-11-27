@@ -3,9 +3,9 @@
   "provenance": {
     "deck": null,
     "input": {
-      "content_hash": "sha256:bedf0f1c48338d5e55faeb3737d738fb74d779e84fc069be98ec9d2c191170fc",
+      "content_hash": "sha256:58a120275c54fba49f203c0a6c2599184cb4a8d4685e285c771c0f848ace3105",
       "path": {
-        "path": "signoff/characterization/reports/20261127-033959-ea45693.json",
+        "path": "signoff/characterization/reports/20261127-052853-a537fb4.json",
         "scope": "repo"
       }
     },
@@ -14,7 +14,7 @@
     "pdk": null
   },
   "schema_version": 1,
-  "source": "signoff/characterization/reports/20261127-033959-ea45693.md",
+  "source": "signoff/characterization/reports/20261127-052853-a537fb4.md",
   "status": "fail",
   "summary": "characterization report: overall FAIL, 9/12 ratified spec-row bounds PASS (raw values compared against the literal ratified bound) with full expected-grid coverage; per-row units, load, bound, decision record, binding point and source-record hash; aggregated offline from committed sim/ records (no re-simulation); not item 5/6 evidence",
   "t1_item": 8

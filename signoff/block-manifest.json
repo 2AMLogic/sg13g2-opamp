@@ -85,7 +85,7 @@
     ],
     "8": {
       "file": "signoff/evidence/characterization.json",
-      "content_hash": "sha256:bedf0f1c48338d5e55faeb3737d738fb74d779e84fc069be98ec9d2c191170fc"
+      "content_hash": "sha256:58a120275c54fba49f203c0a6c2599184cb4a8d4685e285c771c0f848ace3105"
     },
     "9": {
       "file": "signoff/evidence/testbenches.json",
