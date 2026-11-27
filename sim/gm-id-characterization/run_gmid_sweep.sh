@@ -238,74 +238,8 @@ rm -f "${CSV_OUT}.raw"
 # rolls off with decreasing length at mos_tt, nominal overdrive. ---
 SANITY_LOG="${CORNERS_OUT}/sanity_checks.txt"
 SANITY_RC=0
-python3 - "${CSV_OUT}" "${SANITY_LOG}" <<'PYEOF' || SANITY_RC=$?
-import csv, sys
-from collections import defaultdict
-
-src, dst = sys.argv[1], sys.argv[2]
-rows = list(csv.DictReader(open(src)))
-lines = []
-ok = True
-
-by_group = defaultdict(list)
-for row in rows:
-    if row["corner"] != "mos_tt" or row["overdrive_v"] == "":
-        continue
-    by_group[(row["device"], row["length_um"])].append(
-        (float(row["overdrive_v"]), float(row["gm_id_per_v"]))
-    )
-
-for (device, length), pts in by_group.items():
-    pts.sort(key=lambda t: t[0])
-    gmids = [g for (_, g) in pts]
-    # Real PSP103 devices show a genuine (not a finite-difference artifact)
-    # gm/ID PEAK a little above Vgs=0 rather than a monotonic rise all the
-    # way from the deepest subthreshold point swept: at Vgs below the peak,
-    # secondary leakage-current components the compact model includes
-    # (junction/GIDL-type leakage, which does not scale with Vgs the same
-    # way drift-diffusion subthreshold current does) pull gm/ID down below
-    # the ideal weak-inversion ceiling 1/(n*Ut) -- see README.md "Observed
-    # sub-peak gm/ID roll-off in deep subthreshold". The monotonic-decrease
-    # check below therefore starts at the observed peak (the point that
-    # matters for real sizing decisions -- no real design biases a device
-    # in the leakage-dominated tail below it), not at the sweep's first
-    # point.
-    peak_idx = max(range(len(gmids)), key=lambda i: gmids[i])
-    tail = gmids[peak_idx:]
-    violations = sum(1 for a, b in zip(tail, tail[1:]) if b > a + 1e-3)
-    verdict = "PASS" if violations == 0 else "FAIL"
-    if violations:
-        ok = False
-    lines.append(f"{verdict} gm/ID monotonically decreasing vs overdrive from its observed peak (index {peak_idx}/{len(gmids)-1}, peak={gmids[peak_idx]:.3f}): device={device} length={length} corner=mos_tt (violations={violations}/{len(tail)-1})")
-
-# fT vs length at a fixed representative overdrive (~0.3V) for mos_tt
-ft_by_length = {}
-for device in ("nmos", "pmos"):
-    for row in rows:
-        if row["corner"] != "mos_tt" or row["device"] != device or row["overdrive_v"] == "":
-            continue
-        ov = float(row["overdrive_v"])
-        if 0.25 <= ov <= 0.35:
-            ft_by_length.setdefault(device, {}).setdefault(row["length_um"], []).append(float(row["ft_hz"]))
-    if device in ft_by_length:
-        lengths_sorted = sorted(ft_by_length[device].keys(), key=lambda l: float(l.rstrip("u")))
-        fts = [max(ft_by_length[device][l]) for l in lengths_sorted]
-        # Expect fT to be highest at the shortest length and to fall off as
-        # length increases (fT ~ gm/Cgg ~ 1/L^2-ish for a long-channel
-        # square-law device) -- i.e. monotonically decreasing with length.
-        decreasing = all(a >= b for a, b in zip(fts, fts[1:]))
-        verdict = "PASS" if decreasing else "FAIL"
-        if not decreasing:
-            ok = False
-        lines.append(f"{verdict} fT falls off with increasing length near overdrive~0.3V: device={device} lengths={lengths_sorted} fT={['%.3e' % v for v in fts]}")
-
-with open(dst, "w") as f:
-    f.write("\n".join(lines) + "\n")
-
-print("\n".join(lines))
-sys.exit(0 if ok else 1)
-PYEOF
-true
+python3 "${SCRIPT_DIR}/check_sanity.py" "${CSV_OUT}" "${SANITY_LOG}" \
+  --devices "${DEVICES[@]}" --lengths "${LENGTHS[@]}" || SANITY_RC=$?
 
 # --- Plots (summary artifact, per issue #5 AC item 2 "table or plots") ---
 # Best-effort: if matplotlib is not installed, skip plotting rather than
