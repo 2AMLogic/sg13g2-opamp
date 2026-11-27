@@ -8,8 +8,6 @@ import importlib.util
 import io
 import json
 import os
-import shutil
-import tempfile
 import unittest
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -23,6 +21,7 @@ def load(name):
 
 
 rs = load("rz_solver")
+make_scratch = load("rz_test_support").make_scratch
 
 
 def load_json(path):
@@ -88,16 +87,7 @@ CONTROL_NAMES = [
 
 class Scratch(unittest.TestCase):
     def setUp(self):
-        self.tmp = tempfile.mkdtemp()
-        self.addCleanup(shutil.rmtree, self.tmp, True)
-        self.dut = os.path.join(self.tmp, "pex.spice")
-        self.sch = os.path.join(self.tmp, "opamp_core.spice")
-        with open(self.dut, "w") as f:
-            f.write(EXTRACTED)
-        with open(self.sch, "w") as f:
-            f.write(SCHEMATIC)
-        os.environ.pop("SG13G2_PEX_POINTS", None)
-        self.addCleanup(os.environ.pop, "SG13G2_PEX_POINTS", None)
+        self.tmp, self.dut, self.sch = make_scratch(self, EXTRACTED, SCHEMATIC)
 
     def req(self, entry):
         return load_json(entry["request"])
