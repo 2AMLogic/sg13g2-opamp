@@ -142,6 +142,57 @@ class FullGridAdmission(ArchivedCurves):
         self.assertEqual(len(state["valid_ids"]), 45)
 
 
+class WorkerEnvironmentAdmission(ArchivedCurves):
+    points = (("mos_tt", 27, 1.08), compare.NOMINAL_KEY)
+
+    def test_selection_from_individually_valid_bundles(self):
+        project = HERE.parents[2]
+        sys.path.insert(0, str(project / "signoff/characterization"))
+        self.addCleanup(sys.path.remove, sys.path[0])
+        import records
+
+        pvt = grid.read(project / "signoff/characterization/selection.json")["grids"]["pvt45"]
+        pvt["axes"] = {"corner": ["mos_tt"], "temp": ["27"], "vdd": ["1.08", "1.20"]}
+        env = {"pin": grid.read(project / "sim/pdk.json"), "ngspice": "ngspice-46"}
+
+        def load(spec):
+            return records.load_record(grid.ROOT, "output-swing", spec, pvt, env)
+
+        def finish_and_admit():
+            self.assertEqual(grid.finish(self.bundle, grid.ROOT / "fine"), 0)
+            spec = grid.read(self.bundle / "selection.json")
+            state = load(spec)
+            self.assertEqual(state["errors"], [])
+            self.assertEqual(state["source"]["swing_two_pass"]["status"], "verified")
+            return spec
+
+        # Different collecting clients can recover passes from the same worker build.
+        path = self.bundle / "fine.sim.json"
+        fine = grid.read(path)
+        fine["environment"]["engine_build"]["binary_sha256"] = "a" * 64
+        grid.write(path, fine)
+        first = finish_and_admit()
+
+        self.bundle = grid.ROOT / "second"
+        self.capture()
+        for phase in ("coarse", "fine"):
+            path = self.bundle / f"{phase}.sim.json"
+            result = grid.read(path)
+            simulator = result["environment"]["remote"]["worker_environment"]["simulator"]
+            simulator["version_banner"] = simulator["version_banner"].replace("Oct  1", "Oct  2")
+            grid.write(path, result)
+        second = finish_and_admit()
+
+        # Swap the hash-pinned fine file, then the entire pair at the same corner.
+        for phase in ("fine", "coarse"):
+            with self.subTest(swapped=phase):
+                first["swing_two_pass"]["files"][PID][phase] = second["swing_two_pass"]["files"][PID][phase]
+                state = load(first)
+                self.assertEqual(state["source"]["swing_two_pass"]["status"], "error")
+                self.assertTrue(any(PID in e and "worker_version_banner" in e for e in state["errors"]),
+                                state["errors"])
+
+
 class SwingGridControls(ArchivedCurves):
     def test_changed_dut_without_a_baseline_retains_audited_results(self):
         dut = grid.ROOT / grid.DUT
@@ -194,7 +245,7 @@ class SwingGridControls(ArchivedCurves):
         banner = worker["version_banner"]
         worker["version_banner"] = banner.replace("Oct  1", "Oct  2")
         grid.write(path, envelope)
-        with self.assertRaisesRegex(two_pass.PairError, "worker_version_banner"):
+        with self.assertRaisesRegex(compare.InputError, "worker_version_banner"):
             grid.finish(self.bundle, grid.ROOT / "fine")
         worker["version_banner"] = ""
         grid.write(path, envelope)

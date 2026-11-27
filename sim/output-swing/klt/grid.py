@@ -245,9 +245,6 @@ def finish(bundle, fine_artifacts=None, *, replay=False):
     for phase, passes in (("coarse", coarse), ("fine", fine)):
         for p in passes:
             pid = p["pid"]
-            for field in ("model_inputs", "ami_id", "worker_version_banner"):
-                if p[field] != coarse[0][field]:
-                    raise T.PairError(pid, f"{phase} worker differs on {field}")
             path = bundle / f"{pid}_{phase}.json"
             if replay:
                 if read(path) != p:
