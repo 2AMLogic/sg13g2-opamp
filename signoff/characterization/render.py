@@ -109,6 +109,9 @@ def render_markdown(report: dict) -> str:
             worst_txt = f"{_v(worst.get('value'), unit)} at `{worst.get('point')}`" if worst else "—"
             best_txt = f"{_v(best.get('value'), unit)} at `{best.get('point')}`" if best else "—"
             source_txt = f"`{src['csv']}` col `{src['column']}` (`{_short(src['csv_sha256'])}`)"
+            if "envelope" in src:
+                pin = src["envelope"]
+                source_txt += f", graded from `{pin['path']}` (`{_short(pin['sha256'])}`)"
             cond = f"{row['load']}; conditions (descriptive, unverified): {row['conditions']}"
             if with_bound:
                 bound = row["bound"]

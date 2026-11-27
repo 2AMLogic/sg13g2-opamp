@@ -1009,7 +1009,7 @@ def _check_direct_request_grid(req: dict, deck: str, problems: list) -> None:
     if isinstance(supply, dict) and set(supply) == {"vdd", "vinp"}:
         vdd, vinp = supply["vdd"], supply["vinp"]
         if isinstance(vdd, list) and isinstance(vinp, list) and len(vdd) == len(vinp):
-            if covers(list(zip(vdd, vinp)), [(v, v / 2) for v in klt_envelope.SUPPLIES]):
+            if covers(list(zip(vdd, vinp)), [(v, v / 2) for v in klt_envelope.DECIMAL_SUPPLIES]):
                 return
     problems.append(f"{deck} request: supply_v axis must pair each selected VDD with VINP = VDD/2")
 
@@ -1054,10 +1054,11 @@ def _load_cmrr_psrr_klt_population(repo: Path, key: str, ck: dict, expected: lis
                 )
                 continue
             text = data.decode("utf-8")
-            docs[kind] = text if kind.endswith("_body") else json.loads(text)
+            # Grade the decimal written by the simulator, including values near a floor.
+            docs[kind] = text if kind.endswith("_body") else json.loads(text, parse_float=Decimal)
         except (OSError, UnicodeDecodeError, ValueError) as exc:
             errors.append(f"record {key}: cannot read {pin['path']} ({exc})")
-    control_acm0: dict[str, float] = {}
+    control_acm0: dict[str, Decimal] = {}
     control_key = ck["control"]
     control = records.get(control_key) or {}
     cpath = repo / control["csv"] if isinstance(control.get("csv"), str) else None
@@ -1072,11 +1073,8 @@ def _load_cmrr_psrr_klt_population(repo: Path, key: str, ck: dict, expected: lis
             errors.append(f"record {key}: cannot parse control record {control['csv']} ({exc})")
             crows = []
         for row in crows:
-            try:
-                value = float(row["acm0_db"])
-            except (KeyError, TypeError, ValueError):
-                continue
-            if math.isfinite(value):
+            value, _ = parse_decimal(row.get("acm0_db"))
+            if value is not None:
                 control_acm0[(row.get("point_id") or "").strip()] = value
         for pid in expected_ids:
             if pid not in control_acm0:
@@ -1195,11 +1193,11 @@ def _load_cmrr_psrr_klt_population(repo: Path, key: str, ck: dict, expected: lis
                     problems.append(f"{label}: point {pid}: measurement {name} has undecided status {m.get('status')!r}")
             got = {name: m.get("value") for name, m in measures.items()}
             bad = [n for n in spec["names"]
-                   if not isinstance(got.get(n), (int, float)) or isinstance(got.get(n), bool) or not math.isfinite(got[n])]
+                   if not isinstance(got.get(n), (int, Decimal)) or isinstance(got.get(n), bool) or not math.isfinite(got[n])]
             if bad:
                 problems.append(f"point {pid}: {deck} deck: missing or non-finite measurement(s) {bad}")
                 continue
-            points[pid] = {n: float(got[n]) for n in spec["names"]}
+            points[pid] = {name: Decimal(value) for name, value in got.items()}
             points[pid]["vcm_v"] = corner["supply_v"]["vinp"]
         decks[deck] = {"points": points, "version": version,
                        "dut": dict(dut), "jobs": jobs, "envelope": pins[f"{deck}_envelope"]["path"],
@@ -1692,6 +1690,13 @@ def load_record(repo: Path, key: str, spec: dict, grid: dict, env: dict, records
             "control": ck["control"],
         }
         if cmrr_psrr_pop is not None:
+            state["envelope_columns"] = {
+                f"{deck}_db": {
+                    "pin": ck["files"][f"{deck}_envelope"],
+                    "values": {pid: point[deck][f"{deck}_db"] for pid, point in cmrr_psrr_pop["points"].items()},
+                }
+                for deck in ("cmrr", "psrr")
+            }
             src["cmrr_psrr_klt"]["jobs"] = cmrr_psrr_pop["jobs"]
             src["cmrr_psrr_klt"]["cload_f"] = cmrr_psrr_pop["cload_f"]
             envelope_ngspice = f"ngspice-{cmrr_psrr_pop['version']}"

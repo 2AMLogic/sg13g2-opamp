@@ -91,7 +91,7 @@ CMRR_PSRR_KLT_DECKS = {
             "cmrr_db": "(vdb(outa) - vdb(outb))[0]",
             "cmrr_plateau_delta_db": "abs((vdb(outa) - vdb(outb))[20] - cmrr_db)",
         },
-        "limits": {"cmrr_plateau_delta_db": {"max": 0.05}},
+        "limits": {"cmrr_plateau_delta_db": {"max": Decimal("0.05")}},
     },
     "psrr": {
         "names": ("av0_db", "avs0_db", "psrr_db", "psrr_plateau_delta_db"),
@@ -104,7 +104,7 @@ CMRR_PSRR_KLT_DECKS = {
             "psrr_plateau_delta_db": "abs((vdb(outa) - vdb(outb))[20] - psrr_db)",
         },
         # the ratified PSRR bound is the request's own limit on psrr_db
-        "limits": {"psrr_db": {"min": 1.87}, "psrr_plateau_delta_db": {"max": 0.05}},
+        "limits": {"psrr_db": {"min": Decimal("1.87")}, "psrr_plateau_delta_db": {"max": Decimal("0.05")}},
     },
 }
 CMRR_PSRR_ANALYSIS = {"kind": "ac", "args": "dec 20 10m 1g"}

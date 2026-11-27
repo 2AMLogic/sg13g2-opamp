@@ -441,9 +441,8 @@ def _check_offset_mc_statistics(point: dict, draws: dict | None) -> str | None:
 
 # The harness Acm0 control prints 6 digits (observed max 4.3e-5 dB).
 # The record cells are %.9g serializations of the in-deck measurements.
-CMRR_PSRR_CONTROL_DB = 1e-3
-CMRR_PSRR_CELL_DB = 1e-6
-CMRR_PSRR_PLATEAU_DB = 0.05
+CMRR_PSRR_CONTROL_DB = Decimal("0.001")
+CMRR_PSRR_PLATEAU_DB = Decimal("0.05")
 
 
 def _check_cmrr_psrr_klt(point: dict, pop: dict | None) -> str | None:
@@ -471,11 +470,10 @@ def _check_cmrr_psrr_klt(point: dict, pop: dict | None) -> str | None:
         ("cmrr_plateau_delta_db", c["cmrr_plateau_delta_db"]), ("avs0_db", p["avs0_db"]),
         ("psrr_db", p["psrr_db"]), ("psrr_plateau_delta_db", p["psrr_plateau_delta_db"]),
     ):
-        value, why = parse_decimal(point.get(field))
-        if value is None:
-            problems.append(f"{field}: {why}")
-        elif abs(float(value) - want) > CMRR_PSRR_CELL_DB:
-            problems.append(f"{field} {value} is not {want:.9g} recomputed from the pinned envelopes (tolerance {CMRR_PSRR_CELL_DB:g} dB)")
+        problem = _cell_problem(field, point.get(field), format(float(want), ".9g"),
+                                "pinned envelopes", 9, nan_ok=False)
+        if problem:
+            problems.append(problem)
     ctrl = pop["control_acm0"].get(pid)
     if ctrl is None or abs(ctrl - c["acm0_db"]) > CMRR_PSRR_CONTROL_DB:
         problems.append(f"Acm0 {c['acm0_db']:.9g} dB disagrees with the harness regression control {pop['control_csv']} ({ctrl}) by more than {CMRR_PSRR_CONTROL_DB:g} dB (wrong common-mode stimulus?)")

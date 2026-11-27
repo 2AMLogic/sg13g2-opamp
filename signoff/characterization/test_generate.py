@@ -2151,12 +2151,76 @@ class CmrrPsrrKltAudit(RawAuditCase):
         self.assertAlmostEqual(float(self.cell("cmrr_db")), want, places=6)
         self.assertAlmostEqual(float(self.cell("av0_db")) - float(self.cell("acm0_db")), want, places=6)
 
+    def test_writer_and_grader_preserve_violations_that_round_onto_the_floor(self):
+        pid = "mos_fs_125C_1.08V"
+        cmrr = 30.74999999
+        psrr = 1.869999999
+        pins = self.raw()["files"]
+        envelopes = [self.fx.root / pins[f"{deck}_envelope"]["path"] for deck in ("cmrr", "psrr")]
+        acm = self.meas(json.loads(envelopes[0].read_bytes()), "acm0_db", pid)["value"]
+        av0 = acm + cmrr  # keep the independently checked Acm0 control
+
+        def change_cmrr(doc):
+            self.meas(doc, "av0_db", pid)["value"] = av0
+            self.meas(doc, "cmrr_db", pid)["value"] = cmrr
+
+        def change_psrr(doc):
+            self.meas(doc, "av0_db", pid)["value"] = av0
+            self.meas(doc, "avs0_db", pid)["value"] = av0 - psrr
+            self.meas(doc, "psrr_db", pid).update(value=psrr, status="fail", margin=psrr - 1.87)
+            self.corner(doc, pid)["status"] = "fail"
+            doc.update(status="fail", passed=44, failed=1)
+
+        self.edit_env("cmrr_envelope", change_cmrr)
+        self.edit_env("psrr_envelope", change_psrr)
+        record = self.fx.selection["records"][self.RECORD]
+        csv_path, md_path = (self.fx.root / record[kind] for kind in ("csv", "md"))
+        csv_path.unlink()
+        md_path.unlink()
+        subprocess.run([sys.executable, REPO / "sim/cmrr-psrr/klt/summarize_batch.py",
+                        *envelopes, csv_path, md_path], check=True, timeout=20)
+        record.update(csv_sha256=generate.sha256_file(csv_path), md_sha256=generate.sha256_file(md_path))
+        self.fx.save_selection()
+
+        content = self.fx.build()
+        self.assertEqual(self.errors(content), [])
+        for deck, row_id, floor, raw in (("psrr", "psrr", "1.87", psrr), ("cmrr", "cmrr_systematic", "30.75", cmrr)):
+            with self.subTest(row=row_id):
+                row = rows_by_id(content)[row_id]
+                self.assertEqual(row["source"]["envelope"], pins[f"{deck}_envelope"])
+                self.assertEqual(row["verdict"], "FAIL")
+                self.assertEqual(row["violating_points"], [pid])
+                worst = row["measured_worst"]
+                self.assertEqual(worst["point"], pid)
+                self.assertEqual(Decimal(worst["value"]), Decimal(str(raw)))
+                self.assertEqual(Decimal(worst["raw_margin"]), Decimal(str(raw)) - Decimal(floor))
+                self.assertEqual(Decimal(worst["rounded_to_bound_decimals"]), Decimal(floor))
+
+    def test_report_preserves_envelope_digits_beyond_binary_float_precision(self):
+        pin = self.raw()["files"]["psrr_envelope"]
+        path = self.fx.root / pin["path"]
+        text = path.read_text()
+        pid = "mos_fs_125C_1.08V"
+        original = str(self.meas(json.loads(text), "psrr_db", pid)["value"])
+        precise = original + "0000000001"
+        self.assertEqual(float(original), float(precise))
+        # Write the JSON number itself so Python's float encoder cannot round the fixture.
+        path.write_text(text.replace('"value": ' + original, '"value": ' + precise))
+        pin["sha256"] = generate.sha256_file(path)
+        self.fx.save_selection()
+        row = rows_by_id(self.fx.build())["psrr"]
+        self.assertEqual(row["errors"], [])
+        worst = row["measured_worst"]
+        self.assertEqual(worst["value"], precise)
+        self.assertEqual(Decimal(worst["raw_margin"]), Decimal(precise) - Decimal("1.87"))
+
     def test_harness_record_stays_selected_as_the_control(self):
         self.assertIn("cmrr-psrr-harness", self.fx.selection["records"])
         self.assertEqual(self.raw()["control"], "cmrr-psrr-harness")
 
     def test_edited_summary_cell_is_an_error(self):
-        self.fx.set_cell(self.RECORD, self.POINT, "psrr_db", "1.0")
+        edited = Decimal(self.cell("psrr_db")) + Decimal("0.0000001")
+        self.fx.set_cell(self.RECORD, self.POINT, "psrr_db", str(edited))
         self.definition_error()
 
     def test_csv_common_mode_voltage_must_match_the_envelope(self):

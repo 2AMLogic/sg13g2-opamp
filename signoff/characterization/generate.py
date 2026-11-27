@@ -215,6 +215,8 @@ CMRR_PSRR_KLT_AUDIT_RULE = (
     "record states. Per point every cell is recomputed from the envelopes (CMRR = "
     "Av0 - Acm0 and PSRR+ = Av0 - Avs0, in dB, read at the 10 mHz shelf), the two "
     "decks' Av0 must agree (1e-4 dB), both plateau guards must hold (0.05 dB), and "
+    "the CSV cells must match the writer's nine-significant-digit rendering. "
+    "The report grades CMRR and PSRR directly from the pinned envelope decimals. "
     "Acm0 must agree with the selected harness record kept as regression control "
     "(`control`, 1e-3 dB; its Av0, CMRR and PSRR are the superseded floating-inn "
     "figures and are never used). A stale DUT or bench hash, an edited request, "

@@ -54,6 +54,7 @@ import json
 import math
 import re
 import sys
+from decimal import Decimal
 from pathlib import Path
 from typing import Callable, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
 
@@ -63,6 +64,7 @@ from typing import Callable, Dict, Iterable, List, Mapping, Optional, Sequence, 
 PROCESSES = ("mos_tt", "mos_ss", "mos_ff", "mos_sf", "mos_fs")
 TEMPERATURES = (-40, 27, 125)
 SUPPLIES = (1.08, 1.20, 1.32)
+DECIMAL_SUPPLIES = tuple(Decimal(str(v)) for v in SUPPLIES)
 
 Key = Tuple[str, int, float]
 
@@ -250,11 +252,12 @@ def exact_pvt_key(corner: dict) -> Key:
     if set(supply) != {"vdd", "vinp"}:
         raise InputError(f"corner supply_v must contain exactly vdd and vinp, got {supply!r}")
     process, temp, vdd = corner.get("process"), corner.get("temperature_c"), supply.get("vdd")
-    if process not in PROCESSES or temp not in TEMPERATURES or vdd not in SUPPLIES:
+    supplies = DECIMAL_SUPPLIES if isinstance(vdd, Decimal) else SUPPLIES
+    if process not in PROCESSES or temp not in TEMPERATURES or vdd not in supplies:
         raise InputError(f"corner {(process, temp, vdd)!r} is outside the expected grid")
     if supply.get("vinp") != vdd / 2:
         raise InputError(f"corner {(process, temp, vdd)!r}: supplies {supply!r} do not put Vcm at VDD/2")
-    return process, int(temp), vdd
+    return process, int(temp), float(vdd)
 
 
 def check_decided_counts(env: dict, expected_count: int) -> None:
