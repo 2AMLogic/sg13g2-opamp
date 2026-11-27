@@ -11,6 +11,7 @@ import os
 import shutil
 import tempfile
 import unittest
+from unittest import mock
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -23,6 +24,7 @@ def load(name):
 
 
 rc = load("rz_candidate")
+make_scratch = load("rz_test_support").make_scratch
 
 
 def load_json(path):
@@ -77,19 +79,27 @@ BENCH_NAMES = (
 
 class Scratch(unittest.TestCase):
     def setUp(self):
-        self.tmp = tempfile.mkdtemp()
-        self.addCleanup(shutil.rmtree, self.tmp, True)
-        self.dut = os.path.join(self.tmp, "pex.spice")
-        self.sch = os.path.join(self.tmp, "opamp_core.spice")
-        with open(self.dut, "w") as f:
-            f.write(EXTRACTED)
-        with open(self.sch, "w") as f:
-            f.write(SCHEMATIC)
-        os.environ.pop("SG13G2_PEX_POINTS", None)
-        self.addCleanup(os.environ.pop, "SG13G2_PEX_POINTS", None)
+        self.tmp, self.dut, self.sch = make_scratch(self, EXTRACTED, SCHEMATIC)
 
     def req(self, entry):
         return load_json(entry["request"])
+
+
+class ScratchCleanupTest(unittest.TestCase):
+    def test_restores_point_selection_after_error(self):
+        key = "SG13G2_PEX_POINTS"
+
+        class FailingCase(Scratch):
+            def runTest(self):
+                self.assertNotIn(key, os.environ)
+                os.environ[key] = "mos_ss:-40:1.08"
+                raise RuntimeError("intentional test error")
+
+        with mock.patch.dict(os.environ, {key: "mos_tt:27:1.20"}):
+            result = FailingCase().run()
+            self.assertEqual(len(result.errors), 1)
+            self.assertIn("RuntimeError: intentional test error", result.errors[0][1])
+            self.assertEqual(os.environ.get(key), "mos_tt:27:1.20")
 
 
 class PassivesTest(unittest.TestCase):
