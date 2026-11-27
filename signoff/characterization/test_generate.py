@@ -3578,11 +3578,14 @@ class SwingTwoPassRendering(unittest.TestCase):
 
     def test_rule_states_both_evidence_shapes(self):
         rule = self.committed["swing_audit_rule"]
-        self.assertIn("one sha256-pinned coarse and one fine transfer-curve wrdata file", rule)
-        self.assertIn("`swing_two_pass`", rule)
-        self.assertIn("pass-evidence JSON", rule)
-        self.assertIn("serialized coarse crossing +/- the configured half-span", rule)
-        self.assertIn("agree on DUT, bench, simulator and PVT key", rule)
+        archived, two_pass = rule.split("`swing_two_pass`", 1)
+        self.assertIn("one sha256-pinned coarse and one fine transfer-curve wrdata file", archived)
+        self.assertIn("repeated or reversed sweep scales", archived)
+        self.assertIn("mismatched wrdata scale columns", archived)
+        self.assertIn("pass-evidence JSON", two_pass)
+        self.assertIn("serialized coarse crossing +/- the configured half-span", two_pass)
+        self.assertIn("agree on DUT, bench, simulator and PVT key", two_pass)
+        self.assertIn("within half a step of the declared endpoints", two_pass)
 
 
 class SchematicOpenLoopAndVersionPolicy(RawAuditCase):
