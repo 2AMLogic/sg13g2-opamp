@@ -1305,6 +1305,18 @@ class OffsetMcStatistics(RawAuditCase):
         with self.assertRaises(generate.SelectionError):
             self.fx.build()
 
+    def test_draws_hash_may_not_be_named_without_its_file(self):
+        del self.fx.selection["records"][self.RECORD]["draws_csv"]
+        self.fx.save_selection()
+        with self.assertRaisesRegex(generate.SelectionError, "draws_csv.*draws_csv_sha256"):
+            self.fx.build()
+
+    def test_draws_path_must_be_a_string(self):
+        self.fx.selection["records"][self.RECORD]["draws_csv"] = 123
+        self.fx.save_selection()
+        with self.assertRaisesRegex(generate.SelectionError, "`draws_csv` must be a path string"):
+            self.fx.build()
+
     def test_statistics_check_requires_a_draws_population(self):
         del self.fx.selection["records"][self.RECORD]["draws_csv"]
         del self.fx.selection["records"][self.RECORD]["draws_csv_sha256"]
@@ -3088,15 +3100,49 @@ class PinnedPopulationNeedsItsAudit(unittest.TestCase):
         ("input-offset-mc", "draws_csv", "offset_mc_statistics"),
     )
 
+    def test_every_population_has_a_missing_audit_refusal_test(self):
+        import selection
+        other_refusal_tests = {
+            "klt_raw": KltRawAudit.test_klt_raw_without_its_audit_is_refused,
+            "offset_klt_raw": OffsetKltAudit.test_offset_klt_raw_without_its_audit_is_refused,
+            "slew_klt": SlewKltAudit.test_envelope_without_its_audit_is_refused,
+            "swing_two_pass": self.test_two_pass_swing_requires_the_swing_audit,
+        }
+        case_keys = {population for _, population, _ in self.CASES}
+        self.assertEqual(case_keys & other_refusal_tests.keys(), set())
+        self.assertEqual(case_keys | other_refusal_tests.keys(), set(selection.POPULATION_AUDITS))
+        for population, refusal_test in other_refusal_tests.items():
+            with self.subTest(population=population):
+                self.assertTrue(callable(refusal_test))
+
     def test_table_covers_every_pinned_population(self):
         import selection
         self.assertEqual(
             set(selection.POPULATION_AUDITS),
-            {"slew_raw", "noise_raw", "swing_raw", "swing_two_pass", "mc_samples", "draws_csv",
-             "slew_klt", "klt_raw", "offset_klt_raw"},
+            set(selection.POPULATION_VALIDATORS),
         )
         for audit in selection.POPULATION_AUDITS.values():
             self.assertIn(audit, selection.DEFINITION_CHECKS)
+
+    def test_validators_table_dispatches_load_selection(self):
+        import selection
+        extra = "extra_noise_pin"
+        with mock.patch.dict(
+            selection.POPULATION_VALIDATORS,
+            {extra: selection._validate_noise_raw_selection},
+        ):
+            self.assertEqual(
+                set(selection.POPULATION_VALIDATORS) - set(selection.POPULATION_AUDITS),
+                {extra},
+            )
+            fx = Fixture()
+            try:
+                fx.selection["records"]["slew-rate"][extra] = "not-an-object"
+                fx.save_selection()
+                with self.assertRaisesRegex(generate.SelectionError, "must be an object"):
+                    fx.build()
+            finally:
+                fx.close()
 
     def test_population_without_its_audit_is_refused(self):
         for record, population, audit in self.CASES:
