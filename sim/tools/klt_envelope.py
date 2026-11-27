@@ -283,7 +283,7 @@ def check_batch_model_inputs(cmrr: dict, psrr: dict) -> None:
 
 
 def exact_pvt_key(corner: dict) -> Key:
-    """Check the measured coordinates before formatting a PVT45 point ID."""
+    """Require a nominal KLT corner whose ID agrees with its measured PVT coordinates."""
     supply = corner.get("supply_v") if isinstance(corner, dict) else None
     if not isinstance(supply, dict):
         raise InputError(f"corner lacks supply_v: {supply!r}")
@@ -295,11 +295,25 @@ def exact_pvt_key(corner: dict) -> Key:
         raise InputError(f"corner {(process, temp, vdd)!r} is outside the expected grid")
     if supply.get("vinp") != vdd / 2:
         raise InputError(f"corner {(process, temp, vdd)!r}: supplies {supply!r} do not put Vcm at VDD/2")
+    nominal_id = f"{process}/vdd={vdd:.3f}_vinp={supply['vinp']:.3f}V/{int(temp)}C"
+    if corner.get("corner_id") != nominal_id:
+        raise InputError(f"corner_id {corner.get('corner_id')!r} disagrees with nominal PVT corner {nominal_id}")
+    for field in ("monte_carlo", "options", "params", "variant", "supply_waveforms"):
+        if corner.get(field) is not None:
+            raise InputError(f"corner {nominal_id}: {field} is outside the nominal PVT grid")
     return process, int(temp), float(vdd)
 
 
-def check_decided_counts(env: dict, expected_count: int) -> None:
-    """The summary counts and status must describe the full population being used."""
+def check_nominal_pvt_summary(env: dict, expected_count: int) -> None:
+    """Require a nominal run with decided counts covering the full population."""
+    if (env.get("environment") or {}).get("monte_carlo") is not None:
+        raise InputError("environment.monte_carlo identifies a sampled run")
+    measurements = env.get("measurements", [])
+    if not isinstance(measurements, list):
+        raise InputError("expected a measurements[] summary")
+    for measurement in measurements:
+        if isinstance(measurement, dict) and measurement.get("monte_carlo") is not None:
+            raise InputError(f"measurement {measurement.get('name')!r} has monte_carlo statistics")
     corners = env.get("corners")
     if not isinstance(corners, list):
         raise InputError("no corners[] array")

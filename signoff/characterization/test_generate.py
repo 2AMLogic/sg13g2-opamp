@@ -2451,6 +2451,33 @@ class CmrrPsrrKltAudit(RawAuditCase):
                     self.edit_env(f"{deck}_request", lambda d: mutate(d["corners"]))
                     self.assert_error(f"{deck} request", axis)
 
+    def test_request_must_select_only_nominal_pvt45(self):
+        for deck in ("cmrr", "psrr"):
+            for field, mutate in (
+                ("exclude", lambda r: r.update(exclude=[{"process": "mos_fs"}])),
+                ("options", lambda r: r["corners"].update(options={"reltol": [0.001, 0.0001]})),
+                ("monte_carlo", lambda r: r.update(monte_carlo={"n": 1, "seed": 23, "vary": "mismatch"})),
+                ("_explicit_points", lambda r: r.update(_explicit_points=[])),
+            ):
+                with self.subTest(deck=deck, field=field):
+                    self.fresh()
+                    self.edit_json(f"{deck}_request", mutate)
+                    self.assert_error(f"{deck} request", field)
+
+    def test_sampled_envelope_cannot_bind_to_a_nominal_request(self):
+        def sampled(doc):
+            doc["environment"]["monte_carlo"] = {"n": 1, "seed": 23, "vary": "mismatch"}
+            for index, corner in enumerate(doc["corners"]):
+                corner["corner_id"] += "/mc0"
+                corner["monte_carlo"] = {"sample_index": 0, "seed": index + 1}
+
+        for deck in ("cmrr", "psrr"):
+            with self.subTest(deck=deck):
+                self.fresh()
+                kind = f"{deck}_envelope"
+                self.edit_json(kind, sampled)
+                self.assert_error(self.raw()["files"][kind]["path"], "environment.monte_carlo", "corner_id")
+
     def test_request_and_reported_measurement_metadata_must_agree(self):
         for deck in ("cmrr", "psrr"):
             for side, field, value in (("request", "unit", "V"), ("envelope", "unit", "V"),

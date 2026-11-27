@@ -31,7 +31,7 @@ from compare_cmrr_direct import (
     check_body_hash, check_conditions, check_stimulus, gain_problems, index_envelope, output_load_f,
 )
 from klt_envelope import (
-    InputError, batch_job_ids, check_decided_counts, exact_pvt_key, expected_keys,
+    InputError, batch_job_ids, check_nominal_pvt_summary, exact_pvt_key, expected_keys,
     key_str, read_envelope, sha256_file,
 )
 
@@ -50,7 +50,7 @@ def load(path: Path, names: tuple, label: str) -> tuple[dict, dict]:
         raise InputError(f"{label}: {path} is not a klt sim envelope")
     if not batch_job_ids(env):
         raise InputError(f"{label}: no environment.remote batch job")
-    check_decided_counts(env, len(expected_keys()))
+    check_nominal_pvt_summary(env, len(expected_keys()))
     for corner in env["corners"]:
         key = exact_pvt_key(corner)
         if corner.get("diagnostics"):

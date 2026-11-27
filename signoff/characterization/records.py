@@ -1018,6 +1018,15 @@ def _check_direct_request_grid(req: dict, deck: str, problems: list) -> None:
     if not isinstance(axes, dict):
         problems.append(f"{deck} request: missing corners axes")
         return
+    extra_axes = axes.keys() - {"process", "temperature_c", "supply_v"}
+    if extra_axes:
+        problems.append(f"{deck} request: unsupported nominal PVT45 axes in corners: {sorted(extra_axes)}")
+    if req.get("exclude") not in (None, []):
+        problems.append(f"{deck} request: nominal PVT45 does not permit exclude rules")
+    for field in ("monte_carlo", "_explicit_points"):
+        if req.get(field) is not None:
+            problems.append(f"{deck} request: {field} overrides the nominal PVT45 population")
+
     def covers(values, expected):
         return (isinstance(values, list) and len(values) == len(expected)
                 and all(values.count(item) == 1 for item in expected))
@@ -1129,7 +1138,7 @@ def _load_cmrr_psrr_klt_population(repo: Path, key: str, ck: dict, expected: lis
             problems.append(f"{label}: no corners[] array")
             continue
         try:
-            klt_envelope.check_decided_counts(env, len(expected_ids))
+            klt_envelope.check_nominal_pvt_summary(env, len(expected_ids))
         except klt_envelope.InputError as exc:
             problems.append(f"{label}: {exc}")
         try:

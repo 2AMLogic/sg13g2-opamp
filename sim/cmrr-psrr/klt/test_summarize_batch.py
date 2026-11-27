@@ -306,6 +306,21 @@ esac
         self.assertIn("duplicate file design/netlist/opamp_core.spice", result.stderr)
         self.assertEqual(list(self.out.iterdir()), [])
 
+    def test_nonnominal_envelope_publishes_neither_file(self):
+        for path in (CMRR, PSRR):
+            for field, mutate in (
+                ("environment.monte_carlo", lambda d: d["environment"].update(
+                    monte_carlo={"n": 1, "seed": 23, "vary": "mismatch"})),
+                ("monte_carlo statistics", lambda d: d["measurements"][0].update(monte_carlo={"n": 45})),
+                ("monte_carlo", lambda d: d["corners"][0].update(monte_carlo={"sample_index": 0, "seed": 23})),
+                ("corner_id", lambda d: d["corners"][0].update(corner_id=d["corners"][0]["corner_id"] + "/mc0")),
+                ("options", lambda d: d["corners"][0].update(options={"reltol": 0.001})),
+            ):
+                with self.subTest(path=path.name, field=field):
+                    doc = json.loads(path.read_text())
+                    mutate(doc)
+                    self.assert_refused(doc, path, field)
+
     def test_extra_supply_axis_publishes_neither_file(self):
         for path in (CMRR, PSRR):
             with self.subTest(path=path.name):
