@@ -65,7 +65,7 @@
             "sim/cmrr-psrr/klt/tb_psrr_direct.body.spice",
             "sim/output-swing/klt/tb_swing.body.spice"
         ],
-        "8": "signoff/characterization/reports/20261125-103815-ae0f7dc.json",
+        "8": "signoff/characterization/reports/20261127-030737-0631fb1.json",
         "9": "signoff/evidence/testbenches.txt",
         "10": "signoff/evidence/hygiene.txt",
         "11": [

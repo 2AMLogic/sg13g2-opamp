@@ -3913,6 +3913,84 @@ class SwingRawAudit(PointRawPinControlMixin, RawAuditCase):
         self.assertIn("non-finite", res.stderr)
 
 
+class SwingTwoPassRendering(unittest.TestCase):
+    """Issue #541: a source that pins `swing_two_pass` -- exactly the three
+    keys records.load_record writes for it -- gets the swing audit-rule
+    paragraph and a provenance cell, as a `swing_raw` source does."""
+
+    RECORD = "output-swing"
+    OTHER = "input-cmr"
+    TITLE = "Output-swing raw-evidence audit"
+    PIN = "sha256:" + "ab" * 32
+
+    @classmethod
+    def setUpClass(cls):
+        cls.committed = generate.build_content(REPO, SELECTION)
+
+    def two_pass(self, status="verified", points=45):
+        return {"status": status, "points": points, "pins_sha256": self.PIN}
+
+    def sources(self):
+        return json.loads(json.dumps(self.committed["sources"]))
+
+    def render(self, sources):
+        content = json.loads(json.dumps(self.committed))
+        content["sources"] = sources
+        return generate.render_markdown(generate.make_report(content, "20260101-000000-abcd", REPO))
+
+    @staticmethod
+    def row(md, record):
+        return next(line for line in md.splitlines() if line.startswith(f"| {record} |"))
+
+    def test_two_pass_only_source_renders_the_rule_and_a_provenance_cell(self):
+        for status in ("verified", "error"):
+            with self.subTest(status=status):
+                sources = self.sources()
+                src = sources[self.RECORD]
+                src.pop("swing_raw", None)
+                src["swing_two_pass"] = self.two_pass(status)
+                md = self.render(sources)
+                self.assertEqual(md.count(self.TITLE), 1)
+                self.assertTrue(
+                    self.row(md, self.RECORD).rstrip().endswith(
+                        f"| 45 pinned coarse/fine pass-evidence pairs (`{self.PIN.split(':', 1)[-1][:12]}`, {status}) |"
+                    ),
+                    self.row(md, self.RECORD),
+                )
+
+    def test_a_second_swing_source_does_not_repeat_the_rule(self):
+        sources = self.sources()
+        sources[self.OTHER]["swing_two_pass"] = self.two_pass(points=1)
+        md = self.render(sources)
+        self.assertEqual(md.count(self.TITLE), 1)
+        self.assertTrue(
+            self.row(md, self.OTHER).rstrip().endswith(
+                f"| 1 pinned coarse/fine pass-evidence pairs (`{self.PIN.split(':', 1)[-1][:12]}`, verified) |"
+            ),
+            self.row(md, self.OTHER),
+        )
+
+    def test_a_source_with_no_swing_evidence_omits_the_rule(self):
+        sources = self.sources()
+        src = sources[self.RECORD]
+        src.pop("swing_raw", None)
+        src.pop("swing_two_pass", None)
+        md = self.render(sources)
+        self.assertNotIn(self.TITLE, md)
+        self.assertTrue(self.row(md, self.RECORD).rstrip().endswith("| — |"), self.row(md, self.RECORD))
+
+    def test_rule_states_both_evidence_shapes(self):
+        rule = self.committed["swing_audit_rule"]
+        archived, two_pass = rule.split("`swing_two_pass`", 1)
+        self.assertIn("one sha256-pinned coarse and one fine transfer-curve wrdata file", archived)
+        self.assertIn("repeated or reversed sweep scales", archived)
+        self.assertIn("mismatched wrdata scale columns", archived)
+        self.assertIn("pass-evidence JSON", two_pass)
+        self.assertIn("serialized coarse crossing +/- the configured half-span", two_pass)
+        self.assertIn("agree on DUT, bench, simulator and PVT key", two_pass)
+        self.assertIn("within half a step of the declared endpoints", two_pass)
+
+
 class SchematicOpenLoopAndVersionPolicy(RawAuditCase):
     """Issue #500: schematic open-loop OP evidence derives directly from pinned
     AC/OP requests, bench, envelopes and matching DUT across all 45 corners
