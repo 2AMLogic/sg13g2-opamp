@@ -1071,6 +1071,59 @@ class RawAuditCase(unittest.TestCase):
         return next(r for r in generate.read_csv_rows(self.fx.csv_path(self.RECORD))[1]
                     if r["point_id"] == (pid or self.POINT))[column]
 
+    def edit_json(self, kind, mutate, repin=True) -> None:
+        pin = self.raw()["files"][kind]
+        path = self.fx.root / pin["path"]
+        doc = json.loads(path.read_text(encoding="utf-8"))
+        mutate(doc)
+        path.write_text(json.dumps(doc), encoding="utf-8")
+        if repin:
+            pin["sha256"] = generate.sha256_file(path)
+            self.fx.save_selection()
+
+    def add_klt_dut_copy(self, kind):
+        def add_copy(doc):
+            closure = doc["environment"]["netlist_closure"]
+            dut = next(entry for entry in closure if entry["path"] == "design/netlist/opamp_core.spice")
+            closure.append(dict(dut, path="copy/opamp_core.spice"))
+
+        self.edit_json(kind, add_copy)
+
+    def assert_malformed_klt_closure_rejected(self, kind):
+        self.edit_json(kind, lambda doc: doc["environment"]["netlist_closure"].append(None))
+        content = self.fx.build()
+        self.assertEqual(content["sources"][self.RECORD][self.RAW_KEY]["status"], "error")
+        errors = self.errors(content)
+        self.assertTrue(any("malformed netlist_closure entry" in e for e in errors), errors)
+
+    def assert_klt_optional_object(self, kind, path, invalid_string):
+        *parents, field = path.split(".")
+
+        def parent(doc):
+            for key in parents:
+                doc = doc.setdefault(key, {})
+            return doc
+
+        for value in (invalid_string, [], None):
+            with self.subTest(kind=kind, path=path, value=value):
+                self.edit_json(kind, lambda doc, value=value: parent(doc).update({field: value}))
+                content = self.fx.build()
+                audit = content["sources"][self.RECORD][self.RAW_KEY]
+                if value is None:
+                    self.assertEqual(audit["status"], "verified")
+                else:
+                    self.assertEqual(audit["status"], "error")
+                    errors = self.errors(content)
+                    self.assertTrue(any(f"{path} must be an object" in e for e in errors), errors)
+
+        with self.subTest(kind=kind, missing=path):
+            self.edit_json(kind, lambda doc: parent(doc).pop(field))
+            self.assertEqual(self.fx.build()["sources"][self.RECORD][self.RAW_KEY]["status"], "verified")
+
+    def assert_klt_worker_simulator_validation(self, kind):
+        self.assert_klt_optional_object(kind, "environment.remote.worker_environment.simulator", "ngspice-460")
+        self.assert_klt_optional_object(kind, "environment.remote.worker_environment", "legacy-worker")
+
     def _edit_pinned_lines(self, entry, transform, repin=True) -> None:
         path = self.fx.root / entry["path"]
         lines = path.read_text(encoding="utf-8").splitlines()
@@ -1756,16 +1809,6 @@ class KltRawAudit(RawAuditCase):
     KEEP_AUDIT = "keep_klt_audit"
     RAW_KEY = "klt_raw"
 
-    def edit_json(self, kind, mutate, repin=True) -> None:
-        pin = self.raw()["files"][kind]
-        path = self.fx.root / pin["path"]
-        doc = json.loads(path.read_text(encoding="utf-8"))
-        mutate(doc)
-        path.write_text(json.dumps(doc), encoding="utf-8")
-        if repin:
-            pin["sha256"] = generate.sha256_file(path)
-            self.fx.save_selection()
-
     def edit_text(self, kind, transform, repin=True) -> None:
         pin = self.raw()["files"][kind]
         path = self.fx.root / pin["path"]
@@ -1901,7 +1944,7 @@ class KltRawAudit(RawAuditCase):
 
     def test_corner_diagnostics_are_rejected(self):
         self.edit_json("ac", lambda d: self.corner(d).update(diagnostics=[{"code": "nonconvergence"}]))
-        self.assert_error("is not a clean pass")
+        self.assert_error("is not a decided corner")
 
     def test_non_finite_raw_value_is_rejected(self):
         self.edit_json("ac", lambda d: self.set_value(d, "gbw_hz", None))
@@ -1948,6 +1991,20 @@ class KltRawAudit(RawAuditCase):
     def test_wrong_model_deck_is_rejected(self):
         self.edit_json("ac", lambda d: d["environment"].update(models_lib_sha256="0" * 64))
         self.assert_error("model deck")
+
+    def test_malformed_closure_entry_is_rejected(self):
+        for kind in ("ac", "op"):
+            with self.subTest(kind=kind):
+                self.fresh()
+                self.assert_malformed_klt_closure_rejected(kind)
+
+    def test_engine_build_is_an_optional_object(self):
+        for kind in ("ac", "op"):
+            self.assert_klt_optional_object(kind, "environment.engine_build", "legacy-build")
+
+    def test_worker_simulator_metadata_is_optional(self):
+        for kind in ("ac", "op"):
+            self.assert_klt_worker_simulator_validation(kind)
 
     def test_simulated_dut_must_be_the_selected_snapshot(self):
         snap = self.fx.root / self.fx.selection["records"][self.RECORD]["netlist_snapshot"]
@@ -2167,7 +2224,7 @@ class OffsetKltAudit(RawAuditCase):
         self.rawfile("null").write_text(json.dumps(doc), encoding="utf-8")
         self.raw()["files"]["null"]["sha256"] = generate.sha256_file(self.rawfile("null"))
         self.fx.save_selection()
-        self.assert_error("is not a completed run")
+        self.assert_error("is not a decided corner")
 
     def test_non_finite_raw_value_is_rejected(self):
         self.edit_envelope("null", self.POINT, "vos_null_v", None)
@@ -2187,10 +2244,71 @@ class OffsetKltAudit(RawAuditCase):
             doc["environment"]["engine_version"] = "45"
             banner = doc["environment"]["remote"]["worker_environment"]["simulator"]["version_banner"]
             doc["environment"]["remote"]["worker_environment"]["simulator"]["version_banner"] = banner.replace("ngspice-47", "ngspice-45")
+            if (doc["environment"].get("engine_build") or {}).get("version_banner"):
+                doc["environment"]["engine_build"]["version_banner"] = (
+                    doc["environment"]["engine_build"]["version_banner"].replace("ngspice-47", "ngspice-45")
+                )
             self.rawfile(kind).write_text(json.dumps(doc), encoding="utf-8")
             self.raw()["files"][kind]["sha256"] = generate.sha256_file(self.rawfile(kind))
         self.fx.save_selection()
-        self.assert_error("below the sim/pdk.json toolchain floor")
+        self.assert_error("rejected by sim/pdk.json")
+
+    def test_missing_passed_count_is_rejected_without_crashing(self):
+        doc = json.loads(self.rawfile("null").read_text(encoding="utf-8"))
+        doc.pop("passed", None)
+        self.rawfile("null").write_text(json.dumps(doc), encoding="utf-8")
+        self.raw()["files"]["null"]["sha256"] = generate.sha256_file(self.rawfile("null"))
+        self.fx.save_selection()
+        self.assert_error("offset klt raw evidence", "passed=None")
+
+    def test_version_prefix_and_engine_build_banner_mismatch_are_rejected(self):
+        # Prefix match ("ngspice-470" contains "ngspice-47") must not satisfy version "47".
+        doc = json.loads(self.rawfile("null").read_text(encoding="utf-8"))
+        sim = doc["environment"]["remote"]["worker_environment"]["simulator"]
+        sim["version_banner"] = sim["version_banner"].replace("ngspice-47", "ngspice-470")
+        self.rawfile("null").write_text(json.dumps(doc), encoding="utf-8")
+        self.raw()["files"]["null"]["sha256"] = generate.sha256_file(self.rawfile("null"))
+        self.fx.save_selection()
+        self.assert_error("worker banner does not name ngspice-47")
+
+        # engine_build.version_banner must also agree with engine_version.
+        self.fresh()
+        doc = json.loads(self.rawfile("cl").read_text(encoding="utf-8"))
+        doc["environment"]["engine_build"]["version_banner"] = "** ngspice-46 : mismatch"
+        self.rawfile("cl").write_text(json.dumps(doc), encoding="utf-8")
+        self.raw()["files"]["cl"]["sha256"] = generate.sha256_file(self.rawfile("cl"))
+        self.fx.save_selection()
+        self.assert_error("engine_build banner does not name ngspice-47")
+
+    def test_malformed_closure_entry_is_rejected(self):
+        for kind in ("null", "cl"):
+            with self.subTest(kind=kind):
+                self.fresh()
+                self.assert_malformed_klt_closure_rejected(kind)
+
+    def test_engine_build_is_an_optional_object(self):
+        for kind in ("null", "cl"):
+            self.assert_klt_optional_object(kind, "environment.engine_build", "legacy-build")
+
+    def test_worker_simulator_metadata_is_optional(self):
+        for kind in ("null", "cl"):
+            self.assert_klt_worker_simulator_validation(kind)
+
+    def test_bench_dut_is_verified_against_a_renamed_snapshot(self):
+        record = self.fx.selection["records"][self.RECORD]
+        snapshot = self.fx.root / record["netlist_snapshot"]
+        renamed = snapshot.rename(snapshot.with_name("offset-snapshot.spice"))
+        record["netlist_snapshot"] = renamed.relative_to(self.fx.root).as_posix()
+        self.fx.save_selection()
+
+        content = self.fx.build()
+        self.assertEqual(self.errors(content), [])
+        audit = content["sources"][self.RECORD][self.RAW_KEY]
+        self.assertEqual((audit["status"], audit["points"]), ("verified", 45))
+
+    def test_multiple_bench_dut_entries_are_rejected_even_with_the_same_hash(self):
+        self.add_klt_dut_copy("null")
+        self.assert_error("is not the selected netlist snapshot")
 
     def test_simulated_dut_must_be_the_selected_snapshot(self):
         # A comment-only touch leaves the normalized (design-identity) hash
@@ -2629,14 +2747,7 @@ class SlewKltAudit(RawAuditCase):
         self.fx.save_selection()
 
     def edit_env(self, mutate, kind="envelope", repin=True) -> None:
-        pin = self.raw()["files"][kind]
-        path = self.fx.root / pin["path"]
-        doc = json.loads(path.read_text(encoding="utf-8"))
-        mutate(doc)
-        path.write_text(json.dumps(doc), encoding="utf-8")
-        if repin:
-            pin["sha256"] = generate.sha256_file(path)
-            self.fx.save_selection()
+        self.edit_json(kind, mutate, repin)
 
     def corner(self, doc, pid=None):
         pid = pid or self.POINT
@@ -2696,6 +2807,7 @@ class SlewKltAudit(RawAuditCase):
             ("vinn_max_v", "max v(inn)", "min v(inn)"),
             ("vout_dc_v", "at=0", "at=1n"),
             ("op_vout_rail_frac", "v(fout)", "v(fd1)"),
+            ("vibias_dc_v", "v(ibias)", "v(tail)"),
         ):
             with self.subTest(name=name):
                 self.fx.close()
@@ -2705,6 +2817,27 @@ class SlewKltAudit(RawAuditCase):
 
     def test_every_limited_measurement_has_a_pinned_definition(self):
         self.assertLessEqual(set(common.SLEW_KLT_LIMITS), set(common.SLEW_KLT_SPICE))
+
+    def test_record_pinning_both_waveform_and_envelope_passes(self):
+        """Positive control for the `sk is not None and sr is None` guard
+        (issue #532): slew_raw kept beside slew_klt, both audits declared and
+        the waveform-only columns left in the CSV."""
+        self.fresh()
+        rec = self.fx.selection["records"][self.RECORD]
+        self.assertIn("slew_raw", rec)
+        pins = {}
+        for kind, rel in self.FILES.items():
+            dst = self.fx.root / rel
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(REPO / rel, dst)
+            pins[kind] = {"path": rel, "sha256": generate.sha256_file(dst)}
+        rec["definition_checks"] = ["slew_worse_edge", "slew_raw_audit", "slew_klt_audit"]
+        rec["slew_klt"] = {"files": pins}
+        self.fx.save_selection()
+        header = self.fx.csv_path(self.RECORD).read_text(encoding="utf-8").splitlines()[0].split(",")
+        for col in self.WAVEFORM_ONLY:
+            self.assertIn(col, header)
+        self.assertEqual(self.errors(self.fx.build()), [])
 
     # --- same-DUT control ----------------------------------------------------
 
@@ -2850,6 +2983,25 @@ class SlewKltAudit(RawAuditCase):
         self.edit_env(mutate)
         self.assert_error("drive_pass '1' but the pinned envelope's reported quantities")
 
+    def test_malformed_closure_entry_is_rejected(self):
+        self.assert_malformed_klt_closure_rejected("envelope")
+
+    def test_engine_build_is_an_optional_object(self):
+        self.assert_klt_optional_object("envelope", "environment.engine_build", "legacy-build")
+
+    def test_worker_simulator_metadata_is_optional(self):
+        self.assert_klt_worker_simulator_validation("envelope")
+
+    def test_all_matching_dut_paths_must_have_the_snapshot_hash(self):
+        self.add_klt_dut_copy("envelope")
+        content = self.fx.build()
+        self.assertEqual(self.errors(content), [])
+        audit = content["sources"][self.RECORD][self.RAW_KEY]
+        self.assertEqual((audit["status"], audit["points"]), ("verified", 45))
+
+        self.edit_env(lambda doc: doc["environment"]["netlist_closure"][-1].update(sha256="0" * 64))
+        self.assert_error("is not the selected netlist snapshot")
+
     def test_stale_dut_hash(self):
         def mutate(doc):
             for c in doc["environment"]["netlist_closure"]:
@@ -2880,6 +3032,20 @@ class SlewKltAudit(RawAuditCase):
             remote.setdefault("worker_environment", {}).setdefault("simulator", {})["version_banner"] = "ngspice-45 : x"
         self.edit_env(mutate)
         self.assert_error("contradictory simulator version")
+
+    def test_version_prefix_and_engine_build_banner_mismatch_are_rejected(self):
+        # Prefix match ("ngspice-460" contains "ngspice-46") must not satisfy version "46".
+        def set_prefix(doc):
+            remote = doc["environment"]["remote"]
+            remote.setdefault("worker_environment", {}).setdefault("simulator", {})["version_banner"] = "ngspice-460 : x"
+        self.edit_env(set_prefix)
+        self.assert_error("worker banner does not name ngspice-46", "contradictory simulator version")
+
+        # engine_build.version_banner must also agree with engine_version.
+        self.fx.close()
+        self.setUp()
+        self.edit_env(lambda d: d["environment"].update(engine_build={"version_banner": "** ngspice-45 : mismatch"}))
+        self.assert_error("engine_build banner does not name ngspice-46", "contradictory simulator version")
 
     def test_envelope_version_must_match_the_record_prose(self):
         self.edit_env(lambda d: d["environment"].update(engine_version="45"))
@@ -2921,6 +3087,56 @@ class SlewKltAudit(RawAuditCase):
         self.assertEqual(self.errors(content), [])
         row = rows_by_id(content)["slew_rate"]
         self.assertEqual((row["verdict"], row["measured_worst"]["point"]), ("FAIL", self.POINT))
+
+
+class PinnedPopulationNeedsItsAudit(unittest.TestCase):
+    """population => check (issue #533): a record that pins a raw population
+    must run the definition check that audits it, for every population in
+    `selection.POPULATION_AUDITS`, not only the klt ones."""
+
+    # (record, population, audit) for each population the committed selection pins.
+    CASES = (
+        ("slew-rate", "slew_raw", "slew_raw_audit"),
+        ("input-noise", "noise_raw", "noise_raw_audit"),
+        ("output-swing", "swing_raw", "swing_raw_audit"),
+        ("cmrr-mismatch", "mc_samples", "cmrr_mc_statistics"),
+        ("input-offset-mc", "draws_csv", "offset_mc_statistics"),
+    )
+
+    def test_table_covers_every_pinned_population(self):
+        import selection
+        self.assertEqual(
+            set(selection.POPULATION_AUDITS),
+            {"slew_raw", "noise_raw", "swing_raw", "mc_samples", "draws_csv",
+             "slew_klt", "klt_raw", "offset_klt_raw"},
+        )
+        for audit in selection.POPULATION_AUDITS.values():
+            self.assertIn(audit, selection.DEFINITION_CHECKS)
+
+    def test_population_without_its_audit_is_refused(self):
+        for record, population, audit in self.CASES:
+            with self.subTest(population=population):
+                fx = Fixture()
+                try:
+                    rec = fx.selection["records"][record]
+                    self.assertIn(population, rec)
+                    rec["definition_checks"] = [c for c in rec["definition_checks"] if c != audit]
+                    fx.save_selection()
+                    with self.assertRaisesRegex(generate.SelectionError, "never pinned and then ignored"):
+                        fx.build()
+                finally:
+                    fx.close()
+
+    def test_one_audit_does_not_cover_a_second_population(self):
+        fx = Fixture()
+        try:
+            slew = fx.selection["records"]["slew-rate"]
+            slew["noise_raw"] = fx.selection["records"]["input-noise"]["noise_raw"]
+            fx.save_selection()
+            with self.assertRaisesRegex(generate.SelectionError, "noise_raw_audit"):
+                fx.build()
+        finally:
+            fx.close()
 
 
 class SwingRawAudit(PointRawPinControlMixin, RawAuditCase):

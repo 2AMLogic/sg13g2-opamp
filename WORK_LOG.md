@@ -6,8 +6,26 @@
 
 - [2026-09](work_log/WORK_LOG_2026-09.md)
 
+### 2026-11-26
+
+- **PR #544**: refactor: share batch klt envelope validation helpers and drop dead constants
+- **Issue #543** (closed): Factor duplicated batch klt envelope loaders and drop two unused constants in signoff/characterization/records.py
+
 ### 2026-11-25
 
+- **Issue #532** (closed): Pin vibias_dc_v's slew_klt definition, and cover the both-pinned slew record with a test
+- **PR #535**: test: pin vibias_dc_v slew request and add both-pinned slew control
+- **Issue #530** (closed): Fourth ngspice envelope carrier (3h offset_klt_raw) does not use _carry_ngspice_version
+- **PR #536**: refactor: route offset klt ngspice version through shared carrier
+- **Issue #529** (closed): Carry #525's unmeasured external-mkdir diagnostic forward, and fix the two interpretation comments PR #526 left stale
+- **PR #537**: docs: align reservation-race diagnostics with os.mkdir claim primitive
+- **Issue #533** (closed): Enforce "pinned evidence is never ignored" for all 7 populations, not just slew_klt and klt_raw
+- **PR #534**: fix: refuse any pinned raw population whose audit does not run
+- **PR #512**: feat(sim): pair and audit two-pass swing batch evidence offline
+- **Issue #513** (closed): Close two residual coverage gaps in the batch-envelope audits (slew_klt, klt_raw)
+- **PR #520**: feat(signoff): pin every slew_klt measurement and refuse pure-batch records with unaudited columns
+- **Issue #523** (closed): Factor the duplicated ngspice envelope carrier in records.py into one helper
+- **PR #527**: refactor: share envelope ngspice carrier between slew and klt_raw
 - **PR #526**: fix: claim record reservations via os.mkdir instead of the mkdir binary
 - **Issue #525** (closed): test flake (6th; uutils mkdir returns 0 twice for one inode): test_overlapping_starts_give_exactly_one_owner fails on T1 signoff register
 - **PR #509**: feat(signoff): select input-offset record from same-DUT batch evidence

@@ -36,13 +36,13 @@ Human-approved issues ready for implementation (`loom:issue`).
 
 - **#332**: DR-0011: re-derive CMRR bound, re-check gain/swing vs market comps, restate swing headroom (PR #303 operator ruling)
 - **#428**: sim preflight: on batch-fleet runs take OSDI identity from the runner-reported digests, not a locally built .build-manifest, then write the #325 input-cmr record
-- **#429**: post-layout: attribute the klt 0.9.0 extracted phase-margin miss (ff / 1.32 V / 125 C) and the tt / 1.08 V / 27 C non-convergence, then route #312 to a design or klt follow-up
 
 ## In Progress
 
 Issues currently being built (`loom:building`).
 
-_None._
+- **#503**: Reproduce the output-swing audit from batch DC sweeps
+- **#514**: Bind batch CMRR and PSRR envelopes into the cmrr-psrr characterization record
 
 ## PRs Awaiting Review
 
@@ -57,6 +57,8 @@ PRs that passed review and are queued for Champion auto-merge (`loom:pr`).
 - **#303**: docs: submit DR-0011 for two-key ratification (status flip)
 - **#333**: docs(DR-0011): revision 5 restates swing as output range, discloses CMRR/gain gaps
 - **#490**: docs: record the open TT tie measurements and replacement procedure
+- **#528**: characterization: bind batch CMRR/PSRR envelopes behind a cmrr_psrr_klt audit
+- **#538**: feat(signoff): admit batch two-pass swing evidence via swing_raw_audit
 
 ## Proposed
 
@@ -72,6 +74,10 @@ Issues carrying `loom:curated`.
 - **#342**: design: raise PSRR+ via bias/topology change, re-run 45 corners, carry bounds into spec (PR #303 operator ruling) *(curated)*
 - **#429**: post-layout: attribute the klt 0.9.0 extracted phase-margin miss (ff / 1.32 V / 125 C) and the tt / 1.08 V / 27 C non-convergence, then route #312 to a design or klt follow-up *(curated)*
 - **#435**: Resubmit the 1 MΩ and 1 GΩ TT substrate-tie probes and record the results on PR #431 *(curated)*
+- **#502**: Reproduce the input-noise spectrum audit from a batch run *(curated)*
+- **#503**: Reproduce the output-swing audit from batch DC sweeps *(curated)*
+- **#505**: Measure systematic CMRR and PSRR+ for the same DUT on the batch fleet *(curated)*
+- **#514**: Bind batch CMRR and PSRR envelopes into the cmrr-psrr characterization record *(curated)*
 
 ## Proposed (Architect / Hermit)
 
@@ -88,11 +94,11 @@ _None._
 | Operator merge-risk holds | 1 |
 | Very important | 2 |
 | Important | 9 |
-| Ready (`loom:issue`) | 3 |
-| In Progress (`loom:building`) | 0 |
+| Ready (`loom:issue`) | 2 |
+| In Progress (`loom:building`) | 2 |
 | PRs awaiting review | 0 |
-| Approved PRs awaiting merge | 3 |
-| Curated | 10 |
+| Approved PRs awaiting merge | 5 |
+| Curated | 14 |
 | Architect / Hermit proposals | 1 |
 | Active epics | 0 |
 <!-- guide:plan-body:end -->
