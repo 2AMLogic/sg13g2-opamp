@@ -2315,23 +2315,35 @@ class CmrrPsrrKltAudit(RawAuditCase):
         self.edit_env("psrr_body", lambda t: t + "* edited after the run\n")
         self.assert_error("is not the pinned")
 
+    def edit_simulated_body(self, deck, mutate):
+        self.edit_env(f"{deck}_body", mutate)
+        pin = self.raw()["files"][f"{deck}_body"]
+
+        def repin_body(doc):
+            env = doc["environment"]
+            entry = next(e for e in env["netlist_closure"] if e["path"] == pin["path"])
+            entry["sha256"] = env["netlist_sha256"] = pin["sha256"].removeprefix("sha256:")
+            doc["provenance"]["input"]["content_hash"] = pin["sha256"]
+
+        self.edit_env(f"{deck}_envelope", repin_body)
+
     def test_swapped_stimulus_in_a_pinned_bench_is_an_error(self):
         for deck, other in (("psrr", "cmrr"), ("cmrr", "psrr")):
             with self.subTest(deck=deck):
                 self.fresh()
                 pins = self.raw()["files"]
                 other_body = self.fx.root / pins[f"{other}_body"]["path"]
-                self.edit_env(f"{deck}_body", lambda _: other_body.read_text())
-                pin = pins[f"{deck}_body"]
-
-                def repin_body(doc):
-                    env = doc["environment"]
-                    entry = next(e for e in env["netlist_closure"] if e["path"] == pin["path"])
-                    entry["sha256"] = env["netlist_sha256"] = pin["sha256"].removeprefix("sha256:")
-                    doc["provenance"]["input"]["content_hash"] = pin["sha256"]
-
-                self.edit_env(f"{deck}_envelope", repin_body)
+                self.edit_simulated_body(deck, lambda _: other_body.read_text())
                 self.assert_error(f"stimulus check: {deck.upper()} body")
+
+    def test_miswired_inverting_input_capacitor_is_an_error(self):
+        for deck, copy_b in (("cmrr", "Ccmb innb inpb 1"), ("psrr", "Cinnb_acgnd innb vss 1")):
+            for card in ("Cinna_acgnd inna vss 1", copy_b):
+                with self.subTest(deck=deck, card=card):
+                    self.fresh()
+                    name, node, _, _ = card.split()
+                    self.edit_simulated_body(deck, lambda text: text.replace(card, f"{name} {node} vdd 1"))
+                    self.assert_error(f"{deck.upper()} body: {node}")
 
     def test_halved_stimulus_with_consistent_gains_is_an_error(self):
         bench = REPO / "sim/cmrr-psrr/klt"

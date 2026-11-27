@@ -111,6 +111,20 @@ class CompareCmrrDirect(unittest.TestCase):
             with self.subTest(source=label), self.assertRaisesRegex(InputError, label + " must drive"):
                 C.check_stimulus(cmrr, psrr)
 
+    def test_input_coupling_requires_one_top_level_unit_capacitor(self):
+        card = "Cinna_acgnd inna vss 1"
+        for replacement in (
+            card + "m $ 1 F",
+            card + "\nCextra inna inpa 1",
+            ".subckt unused inna vss\n" + card + "\n.ends",
+            ".if (0)\n" + card + "\n.endif",
+            card + "\n.if (1)\nCextra inna inpa 1\n.endif",
+        ):
+            with self.subTest(replacement=replacement), self.assertRaisesRegex(InputError, "CMRR body: inna"):
+                C.check_stimulus(self.cbody.replace(card, replacement), self.pbody)
+        reversed_pins = "Cinna_acgnd VSS INNA\n+ 1.0E0 $ 1 F"
+        C.check_stimulus(self.cbody.replace(card, reversed_pins), self.pbody)
+
     def test_swapped_stimulus_values_are_out_of_tolerance(self):
         env = copy.deepcopy(self.cmrr)
         for i, c in enumerate(env["corners"]):  # copy B excited by the supply: Acm0 reads Avs0

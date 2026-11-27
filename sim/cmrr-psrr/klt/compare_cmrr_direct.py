@@ -167,17 +167,27 @@ def gain_problems(cmrr: dict, psrr: dict) -> list[str]:
     return problems
 
 
-_AC_NUMBER = re.compile(r"[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:e[+-]?[0-9]+)?", re.I)
+_NUMBER = re.compile(r"[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:e[+-]?[0-9]+)?", re.I)
 
 
-def _check_ac_sources(body: str, deck: str, expected: dict[str, str], problems: list[str]) -> None:
-    # Only source cards drive the AC solve. Comments can also mention "ac 1".
+def _is_one(value: str) -> bool:
+    try:
+        return bool(_NUMBER.fullmatch(value)) and Decimal(value) == 1
+    except InvalidOperation:
+        return False
+
+
+def _card_fields(body: str) -> list[list[str]]:
+    """Tokenize logical cards after stripping inline comments and joining continuations."""
     cards = re.sub(r"(?:\$|;|//).*", "", body)
     cards = re.sub(r"\n[ \t]*\+", " ", cards)
+    return [line.split() for line in cards.lower().splitlines() if line.strip()]
+
+
+def _check_ac_sources(cards: list[list[str]], deck: str, expected: dict[str, str], problems: list[str]) -> None:
     sources = []
-    for line in cards.lower().splitlines():
-        fields = line.split()
-        if not fields or fields[0][0] not in "vi" or "ac" not in fields[3:]:
+    for fields in cards:
+        if fields[0][0] not in "vi" or "ac" not in fields[3:]:
             continue
         name = fields[0]
         sources.append(name)
@@ -189,25 +199,53 @@ def _check_ac_sources(body: str, deck: str, expected: dict[str, str], problems: 
             problems.append(f"{deck} body: {label} must drive {terminals}")
         ac = fields.index("ac", 3)
         magnitude = fields[ac + 1] if ac + 1 < len(fields) else ""
-        try:
-            unit = bool(_AC_NUMBER.fullmatch(magnitude)) and Decimal(magnitude) == 1
-        except InvalidOperation:
-            unit = False
-        if fields[3:].count("ac") != 1 or not unit:
+        if fields[3:].count("ac") != 1 or not _is_one(magnitude):
             problems.append(f"{deck} body: {label} must have unit AC magnitude (got {magnitude!r})")
     if sorted(sources) != sorted(expected):
         problems.append(f"{deck} body AC sources are {sorted(sources)}, need exactly {sorted(expected)}")
 
 
+def _check_input_coupling(cards: list[list[str]], deck: str, copy_b_reference: str, problems: list[str]) -> None:
+    """Require exactly one unconditional 1 F bench capacitor on each inverting input."""
+    references = {"inna": "vss", "innb": copy_b_reference}
+    connections = {node: [] for node in references}
+    nested = conditional = 0
+    for fields in cards:
+        name = fields[0]
+        if name in (".subckt", ".control"):
+            nested += 1
+        elif name in (".ends", ".endc"):
+            nested -= 1
+        elif nested:
+            continue
+        elif name == ".end":
+            break
+        elif name == ".if":
+            conditional += 1
+        elif name == ".endif":
+            conditional -= 1
+        elif name.startswith("c"):
+            for node, reference in references.items():
+                if node in fields[1:3]:
+                    valid = (conditional == 0 and len(fields) == 4
+                             and reference in fields[1:3] and _is_one(fields[3]))
+                    connections[node].append(valid)
+    for node, reference in references.items():
+        if connections[node] != [True]:
+            problems.append(f"{deck} body: {node} must connect through one 1 F capacitor to {reference}")
+
+
 def check_stimulus(cmrr_body: str, psrr_body: str) -> None:
-    """Each measured output gain assumes a unit AC source on the intended nodes."""
+    """Check each gain's unit excitation and inverting-input AC connection."""
     problems = []
-    _check_ac_sources(cmrr_body, "CMRR", {"vinp": "inpa 0", "vcmb": "inpb midb"}, problems)
-    _check_ac_sources(psrr_body, "PSRR", {"vinp": "inpa 0", "vsrip": "vddb vdd"}, problems)
+    cmrr = _card_fields(cmrr_body)
+    psrr = _card_fields(psrr_body)
+    _check_ac_sources(cmrr, "CMRR", {"vinp": "inpa 0", "vcmb": "inpb midb"}, problems)
+    _check_ac_sources(psrr, "PSRR", {"vinp": "inpa 0", "vsrip": "vddb vdd"}, problems)
+    _check_input_coupling(cmrr, "CMRR", "inpb", problems)
+    _check_input_coupling(psrr, "PSRR", "vss", problems)
     if not re.search(r"^Vcmb\s+inpb\s+midb\s+dc\s+0\s+ac\s+1\s*$", cmrr_body, re.M | re.I):
         problems.append("CMRR body: common-mode source must be `Vcmb inpb midb dc 0 ac 1` (input of copy B)")
-    if not re.search(r"^Ccmb\s+innb\s+inpb\s+1\s*$", cmrr_body, re.M | re.I):
-        problems.append("CMRR body: inn of copy B must follow inp through `Ccmb innb inpb 1`")
     if re.search(r"^Vsrip\b", cmrr_body, re.M | re.I):
         problems.append("CMRR body carries a supply AC source (Vsrip): swapped stimulus")
     if re.search(r"^Vcmb\b", psrr_body, re.M | re.I):

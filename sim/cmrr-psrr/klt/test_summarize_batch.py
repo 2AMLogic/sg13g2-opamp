@@ -203,6 +203,15 @@ esac
                 body = (HERE / f"tb_{other}_direct.body.spice").read_text()
                 self.assert_body_refused(path, body, f"stimulus check: {deck} body")
 
+    def test_missing_inverting_input_capacitor_publishes_neither_file(self):
+        for path, deck, copy_b in ((CMRR, "CMRR", "Ccmb innb inpb 1"), (PSRR, "PSRR", "Cinnb_acgnd innb vss 1")):
+            body = (HERE / f"tb_{deck.lower()}_direct.body.spice").read_text()
+            for card in ("Cinna_acgnd inna vss 1", copy_b):
+                with self.subTest(deck=deck, card=card):
+                    self.assertIn(card, body)
+                    self.assert_body_refused(path, body.replace(card, "* " + card),
+                                             f"{deck} body: {card.split()[1]}")
+
     def test_halved_stimulus_publishes_neither_file(self):
         for source, paths in (("Vsrip", (PSRR,)), ("Vinp", (CMRR, PSRR))):
             with self.subTest(source=source):
