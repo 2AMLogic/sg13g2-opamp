@@ -178,6 +178,27 @@ esac
                         doc["netlist"]["path"] = "other/" + Path(rel).name
                     self.assert_refused(doc, path, "netlist_closure" if field == "all hashes" else field)
 
+    def assert_body_refused(self, path, body_text, reason):
+        doc = json.loads(path.read_text())
+        rel = doc["netlist"]["path"]
+        body = self.root / rel
+        body.write_text(body_text)
+        digest = hashlib.sha256(body.read_bytes()).hexdigest()
+        env = doc["environment"]
+        next(e for e in env["netlist_closure"] if e["path"] == rel)["sha256"] = digest
+        env["netlist_sha256"] = digest
+        doc["provenance"]["input"]["content_hash"] = "sha256:" + digest
+        try:
+            self.assert_refused(doc, path, reason)
+        finally:
+            shutil.copyfile(HERE / body.name, body)
+
+    def test_swapped_stimulus_publishes_neither_file(self):
+        for path, deck, other in ((PSRR, "PSRR", "cmrr"), (CMRR, "CMRR", "psrr")):
+            with self.subTest(deck=deck):
+                body = (HERE / f"tb_{other}_direct.body.spice").read_text()
+                self.assert_body_refused(path, body, f"stimulus check: {deck} body")
+
     def test_matching_body_hashes_require_two_2pf_output_loads(self):
         for path in (CMRR, PSRR):
             original = json.loads(path.read_text())["netlist"]["path"]
@@ -189,15 +210,7 @@ esac
                     ("duplicated A", committed.replace("Cloadb outb", "Cloada outa")),
                     ("wrong output", committed.replace("Cloadb outb", "Cloadb outa"))):
                 with self.subTest(path=path.name, case=name):
-                    body.write_text(altered)
-                    doc = json.loads(path.read_text())
-                    digest = hashlib.sha256(body.read_bytes()).hexdigest()
-                    env = doc["environment"]
-                    next(e for e in env["netlist_closure"] if e["path"] == original)["sha256"] = digest
-                    env["netlist_sha256"] = digest
-                    doc["provenance"]["input"]["content_hash"] = "sha256:" + digest
-                    self.assert_refused(doc, path, "2 pF")
-            body.write_text(committed)
+                    self.assert_body_refused(path, altered, "2 pF")
 
     def test_model_input_mismatch_publishes_neither_file(self):
         for path in (CMRR, PSRR):

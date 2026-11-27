@@ -1044,15 +1044,16 @@ def _load_cmrr_psrr_klt_population(repo: Path, key: str, ck: dict, expected: lis
         if not path.is_file():
             errors.append(f"record {key}: missing batch cmrr-psrr artifact {kind} {pin['path']}")
             continue
-        actual = sha256_file(path)
-        if actual != pin["sha256"]:
-            errors.append(
-                f"record {key}: {pin['path']} does not match its selection pin "
-                f"(pinned {pin['sha256']}, actual {actual}) -- re-select deliberately, never re-read silently"
-            )
-            continue
         try:
-            text = path.read_text(encoding="utf-8")
+            data = path.read_bytes()
+            actual = sha256_bytes(data)
+            if actual != pin["sha256"]:
+                errors.append(
+                    f"record {key}: {pin['path']} does not match its selection pin "
+                    f"(pinned {pin['sha256']}, actual {actual}) -- re-select deliberately, never re-read silently"
+                )
+                continue
+            text = data.decode("utf-8")
             docs[kind] = text if kind.endswith("_body") else json.loads(text)
         except (OSError, UnicodeDecodeError, ValueError) as exc:
             errors.append(f"record {key}: cannot read {pin['path']} ({exc})")
@@ -1205,6 +1206,10 @@ def _load_cmrr_psrr_klt_population(repo: Path, key: str, ck: dict, expected: lis
                        "cload_f": float(cload) if cload is not None else None}
     if len(decks) == 2:
         a, b = decks["cmrr"], decks["psrr"]
+        try:
+            cmrr_direct.check_stimulus(docs["cmrr_body"], docs["psrr_body"])
+        except klt_envelope.InputError as exc:
+            problems.append(str(exc))
         try:
             klt_envelope.check_batch_model_inputs(docs["cmrr_envelope"], docs["psrr_envelope"])
         except klt_envelope.InputError as exc:
