@@ -32,7 +32,8 @@ class BatchRecordWriter(unittest.TestCase):
         (bench.parent / "tools").symlink_to(HERE.parents[1] / "tools")
         (bench / "netlist-snapshots").symlink_to(HERE.parent / "netlist-snapshots")
         for name in ("summarize_batch.py", "compare_cmrr_direct.py",
-                     "tb_cmrr_direct.body.spice", "tb_psrr_direct.body.spice"):
+                     "tb_cmrr_direct.body.spice", "tb_psrr_direct.body.spice",
+                     "cmrr_direct.request.json", "psrr_direct.request.json"):
             shutil.copy(HERE / name, bench / "klt" / name)
         self.restore_inputs()
 
@@ -46,8 +47,7 @@ class BatchRecordWriter(unittest.TestCase):
 
     def test_live_run_compares_and_publishes_its_own_envelopes(self):
         klt = self.inputs.parent
-        for name in ("run_direct.sh", "run_cmrr_direct.sh", "compare_direct.py",
-                     "psrr_direct.request.json", "cmrr_direct.request.json"):
+        for name in ("run_direct.sh", "run_cmrr_direct.sh", "compare_direct.py"):
             shutil.copy(HERE / name, klt / name)
         (self.root / "sim/env.sh").symlink_to(HERE.parents[1] / "env.sh")
 
@@ -150,6 +150,34 @@ esac
         self.assertIn(reason, result.stderr)
         self.assertFalse((self.out / f"{record_id}.csv").exists())
         self.assertFalse((self.out / f"{record_id}.md").exists())
+
+    def test_overridden_ac_window_or_solver_publishes_neither_file(self):
+        for path in (CMRR, PSRR):
+            for field, mutate in (
+                ("analysis_args", lambda e: e["corners"][-1].update(analysis_args="dec 200 10m 1g")),
+                ("ngspice_options", lambda e: e["environment"].update(ngspice_options={"reltol": 0.01})),
+                ("ngspice_init", lambda e: e["environment"].update(
+                    ngspice_init={"source": "request", "lines": ["set reltol=0.01"]})),
+            ):
+                with self.subTest(path=path.name, field=field):
+                    doc = json.loads(path.read_text())
+                    mutate(doc)
+                    self.assert_refused(doc, path, field)
+
+    def test_unmet_request_engine_pin_publishes_neither_file(self):
+        for deck in ("cmrr", "psrr"):
+            with self.subTest(deck=deck):
+                path = self.inputs.parent / f"{deck}_direct.request.json"
+                original = path.read_text()
+                doc = json.loads(original)
+                doc["engine_version"] = "46"
+                path.write_text(json.dumps(doc))
+                result = self.publish(RECORD_ID=deck)
+                path.write_text(original)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn("engine_version", result.stderr)
+                self.assertFalse((self.out / f"{deck}.csv").exists())
+                self.assertFalse((self.out / f"{deck}.md").exists())
 
     def test_inconsistent_gains_publish_neither_file(self):
         for path, rejection in ((CMRR, "cmrr_db"), (PSRR, "psrr_db")):

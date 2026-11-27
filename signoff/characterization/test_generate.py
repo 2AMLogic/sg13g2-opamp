@@ -2439,6 +2439,52 @@ class CmrrPsrrKltAudit(RawAuditCase):
                     self.edit_json(f"{deck}_request", mutate)
                     self.assert_error(f"{deck} request", field)
 
+    def test_direct_request_requires_the_fixed_ac_sweep_and_solver(self):
+        for deck in ("cmrr", "psrr"):
+            for field, mutate in (
+                ("analysis_steps", lambda r: r.update(analysis_steps=[r["analysis"]])),
+                ("decks", lambda r: r.update(decks=[{"netlist": r["netlist"]}])),
+                ("commands", lambda r: r.update(commands=[])),
+                ("analysis_overrides", lambda r: r.update(analysis_overrides=[
+                    {"match": {"process": "mos_fs"}, "args": "dec 200 10m 1g"}])),
+                ("ngspice_options", lambda r: r["options"].update(ngspice_options={"reltol": 0.01})),
+                ("nodeset", lambda r: r["options"].update(nodeset=[{"match": {}, "values": {"outa": 0.5}}])),
+                ("retry_on_convergence_error", lambda r: r["options"].update(retry_on_convergence_error=True)),
+                ("engine_version", lambda r: r.update(engine_version="46")),
+                ("engine_version", lambda r: r.update(engine_version="47.1")),
+            ):
+                with self.subTest(deck=deck, field=field):
+                    self.fresh()
+                    self.edit_json(f"{deck}_request", mutate)
+                    self.assert_error(f"{deck} request", field)
+
+    def test_matching_engine_pin_and_empty_overrides_preserve_the_grade(self):
+        def pin(request):
+            request.update(engine_version="47", analysis_overrides=[])
+            request["options"].update(ngspice_options={}, retry_on_convergence_error=False)
+
+        for deck in ("cmrr", "psrr"):
+            self.edit_json(f"{deck}_request", pin)
+        content = self.fx.build()
+        self.assertEqual(self.errors(content), [])
+        self.assertEqual(content["sources"][self.RECORD]["valid_points"], 45)
+
+    def test_envelope_must_match_the_fixed_ac_sweep_and_solver(self):
+        for deck in ("cmrr", "psrr"):
+            for field, mutate in (
+                ("analysis_args", lambda e: self.corner(e, "mos_fs_125C_1.08V").update(
+                    analysis_args="dec 200 10m 1g")),
+                ("nodeset", lambda e: e["corners"][0].update(nodeset={"outa": 0.5})),
+                ("ngspice_options", lambda e: e["environment"].update(ngspice_options={"reltol": 0.01})),
+                ("retry_on_convergence_error", lambda e: e["environment"].update(
+                    retry_on_convergence_error={"reltol": 0.01})),
+            ):
+                with self.subTest(deck=deck, field=field):
+                    self.fresh()
+                    kind = f"{deck}_envelope"
+                    self.edit_json(kind, mutate)
+                    self.assert_error(field, self.raw()["files"][kind]["path"])
+
     def test_request_axes_must_cover_the_envelope_grid(self):
         for deck in ("cmrr", "psrr"):
             for axis, mutate in (

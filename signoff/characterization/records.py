@@ -25,7 +25,6 @@ from pathlib import Path
 from typing import Literal
 
 from common import (
-    CMRR_PSRR_ANALYSIS,
     CMRR_PSRR_KLT_DECKS,
     CMRR_PSRR_KLT_KINDS,
     KLT_RAW_KINDS,
@@ -978,19 +977,16 @@ def _check_direct_request_identity(req: dict, env: dict, deck: str, repo: Path,
     if (not isinstance(netlist, str) or Path(netlist).is_absolute() or not (directory / netlist).is_file()
             or (directory / netlist).resolve() != body.resolve()):
         problems.append(f"{label}: netlist {netlist!r} is not the pinned bench body")
-    return _direct_init_evidence(options.get("ngspice_init"), env, deck, problems)
-
-
-def _direct_init_evidence(requested, env: dict, deck: str, problems: list) -> dict | None:
-    if requested != ["set measureprec=12", "set numdgt=12"]:
-        problems.append(f"{deck} request: options.ngspice_init must contain the two documented print-precision settings")
-        return None
-    label = f"{deck} envelope"
+    envelope_label = f"{deck} envelope {pins[f'{deck}_envelope']['path']}"
     try:
-        reported = klt_envelope.batch_init_digest_jobs(env, requested, label)
+        reported = cmrr_direct.check_sweep_settings(req, env, deck, envelope_label)
     except klt_envelope.InputError as exc:
         problems.append(str(exc))
         return None
+    return _direct_init_evidence(options["ngspice_init"], env, reported, envelope_label, problems)
+
+
+def _direct_init_evidence(requested: list, env: dict, reported: list, label: str, problems: list) -> dict | None:
     diagnostics = env.get("diagnostics", [])
     if not isinstance(diagnostics, list):
         problems.append(f"{label}: expected a list of diagnostics")
@@ -1177,8 +1173,6 @@ def _load_cmrr_psrr_klt_population(repo: Path, key: str, ck: dict, expected: lis
         except klt_envelope.InputError as exc:
             problems.append(str(exc))
         init_evidence = _check_direct_request_identity(req, env, deck, repo, pins, problems)
-        if req.get("analysis") != CMRR_PSRR_ANALYSIS:
-            problems.append(f"{deck} request: analysis is not {CMRR_PSRR_ANALYSIS}")
         _check_direct_request_grid(req, deck, problems)
         defs = _direct_measurements(req.get("measurements"), spec["names"], f"{deck} request", problems)
         reported = _direct_measurements(env.get("measurements"), spec["names"], label, problems)

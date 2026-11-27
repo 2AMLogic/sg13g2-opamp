@@ -107,7 +107,6 @@ CMRR_PSRR_KLT_DECKS = {
         "limits": {"psrr_db": {"min": Decimal("1.87")}, "psrr_plateau_delta_db": {"max": Decimal("0.05")}},
     },
 }
-CMRR_PSRR_ANALYSIS = {"kind": "ac", "args": "dec 20 10m 1g"}
 SLEW_KLT_LIMITS = {
     "lin_rise_ratio": {"min": 0.98, "max": 1.02}, "lin_fall_ratio": {"min": 0.98, "max": 1.02},
     "pre_rise_orel_v": {"max": -0.15}, "pre_fall_orel_v": {"min": 0.15},

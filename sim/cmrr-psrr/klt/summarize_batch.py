@@ -3,8 +3,8 @@
 
   summarize_batch.py <cmrr.sim.json> <direct.sim.json> <out.csv> <out.md>
 
-Reads the committed same-DUT envelopes (`cmrr_direct.request.json`,
-`psrr_direct.request.json`; 45 corners each) and writes the record that
+Checks each committed same-DUT envelope (45 corners) against the sweep settings
+in `cmrr_direct.request.json` or `psrr_direct.request.json` and writes the record that
 `signoff/characterization/selection.json` selects for `cmrr-psrr`:
 
   * av0_db, acm0_db, cmrr_db (= Av0 - Acm0, dB), cmrr_plateau_delta_db  <- CMRR deck
@@ -22,13 +22,15 @@ from __future__ import annotations
 import csv
 from decimal import Decimal
 import io
+import json
 import sys
 from pathlib import Path
 
 from compare_cmrr_direct import (
     CMRR_SYSTEMATIC_BOUND_DB, DEFAULT_CMRR_BODY, DEFAULT_PSRR_BODY, DUT,
     MEASUREMENTS as CMRR_NAMES, PLATEAU_MAX_DB, PSRR_MEASUREMENTS as PSRR_NAMES,
-    check_body_hash, check_conditions, check_stimulus, gain_problems, index_envelope, output_load_f,
+    check_body_hash, check_conditions, check_stimulus, check_sweep_settings, gain_problems,
+    index_envelope, output_load_f,
 )
 from klt_envelope import (
     InputError, batch_job_ids, check_nominal_pvt_summary, exact_pvt_key, expected_keys,
@@ -44,12 +46,19 @@ PSRR_BOUND_DB = 1.87
 SNAPSHOT = Path("sim/cmrr-psrr/netlist-snapshots/20260921-151815-707b34c/opamp_core.spice")
 
 
-def load(path: Path, names: tuple, label: str) -> tuple[dict, dict]:
+def load(path: Path, names: tuple, deck: str) -> tuple[dict, dict]:
+    label = f"{deck.upper()} envelope"
     env = read_envelope(path)
     if not isinstance(env, dict) or not isinstance(env.get("corners"), list):
         raise InputError(f"{label}: {path} is not a klt sim envelope")
     if not batch_job_ids(env):
         raise InputError(f"{label}: no environment.remote batch job")
+    request_path = Path(__file__).with_name(f"{deck}_direct.request.json")
+    try:
+        request = json.loads(request_path.read_bytes())
+    except ValueError as exc:
+        raise InputError(f"{request_path}: unreadable request ({exc})") from exc
+    check_sweep_settings(request, env, deck, f"{label} {path}")
     check_nominal_pvt_summary(env, len(expected_keys()))
     for corner in env["corners"]:
         key = exact_pvt_key(corner)
@@ -74,8 +83,8 @@ def main(argv: list[str]) -> int:
         print(__doc__, file=sys.stderr)
         return 2
     try:
-        cenv, cm = load(Path(argv[1]), CMRR_NAMES, "CMRR envelope")
-        penv, ps = load(Path(argv[2]), PSRR_NAMES, "PSRR envelope")
+        cenv, cm = load(Path(argv[1]), CMRR_NAMES, "cmrr")
+        penv, ps = load(Path(argv[2]), PSRR_NAMES, "psrr")
         conditions = check_conditions(cenv, penv, require_build_banner=True)
         cmrr_body = check_body_hash(cenv, DEFAULT_CMRR_BODY, "CMRR")
         psrr_body = check_body_hash(penv, DEFAULT_PSRR_BODY, "PSRR")

@@ -55,6 +55,7 @@ MEASUREMENTS = ("av0_db", "acm0_db", "cmrr_db", "cmrr_plateau_delta_db")
 PSRR_MEASUREMENTS = ("av0_db", "avs0_db", "psrr_db", "psrr_plateau_delta_db")
 REJECT_STATUSES = ("skipped", "error", "inconclusive", "not_checked")
 CMRR_SYSTEMATIC_BOUND_DB = 30.75  # superseded DR-2 row, context only
+DIRECT_ANALYSIS = {"kind": "ac", "args": "dec 20 10m 1g"}
 PLATEAU_MAX_DB = 0.05
 DEFAULT_CMRR_BODY = os.path.join(HERE, "tb_cmrr_direct.body.spice")
 DEFAULT_PSRR_BODY = os.path.join(HERE, "tb_psrr_direct.body.spice")
@@ -79,6 +80,55 @@ def index_envelope(env: dict, label: str = "envelope", measurements=MEASUREMENTS
     if not (remote.get("job_id") or remote.get("fleet")):
         raise InputError(f"{label}: no environment.remote batch job (a local or harness run is not batch evidence)")
     return idx
+
+
+def check_sweep_settings(request: dict, env: dict, deck: str, envelope_label: str) -> list[str]:
+    """Require the fixed AC sweep and default solver. Return jobs that attest the requested init file."""
+    label = f"{deck} request"
+    if not isinstance(request, dict) or request.get("analysis") != DIRECT_ANALYSIS:
+        raise InputError(f"{label}: analysis must be {DIRECT_ANALYSIS}")
+    if request.get("analysis_overrides") not in (None, []):
+        raise InputError(f"{label}: analysis_overrides would replace the fixed AC window")
+    if request.get("analysis_steps") is not None:
+        raise InputError(f"{label}: analysis_steps cannot establish a single AC sweep")
+    for field in ("commands", "decks"):
+        if field in request:
+            raise InputError(f"{label}: {field} selects a different execution mode from the fixed AC sweep")
+
+    options = request.get("options", {})
+    environment = env.get("environment", {})
+    for settings, source in ((options, f"{label}: options"), (environment, f"{envelope_label}: environment")):
+        if not isinstance(settings, dict):
+            raise InputError(f"{source} must be an object")
+        if settings.get("ngspice_options") not in (None, {}):
+            raise InputError(f"{source}.ngspice_options must be empty for the default solver")
+        retry = settings.get("retry_on_convergence_error")
+        if retry is not None and retry is not False:
+            raise InputError(f"{source}.retry_on_convergence_error permits nondefault solver settings")
+
+    for field in ("nodeset", "initial_conditions"):
+        if options.get(field) not in (None, []):
+            raise InputError(f"{label}: options.{field} changes the solver's starting state")
+    for corner in env["corners"]:
+        if not isinstance(corner, dict):
+            raise InputError(f"{envelope_label}: expected a corner object")
+        for field in ("analysis_args", "steps", "nodeset", "initial_conditions"):
+            if corner.get(field) is not None:
+                raise InputError(f"{envelope_label}: corner {corner.get('corner_id')!r} reports {field} "
+                                 "outside the fixed AC sweep and default solver settings")
+
+    # The admitted batch envelopes identify the ngspice major only. A minor pin needs finer evidence.
+    pin = request.get("engine_version")
+    if pin is not None:
+        version = str(environment.get("engine_version"))
+        if (not isinstance(pin, str) or not re.fullmatch(r"[0-9]+", pin.strip())
+                or pin.strip().lstrip("0") != version.lstrip("0")):
+            raise InputError(f"{label}: engine_version {pin!r} is not satisfied by recorded ngspice-{version}")
+
+    requested_init = options.get("ngspice_init")
+    if requested_init != ["set measureprec=12", "set numdgt=12"]:
+        raise InputError(f"{label}: options.ngspice_init must contain the two documented print-precision settings")
+    return E.batch_init_digest_jobs(env, requested_init, envelope_label)
 
 
 def check_conditions(cmrr: dict, psrr: dict, *, require_build_banner: bool = False) -> dict:
