@@ -167,24 +167,49 @@ def gain_problems(cmrr: dict, psrr: dict) -> list[str]:
     return problems
 
 
-_AC_SRC = re.compile(r"^([VI]\w*)\s+.*\bac\s+[0-9.eE+-]+", re.MULTILINE | re.IGNORECASE)
+_AC_NUMBER = re.compile(r"[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:e[+-]?[0-9]+)?", re.I)
+
+
+def _check_ac_sources(body: str, deck: str, expected: dict[str, str], problems: list[str]) -> None:
+    # Only source cards drive the AC solve. Comments can also mention "ac 1".
+    cards = re.sub(r"(?:\$|;|//).*", "", body)
+    cards = re.sub(r"\n[ \t]*\+", " ", cards)
+    sources = []
+    for line in cards.lower().splitlines():
+        fields = line.split()
+        if not fields or fields[0][0] not in "vi" or "ac" not in fields[3:]:
+            continue
+        name = fields[0]
+        sources.append(name)
+        if name not in expected:
+            continue
+        label = name.capitalize()
+        terminals = expected[name]
+        if fields[1:3] != terminals.split():
+            problems.append(f"{deck} body: {label} must drive {terminals}")
+        ac = fields.index("ac", 3)
+        magnitude = fields[ac + 1] if ac + 1 < len(fields) else ""
+        try:
+            unit = bool(_AC_NUMBER.fullmatch(magnitude)) and Decimal(magnitude) == 1
+        except InvalidOperation:
+            unit = False
+        if fields[3:].count("ac") != 1 or not unit:
+            problems.append(f"{deck} body: {label} must have unit AC magnitude (got {magnitude!r})")
+    if sorted(sources) != sorted(expected):
+        problems.append(f"{deck} body AC sources are {sorted(sources)}, need exactly {sorted(expected)}")
 
 
 def check_stimulus(cmrr_body: str, psrr_body: str) -> None:
-    """Refuse a swapped common-mode/supply stimulus."""
+    """Each measured output gain assumes a unit AC source on the intended nodes."""
     problems = []
-    cm_srcs = sorted(m.group(1).lower() for m in _AC_SRC.finditer(cmrr_body))
-    if cm_srcs != ["vcmb", "vinp"]:
-        problems.append(f"CMRR body AC sources are {cm_srcs}, need exactly ['vcmb', 'vinp']")
+    _check_ac_sources(cmrr_body, "CMRR", {"vinp": "inpa 0", "vcmb": "inpb midb"}, problems)
+    _check_ac_sources(psrr_body, "PSRR", {"vinp": "inpa 0", "vsrip": "vddb vdd"}, problems)
     if not re.search(r"^Vcmb\s+inpb\s+midb\s+dc\s+0\s+ac\s+1\s*$", cmrr_body, re.M | re.I):
         problems.append("CMRR body: common-mode source must be `Vcmb inpb midb dc 0 ac 1` (input of copy B)")
     if not re.search(r"^Ccmb\s+innb\s+inpb\s+1\s*$", cmrr_body, re.M | re.I):
         problems.append("CMRR body: inn of copy B must follow inp through `Ccmb innb inpb 1`")
     if re.search(r"^Vsrip\b", cmrr_body, re.M | re.I):
         problems.append("CMRR body carries a supply AC source (Vsrip): swapped stimulus")
-    ps_srcs = sorted(m.group(1).lower() for m in _AC_SRC.finditer(psrr_body))
-    if ps_srcs != ["vinp", "vsrip"]:
-        problems.append(f"PSRR body AC sources are {ps_srcs}, need exactly ['vinp', 'vsrip']")
     if re.search(r"^Vcmb\b", psrr_body, re.M | re.I):
         problems.append("PSRR body carries a common-mode AC source (Vcmb): swapped stimulus")
     if problems:

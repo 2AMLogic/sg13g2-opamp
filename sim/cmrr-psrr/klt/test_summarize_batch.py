@@ -5,10 +5,14 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 
 HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE))
+from stimulus_fixtures import halve_stimulus  # noqa: E402
+
 CMRR = HERE / "records/20261125-011804-02d78dd.cmrr.sim.json"
 PSRR = HERE / "records/20261125-011604-02d78dd.direct.sim.json"
 
@@ -198,6 +202,23 @@ esac
             with self.subTest(deck=deck):
                 body = (HERE / f"tb_{other}_direct.body.spice").read_text()
                 self.assert_body_refused(path, body, f"stimulus check: {deck} body")
+
+    def test_halved_stimulus_publishes_neither_file(self):
+        for source, paths in (("Vsrip", (PSRR,)), ("Vinp", (CMRR, PSRR))):
+            with self.subTest(source=source):
+                self.restore_inputs()
+                for deck in ("cmrr", "psrr"):
+                    body = HERE / f"tb_{deck}_direct.body.spice"
+                    shutil.copyfile(body, self.inputs.parent / body.name)
+                for path in paths:
+                    halve_stimulus(self.root, self.inputs / path.name, source)
+                result = self.publish(RECORD_ID=source)
+                self.assertNotEqual(result.returncode, 0)
+                for path in paths:
+                    deck = "CMRR" if path == CMRR else "PSRR"
+                    self.assertIn(f"{deck} body: {source} must have unit AC magnitude", result.stderr)
+                self.assertFalse((self.out / f"{source}.csv").exists())
+                self.assertFalse((self.out / f"{source}.md").exists())
 
     def test_matching_body_hashes_require_two_2pf_output_loads(self):
         for path in (CMRR, PSRR):

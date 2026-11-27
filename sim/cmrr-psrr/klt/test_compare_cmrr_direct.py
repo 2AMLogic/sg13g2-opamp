@@ -93,6 +93,24 @@ class CompareCmrrDirect(unittest.TestCase):
         with self.assertRaisesRegex(InputError, "Vcmb"):
             self._compare(pbody=self.pbody + "Vcmb inpb midb dc 0 ac 1\n")
 
+    def test_ac_magnitude_is_read_from_the_source_card(self):
+        card = "Vsrip vddb vdd dc 0 ac 1"
+        for magnitude in ("0.5", "1m", "1.001", "1e-1", "1e", "0.5 ac 1"):
+            with self.subTest(magnitude=magnitude):
+                changed = self.pbody.replace(card, f"Vsrip vddb vdd dc 0 ac {magnitude} $ ac 1")
+                with self.assertRaisesRegex(InputError, "PSRR body: Vsrip must have unit AC magnitude"):
+                    C.check_stimulus(self.cbody, changed)
+        C.check_stimulus(self.cbody, self.pbody.replace(card, "Vsrip vddb vdd dc 0\n+ AC 0.1E1 $ ac 0.5"))
+
+    def test_unit_sources_must_drive_the_expected_nodes(self):
+        for label, cmrr, psrr in (
+            ("CMRR body: Vinp", self.cbody.replace("Vinp inpa", "Vinp inpb"), self.pbody),
+            ("PSRR body: Vinp", self.cbody, self.pbody.replace("Vinp inpa", "Vinp inpb")),
+            ("PSRR body: Vsrip", self.cbody, self.pbody.replace("Vsrip vddb", "Vsrip outb")),
+        ):
+            with self.subTest(source=label), self.assertRaisesRegex(InputError, label + " must drive"):
+                C.check_stimulus(cmrr, psrr)
+
     def test_swapped_stimulus_values_are_out_of_tolerance(self):
         env = copy.deepcopy(self.cmrr)
         for i, c in enumerate(env["corners"]):  # copy B excited by the supply: Acm0 reads Avs0

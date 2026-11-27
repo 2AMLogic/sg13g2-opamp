@@ -2333,6 +2333,38 @@ class CmrrPsrrKltAudit(RawAuditCase):
                 self.edit_env(f"{deck}_envelope", repin_body)
                 self.assert_error(f"stimulus check: {deck.upper()} body")
 
+    def test_halved_stimulus_with_consistent_gains_is_an_error(self):
+        bench = REPO / "sim/cmrr-psrr/klt"
+        with mock.patch.object(sys, "path", [*sys.path, str(bench)]):
+            from stimulus_fixtures import halve_stimulus
+
+        for source, decks in (("Vsrip", ("psrr",)), ("Vinp", ("cmrr", "psrr"))):
+            with self.subTest(source=source):
+                self.fresh()
+                pins = self.raw()["files"]
+                cells = {}
+                for deck in decks:
+                    envelope = self.fx.root / pins[f"{deck}_envelope"]["path"]
+                    halve_stimulus(self.fx.root, envelope, source)
+                    for kind in (f"{deck}_body", f"{deck}_envelope"):
+                        pins[kind]["sha256"] = generate.sha256_file(self.fx.root / pins[kind]["path"])
+                    for corner in json.loads(envelope.read_bytes())["corners"]:
+                        pid = f"{corner['process']}_{corner['temperature_c']}C_{corner['supply_v']['vdd']:.2f}V"
+                        cells.setdefault(pid, {}).update({m["name"]: m["value"] for m in corner["measurements"]})
+
+                # Select the replayed values so the CSV agrees with the envelopes.
+                def replay_csv(lines):
+                    columns = lines[0].split(",")
+                    yield lines[0]
+                    for line in lines[1:]:
+                        row = line.split(",")
+                        for name, value in cells[row[0]].items():
+                            row[columns.index(name)] = format(value, ".9g")
+                        yield ",".join(row)
+
+                self.fx.rewrite_csv(self.RECORD, replay_csv)
+                self.assert_error(*(f"{deck.upper()} body: {source} must have unit AC magnitude" for deck in decks))
+
     def test_bench_load_not_stated_by_the_record_is_an_error(self):
         for load in ("5e-12", "2p"):
             with self.subTest(load=load):
