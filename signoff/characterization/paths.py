@@ -44,6 +44,13 @@ import slew_post  # noqa: E402
 # Shared output-swing post-processing (issue #230): the SAME module run_swing_sweep.sh runs.
 sys.path.insert(0, str(DEFAULT_REPO_ROOT / "sim" / "output-swing"))
 import swing_post  # noqa: E402
+# Two-pass output-swing batch pairing/audit (issue #503). Loaded by file path:
+# the bench's klt directory also holds a compare.py, so it is not put on sys.path.
+import importlib.util  # noqa: E402
+_tp_spec = importlib.util.spec_from_file_location(
+    "swing_two_pass", DEFAULT_REPO_ROOT / "sim" / "output-swing" / "klt" / "two_pass.py")
+swing_two_pass = importlib.util.module_from_spec(_tp_spec)
+_tp_spec.loader.exec_module(swing_two_pass)
 # Shared input-offset klt derivation (issue #504): the SAME module the bench's
 # run.sh writer, its compare.py and this package's offset_klt_audit all apply.
 sys.path.insert(0, str(DEFAULT_REPO_ROOT / "sim" / "input-offset" / "klt"))

@@ -3107,7 +3107,7 @@ class PinnedPopulationNeedsItsAudit(unittest.TestCase):
         import selection
         self.assertEqual(
             set(selection.POPULATION_AUDITS),
-            {"slew_raw", "noise_raw", "swing_raw", "mc_samples", "draws_csv",
+            {"slew_raw", "noise_raw", "swing_raw", "swing_two_pass", "mc_samples", "draws_csv",
              "slew_klt", "klt_raw", "offset_klt_raw"},
         )
         for audit in selection.POPULATION_AUDITS.values():
@@ -3126,6 +3126,22 @@ class PinnedPopulationNeedsItsAudit(unittest.TestCase):
                         fx.build()
                 finally:
                     fx.close()
+
+    def test_two_pass_swing_requires_the_swing_audit(self):
+        selected = json.loads(SELECTION.read_text(encoding="utf-8"))
+        swing = selected["records"]["output-swing"]
+        del swing["swing_raw"]
+        pin = {"path": "evidence.json", "sha256": "sha256:test"}
+        swing["swing_two_pass"] = {"files": {"point": {"coarse": pin, "fine": pin}}}
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "selection.json"
+            path.write_text(json.dumps(selected), encoding="utf-8")
+            generate.load_selection(path)
+
+            swing["definition_checks"].remove("swing_raw_audit")
+            path.write_text(json.dumps(selected), encoding="utf-8")
+            with self.assertRaisesRegex(generate.SelectionError, "swing_two_pass.*swing_raw_audit"):
+                generate.load_selection(path)
 
     def test_one_audit_does_not_cover_a_second_population(self):
         fx = Fixture()
