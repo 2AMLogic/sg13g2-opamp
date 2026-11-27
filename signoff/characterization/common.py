@@ -31,6 +31,8 @@ VALID_OPS = ("==", ">=", "==col")
 NOISE_PIN_KINDS = ("log", "spectrum")
 SLEW_PIN_KINDS = ("tran", "netlist")
 SWING_PIN_KINDS = ("coarse_csv", "coarse_netlist", "fine_csv", "fine_netlist")
+# Issue #503: the batch two-pass swing evidence, one pinned pass-evidence JSON per pass.
+SWING_TWO_PASS_KINDS = ("coarse", "fine")
 KLT_RAW_KINDS = ("ac", "op", "measurement", "ac_request", "op_request", "bench_body")
 KLT_RAW_REQUIRED_KINDS = ("ac", "op", "ac_request", "op_request", "bench_body")
 # Issue #501: the slew bench's batch `klt sim` evidence (sim/slew-rate/klt/).

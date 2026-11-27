@@ -30,6 +30,7 @@ from common import (
     SLEW_KLT_KINDS,
     SLEW_PIN_KINDS,
     SWING_PIN_KINDS,
+    SWING_TWO_PASS_KINDS,
     VALID_OPS,
     SelectionError,
     _no_duplicate_keys,
@@ -146,10 +147,10 @@ def load_selection(path: Path) -> dict:
                     "input-offset `klt sim` envelopes; name hash-pinned `offset_klt_raw` "
                     "beside the summary"
                 )
-            if need == "swing" and rec.get("swing_raw") is None:
+            if need == "swing" and rec.get("swing_raw") is None and rec.get("swing_two_pass") is None:
                 raise SelectionError(
                     f"selection: record {key}: definition check {name!r} verifies raw "
-                    "DC curves; name hash-pinned `swing_raw` beside the summary"
+                    "DC curves; name hash-pinned `swing_raw` (or batch `swing_two_pass`) beside the summary"
                 )
     return selection
 
@@ -274,6 +275,20 @@ def _validate_swing_raw_selection(key: str, sw, _rec: dict, _records: dict) -> N
     _validate_raw_pins(where, sw.get("files"), SWING_PIN_KINDS, f"{list(SWING_PIN_KINDS)}")
 
 
+def _validate_swing_two_pass_selection(key: str, sw, rec: dict, _records: dict) -> None:
+    """Shape of a record's `swing_two_pass` pin (issue #503): per point one
+    hash-pinned coarse and one hash-pinned fine pass-evidence JSON (see
+    sim/output-swing/klt/two_pass.py for the pass schema)."""
+    where = f"selection: record {key}: `swing_two_pass`"
+    if not isinstance(sw, dict) or sorted(sw) != ["files"]:
+        raise SelectionError(f"{where} must be an object with exactly `files`")
+    _validate_raw_pins(where, sw.get("files"), SWING_TWO_PASS_KINDS, f"{list(SWING_TWO_PASS_KINDS)}")
+    if "swing_raw" in rec:
+        raise SelectionError(
+            f"selection: record {key}: `swing_raw` and `swing_two_pass` are alternative "
+            "evidence for the same summary; name exactly one")
+
+
 def _validate_klt_raw_selection(key: str, kr, _rec: dict, records: dict) -> None:
     """Shape of a record's `klt_raw` pin: pinned AC/OP envelopes, requests and
     bench body (plus optional `measurement`, and optional `dc_continuity` when
@@ -319,6 +334,7 @@ POPULATION_VALIDATORS = {
     "noise_raw": _validate_noise_raw_selection,
     "slew_raw": _validate_slew_raw_selection,
     "swing_raw": _validate_swing_raw_selection,
+    "swing_two_pass": _validate_swing_two_pass_selection,
     "slew_klt": _validate_slew_klt_selection,
     "klt_raw": _validate_klt_raw_selection,
     "offset_klt_raw": _validate_offset_klt_raw_selection,
@@ -331,6 +347,7 @@ POPULATION_AUDITS = {
     "slew_raw": "slew_raw_audit",
     "noise_raw": "noise_raw_audit",
     "swing_raw": "swing_raw_audit",
+    "swing_two_pass": "swing_raw_audit",
     "mc_samples": "cmrr_mc_statistics",
     "draws_csv": "offset_mc_statistics",
     "slew_klt": "slew_klt_audit",

@@ -2732,19 +2732,29 @@ class SlewKltAudit(RawAuditCase):
 
     def setUp(self) -> None:
         super().setUp()
-        rec = self.fx.selection["records"][self.RECORD]
+        self.select_pure_batch()
+        self.drop_waveform_only_columns()
+
+    def fresh_batch(self) -> None:
+        self.fresh()
+        self.select_pure_batch()
+        self.drop_waveform_only_columns()
+
+    def install_batch_artifacts(self) -> None:
         pins = {}
         for kind, rel in self.FILES.items():
             dst = self.fx.root / rel
             dst.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(REPO / rel, dst)
             pins[kind] = {"path": rel, "sha256": generate.sha256_file(dst)}
-        # the pure batch scenario: no local waveforms, the envelope instead
+        self.fx.selection["records"][self.RECORD]["slew_klt"] = {"files": pins}
+
+    def select_pure_batch(self) -> None:
+        self.install_batch_artifacts()
+        rec = self.fx.selection["records"][self.RECORD]
         rec.pop("slew_raw")
         rec["definition_checks"] = ["slew_worse_edge", "slew_klt_audit"]
-        rec["slew_klt"] = {"files": pins}
         self.fx.save_selection()
-        self.drop_waveform_only_columns()
 
     WAVEFORM_ONLY = ("vout_min_v", "vout_max_v", "window_lo_v", "window_hi_v")
 
@@ -2774,25 +2784,12 @@ class SlewKltAudit(RawAuditCase):
     # --- issue #513: item 1, columns no batch check covers ----------------------
 
     def test_pure_batch_record_declaring_waveform_only_columns_is_refused(self):
-        self.fresh_pure_batch_with_columns()
+        self.fresh()
+        self.select_pure_batch()
         errors = self.assert_error("pins slew_klt without slew_raw")
         msg = next(e for e in errors if "pins slew_klt without slew_raw" in e)
         for col in self.WAVEFORM_ONLY:
             self.assertIn(col, msg)
-
-    def fresh_pure_batch_with_columns(self) -> None:
-        self.fresh()
-        rec = self.fx.selection["records"][self.RECORD]
-        pins = {}
-        for kind, rel in self.FILES.items():
-            dst = self.fx.root / rel
-            dst.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(REPO / rel, dst)
-            pins[kind] = {"path": rel, "sha256": generate.sha256_file(dst)}
-        rec.pop("slew_raw", None)
-        rec["definition_checks"] = ["slew_worse_edge", "slew_klt_audit"]
-        rec["slew_klt"] = {"files": pins}
-        self.fx.save_selection()
 
     def test_pure_batch_record_without_those_columns_passes(self):
         self.assertEqual(self.errors(self.fx.build()), [])
@@ -2809,8 +2806,7 @@ class SlewKltAudit(RawAuditCase):
     def test_moved_traverse_sample_time_is_refused(self):
         for name, old, new in (("pre_rise_orel_v", "at=299n", "at=399n"), ("pre_fall_orel_v", "at=549n", "at=649n")):
             with self.subTest(name=name):
-                self.fx.close()
-                self.setUp()
+                self.fresh_batch()
                 self.edit_request_spice(name, old, new)
                 self.assert_error(f"slew request: measurement {name} is")
 
@@ -2822,8 +2818,7 @@ class SlewKltAudit(RawAuditCase):
             ("vibias_dc_v", "v(ibias)", "v(tail)"),
         ):
             with self.subTest(name=name):
-                self.fx.close()
-                self.setUp()
+                self.fresh_batch()
                 self.edit_request_spice(name, old, new)
                 self.assert_error(f"slew request: measurement {name} is")
 
@@ -2837,14 +2832,8 @@ class SlewKltAudit(RawAuditCase):
         self.fresh()
         rec = self.fx.selection["records"][self.RECORD]
         self.assertIn("slew_raw", rec)
-        pins = {}
-        for kind, rel in self.FILES.items():
-            dst = self.fx.root / rel
-            dst.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(REPO / rel, dst)
-            pins[kind] = {"path": rel, "sha256": generate.sha256_file(dst)}
+        self.install_batch_artifacts()
         rec["definition_checks"] = ["slew_worse_edge", "slew_raw_audit", "slew_klt_audit"]
-        rec["slew_klt"] = {"files": pins}
         self.fx.save_selection()
         header = self.fx.csv_path(self.RECORD).read_text(encoding="utf-8").splitlines()[0].split(",")
         for col in self.WAVEFORM_ONLY:
@@ -2948,9 +2937,7 @@ class SlewKltAudit(RawAuditCase):
     def test_every_artifact_must_be_pinned(self):
         for kind in self.FILES:
             with self.subTest(kind=kind):
-                self.tearDown()
-                self.fx.close()
-                self.setUp()
+                self.fresh_batch()
                 del self.raw()["files"][kind]
                 self.fx.save_selection()
                 with self.assertRaises(generate.SelectionError):
@@ -2979,8 +2966,7 @@ class SlewKltAudit(RawAuditCase):
     def test_tampered_worst_edge(self):
         self.fx.set_cell(self.RECORD, self.POINT, "sr_worst_v_per_us", "9.5")
         self.assert_error(f"point {self.POINT} fails definition check slew_worse_edge")
-        self.fresh()
-        self.setUp()
+        self.fresh_batch()
         # rise/fall/worst moved together: only the envelope can refuse it
         for col in ("sr_rise_v_per_us", "sr_fall_v_per_us", "sr_worst_v_per_us"):
             self.fx.set_cell(self.RECORD, self.POINT, col, "9.5")
@@ -3054,8 +3040,7 @@ class SlewKltAudit(RawAuditCase):
         self.assert_error("worker banner does not name ngspice-46", "contradictory simulator version")
 
         # engine_build.version_banner must also agree with engine_version.
-        self.fx.close()
-        self.setUp()
+        self.fresh_batch()
         self.edit_env(lambda d: d["environment"].update(engine_build={"version_banner": "** ngspice-45 : mismatch"}))
         self.assert_error("engine_build banner does not name ngspice-46", "contradictory simulator version")
 
@@ -3115,13 +3100,20 @@ class PinnedPopulationNeedsItsAudit(unittest.TestCase):
         ("input-offset-mc", "draws_csv", "offset_mc_statistics"),
     )
 
-    # (population, suite, method) for populations whose missing-audit refusal is
-    # exercised in their own suite rather than through CASES above.
-    OTHER_REFUSAL_TESTS = (
-        ("klt_raw", KltRawAudit, "test_klt_raw_without_its_audit_is_refused"),
-        ("offset_klt_raw", OffsetKltAudit, "test_offset_klt_raw_without_its_audit_is_refused"),
-        ("slew_klt", SlewKltAudit, "test_envelope_without_its_audit_is_refused"),
-    )
+    def test_every_population_has_a_missing_audit_refusal_test(self):
+        import selection
+        other_refusal_tests = {
+            "klt_raw": KltRawAudit.test_klt_raw_without_its_audit_is_refused,
+            "offset_klt_raw": OffsetKltAudit.test_offset_klt_raw_without_its_audit_is_refused,
+            "slew_klt": SlewKltAudit.test_envelope_without_its_audit_is_refused,
+            "swing_two_pass": self.test_two_pass_swing_requires_the_swing_audit,
+        }
+        case_keys = {population for _, population, _ in self.CASES}
+        self.assertEqual(case_keys & other_refusal_tests.keys(), set())
+        self.assertEqual(case_keys | other_refusal_tests.keys(), set(selection.POPULATION_AUDITS))
+        for population, refusal_test in other_refusal_tests.items():
+            with self.subTest(population=population):
+                self.assertTrue(callable(refusal_test))
 
     def test_table_covers_every_pinned_population(self):
         import selection
@@ -3131,19 +3123,6 @@ class PinnedPopulationNeedsItsAudit(unittest.TestCase):
         )
         for audit in selection.POPULATION_AUDITS.values():
             self.assertIn(audit, selection.DEFINITION_CHECKS)
-
-    def test_every_population_has_a_missing_audit_refusal_test(self):
-        import selection
-        case_keys = {population for _, population, _ in self.CASES}
-        other_keys = {population for population, _, _ in self.OTHER_REFUSAL_TESTS}
-        self.assertEqual(case_keys & other_keys, set())
-        self.assertEqual(case_keys | other_keys, set(selection.POPULATION_AUDITS))
-        for population, suite, method in self.OTHER_REFUSAL_TESTS:
-            with self.subTest(population=population):
-                self.assertTrue(
-                    callable(getattr(suite, method, None)),
-                    f"{suite.__name__}.{method} not found",
-                )
 
     def test_validators_table_dispatches_load_selection(self):
         import selection
@@ -3178,6 +3157,22 @@ class PinnedPopulationNeedsItsAudit(unittest.TestCase):
                         fx.build()
                 finally:
                     fx.close()
+
+    def test_two_pass_swing_requires_the_swing_audit(self):
+        selected = json.loads(SELECTION.read_text(encoding="utf-8"))
+        swing = selected["records"]["output-swing"]
+        del swing["swing_raw"]
+        pin = {"path": "evidence.json", "sha256": "sha256:test"}
+        swing["swing_two_pass"] = {"files": {"point": {"coarse": pin, "fine": pin}}}
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "selection.json"
+            path.write_text(json.dumps(selected), encoding="utf-8")
+            generate.load_selection(path)
+
+            swing["definition_checks"].remove("swing_raw_audit")
+            path.write_text(json.dumps(selected), encoding="utf-8")
+            with self.assertRaisesRegex(generate.SelectionError, "swing_two_pass.*swing_raw_audit"):
+                generate.load_selection(path)
 
     def test_one_audit_does_not_cover_a_second_population(self):
         fx = Fixture()

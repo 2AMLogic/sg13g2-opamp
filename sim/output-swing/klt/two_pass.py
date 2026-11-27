@@ -103,7 +103,8 @@ def _identity(pid, label, p):
 
 def audit_pair(pid, coarse, fine, criterion=None):
     """Validate and measure one corner. Returns {"fields": {AUDIT_FIELD: serialized},
-    "verdicts": {limit: bool}, "valid": True}; raises PairError on any
+    "verdicts": {limit: bool}, "valid": True, "coarse": coarse_measure dict,
+    "fine": fine_measure dict (what defchecks._check_swing_raw consumes)}; raises PairError on any
     evidence problem (the corner and reason are in the message)."""
     crit = float(swing_post.CONFIG["criterion_frac"]) if criterion is None else criterion
     for label, p in (("coarse", coarse), ("fine", fine)):
@@ -165,7 +166,7 @@ def audit_pair(pid, coarse, fine, criterion=None):
     if tuple(fields) != swing_post.AUDIT_FIELDS:
         raise PairError(pid, "audit fields drifted from swing_post.AUDIT_FIELDS")
     verdicts = {name: float(fields[name]) >= lim for name, lim in LIMITS.items()}
-    return {"fields": fields, "verdicts": verdicts, "valid": True}
+    return {"fields": fields, "verdicts": verdicts, "valid": True, "coarse": c, "fine": m}
 
 
 def _cell_matches(cell, printed):
