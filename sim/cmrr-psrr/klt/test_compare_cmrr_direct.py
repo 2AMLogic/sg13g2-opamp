@@ -142,6 +142,17 @@ class CompareCmrrDirect(unittest.TestCase):
         with self.assertRaisesRegex(InputError, "engine_version differs"):
             self._compare(cmrr=env)
 
+    def test_single_job_worker_banner_is_optional_but_must_agree_when_present(self):
+        env = self.cmrr["environment"]
+        job = env["remote"]["fleet"][0]
+        env["remote"] = job
+        simulator = job["worker_environment"]["simulator"]
+        del simulator["version_banner"]
+        self.assertEqual(self._compare()["conditions"]["engine_version"], "47")
+        simulator["version_banner"] = "** ngspice-45 and ngspice-47"
+        with self.assertRaisesRegex(InputError, "worker simulator.*expected ngspice-47"):
+            self._compare()
+
     # --- negative control: failed plateau guard is a result
     def test_plateau_miss_is_listed(self):
         env = copy.deepcopy(self.cmrr)

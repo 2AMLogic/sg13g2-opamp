@@ -116,13 +116,51 @@ def batch_job_ids(env: dict) -> List[str]:
     return sorted({job for job in ids if isinstance(job, str) and job})
 
 
-def _named_hashes(entries, label: str, *, osdi=False, hash_key="sha256") -> dict[str, str]:
+def _batch_jobs(env: dict, label: str) -> list[dict]:
+    remote = (env.get("environment") or {}).get("remote")
+    if not isinstance(remote, dict):
+        raise InputError(f"{label}: missing batch job metadata")
+    fleet = remote.get("fleet")
+    if fleet is None:
+        return [remote]
+    if not isinstance(fleet, list) or not all(isinstance(job, dict) for job in fleet):
+        raise InputError(f"{label}: malformed fleet")
+    return [remote, *fleet]
+
+
+def check_batch_ngspice(env: dict, label: str, *, require_build_banner: bool = False) -> None:
+    """Reconcile the reported ngspice major with every available execution banner."""
+    environment = env.get("environment") or {}
+    version = str(environment.get("engine_version"))
+    if environment.get("engine") != "ngspice" or not re.fullmatch(r"[0-9]+", version):
+        raise InputError(f"{label}: expected an identified ngspice engine, got {environment.get('engine')!r} {version!r}")
+
+    def check_banner(metadata, source, required=False):
+        if metadata is not None and not isinstance(metadata, dict):
+            raise InputError(f"{label}: {source} must be an object")
+        banner = (metadata or {}).get("version_banner")
+        if banner is None and not required:
+            return
+        majors = set(re.findall(r"\bngspice-([0-9]+)\b", banner)) if isinstance(banner, str) else set()
+        if majors != {version}:
+            raise InputError(f"{label}: {source} banner reports {sorted(majors)}, expected ngspice-{version}")
+
+    check_banner(environment.get("engine_build"), "engine_build", require_build_banner)
+    for job in _batch_jobs(env, label):
+        worker = job.get("worker_environment")
+        if worker is not None:
+            if not isinstance(worker, dict):
+                raise InputError(f"{label}: malformed worker environment")
+            check_banner(worker.get("simulator"), f"job {job.get('job_id')} worker simulator")
+
+
+def _named_hashes(entries, label: str, *, osdi=False, hash_key="sha256", name_key="name") -> dict[str, str]:
     """Read a manifest by file name. Duplicate or absent evidence cannot establish identity."""
     if not isinstance(entries, list) or not entries:
         raise InputError(f"{label}: missing file hashes")
     hashes = {}
     for item in entries:
-        name = item.get("name") if isinstance(item, dict) else None
+        name = item.get(name_key) if isinstance(item, dict) else None
         if osdi and not isinstance(name, str) and isinstance(item, dict) and isinstance(item.get("entry"), str):
             name = Path(item["entry"]).name
         if not isinstance(name, str) or not name:
@@ -134,6 +172,12 @@ def _named_hashes(entries, label: str, *, osdi=False, hash_key="sha256") -> dict
             raise InputError(f"{label}: {name} lacks a valid {hash_key}")
         hashes[name] = digest
     return hashes
+
+
+def netlist_closure(env: dict, label: str) -> dict[str, str]:
+    """Index the recorded netlist hashes without dropping duplicate paths."""
+    entries = (env.get("environment") or {}).get("netlist_closure")
+    return _named_hashes(entries, f"{label} netlist_closure", name_key="path")
 
 
 def _check_same_hashes(left: dict, right: dict, label: str) -> None:
@@ -174,15 +218,7 @@ def _batch_model_hashes(env: dict, label: str) -> dict[str, dict[str, str]]:
         if source.get(name) != digest:
             raise InputError(f"{label}: corner section library {name} disagrees with its staged source identity")
 
-    remote = environment.get("remote") or {}
-    jobs = remote.get("fleet") if isinstance(remote, dict) else None
-    if jobs is None:
-        jobs = [remote]
-    if not isinstance(jobs, list):
-        raise InputError(f"{label}: malformed fleet")
-    for job in jobs:
-        if not isinstance(job, dict):
-            raise InputError(f"{label}: malformed fleet job")
+    for job in _batch_jobs(env, label):
         job_label = f"{label} job {job.get('job_id')}"
         if "runner_models_lib_sha256" in job and job["runner_models_lib_sha256"] != staged[root]:
             raise InputError(f"{job_label}: {root} disagrees with its staged hash")
@@ -238,7 +274,7 @@ def check_decided_counts(env: dict, expected_count: int) -> None:
         raise InputError("corners carry diagnostics")
 
 
-def sha256_file(path: str) -> str:
+def sha256_file(path: str | Path) -> str:
     h = hashlib.sha256()
     with open(path, "rb") as f:
         for chunk in iter(lambda: f.read(1 << 16), b""):

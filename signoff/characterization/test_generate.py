@@ -2147,6 +2147,10 @@ class CmrrPsrrKltAudit(RawAuditCase):
         self.fx.set_cell(self.RECORD, self.POINT, "psrr_db", "1.0")
         self.definition_error()
 
+    def test_csv_common_mode_voltage_must_match_the_envelope(self):
+        self.fx.set_cell(self.RECORD, self.POINT, "vcm_v", "0.12")
+        self.assert_error(self.POINT, "vcm_v", "supply_v.vinp")
+
     def test_cmrr_summary_not_av0_minus_acm0_is_an_error(self):
         self.fx.set_cell(self.RECORD, self.POINT, "cmrr_db", str(float(self.cell("cmrr_db")) + 1))
         self.definition_error()
@@ -2363,6 +2367,23 @@ class CmrrPsrrKltAudit(RawAuditCase):
 
         self.edit_env("cmrr_envelope", ver)
         self.assert_error("not the same run conditions")
+
+    def test_build_and_worker_banners_must_match_the_exact_ngspice_major(self):
+        for deck in ("cmrr", "psrr"):
+            for source in ("engine_build", "worker"):
+                with self.subTest(deck=deck, source=source):
+                    self.fresh()
+
+                    def change_banner(doc):
+                        env = doc["environment"]
+                        if source == "engine_build":
+                            env["engine_build"]["version_banner"] = "** ngspice-470 : build"
+                        else:
+                            job = env["remote"]["fleet"][1]
+                            job["worker_environment"]["simulator"]["version_banner"] = "** ngspice-45 : worker"
+
+                    self.edit_json(f"{deck}_envelope", change_banner)
+                    self.assert_error(source, "ngspice-47")
 
     def test_envelope_not_from_a_batch_job_is_an_error(self):
         self.edit_env("cmrr_envelope", lambda d: d["environment"].pop("remote"))

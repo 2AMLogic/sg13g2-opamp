@@ -91,6 +91,47 @@ class BatchRecordWriter(unittest.TestCase):
                     self.assertIn(name, result.stderr)
                     self.assertEqual(list(self.out.iterdir()), [])
 
+    def test_contradictory_simulator_banner_publishes_neither_file(self):
+        for path in (CMRR, PSRR):
+            for source in ("engine_build", "worker"):
+                with self.subTest(path=path.name, source=source):
+                    self.restore_inputs()
+                    doc = json.loads(path.read_text())
+                    env = doc["environment"]
+                    if source == "engine_build":
+                        env["engine_build"]["version_banner"] = "** ngspice-470 : build"
+                    else:
+                        job = env["remote"]["fleet"][-1]
+                        job["worker_environment"]["simulator"]["version_banner"] = "** ngspice-45 : worker"
+                    (self.inputs / path.name).write_text(json.dumps(doc))
+                    result = self.publish(RECORD_ID=f"{path.stem}-{source}")
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertIn(source, result.stderr)
+                    self.assertIn("ngspice-47", result.stderr)
+                    self.assertEqual(list(self.out.iterdir()), [])
+
+    def test_matching_dut_hashes_must_also_match_the_named_snapshot(self):
+        for path in (CMRR, PSRR):
+            doc = json.loads(path.read_text())
+            dut = next(e for e in doc["environment"]["netlist_closure"] if e["path"] == "design/netlist/opamp_core.spice")
+            dut["sha256"] = "a" * 64
+            (self.inputs / path.name).write_text(json.dumps(doc))
+        result = self.publish()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("netlist-snapshots/20260921-151815-707b34c/opamp_core.spice", result.stderr)
+        self.assertEqual(list(self.out.iterdir()), [])
+
+    def test_duplicate_closure_path_cannot_hide_a_different_dut(self):
+        doc = json.loads(CMRR.read_text())
+        closure = doc["environment"]["netlist_closure"]
+        dut = next(e for e in closure if e["path"] == "design/netlist/opamp_core.spice")
+        closure.insert(0, dict(dut, sha256="a" * 64))
+        (self.inputs / CMRR.name).write_text(json.dumps(doc))
+        result = self.publish()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("duplicate file design/netlist/opamp_core.spice", result.stderr)
+        self.assertEqual(list(self.out.iterdir()), [])
+
     def test_extra_supply_axis_publishes_neither_file(self):
         for path in (CMRR, PSRR):
             with self.subTest(path=path.name):

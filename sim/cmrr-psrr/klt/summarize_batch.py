@@ -25,10 +25,13 @@ import sys
 from pathlib import Path
 
 from compare_cmrr_direct import (
-    CMRR_SYSTEMATIC_BOUND_DB, MEASUREMENTS as CMRR_NAMES, PLATEAU_MAX_DB,
+    CMRR_SYSTEMATIC_BOUND_DB, DUT, MEASUREMENTS as CMRR_NAMES, PLATEAU_MAX_DB,
     PSRR_MEASUREMENTS as PSRR_NAMES, check_conditions, index_envelope,
 )
-from klt_envelope import InputError, batch_job_ids, check_decided_counts, exact_pvt_key, expected_keys, key_str, read_envelope
+from klt_envelope import (
+    InputError, batch_job_ids, check_decided_counts, exact_pvt_key, expected_keys,
+    key_str, read_envelope, sha256_file,
+)
 
 COLUMNS = (
     "point_id", "corner", "temp_c", "vdd_v", "vcm_v",
@@ -36,6 +39,7 @@ COLUMNS = (
     "avs0_db", "psrr_db", "psrr_plateau_delta_db",
 )
 PSRR_BOUND_DB = 1.87
+SNAPSHOT = Path("sim/cmrr-psrr/netlist-snapshots/20260921-151815-707b34c/opamp_core.spice")
 
 
 def load(path: Path, names: tuple, label: str) -> tuple[dict, dict]:
@@ -70,15 +74,12 @@ def main(argv: list[str]) -> int:
     try:
         cenv, cm = load(Path(argv[1]), CMRR_NAMES, "CMRR envelope")
         penv, ps = load(Path(argv[2]), PSRR_NAMES, "PSRR envelope")
-        check_conditions(cenv, penv)
-        version = cenv["environment"].get("engine_version")
-        ngspice = f"ngspice-{version}"
-        for env in (cenv, penv):
-            engine = env["environment"]
-            banner = (engine.get("engine_build") or {}).get("version_banner") or ""
-            if engine.get("engine") != "ngspice" or not version or ngspice not in banner:
-                raise InputError("envelope does not identify its ngspice version consistently")
-    except InputError as exc:
+        conditions = check_conditions(cenv, penv, require_build_banner=True)
+        ngspice = f"ngspice-{conditions['engine_version']}"
+        snapshot_hash = sha256_file(Path(__file__).resolve().parents[3] / SNAPSHOT)
+        if conditions["dut_netlist_sha256"] != snapshot_hash:
+            raise InputError(f"DUT hash {conditions['dut_netlist_sha256']} differs from snapshot {SNAPSHOT} ({snapshot_hash})")
+    except (InputError, OSError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
     rows = []
@@ -109,8 +110,8 @@ def main(argv: list[str]) -> int:
 Produced by `sim/cmrr-psrr/klt/summarize_batch.py` (issue #514) from the same-DUT
 envelopes `{Path(argv[1]).name}` (jobs {', '.join('`' + j + '`' for j in batch_job_ids(cenv))}) and
 `{Path(argv[2]).name}` (jobs {', '.join('`' + j + '`' for j in batch_job_ids(penv))}),
-45 corners each, {ngspice}, into CL = 2 pF [DR-1]. DUT: `design/netlist/opamp_core.spice`
-(snapshot `sim/cmrr-psrr/netlist-snapshots/20260921-151815-707b34c/opamp_core.spice`, same sha256).
+45 corners each, {ngspice}, into CL = 2 pF [DR-1]. DUT: `{DUT}`
+(snapshot `{SNAPSHOT.as_posix()}`, same sha256).
 
 CMRR = Av0 - Acm0 and PSRR+ = Av0 - Avs0 are each ONE in-deck measurement (two DUT
 copies per deck), in dB, read at the 10 mHz DC shelf. Av0 here is the AC-grounded-`inn`

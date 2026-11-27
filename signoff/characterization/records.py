@@ -1105,13 +1105,11 @@ def _load_cmrr_psrr_klt_population(repo: Path, key: str, ck: dict, expected: lis
         jobs = klt_envelope.batch_job_ids(env)
         if not jobs:
             problems.append(f"{label}: no environment.remote batch job (not a batch run)")
-        version = e.get("engine_version")
-        if e.get("engine") != "ngspice" or not version:
-            problems.append(f"{label}: engine {e.get('engine')!r} {version!r} is not an identified ngspice")
-        version = str(version)
-        banner = (e.get("engine_build") or {}).get("version_banner")
-        if banner is not None and f"ngspice-{version}" not in banner:
-            problems.append(f"{label}: engine banner does not name ngspice-{version} (contradictory simulator version)")
+        version = str(e.get("engine_version"))
+        try:
+            klt_envelope.check_batch_ngspice(env, label)
+        except klt_envelope.InputError as exc:
+            problems.append(str(exc))
         stated = sorted(set(NGSPICE_RE.findall(md_text)))
         if stated and stated != [version]:
             problems.append(f"{label}: ran ngspice-{version} but the selected record's prose names {', '.join('ngspice-' + s for s in stated)}")
@@ -1121,7 +1119,11 @@ def _load_cmrr_psrr_klt_population(repo: Path, key: str, ck: dict, expected: lis
         deck_prov = prov.get("deck") or {}
         if deck_prov.get("name") != "cornerMOSlv.lib" or deck_prov.get("content_hash") != "sha256:" + str(e.get("models_lib_sha256")):
             problems.append(f"{label}: model deck identity {deck_prov.get('name')!r} {deck_prov.get('content_hash')!r} is not cornerMOSlv.lib at the recorded models_lib_sha256")
-        closure = {c.get("path"): c.get("sha256") for c in e.get("netlist_closure") or []}
+        try:
+            closure = klt_envelope.netlist_closure(env, label)
+        except klt_envelope.InputError as exc:
+            problems.append(str(exc))
+            continue
         dut = {p: "sha256:" + str(h) for p, h in closure.items() if Path(p).name == Path(snapshot_rel).name}
         if not dut or set(dut.values()) != {snap_hash}:
             problems.append(f"{label}: simulated DUT {dut or sorted(closure)} is not the selected netlist snapshot {snapshot_rel} ({snap_hash})")
@@ -1199,6 +1201,7 @@ def _load_cmrr_psrr_klt_population(repo: Path, key: str, ck: dict, expected: lis
                 problems.append(f"point {pid}: {deck} deck: missing or non-finite measurement(s) {bad}")
                 continue
             points[pid] = {n: float(got[n]) for n in spec["names"]}
+            points[pid]["vcm_v"] = corner["supply_v"]["vinp"]
         decks[deck] = {"points": points, "version": version,
                        "dut": dict(dut), "jobs": jobs, "envelope": pins[f"{deck}_envelope"]["path"],
                        "cload_f": float(next(iter(cloads))) if len(cloads) == 1 else None}

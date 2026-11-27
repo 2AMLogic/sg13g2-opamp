@@ -79,30 +79,31 @@ def index_envelope(env: dict, label: str = "envelope", measurements=MEASUREMENTS
     return idx
 
 
-def _closure(env: dict) -> Dict[str, str]:
-    return {c["path"]: c["sha256"] for c in (env.get("environment") or {}).get("netlist_closure") or []}
-
-
 def _body_path(env: dict) -> str:
     n = env.get("netlist")
     return n.get("path") if isinstance(n, dict) else str(n)
 
 
-def check_conditions(cmrr: dict, psrr: dict) -> None:
-    """The two envelopes must be the same run conditions, or they are not joined."""
+def check_conditions(cmrr: dict, psrr: dict, *, require_build_banner: bool = False) -> dict:
+    """Return the run conditions shared by both decks after checking their evidence."""
     problems: List[str] = []
     ec, ep = cmrr.get("environment") or {}, psrr.get("environment") or {}
     for f in ("engine", "engine_version", "models_lib_sha256"):
         if ec.get(f) != ep.get(f):
             problems.append(f"{f} differs (CMRR {ec.get(f)!r} vs PSRR {ep.get(f)!r})")
     E.check_batch_model_inputs(cmrr, psrr)
-    cc, cp = _closure(cmrr), _closure(psrr)
+    cc = E.netlist_closure(cmrr, "CMRR envelope")
+    cp = E.netlist_closure(psrr, "PSRR envelope")
     if DUT not in cc or DUT not in cp:
         problems.append(f"{DUT} missing from a netlist closure")
     elif cc[DUT] != cp[DUT]:
         problems.append(f"DUT netlist hash differs (CMRR {cc[DUT][:12]} vs PSRR {cp[DUT][:12]}): Av0 is from a different DUT")
     if problems:
         raise InputError("misjoined envelopes: " + "; ".join(problems))
+    for env, label in ((cmrr, "CMRR envelope"), (psrr, "PSRR envelope")):
+        E.check_batch_ngspice(env, label, require_build_banner=require_build_banner)
+    return {"engine": ec["engine"], "engine_version": ec["engine_version"],
+            "dut_netlist_sha256": cc[DUT], "models_lib_sha256": ec["models_lib_sha256"]}
 
 
 def _sha(path: str) -> str:
@@ -111,7 +112,7 @@ def _sha(path: str) -> str:
 
 
 def check_body_hash(env: dict, body_path: str, label: str) -> None:
-    got = _closure(env).get("sim/cmrr-psrr/klt/" + os.path.basename(body_path))
+    got = E.netlist_closure(env, label).get("sim/cmrr-psrr/klt/" + os.path.basename(body_path))
     if got is None:
         raise InputError(f"{label}: envelope closure does not name {os.path.basename(body_path)}")
     if got != _sha(body_path):
@@ -147,7 +148,7 @@ def load_harness(path: str) -> Dict[Key, Dict[str, object]]:
 
 
 def compare(cmrr_idx, psrr_idx, harness, cmrr_env: dict, psrr_env: dict, cmrr_body: str, psrr_body: str) -> dict:
-    check_conditions(cmrr_env, psrr_env)
+    conditions = check_conditions(cmrr_env, psrr_env)
     check_stimulus(cmrr_body, psrr_body)
     oot: List[str] = []
     plateau_fail: List[str] = []
@@ -181,8 +182,7 @@ def compare(cmrr_idx, psrr_idx, harness, cmrr_env: dict, psrr_env: dict, cmrr_bo
                            "acm0_vs_harness_abs_db": ACM0_HARNESS_ABS_DB},
             "out_of_tolerance": oot, "bound_verdict_disagreements": [],
             "plateau_guard_failures": plateau_fail,
-            "conditions": {"engine": cmrr_env["environment"].get("engine"), "engine_version": cmrr_env["environment"].get("engine_version"),
-                           "dut_netlist_sha256": _closure(cmrr_env)[DUT], "models_lib_sha256": cmrr_env["environment"].get("models_lib_sha256")},
+            "conditions": conditions,
             "row": {"context_bound": {"min": CMRR_SYSTEMATIC_BOUND_DB, "unit": "dB", "note": "superseded DR-2 systematic floor, context only"},
                     "worst": {"point": worst["point_id"], "value": worst["cmrr_db"], "verdict": "pass" if worst["meets_systematic_floor"] else "fail"},
                     "points_below_floor": [q["point_id"] for q in points if not q["meets_systematic_floor"]],

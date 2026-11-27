@@ -464,6 +464,10 @@ def _check_cmrr_psrr_klt(point: dict, pop: dict | None) -> str | None:
         return "cannot evaluate (no pinned batch cmrr-psrr values for this point)"
     c, p = raw["cmrr"], raw["psrr"]
     problems = []
+    vcm_problem = _cell_problem("vcm_v", point.get("vcm_v"), format(c["vcm_v"], ".9g"),
+                                "pinned envelope supply_v.vinp", 9, nan_ok=False)
+    if vcm_problem:
+        problems.append(vcm_problem)
     if abs(c["av0_db"] - p["av0_db"]) > CMRR_PSRR_AV0_JOIN_DB:
         problems.append(f"Av0 of the CMRR deck {c['av0_db']:.9g} and the PSRR deck {p['av0_db']:.9g} differ by more than {CMRR_PSRR_AV0_JOIN_DB:g} dB (different DUT, corner or options)")
     for what, d, a, b, out in (("cmrr_db", c, "av0_db", "acm0_db", "cmrr_db"), ("psrr_db", p, "av0_db", "avs0_db", "psrr_db")):
