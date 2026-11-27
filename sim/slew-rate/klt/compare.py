@@ -45,10 +45,14 @@ from typing import Dict, Iterable, List, Optional, Tuple
 
 # The grid, the key helpers, InputError and the envelope gate are shared by
 # every sim/*/klt/compare.py: sim/tools/klt_envelope.py (issue #142).
-_TOOLS = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "tools"))
+_BENCH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_TOOLS = os.path.join(os.path.dirname(_BENCH), "tools")
 if _TOOLS not in sys.path:
     sys.path.insert(0, _TOOLS)
+if _BENCH not in sys.path:
+    sys.path.insert(0, _BENCH)
 import klt_envelope as E  # noqa: E402
+from slew_post import SlewError, parse_waveform  # noqa: E402
 from klt_envelope import (  # noqa: E402,F401  (re-exported: tests and callers use C.<name>)
     PROCESSES, TEMPERATURES, SUPPLIES, Key, InputError, expected_keys, make_key, key_str,
 )
@@ -149,17 +153,13 @@ def load_harness_csv(path: str) -> Dict[Key, Dict[str, object]]:
 
 def load_waveform(path: str) -> Tuple[List[float], List[float]]:
     """The harness's committed wrdata waveform: (time, v(out)) per line."""
-    t: List[float] = []
-    v: List[float] = []
     try:
-        with open(path) as f:
-            for line in f:
-                parts = line.split()
-                if len(parts) >= 2:
-                    t.append(float(parts[0]))
-                    v.append(float(parts[1]))
-    except (OSError, ValueError) as e:
-        raise InputError(f"{path}: unreadable waveform ({e})")
+        with open(path, encoding="utf-8") as f:
+            t, v = parse_waveform(f.read(), path)
+    except (OSError, UnicodeError) as e:
+        raise InputError(f"{path}: unreadable waveform ({e})") from e
+    except SlewError as e:
+        raise InputError(str(e)) from e
     if len(t) < 3:
         raise InputError(f"{path}: waveform has {len(t)} samples")
     return t, v
