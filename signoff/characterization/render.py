@@ -279,6 +279,17 @@ def render_markdown(report: dict) -> str:
     cp_rule = content.get("cmrr_psrr_klt_audit_rule")
     if cp_rule and any(src.get("cmrr_psrr_klt") for src in content["sources"].values()):
         w(f"\n{cp_rule}\n\n")
+        for src in content["sources"].values():
+            audit = src.get("cmrr_psrr_klt", {})
+            for deck, init in audit.get("ngspice_init", {}).items():
+                settings = ", ".join(f"`{line}`" for line in init["requested_lines"])
+                matched = len(init["jobs_with_matching_digest"])
+                total = len(audit["jobs"][deck])
+                w(f"- {deck.upper()} requested {settings}. {matched} of {total} batch jobs "
+                  f"reported a matching initialization digest. Simulator application is {init['simulator_application']}.")
+                for warning in init["diagnostics"]:
+                    w(f" Worker warning `{warning['code']}`.")
+                w("\n")
     slew_klt_rule = content.get("slew_klt_audit_rule")
     if slew_klt_rule and any(src.get("slew_klt") for src in content["sources"].values()):
         w(f"\n{slew_klt_rule}\n\n")

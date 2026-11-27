@@ -929,8 +929,8 @@ def _load_slew_klt_population(repo: Path, key: str, sk: dict, expected: list, sn
 
 
 def _check_direct_request_identity(req: dict, env: dict, deck: str, repo: Path,
-                                   pins: dict, problems: list) -> None:
-    """Bind the request's PDK-relative library and request-relative bench to the recorded run."""
+                                   pins: dict, problems: list) -> dict | None:
+    """Check the pinned request against the run and return its initialization evidence."""
     label = f"{deck} request"
     e = env.get("environment") or {}
     prov = env.get("provenance") or {}
@@ -978,6 +978,38 @@ def _check_direct_request_identity(req: dict, env: dict, deck: str, repo: Path,
     if (not isinstance(netlist, str) or Path(netlist).is_absolute() or not (directory / netlist).is_file()
             or (directory / netlist).resolve() != body.resolve()):
         problems.append(f"{label}: netlist {netlist!r} is not the pinned bench body")
+    return _direct_init_evidence(options.get("ngspice_init"), env, deck, problems)
+
+
+def _direct_init_evidence(requested, env: dict, deck: str, problems: list) -> dict | None:
+    if requested != ["set measureprec=12", "set numdgt=12"]:
+        problems.append(f"{deck} request: options.ngspice_init must contain the two documented print-precision settings")
+        return None
+    label = f"{deck} envelope"
+    try:
+        reported = klt_envelope.batch_init_digest_jobs(env, requested, label)
+    except klt_envelope.InputError as exc:
+        problems.append(str(exc))
+        return None
+    diagnostics = env.get("diagnostics", [])
+    if not isinstance(diagnostics, list):
+        problems.append(f"{label}: expected a list of diagnostics")
+        return None
+    warnings = [d for d in diagnostics if isinstance(d, dict) and d.get("code") == "batch_ngspice_init_unverified"]
+    for warning in warnings:
+        jobs = warning.get("jobs")
+        if warning.get("simulator_application") != "unverified" or not isinstance(jobs, list):
+            problems.append(f"{label}: invalid ngspice_init worker diagnostic")
+            return None
+        for job in jobs:
+            if not isinstance(job, dict) or job.get("request_identity") not in ("unverified", "digest_reported"):
+                problems.append(f"{label}: invalid ngspice_init job identity in worker diagnostic")
+                return None
+            if job["request_identity"] == "digest_reported" and job.get("job_id") not in reported:
+                problems.append(f"{label}: ngspice_init diagnostic claims a digest for job {job.get('job_id')} without a matching worker digest")
+                return None
+    return {"requested_lines": requested, "jobs_with_matching_digest": reported,
+            "simulator_application": "unverified", "diagnostics": warnings}
 
 
 def _check_direct_request_grid(req: dict, deck: str, problems: list) -> None:
@@ -1135,7 +1167,7 @@ def _load_cmrr_psrr_klt_population(repo: Path, key: str, ck: dict, expected: lis
             cmrr_direct.check_body_identity(env, closure, body_pin["path"], body_pin["sha256"].removeprefix("sha256:"), label)
         except klt_envelope.InputError as exc:
             problems.append(str(exc))
-        _check_direct_request_identity(req, env, deck, repo, pins, problems)
+        init_evidence = _check_direct_request_identity(req, env, deck, repo, pins, problems)
         if req.get("analysis") != CMRR_PSRR_ANALYSIS:
             problems.append(f"{deck} request: analysis is not {CMRR_PSRR_ANALYSIS}")
         _check_direct_request_grid(req, deck, problems)
@@ -1199,7 +1231,7 @@ def _load_cmrr_psrr_klt_population(repo: Path, key: str, ck: dict, expected: lis
                 continue
             points[pid] = {name: Decimal(value) for name, value in got.items()}
             points[pid]["vcm_v"] = corner["supply_v"]["vinp"]
-        decks[deck] = {"points": points, "version": version,
+        decks[deck] = {"points": points, "version": version, "ngspice_init": init_evidence,
                        "dut": dict(dut), "jobs": jobs, "envelope": pins[f"{deck}_envelope"]["path"],
                        "cload_f": float(cload) if cload is not None else None}
     if len(decks) == 2:
@@ -1222,6 +1254,7 @@ def _load_cmrr_psrr_klt_population(repo: Path, key: str, ck: dict, expected: lis
         "points": {pid: {"cmrr": decks["cmrr"]["points"][pid], "psrr": decks["psrr"]["points"][pid]} for pid in expected_ids},
         "version": decks["cmrr"]["version"],
         "jobs": {"cmrr": decks["cmrr"]["jobs"], "psrr": decks["psrr"]["jobs"]},
+        "ngspice_init": {deck: data["ngspice_init"] for deck, data in decks.items()},
         "envelopes": {"cmrr": decks["cmrr"]["envelope"], "psrr": decks["psrr"]["envelope"]},
         "cload_f": decks["cmrr"]["cload_f"],
         "control": control_key, "control_csv": control["csv"], "control_acm0": control_acm0,
@@ -1698,6 +1731,7 @@ def load_record(repo: Path, key: str, spec: dict, grid: dict, env: dict, records
                 for deck in ("cmrr", "psrr")
             }
             src["cmrr_psrr_klt"]["jobs"] = cmrr_psrr_pop["jobs"]
+            src["cmrr_psrr_klt"]["ngspice_init"] = cmrr_psrr_pop["ngspice_init"]
             src["cmrr_psrr_klt"]["cload_f"] = cmrr_psrr_pop["cload_f"]
             envelope_ngspice = f"ngspice-{cmrr_psrr_pop['version']}"
             _carry_ngspice_version(key, src, envelope_ngspice, "the pinned cmrr-psrr envelopes", spec, env, errors)

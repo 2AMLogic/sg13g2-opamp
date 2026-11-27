@@ -2137,6 +2137,17 @@ class CmrrPsrrKltAudit(RawAuditCase):
         self.assertEqual((src["cmrr_psrr_klt"]["status"], src["cmrr_psrr_klt"]["points"]), ("verified", 45))
         self.assertEqual(src["cmrr_psrr_klt"]["control"], "cmrr-psrr-harness")
         self.assertEqual(len(src["cmrr_psrr_klt"]["jobs"]["cmrr"]), 5)
+        md = generate.render_markdown(generate.make_report(content, None, self.fx.root))
+        for deck in ("cmrr", "psrr"):
+            init = src[self.RAW_KEY]["ngspice_init"][deck]
+            self.assertEqual(init["requested_lines"], ["set measureprec=12", "set numdgt=12"])
+            self.assertEqual(init["jobs_with_matching_digest"], [])
+            self.assertEqual(init["simulator_application"], "unverified")
+            envelope = json.loads((REPO / self.raw()["files"][f"{deck}_envelope"]["path"]).read_bytes())
+            self.assertEqual(init["diagnostics"], envelope["diagnostics"])
+            self.assertIn(f"{deck.upper()} requested `set measureprec=12`, `set numdgt=12`. "
+                          "0 of 5 batch jobs reported a matching initialization digest", md)
+        self.assertIn("batch_ngspice_init_unverified", md)
         self.assertEqual((src["valid_points"], src["ngspice"]), (45, "ngspice-47"))
         self.assertIn("CMRR/PSRR batch-envelope audit", content["cmrr_psrr_klt_audit_rule"])
         rows = rows_by_id(content)
@@ -2292,6 +2303,52 @@ class CmrrPsrrKltAudit(RawAuditCase):
 
                     self.edit_json(f"{deck}_envelope", change_hash)
                     self.assert_error("CMRR and PSRR", name)
+
+    def test_unverified_request_cannot_add_a_compatibility_mode(self):
+        for deck in ("cmrr", "psrr"):
+            with self.subTest(deck=deck):
+                self.fresh()
+                self.edit_json(f"{deck}_request", lambda req: req["options"]["ngspice_init"].append("set ngbehavior=hsa"))
+                self.assert_error(f"{deck} request: options.ngspice_init")
+
+    def test_reported_init_must_match_the_request(self):
+        for deck in ("cmrr", "psrr"):
+            for location in ("envelope", "worker"):
+                for field, value in (("lines", ["set ngbehavior=hsa"]), ("sha256", "sha256:" + "0" * 64)):
+                    with self.subTest(deck=deck, location=location, field=field):
+                        self.fresh()
+
+                        def change(doc):
+                            metadata = doc["environment"]
+                            if location == "worker":
+                                metadata = metadata["remote"]["fleet"][-1]["worker_environment"]
+                            metadata["ngspice_init"] = {"source": "request", field: value}
+
+                        self.edit_json(f"{deck}_envelope", change)
+                        self.assert_error(f"{deck} envelope", "ngspice_init", field)
+
+    def test_worker_diagnostic_needs_the_digest_it_claims(self):
+        self.edit_json("cmrr_envelope", lambda doc: doc["diagnostics"][0]["jobs"][0].update(request_identity="digest_reported"))
+        self.assert_error("cmrr envelope", "without a matching worker digest")
+
+    def test_worker_init_digest_identifies_contents_only(self):
+        def record_identity(doc):
+            for index in (0, 1):
+                worker = doc["environment"]["remote"]["fleet"][index]["worker_environment"]
+                lines = ["set measureprec=12", "set numdgt=12"]
+                if index == 1:
+                    lines.insert(0, f"set num_threads={worker['threads_per_worker']}")
+                digest = generate.sha256_bytes(("\n".join(lines) + "\n").encode())
+                worker["ngspice_init"] = {"source": "request", "lines": lines, "sha256": digest}
+                doc["diagnostics"][0]["jobs"][index]["request_identity"] = "digest_reported"
+
+        self.edit_json("psrr_envelope", record_identity)
+        content = self.fx.build()
+        self.assertEqual(self.errors(content), [])
+        init = content["sources"][self.RECORD][self.RAW_KEY]["ngspice_init"]["psrr"]
+        self.assertCountEqual(init["jobs_with_matching_digest"], [j["job_id"] for j in init["diagnostics"][0]["jobs"][:2]])
+        md = generate.render_markdown(generate.make_report(content, None, self.fx.root))
+        self.assertIn("2 of 5 batch jobs reported a matching initialization digest. Simulator application is unverified.", md)
 
     def test_request_must_match_the_recorded_execution(self):
         for deck in ("cmrr", "psrr"):

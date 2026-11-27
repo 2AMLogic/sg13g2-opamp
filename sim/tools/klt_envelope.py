@@ -156,6 +156,44 @@ def check_batch_ngspice(env: dict, label: str, *, require_build_banner: bool = F
             check_banner(worker.get("simulator"), f"job {job.get('job_id')} worker simulator")
 
 
+def batch_init_digest_jobs(env: dict, requested: list[str], label: str) -> list[str]:
+    """Check every recorded init identity and return workers with a matching file digest."""
+    def matches(metadata: dict, location: str) -> bool:
+        init = metadata.get("ngspice_init")
+        if init is None:
+            return False
+        if not isinstance(init, dict) or init.get("source") not in ("runner", "request"):
+            raise InputError(f"{location}: ngspice_init does not identify the requested initialization")
+        lines, digest = init.get("lines"), init.get("sha256")
+        candidates = [requested]
+        threads = metadata.get("threads_per_worker")
+        if type(threads) is int and threads > 0:
+            # KLT may prepend the worker launch pin to the requested .spiceinit file.
+            candidates.append([f"set num_threads={threads}", *requested])
+        for candidate in candidates:
+            if lines is not None and lines != candidate:
+                continue
+            data = ("\n".join(candidate) + "\n").encode("utf-8")
+            if digest is None or digest == "sha256:" + hashlib.sha256(data).hexdigest():
+                return digest is not None
+        raise InputError(f"{location}: ngspice_init lines or sha256 disagree with the request")
+
+    matches(env["environment"], label)
+    reported = set()
+    for job in _batch_jobs(env, label):
+        worker = job.get("worker_environment")
+        if worker is None:
+            continue
+        if not isinstance(worker, dict):
+            raise InputError(f"{label}: malformed worker environment")
+        job_id = job.get("job_id")
+        if matches(worker, f"{label} job {job_id}"):
+            if not isinstance(job_id, str) or not job_id:
+                raise InputError(f"{label}: ngspice_init digest has no batch job ID")
+            reported.add(job_id)
+    return sorted(reported)
+
+
 def _named_hashes(entries, label: str, *, osdi=False, hash_key="sha256", name_key="name") -> dict[str, str]:
     """Read a manifest by file name. Duplicate or absent evidence cannot establish identity."""
     if not isinstance(entries, list) or not entries:
