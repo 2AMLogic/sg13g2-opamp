@@ -27,6 +27,8 @@ from swing_post import CONFIG, serialize, sweep_count  # noqa: E402
 
 PID = "mos_tt_27C_1.20V"
 VDD, VCM = 1.2, 0.6
+FIXTURE_WORKER = {"worker_version_banner": "fixture ngspice build", "ami_id": "fixture-ami",
+                  "model_inputs": {"fixture.lib": "c" * 64}}
 CS, CE, CSTEP = (float(CONFIG[k]) for k in ("coarse_start_v", "coarse_stop_v", "coarse_step_v"))
 FSTEP, HALF = float(CONFIG["fine_step_v"]), float(CONFIG["fine_halfspan_v"])
 
@@ -52,8 +54,8 @@ def make_pair(coarse_fn, fine_fn=None, pid=PID, vos_shift=0.0):
     start, stop, _ = T.fine_window(cvid, cvout, VCM)
     start, stop = start + vos_shift, stop + vos_shift
     fvid = grid(start, stop, FSTEP)
-    ident = dict(dut_sha256="a" * 64, bench_sha256="b" * 64, simulator="ngspice-45", process="mos_tt",
-                 temp_c=27.0, vdd_v=VDD, vcm_v=VCM, pid=pid)
+    ident = dict(dut_sha256="a" * 64, bench_sha256=T.BENCH_2PF_SHA256, simulator="ngspice-45", process="mos_tt",
+                 temp_c=27.0, vdd_v=VDD, vcm_v=VCM, pid=pid, **FIXTURE_WORKER)
     coarse = dict(ident, start=CS, stop=CE, step=CSTEP, vid=cvid, vout=cvout)
     fine = dict(ident, start=start, stop=stop, step=FSTEP, vid=fvid,
                 vout=[fine_fn(x) for x in fvid], ivdd=[-12e-6] * len(fvid))
@@ -285,8 +287,8 @@ class ArchivedEvidence(unittest.TestCase):
                 fvid, (fvout, fivdd) = T.swing_post.parse_wrdata(fh.read(), T.swing_post.FINE_VECTORS, pid)
             vdd, vcm = float(r["vdd_v"]), float(r["vcm_v"])
             start, stop, _ = T.fine_window(cvid, cvout, vcm)
-            ident = dict(dut_sha256="a" * 64, bench_sha256="b" * 64, simulator="ngspice", pid=pid,
-                         process=r["corner"], temp_c=float(r["temp_c"]), vdd_v=vdd, vcm_v=vcm)
+            ident = dict(dut_sha256="a" * 64, bench_sha256=T.BENCH_2PF_SHA256, simulator="ngspice", pid=pid,
+                         process=r["corner"], temp_c=float(r["temp_c"]), vdd_v=vdd, vcm_v=vcm, **FIXTURE_WORKER)
             coarse = dict(ident, start=CS, stop=CE, step=CSTEP, vid=cvid, vout=cvout)
             fine = dict(ident, start=start, stop=stop, step=FSTEP, vid=fvid, vout=fvout, ivdd=fivdd)
             out, problems = T.audit_population([pid], [coarse], [fine])
