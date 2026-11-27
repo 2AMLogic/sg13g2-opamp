@@ -43,12 +43,14 @@ Issues currently being built (`loom:building`).
 
 - **#503**: Reproduce the output-swing audit from batch DC sweeps
 - **#514**: Bind batch CMRR and PSRR envelopes into the cmrr-psrr characterization record
+- **#548**: Remove redundant fixture copies from SlewKltAudit
+- **#549**: signoff: POPULATION_AUDITS coverage is asserted against a hard-coded set, so a new pin kind can be pinned-and-ignored
 
 ## PRs Awaiting Review
 
 PRs waiting on Judge (`loom:review-requested`).
 
-_None._
+- **#528**: characterization: bind batch CMRR/PSRR envelopes behind a cmrr_psrr_klt audit
 
 ## Approved (Awaiting Merge)
 
@@ -57,7 +59,6 @@ PRs that passed review and are queued for Champion auto-merge (`loom:pr`).
 - **#303**: docs: submit DR-0011 for two-key ratification (status flip)
 - **#333**: docs(DR-0011): revision 5 restates swing as output range, discloses CMRR/gain gaps
 - **#490**: docs: record the open TT tie measurements and replacement procedure
-- **#528**: characterization: bind batch CMRR/PSRR envelopes behind a cmrr_psrr_klt audit
 - **#538**: feat(signoff): admit batch two-pass swing evidence via swing_raw_audit
 
 ## Proposed
@@ -78,6 +79,7 @@ Issues carrying `loom:curated`.
 - **#503**: Reproduce the output-swing audit from batch DC sweeps *(curated)*
 - **#505**: Measure systematic CMRR and PSRR+ for the same DUT on the batch fleet *(curated)*
 - **#514**: Bind batch CMRR and PSRR envelopes into the cmrr-psrr characterization record *(curated)*
+- **#549**: signoff: POPULATION_AUDITS coverage is asserted against a hard-coded set, so a new pin kind can be pinned-and-ignored *(curated)*
 
 ## Proposed (Architect / Hermit)
 
@@ -95,10 +97,10 @@ _None._
 | Very important | 2 |
 | Important | 9 |
 | Ready (`loom:issue`) | 2 |
-| In Progress (`loom:building`) | 2 |
-| PRs awaiting review | 0 |
-| Approved PRs awaiting merge | 5 |
-| Curated | 14 |
+| In Progress (`loom:building`) | 4 |
+| PRs awaiting review | 1 |
+| Approved PRs awaiting merge | 4 |
+| Curated | 15 |
 | Architect / Hermit proposals | 1 |
 | Active epics | 0 |
 <!-- guide:plan-body:end -->
