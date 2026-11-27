@@ -18,6 +18,8 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -275,6 +277,21 @@ class TestBoundVerdicts(Base):
 
 
 class TestCli(Base):
+    def test_compare_rejects_waveform_row_missing_voltage(self):
+        envelope = os.path.join(HERE, "records", "20261015-063443-80878d7.sim.json")
+        with tempfile.TemporaryDirectory() as d:
+            traces = shutil.copytree(HARNESS_TRAN_DIR, os.path.join(d, "traces"))
+            trace = os.path.join(traces, "mos_tt_27C_1.20V_tran.csv")
+            with open(trace, "a") as f:
+                f.write("0\n")
+            result = subprocess.run(
+                [sys.executable, os.path.join(HERE, "compare.py"), "compare",
+                 "--envelope", envelope, "--harness-csv", HARNESS_CSV,
+                 "--harness-tran-dir", traces], capture_output=True, text=True,
+            )
+            self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+            self.assertIn(f"{trace}:802:", result.stderr)
+
     def test_validate_and_compare_exit_codes(self):
         with tempfile.TemporaryDirectory() as d:
             good = os.path.join(d, "good.json")
