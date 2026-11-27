@@ -185,10 +185,11 @@ sim/cmrr-psrr/run_cmrr_psrr_sweep.sh   # harness record (regression control)
 sim/cmrr-psrr/run_klt_record.sh        # batch record the characterization report selects
 ```
 
-`run_klt_record.sh` (issue #514) submits the two direct decks to the batch fleet
-(`klt/run_direct.sh`, `klt/run_cmrr_direct.sh`; no local grid fallback) and
-summarizes the newest envelope pair with `klt/summarize_batch.py` into
-`records/<id>.{csv,md}`; `SKIP_RUN=1` summarizes the committed envelopes only.
+`run_klt_record.sh` (issue #514) submits the PSRR deck to the batch fleet with
+`klt/run_direct.sh`. It passes that run’s checked envelope to
+`klt/run_cmrr_direct.sh` for the CMRR cross-check, then summarizes those two
+envelopes into `records/<id>.{csv,md}` with `klt/summarize_batch.py`.
+`SKIP_RUN=1` skips submission and selects the newest existing envelope for each deck.
 
 Requires `ngspice` on `PATH` (developed and run against `ngspice-46`)
 plus the OSDI models `sim/tools/build-osdi.sh` builds; does **not**

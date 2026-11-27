@@ -40,6 +40,62 @@ class BatchRecordWriter(unittest.TestCase):
         return subprocess.run(["bash", self.runner], text=True, capture_output=True, timeout=20,
                               env={**os.environ, "SKIP_RUN": "1", "RECORD_ID": "test", **env})
 
+    def test_live_run_compares_and_publishes_its_own_envelopes(self):
+        klt = self.inputs.parent
+        for name in ("run_direct.sh", "run_cmrr_direct.sh", "compare_direct.py",
+                     "psrr_direct.request.json", "cmrr_direct.request.json"):
+            shutil.copy(HERE / name, klt / name)
+        (self.root / "sim/env.sh").symlink_to(HERE.parents[1] / "env.sh")
+
+        # Stage a competing pair with consistent arithmetic but different gains.
+        # The replay client publishes it while the second submission is running.
+        for path, operand, rejection in ((CMRR, "acm0_db", "cmrr_db"), (PSRR, "avs0_db", "psrr_db")):
+            doc = json.loads(path.read_text())
+            meas = {m["name"]: m for m in doc["corners"][0]["measurements"]}
+            meas[operand]["value"] += 0.5
+            meas[rejection]["value"] -= 0.5
+            (self.root / ("99999999-competitor" + "".join(path.suffixes))).write_text(json.dumps(doc))
+
+        replay = self.root / "replay-klt"
+        replay.write_text("""#!/bin/sh
+set -eu
+case "$1" in
+    --version) echo offline-replay ;;
+    sim)
+        case "${2##*/}" in
+            psrr_direct.request.json) cat "$REPLAY_PSRR" ;;
+            cmrr_direct.request.json)
+                cp "$PWD"/99999999-competitor.*.sim.json "${2%/*}/records/"
+                cat "$REPLAY_CMRR" ;;
+            *) exit 2 ;;
+        esac ;;
+    *) exit 2 ;;
+esac
+""")
+        replay.chmod(0o755)
+        result = self.publish(
+            SKIP_RUN="0", KLT=replay.name, PATH=f"{self.root}:{os.environ['PATH']}",
+            REPLAY_CMRR=str(CMRR), REPLAY_PSRR=str(PSRR), PDK_ROOT=str(self.root),
+            PSRR_JOIN_RECORD=str(HERE / "records/20261016-171154-ff5ee9a.compare.json"),
+            CMRR_HARNESS_CSV=str(HERE.parent / "records/20260921-151815-707b34c.csv"),
+            # A standalone CMRR override must not redirect the paired run.
+            CMRR_PSRR_DIRECT_ENVELOPE=str(self.inputs / PSRR.name),
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        summary = (self.out / "test.md").read_text()
+        reports = {}
+        for deck in ("direct", "cmrr"):
+            report, = self.inputs.glob(f"*.{deck}.compare.json")
+            reports[deck] = json.loads(report.read_text())["inputs"]
+            with self.subTest(published=deck):
+                self.assertIn(f"`{Path(reports[deck]['envelope']['path']).name}`", summary)
+        with self.subTest(comparison="CMRR joins this run's PSRR"):
+            expected = self.root / reports["direct"]["envelope"]["path"]
+            self.assertEqual(self.root / reports["cmrr"]["psrr_envelope"]["path"], expected)
+        with self.subTest(published="measurements"):
+            expected = HERE.parent / "records/20261125-103814-7fb5ff0.csv"
+            self.assertEqual((self.out / "test.csv").read_bytes(), expected.read_bytes())
+
     def test_incomplete_grids_publish_neither_file_and_can_retry(self):
         for count in (0, 1):
             with self.subTest(count=count):
