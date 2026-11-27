@@ -39,21 +39,6 @@ from common import (
 from defchecks import DEFINITION_CHECKS
 from paths import noise_post, slew_post, swing_post
 
-# population key -> the definition check that audits it. A record that pins a
-# population must run its audit (raw evidence is never pinned and then
-# ignored); the reverse direction is the `need` tag in DEFINITION_CHECKS.
-POPULATION_AUDITS = {
-    "slew_raw": "slew_raw_audit",
-    "noise_raw": "noise_raw_audit",
-    "swing_raw": "swing_raw_audit",
-    "swing_two_pass": "swing_raw_audit",
-    "mc_samples": "cmrr_mc_statistics",
-    "draws_csv": "offset_mc_statistics",
-    "slew_klt": "slew_klt_audit",
-    "klt_raw": "open_loop_klt_audit",
-    "offset_klt_raw": "offset_klt_audit",
-    "cmrr_psrr_klt": "cmrr_psrr_klt_audit",
-}
 
 def load_selection(path: Path) -> dict:
     try:
@@ -112,35 +97,11 @@ def load_selection(path: Path) -> dict:
                 raise SelectionError(f"selection: record {key}: bad valid_when entry {cond!r}")
         if ("env_sidecar" in rec) != ("env_sidecar_sha256" in rec):
             raise SelectionError(f"selection: record {key}: `env_sidecar` and `env_sidecar_sha256` go together")
-        if ("draws_csv" in rec) != ("draws_csv_sha256" in rec):
-            raise SelectionError(
-                f"selection: record {key}: `draws_csv` and `draws_csv_sha256` go "
-                "together; a draws population is named only with its hash pin"
-            )
-        if rec.get("draws_csv") is not None and not isinstance(rec["draws_csv"], str):
-            raise SelectionError(f"selection: record {key}: `draws_csv` must be a path string")
-        if "mc_samples" in rec:
-            _validate_mc_samples_selection(key, rec["mc_samples"], selection["records"])
-        if "noise_raw" in rec:
-            _validate_noise_raw_selection(key, rec["noise_raw"])
-        if "slew_raw" in rec:
-            _validate_slew_raw_selection(key, rec["slew_raw"])
-        if "swing_raw" in rec:
-            _validate_swing_raw_selection(key, rec["swing_raw"])
-        if "swing_two_pass" in rec:
-            _validate_swing_two_pass_selection(key, rec["swing_two_pass"])
-            if "swing_raw" in rec:
-                raise SelectionError(
-                    f"selection: record {key}: `swing_raw` and `swing_two_pass` are alternative "
-                    "evidence for the same summary; name exactly one")
-        if "slew_klt" in rec:
-            _validate_slew_klt_selection(key, rec["slew_klt"])
-        if "cmrr_psrr_klt" in rec:
-            _validate_cmrr_psrr_klt_selection(key, rec["cmrr_psrr_klt"], selection["records"])
-        if "klt_raw" in rec:
-            _validate_klt_raw_selection(key, rec["klt_raw"], selection["records"])
-        if "offset_klt_raw" in rec:
-            _validate_offset_klt_raw_selection(key, rec["offset_klt_raw"], selection["records"])
+        if "draws_csv_sha256" in rec and "draws_csv" not in rec:
+            POPULATION_VALIDATORS["draws_csv"](key, None, rec, selection["records"])
+        for population, validate in POPULATION_VALIDATORS.items():
+            if population in rec:
+                validate(key, rec[population], rec, selection["records"])
         for population, audit in POPULATION_AUDITS.items():
             if population in rec and audit not in rec.get("definition_checks", []):
                 raise SelectionError(
@@ -200,10 +161,22 @@ def load_selection(path: Path) -> dict:
     return selection
 
 
+def _validate_draws_csv_selection(key: str, dc, rec: dict, _records: dict) -> None:
+    """Shape of a record's `draws_csv` pin: a path string paired with
+    `draws_csv_sha256`."""
+    if ("draws_csv" in rec) != ("draws_csv_sha256" in rec):
+        raise SelectionError(
+            f"selection: record {key}: `draws_csv` and `draws_csv_sha256` go "
+            "together; a draws population is named only with its hash pin"
+        )
+    if not isinstance(dc, str):
+        raise SelectionError(f"selection: record {key}: `draws_csv` must be a path string")
+
+
 MC_ACCEPTANCE_KEYS = ("op_rail_frac", "op_mid_frac", "plateau_tol_db")
 
 
-def _validate_mc_samples_selection(key: str, ms, records: dict) -> None:
+def _validate_mc_samples_selection(key: str, ms, _rec: dict, records: dict) -> None:
     """Shape of a record's `mc_samples` pin (a pinned LIST of raw sample files,
     not the offset-specific draws CSV contract)."""
     where = f"selection: record {key}: `mc_samples`"
@@ -247,7 +220,7 @@ def _validate_raw_pins(where: str, files, kinds: tuple, shape: str) -> None:
                 )
 
 
-def _validate_noise_raw_selection(key: str, nr) -> None:
+def _validate_noise_raw_selection(key: str, nr, _rec: dict, _records: dict) -> None:
     """Shape of a record's `noise_raw` pin: per point, one pinned log and one
     pinned in-band spectrum, plus the documented measurement band."""
     where = f"selection: record {key}: `noise_raw`"
@@ -265,7 +238,7 @@ def _validate_noise_raw_selection(key: str, nr) -> None:
     _validate_raw_pins(where, nr.get("files"), NOISE_PIN_KINDS, f"{{log, spectrum}}")
 
 
-def _validate_slew_raw_selection(key: str, sr) -> None:
+def _validate_slew_raw_selection(key: str, sr, _rec: dict, _records: dict) -> None:
     """Shape of a record's `slew_raw` pin: the measurement configuration, plus
     per point one pinned transient waveform and one pinned rendered netlist."""
     where = f"selection: record {key}: `slew_raw`"
@@ -279,7 +252,7 @@ def _validate_slew_raw_selection(key: str, sr) -> None:
     _validate_raw_pins(where, sr.get("files"), SLEW_PIN_KINDS, f"{{tran, netlist}}")
 
 
-def _validate_slew_klt_selection(key: str, sk) -> None:
+def _validate_slew_klt_selection(key: str, sk, _rec: dict, _records: dict) -> None:
     """Shape of a record's `slew_klt` pin: the batch envelope, the request it
     ran and the bench body, each with its sha256 (issue #501)."""
     where = f"selection: record {key}: `slew_klt`"
@@ -293,7 +266,7 @@ def _validate_slew_klt_selection(key: str, sk) -> None:
             raise SelectionError(f"{where}.files.{kind} needs string `path` and `sha256` (a raw artifact is never named without its pin)")
 
 
-def _validate_cmrr_psrr_klt_selection(key: str, ck, records: dict) -> None:
+def _validate_cmrr_psrr_klt_selection(key: str, ck, _rec: dict, records: dict) -> None:
     """Shape of a record's `cmrr_psrr_klt` pin: both decks' envelope, request and
     bench body with their sha256, plus the harness record kept as regression
     control (issue #514)."""
@@ -310,7 +283,7 @@ def _validate_cmrr_psrr_klt_selection(key: str, ck, records: dict) -> None:
             raise SelectionError(f"{where}.files.{kind} needs string `path` and `sha256` (a raw artifact is never named without its pin)")
 
 
-def _validate_swing_raw_selection(key: str, sw) -> None:
+def _validate_swing_raw_selection(key: str, sw, _rec: dict, _records: dict) -> None:
     """Shape of a record's `swing_raw` pin: the measurement configuration, plus
     per point one pinned coarse and one fine transfer curve and their rendered
     netlists."""
@@ -325,7 +298,7 @@ def _validate_swing_raw_selection(key: str, sw) -> None:
     _validate_raw_pins(where, sw.get("files"), SWING_PIN_KINDS, f"{list(SWING_PIN_KINDS)}")
 
 
-def _validate_swing_two_pass_selection(key: str, sw) -> None:
+def _validate_swing_two_pass_selection(key: str, sw, rec: dict, _records: dict) -> None:
     """Shape of a record's `swing_two_pass` pin (issue #503): per point one
     hash-pinned coarse and one hash-pinned fine pass-evidence JSON (see
     sim/output-swing/klt/two_pass.py for the pass schema)."""
@@ -333,9 +306,13 @@ def _validate_swing_two_pass_selection(key: str, sw) -> None:
     if not isinstance(sw, dict) or sorted(sw) != ["files"]:
         raise SelectionError(f"{where} must be an object with exactly `files`")
     _validate_raw_pins(where, sw.get("files"), SWING_TWO_PASS_KINDS, f"{list(SWING_TWO_PASS_KINDS)}")
+    if "swing_raw" in rec:
+        raise SelectionError(
+            f"selection: record {key}: `swing_raw` and `swing_two_pass` are alternative "
+            "evidence for the same summary; name exactly one")
 
 
-def _validate_klt_raw_selection(key: str, kr, records: dict) -> None:
+def _validate_klt_raw_selection(key: str, kr, _rec: dict, records: dict) -> None:
     """Shape of a record's `klt_raw` pin: pinned AC/OP envelopes, requests and
     bench body (plus optional `measurement`, and optional `dc_continuity` when
     comparing two configurations or standing in for a legacy port-only run)."""
@@ -353,7 +330,7 @@ def _validate_klt_raw_selection(key: str, kr, records: dict) -> None:
             raise SelectionError(f"{where}.files.{kind} needs string `path` and `sha256` (a raw artifact is never named without its pin)")
 
 
-def _validate_offset_klt_raw_selection(key: str, kr, records: dict) -> None:
+def _validate_offset_klt_raw_selection(key: str, kr, _rec: dict, records: dict) -> None:
     """Shape of a record's `offset_klt_raw` pin (issue #504): one pinned file
     per kind (both envelopes, both requests, both circuit bodies), plus the
     selected same-DUT open-loop record the closed-loop referral joins Av0
@@ -369,3 +346,36 @@ def _validate_offset_klt_raw_selection(key: str, kr, records: dict) -> None:
     for kind, pin in files.items():
         if not (isinstance(pin, dict) and isinstance(pin.get("path"), str) and isinstance(pin.get("sha256"), str)):
             raise SelectionError(f"{where}.files.{kind} needs string `path` and `sha256` (a raw artifact is never named without its pin)")
+
+
+# population key -> shape validator dispatched by `load_selection`. Every key
+# admitted here must also be mapped in `POPULATION_AUDITS` so raw evidence is
+# never pinned and then ignored.
+POPULATION_VALIDATORS = {
+    "draws_csv": _validate_draws_csv_selection,
+    "mc_samples": _validate_mc_samples_selection,
+    "noise_raw": _validate_noise_raw_selection,
+    "slew_raw": _validate_slew_raw_selection,
+    "swing_raw": _validate_swing_raw_selection,
+    "swing_two_pass": _validate_swing_two_pass_selection,
+    "slew_klt": _validate_slew_klt_selection,
+    "klt_raw": _validate_klt_raw_selection,
+    "offset_klt_raw": _validate_offset_klt_raw_selection,
+    "cmrr_psrr_klt": _validate_cmrr_psrr_klt_selection,
+}
+
+# population key -> the definition check that audits it. A record that pins a
+# population must run its audit (raw evidence is never pinned and then
+# ignored); the reverse direction is the `need` tag in DEFINITION_CHECKS.
+POPULATION_AUDITS = {
+    "slew_raw": "slew_raw_audit",
+    "noise_raw": "noise_raw_audit",
+    "swing_raw": "swing_raw_audit",
+    "swing_two_pass": "swing_raw_audit",
+    "mc_samples": "cmrr_mc_statistics",
+    "draws_csv": "offset_mc_statistics",
+    "slew_klt": "slew_klt_audit",
+    "klt_raw": "open_loop_klt_audit",
+    "offset_klt_raw": "offset_klt_audit",
+    "cmrr_psrr_klt": "cmrr_psrr_klt_audit",
+}

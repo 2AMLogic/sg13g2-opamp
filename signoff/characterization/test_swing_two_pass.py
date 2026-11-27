@@ -133,13 +133,30 @@ class SwingTwoPassAdmission(unittest.TestCase):
 
 
 class SwingTwoPassSelectionShape(unittest.TestCase):
-    def test_shape_validator(self):
+    def setUp(self):
+        self.selected = json.loads((HERE / "selection.json").read_text(encoding="utf-8"))
+        self.swing = self.selected["records"]["output-swing"]
         pin = {"path": "a", "sha256": "sha256:x"}
-        good = {"files": {PID: {"coarse": pin, "fine": pin}}}
-        selection._validate_swing_two_pass_selection("k", good)
-        for bad in ({"files": {PID: {"coarse": pin}}}, {"files": {}}, {"files": good["files"], "x": 1}, []):
-            with self.assertRaises(selection.SelectionError):
-                selection._validate_swing_two_pass_selection("k", bad)
+        self.files = {PID: {"coarse": pin, "fine": pin}}
+
+    def load_with_two_pass(self, evidence):
+        self.swing["swing_two_pass"] = evidence
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "selection.json"
+            path.write_text(json.dumps(self.selected), encoding="utf-8")
+            selection.load_selection(path)
+
+    def test_shape_validator(self):
+        del self.swing["swing_raw"]
+        self.load_with_two_pass({"files": self.files})
+        for bad in ({"files": {PID: {"coarse": self.files[PID]["coarse"]}}},
+                    {"files": {}}, {"files": self.files, "x": 1}, []):
+            with self.subTest(evidence=bad), self.assertRaisesRegex(selection.SelectionError, "swing_two_pass"):
+                self.load_with_two_pass(bad)
+
+    def test_record_cannot_pin_both_swing_formats(self):
+        with self.assertRaisesRegex(selection.SelectionError, "swing_raw.*swing_two_pass.*name exactly one"):
+            self.load_with_two_pass({"files": self.files})
 
 
 if __name__ == "__main__":
