@@ -40,6 +40,9 @@ import swing_post  # noqa: E402
 # selection.json rows swing_headroom_vdd / swing_headroom_vss / swing_span;
 # the characterization reader applies those limits to the audited values.
 LIMITS = {"headroom_hi_v": 0.251, "headroom_lo_v": 0.141, "swing_span_v": 0.571}
+# tb_swing.body.spice with Cload out vss 2e-12. The record's "CL = 2 pF"
+# statement applies to this exact bench, even when replaying after a bench edit.
+BENCH_2PF_SHA256 = "20d7d6b5a2a7fb9d4b63329f23090479487fbe341395cb41981b0c7a157646e2"
 IDENTITY_KEYS = ("dut_sha256", "bench_sha256", "simulator", "process", "temp_c", "vdd_v", "vcm_v")
 
 
@@ -101,6 +104,8 @@ def _identity(pid, label, p):
     for k in IDENTITY_KEYS + ("start", "stop", "step") + curves:
         if k not in p:
             raise PairError(pid, f"{label} pass records no {k}")
+    if p["bench_sha256"] != BENCH_2PF_SHA256:
+        raise PairError(pid, f"{label} pass bench_sha256 {p['bench_sha256']!r} differs from the supported 2 pF bench")
     for field in ("worker_version_banner", "ami_id"):
         value = p.get(field)
         if not isinstance(value, str) or not value.strip():

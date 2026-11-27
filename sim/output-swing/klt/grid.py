@@ -65,8 +65,11 @@ def coarse_request(bundle):
         path = bundle / rel
         path.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(ROOT / rel, path)
+    inputs = submission_inputs(bundle)
+    if inputs["bench_sha256"] != T.BENCH_2PF_SHA256:
+        raise C.InputError(f"{BENCH}: bench_sha256 {inputs['bench_sha256']} differs from the supported 2 pF bench")
     request = read(HERE / "swing.request.json")
-    request.update(netlist=str(BENCH), batch={}, _comment=submission_inputs(bundle))
+    request.update(netlist=str(BENCH), batch={}, _comment=inputs)
     write(bundle / "coarse.request.json", request)
 
 

@@ -394,6 +394,13 @@ digest, both snapshots and the job ID. The comparison checks the ngspice
 build banner observed on each worker. The executable digest describes the
 collecting client.
 
+Before a new grid is submitted, the producer checks the retained bench against
+the SHA-256 pinned in `two_pass.py`. Replay and signoff require that digest
+in both passes at every PVT point. The pinned `tb_swing.body.spice` has a
+`Cload out vss 2e-12` element, which establishes the record’s 2 pF load.
+A bench revision requires reviewing the circuit and updating the supported
+digest before submitting a new grid. The DUT has a separate snapshot and digest.
+
 To recover an interrupted run, use its original bundle and run ID in
 `sim/output-swing/klt/run.sh grid <run-id>`. The runner collects the
 recorded jobs and submits the fine pass if it has yet to start.

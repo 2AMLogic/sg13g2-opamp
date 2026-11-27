@@ -67,6 +67,9 @@ class ArchivedCurves(unittest.TestCase):
 
     def capture(self):
         grid.coarse_request(self.bundle)
+        self.collect_fixture_jobs()
+
+    def collect_fixture_jobs(self):
         self.submit("coarse")
         self.emit("coarse")
         passes = grid.extract(self.bundle, "coarse", grid.ROOT / "coarse")
@@ -86,6 +89,7 @@ class ArchivedCurves(unittest.TestCase):
     def emit(self, phase):
         req = grid.read(self.bundle / f"{phase}.request.json")
         env = grid.read(HERE / "records/20261101-010941-b7a1a86.sim.json")
+        env["environment"]["netlist_sha256"] = compare.E.sha256_file(self.bundle / grid.BENCH)
         for item in env["environment"]["netlist_closure"]:
             retained = self.bundle / item["path"]
             item.update(path=str(retained.relative_to(grid.ROOT)), sha256=compare.E.sha256_file(retained))
@@ -145,33 +149,35 @@ class FullGridAdmission(ArchivedCurves):
 class WorkerEnvironmentAdmission(ArchivedCurves):
     points = (("mos_tt", 27, 1.08), compare.NOMINAL_KEY)
 
-    def test_selection_from_individually_valid_bundles(self):
+    def setUp(self):
+        super().setUp()
         project = HERE.parents[2]
         sys.path.insert(0, str(project / "signoff/characterization"))
         self.addCleanup(sys.path.remove, sys.path[0])
+        self.pvt = grid.read(project / "signoff/characterization/selection.json")["grids"]["pvt45"]
+        self.pvt["axes"] = {"corner": ["mos_tt"], "temp": ["27"], "vdd": ["1.08", "1.20"]}
+        self.env = {"pin": grid.read(project / "sim/pdk.json"), "ngspice": "ngspice-46"}
+
+    def load(self, spec):
         import records
 
-        pvt = grid.read(project / "signoff/characterization/selection.json")["grids"]["pvt45"]
-        pvt["axes"] = {"corner": ["mos_tt"], "temp": ["27"], "vdd": ["1.08", "1.20"]}
-        env = {"pin": grid.read(project / "sim/pdk.json"), "ngspice": "ngspice-46"}
+        return records.load_record(grid.ROOT, "output-swing", spec, self.pvt, self.env)
 
-        def load(spec):
-            return records.load_record(grid.ROOT, "output-swing", spec, pvt, env)
+    def finish_and_admit(self):
+        self.assertEqual(grid.finish(self.bundle, grid.ROOT / "fine"), 0)
+        spec = grid.read(self.bundle / "selection.json")
+        state = self.load(spec)
+        self.assertEqual(state["errors"], [])
+        self.assertEqual(state["source"]["swing_two_pass"]["status"], "verified")
+        return spec
 
-        def finish_and_admit():
-            self.assertEqual(grid.finish(self.bundle, grid.ROOT / "fine"), 0)
-            spec = grid.read(self.bundle / "selection.json")
-            state = load(spec)
-            self.assertEqual(state["errors"], [])
-            self.assertEqual(state["source"]["swing_two_pass"]["status"], "verified")
-            return spec
-
+    def test_selection_from_individually_valid_bundles(self):
         # Different collecting clients can recover passes from the same worker build.
         path = self.bundle / "fine.sim.json"
         fine = grid.read(path)
         fine["environment"]["engine_build"]["binary_sha256"] = "a" * 64
         grid.write(path, fine)
-        first = finish_and_admit()
+        first = self.finish_and_admit()
 
         self.bundle = grid.ROOT / "second"
         self.capture()
@@ -181,19 +187,62 @@ class WorkerEnvironmentAdmission(ArchivedCurves):
             simulator = result["environment"]["remote"]["worker_environment"]["simulator"]
             simulator["version_banner"] = simulator["version_banner"].replace("Oct  1", "Oct  2")
             grid.write(path, result)
-        second = finish_and_admit()
+        second = self.finish_and_admit()
 
         # Swap the hash-pinned fine file, then the entire pair at the same corner.
         for phase in ("fine", "coarse"):
             with self.subTest(swapped=phase):
                 first["swing_two_pass"]["files"][PID][phase] = second["swing_two_pass"]["files"][PID][phase]
-                state = load(first)
+                state = self.load(first)
                 self.assertEqual(state["source"]["swing_two_pass"]["status"], "error")
                 self.assertTrue(any(PID in e and "worker_version_banner" in e for e in state["errors"]),
                                 state["errors"])
 
+    def test_selection_rejects_a_whole_pair_from_another_bench(self):
+        selected = self.finish_and_admit()
+        self.bundle = grid.ROOT / "four-pf"
+        grid.coarse_request(self.bundle)
+
+        # Recreate a submission by the old producer. The 4 pF bench, request,
+        # receipts and both result closures agree with one another.
+        bench = self.bundle / grid.BENCH
+        bench.write_text(bench.read_text().replace("Cload out vss 2e-12", "Cload out vss 4e-12"))
+        req = self.bundle / "coarse.request.json"
+        grid.write(req, dict(grid.read(req), _comment=grid.submission_inputs(self.bundle)))
+        self.collect_fixture_jobs()
+
+        # Replace both existing pins at the first selected corner, so using
+        # the first evidence file as the reference would blame the other corner.
+        pid = compare.key_str(self.points[0])
+        for phase in ("coarse", "fine"):
+            passes = grid.extract(self.bundle, phase, grid.ROOT / phase)
+            doc, = (p for p in passes if p["pid"] == pid)
+            path = self.bundle / f"{pid}_{phase}.json"
+            grid.write(path, doc)
+            selected["swing_two_pass"]["files"][pid][phase] = grid.pin(path)
+        state = self.load(selected)
+        self.assertEqual(state["source"]["swing_two_pass"]["status"], "error")
+        self.assertEqual(len(state["errors"]), 1, state["errors"])
+        self.assertIn(f"point {pid}:", state["errors"][0])
+        self.assertIn("bench_sha256", state["errors"][0])
+
+        with self.assertRaisesRegex(compare.InputError, "bench_sha256"):
+            grid.finish(self.bundle, grid.ROOT / "fine")
+        self.assertFalse((self.bundle / "record.md").exists())
+        self.assertFalse((self.bundle / "selection.json").exists())
+        with self.assertRaisesRegex(compare.InputError, "bench_sha256"):
+            grid.finish(self.bundle, replay=True)
+
 
 class SwingGridControls(ArchivedCurves):
+    def test_coarse_request_rejects_unsupported_bench_before_submission(self):
+        bench = grid.ROOT / grid.BENCH
+        bench.write_text(bench.read_text().replace("Cload out vss 2e-12", "Cload out vss 4e-12"))
+        bundle = grid.ROOT / "new-run"
+        with self.assertRaisesRegex(compare.InputError, "bench_sha256"):
+            grid.coarse_request(bundle)
+        self.assertFalse((bundle / "coarse.request.json").exists())
+
     def test_changed_dut_without_a_baseline_retains_audited_results(self):
         dut = grid.ROOT / grid.DUT
         dut.write_text(dut.read_text().replace("w=3.2u", "w=6.4u", 1))
