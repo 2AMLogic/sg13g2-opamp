@@ -93,6 +93,86 @@ class CompareCmrrDirect(unittest.TestCase):
         with self.assertRaisesRegex(InputError, "Vcmb"):
             self._compare(pbody=self.pbody + "Vcmb inpb midb dc 0 ac 1\n")
 
+    def test_ac_magnitude_is_read_from_the_source_card(self):
+        card = "Vsrip vddb vdd dc 0 ac 1"
+        for magnitude in ("0.5", "1m", "1.001", "1e-1", "1e", "0.5 ac 1"):
+            with self.subTest(magnitude=magnitude):
+                changed = self.pbody.replace(card, f"Vsrip vddb vdd dc 0 ac {magnitude} $ ac 1")
+                with self.assertRaisesRegex(InputError, "PSRR body: Vsrip must have unit AC magnitude"):
+                    C.check_stimulus(self.cbody, changed)
+        C.check_stimulus(self.cbody, self.pbody.replace(card, "Vsrip vddb vdd dc 0\n+ AC 0.1E1 $ ac 0.5"))
+        commented = "Vsrip vddb vdd dc 0\r\n* AC specifications follow\r\n+ AC 1"
+        C.check_stimulus(self.cbody, self.pbody.replace(card, commented))
+        conditional_dc = card + "\n.if(1)\nVsrip vddb vdd dc 0\n.endif"
+        with self.assertRaisesRegex(InputError, "PSRR body: Vsrip must have unit AC magnitude"):
+            C.check_stimulus(self.cbody, self.pbody.replace(card, conditional_dc))
+
+    def test_unit_sources_must_drive_the_expected_nodes(self):
+        for label, cmrr, psrr in (
+            ("CMRR body: Vinp", self.cbody.replace("Vinp inpa", "Vinp inpb"), self.pbody),
+            ("PSRR body: Vinp", self.cbody, self.pbody.replace("Vinp inpa", "Vinp inpb")),
+            ("PSRR body: Vsrip", self.cbody, self.pbody.replace("Vsrip vddb", "Vsrip outb")),
+        ):
+            with self.subTest(source=label), self.assertRaisesRegex(InputError, label + " must drive"):
+                C.check_stimulus(cmrr, psrr)
+
+    def test_solver_options_in_the_netlist_and_control_commands(self):
+        for card in (
+            ".OPT tnom=27,RELTOL = 0.01",
+            '.option "reltol"=0.01',
+            ".option tnom=27 $ nominal temperature\n* continued below\n+ reltol=0.01",
+            ".options tnom=27 \\\\\n reltol=0.01",
+            ".subckt child a\n.opt reltol=0.01\nr1 a 0 1k\n.ends\nx1 vdd child",
+            ".if (1)\n.options reltol=0.01\n.endif",
+            ".control\nset r=0.01\noption reltol=$r\n.endc",
+            "*# set reltol=0.01",
+        ):
+            with self.subTest(card=card), self.assertRaisesRegex(InputError, "CMRR body: reltol"):
+                C.check_stimulus(self.cbody + card + "\n", self.pbody)
+        comments = "* .options reltol=0.01\n.option tnom=27 $ reltol=0.01\n*# echo reltol=0.01\n"
+        C.check_stimulus(self.cbody + comments + '*# set label="default reltol=0.001"\n', self.pbody)
+
+    def test_input_coupling_requires_one_top_level_unit_capacitor(self):
+        card = "Cinna_acgnd inna vss 1"
+        for replacement in (
+            card + "m $ 1 F",
+            card + "\nCextra inna inpa 1",
+            ".subckt unused inna vss\n" + card + "\n.ends",
+            ".if (0)\n" + card + "\n.endif",
+            card + "\n.if (1)\nCextra inna inpa 1\n.endif",
+        ):
+            with self.subTest(replacement=replacement), self.assertRaisesRegex(InputError, "CMRR body: inna"):
+                C.check_stimulus(self.cbody.replace(card, replacement), self.pbody)
+        reversed_pins = "Cinna_acgnd VSS INNA\n+ 1.0E0 $ 1 F"
+        C.check_stimulus(self.cbody.replace(card, reversed_pins), self.pbody)
+
+    def test_sources_and_loads_must_be_in_the_top_level_circuit(self):
+        source = "Vsrip vddb vdd dc 0 ac 1"
+        load = "Cloadb outb vss 2e-12"
+        for block in (".subckt unused a b\n{}\n.ends", ".control\n{}\n.endc", ".end\n{}"):
+            with self.subTest(block=block):
+                # Move both cards out of the circuit, keeping their text intact.
+                body = self.pbody.replace(source, "").replace(load, "")
+                body += block.format(source + "\n" + load) + "\n"
+                with self.assertRaisesRegex(InputError, "PSRR body AC sources"):
+                    C.check_stimulus(self.cbody, body)
+                self.assertIsNone(C.output_load_f(body))
+
+                # The same out-of-scope copies cannot shadow valid circuit cards.
+                body = self.pbody + block.format(source + "\n" + load) + "\n"
+                C.check_stimulus(self.cbody, body)
+                self.assertEqual(C.output_load_f(body), C.output_load_f(self.pbody))
+
+    def test_nested_branches_keep_the_outer_condition_until_endif(self):
+        card = "Cinna_acgnd inna vss 1"
+        inner = ".IF(0)\nRinner inpa 0 1k\n.ENDIF"
+        for branch in (".elseif (0)", ".else"):
+            with self.subTest(branch=branch):
+                prefix = f".if (0)\n{inner}\n{branch}\n"
+                with self.assertRaisesRegex(InputError, "CMRR body: inna"):
+                    C.check_stimulus(self.cbody.replace(card, prefix + card + "\n.endif"), self.pbody)
+                C.check_stimulus(self.cbody.replace(card, prefix + "Router inpa 0 1k\n.endif\n" + card), self.pbody)
+
     def test_swapped_stimulus_values_are_out_of_tolerance(self):
         env = copy.deepcopy(self.cmrr)
         for i, c in enumerate(env["corners"]):  # copy B excited by the supply: Acm0 reads Avs0
@@ -141,6 +221,17 @@ class CompareCmrrDirect(unittest.TestCase):
         env["environment"]["engine_version"] = "46"
         with self.assertRaisesRegex(InputError, "engine_version differs"):
             self._compare(cmrr=env)
+
+    def test_single_job_worker_banner_is_optional_but_must_agree_when_present(self):
+        env = self.cmrr["environment"]
+        job = env["remote"]["fleet"][0]
+        env["remote"] = job
+        simulator = job["worker_environment"]["simulator"]
+        del simulator["version_banner"]
+        self.assertEqual(self._compare()["conditions"]["engine_version"], "47")
+        simulator["version_banner"] = "** ngspice-45 and ngspice-47"
+        with self.assertRaisesRegex(InputError, "worker simulator.*expected ngspice-47"):
+            self._compare()
 
     # --- negative control: failed plateau guard is a result
     def test_plateau_miss_is_listed(self):

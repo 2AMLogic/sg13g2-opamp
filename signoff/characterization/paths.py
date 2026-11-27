@@ -20,6 +20,7 @@ Stdlib only; the `sys.path` edits these imports need are its only effect.
 
 from __future__ import annotations
 
+import importlib.util
 import sys
 from pathlib import Path
 
@@ -28,6 +29,7 @@ DEFAULT_REPO_ROOT = HERE.parent.parent
 # Shared sidecar contract/helper (issue #191) and OP sanity gate (issue #380); pure functions, stdlib only.
 sys.path.insert(0, str(DEFAULT_REPO_ROOT / "sim" / "tools"))
 import env_identity  # noqa: E402
+import klt_envelope  # noqa: E402
 import op_sanity  # noqa: E402
 # Shared draws-population contract (issue #141); pure functions, stdlib only.
 sys.path.insert(0, str(DEFAULT_REPO_ROOT / "signoff" / "yield-inputs"))
@@ -44,13 +46,18 @@ import slew_post  # noqa: E402
 # Shared output-swing post-processing (issue #230): the SAME module run_swing_sweep.sh runs.
 sys.path.insert(0, str(DEFAULT_REPO_ROOT / "sim" / "output-swing"))
 import swing_post  # noqa: E402
-# Two-pass output-swing batch pairing/audit (issue #503). Loaded by file path:
-# the bench's klt directory also holds a compare.py, so it is not put on sys.path.
-import importlib.util  # noqa: E402
-_tp_spec = importlib.util.spec_from_file_location(
-    "swing_two_pass", DEFAULT_REPO_ROOT / "sim" / "output-swing" / "klt" / "two_pass.py")
-swing_two_pass = importlib.util.module_from_spec(_tp_spec)
-_tp_spec.loader.exec_module(swing_two_pass)
+
+
+def _bench_module(name: str, path: str):
+    """Load bench-specific checks without exposing a bench's compare.py on sys.path."""
+    spec = importlib.util.spec_from_file_location(name, DEFAULT_REPO_ROOT / path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+swing_two_pass = _bench_module("swing_two_pass", "sim/output-swing/klt/two_pass.py")
+cmrr_direct = _bench_module("cmrr_direct", "sim/cmrr-psrr/klt/compare_cmrr_direct.py")
 # Shared input-offset klt derivation (issue #504): the SAME module the bench's
 # run.sh writer, its compare.py and this package's offset_klt_audit all apply.
 sys.path.insert(0, str(DEFAULT_REPO_ROOT / "sim" / "input-offset" / "klt"))

@@ -27,6 +27,8 @@
 # CMRR_PSRR_DIRECT_ENVELOPE overrides the PSRR direct envelope joined to this
 # run (default: the newest records/*.direct.sim.json); CMRR_HARNESS_CSV
 # overrides the harness record.
+# On success, write the checked envelope's absolute path to a new KLT_ENVELOPE_PATH_FILE
+# when requested by run_klt_record.sh.
 #
 # Exit status: 0 records written and in agreement; 3 preflight failed; 4 no
 # gradable envelope (nothing written); 5 records written but the cross-check
@@ -66,3 +68,7 @@ klt_write_envelope "${out}"
 
 KLT_PROVENANCE_EXTRA=("submit_mode=single")
 klt_compare_and_finish --psrr-envelope "${PSRR_ENV}" --harness-csv "${HARNESS_CSV}"
+if [[ -n "${KLT_ENVELOPE_PATH_FILE:-}" ]]; then
+  set -o noclobber
+  printf '%s\n' "${RECORDS_DIR}/${RECORD_ID}${RECORD_SUFFIX}.sim.json" > "${KLT_ENVELOPE_PATH_FILE}"
+fi

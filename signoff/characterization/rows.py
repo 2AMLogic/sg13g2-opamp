@@ -41,16 +41,20 @@ def parse_inventory(path: Path) -> dict[str, str]:
 
 def column_values(state: dict, column: str, scale: Decimal, ids: list[str], errors: list):
     values = []
+    envelope = state.get("envelope_columns", {}).get(column)
     for pid in ids:
         row = state["points"].get(pid) or state["controls"].get(pid)
         if column not in row:
             errors.append(f"record {state['key']}: no column {column!r}")
             return []
-        value, why = parse_decimal(row.get(column))
+        if envelope is not None:
+            value, why = envelope["values"].get(pid), "missing envelope measurement"
+        else:
+            value, why = parse_decimal(row.get(column))
         if value is None:
             errors.append(f"record {state['key']}: point {pid} column {column}: {why}")
             continue
-        values.append((pid, value * scale))
+        values.append((pid, value if scale == 1 else value * scale))
     return values
 
 
@@ -259,6 +263,9 @@ def evaluate_row(row: dict, records: dict, spec_lines: list[str], inventory: dic
         "column": row["column"],
         "scale_to_unit": row["scale"],
     }
+    envelope = state.get("envelope_columns", {}).get(row["column"])
+    if envelope is not None:
+        out["source"]["envelope"] = envelope["pin"]
     out["coverage"] = {
         "grid": rec_spec.get("grid"),
         "expected": state["source"].get("expected_points"),

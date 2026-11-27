@@ -23,6 +23,8 @@
 # executable (default: `klt` on PATH).
 #
 # PSRR_JOIN_RECORD overrides the join record the envelope is checked against.
+# On success, write the checked envelope's absolute path to a new KLT_ENVELOPE_PATH_FILE
+# when requested by run_klt_record.sh.
 #
 # Exit status: 0 records written and in agreement; 3 preflight failed; 4 no
 # gradable envelope (nothing written); 5 records written but the cross-check
@@ -60,3 +62,7 @@ klt_write_envelope "${out}"
 
 KLT_PROVENANCE_EXTRA=("submit_mode=single")
 klt_compare_and_finish --join-record "${JOIN_RECORD}"
+if [[ -n "${KLT_ENVELOPE_PATH_FILE:-}" ]]; then
+  set -o noclobber
+  printf '%s\n' "${RECORDS_DIR}/${RECORD_ID}${RECORD_SUFFIX}.sim.json" > "${KLT_ENVELOPE_PATH_FILE}"
+fi

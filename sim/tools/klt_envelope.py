@@ -52,7 +52,10 @@ import csv
 import hashlib
 import json
 import math
+import re
 import sys
+from decimal import Decimal
+from pathlib import Path
 from typing import Callable, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
 
 # ---------------------------------------------------------------- the grid
@@ -61,6 +64,7 @@ from typing import Callable, Dict, Iterable, List, Mapping, Optional, Sequence, 
 PROCESSES = ("mos_tt", "mos_ss", "mos_ff", "mos_sf", "mos_fs")
 TEMPERATURES = (-40, 27, 125)
 SUPPLIES = (1.08, 1.20, 1.32)
+DECIMAL_SUPPLIES = tuple(Decimal(str(v)) for v in SUPPLIES)
 
 Key = Tuple[str, int, float]
 
@@ -101,7 +105,231 @@ def finite(x) -> bool:
     return isinstance(x, (int, float)) and not isinstance(x, bool) and math.isfinite(x)
 
 
-def sha256_file(path: str) -> str:
+def batch_job_ids(env: dict) -> List[str]:
+    """A single batch job, or the set of jobs in a sharded fleet run."""
+    environment = env.get("environment")
+    remote = environment.get("remote") if isinstance(environment, dict) else None
+    if not isinstance(remote, dict):
+        return []
+    ids = [remote.get("job_id")]
+    fleet = remote.get("fleet")
+    if isinstance(fleet, list):
+        ids.extend(f.get("job_id") for f in fleet if isinstance(f, dict))
+    return sorted({job for job in ids if isinstance(job, str) and job})
+
+
+def _batch_jobs(env: dict, label: str) -> list[dict]:
+    remote = (env.get("environment") or {}).get("remote")
+    if not isinstance(remote, dict):
+        raise InputError(f"{label}: missing batch job metadata")
+    fleet = remote.get("fleet")
+    if fleet is None:
+        return [remote]
+    if not isinstance(fleet, list) or not all(isinstance(job, dict) for job in fleet):
+        raise InputError(f"{label}: malformed fleet")
+    return [remote, *fleet]
+
+
+def check_batch_ngspice(env: dict, label: str, *, require_build_banner: bool = False) -> None:
+    """Reconcile the reported ngspice major with every available execution banner."""
+    environment = env.get("environment") or {}
+    version = str(environment.get("engine_version"))
+    if environment.get("engine") != "ngspice" or not re.fullmatch(r"[0-9]+", version):
+        raise InputError(f"{label}: expected an identified ngspice engine, got {environment.get('engine')!r} {version!r}")
+
+    def check_banner(metadata, source, required=False):
+        if metadata is not None and not isinstance(metadata, dict):
+            raise InputError(f"{label}: {source} must be an object")
+        banner = (metadata or {}).get("version_banner")
+        if banner is None and not required:
+            return
+        majors = set(re.findall(r"\bngspice-([0-9]+)\b", banner)) if isinstance(banner, str) else set()
+        if majors != {version}:
+            raise InputError(f"{label}: {source} banner reports {sorted(majors)}, expected ngspice-{version}")
+
+    check_banner(environment.get("engine_build"), "engine_build", require_build_banner)
+    for job in _batch_jobs(env, label):
+        worker = job.get("worker_environment")
+        if worker is not None:
+            if not isinstance(worker, dict):
+                raise InputError(f"{label}: malformed worker environment")
+            check_banner(worker.get("simulator"), f"job {job.get('job_id')} worker simulator")
+
+
+def batch_init_digest_jobs(env: dict, requested: list[str], label: str) -> list[str]:
+    """Check every recorded init identity and return workers with a matching file digest."""
+    def matches(metadata: dict, location: str) -> bool:
+        init = metadata.get("ngspice_init")
+        if init is None:
+            return False
+        if not isinstance(init, dict) or init.get("source") not in ("runner", "request"):
+            raise InputError(f"{location}: ngspice_init does not identify the requested initialization")
+        lines, digest = init.get("lines"), init.get("sha256")
+        candidates = [requested]
+        threads = metadata.get("threads_per_worker")
+        if type(threads) is int and threads > 0:
+            # KLT may prepend the worker launch pin to the requested .spiceinit file.
+            candidates.append([f"set num_threads={threads}", *requested])
+        for candidate in candidates:
+            if lines is not None and lines != candidate:
+                continue
+            data = ("\n".join(candidate) + "\n").encode("utf-8")
+            if digest is None or digest == "sha256:" + hashlib.sha256(data).hexdigest():
+                return digest is not None
+        raise InputError(f"{location}: ngspice_init lines or sha256 disagree with the request")
+
+    matches(env["environment"], label)
+    reported = set()
+    for job in _batch_jobs(env, label):
+        worker = job.get("worker_environment")
+        if worker is None:
+            continue
+        if not isinstance(worker, dict):
+            raise InputError(f"{label}: malformed worker environment")
+        job_id = job.get("job_id")
+        if matches(worker, f"{label} job {job_id}"):
+            if not isinstance(job_id, str) or not job_id:
+                raise InputError(f"{label}: ngspice_init digest has no batch job ID")
+            reported.add(job_id)
+    return sorted(reported)
+
+
+def _named_hashes(entries, label: str, *, osdi=False, hash_key="sha256", name_key="name") -> dict[str, str]:
+    """Read a manifest by file name. Duplicate or absent evidence cannot establish identity."""
+    if not isinstance(entries, list) or not entries:
+        raise InputError(f"{label}: missing file hashes")
+    hashes = {}
+    for item in entries:
+        name = item.get(name_key) if isinstance(item, dict) else None
+        if osdi and not isinstance(name, str) and isinstance(item, dict) and isinstance(item.get("entry"), str):
+            name = Path(item["entry"]).name
+        if not isinstance(name, str) or not name:
+            raise InputError(f"{label}: missing file name")
+        if name in hashes:
+            raise InputError(f"{label}: duplicate file {name}")
+        digest = item.get(hash_key)
+        if not isinstance(digest, str) or not re.fullmatch(r"[0-9a-f]{64}", digest):
+            raise InputError(f"{label}: {name} lacks a valid {hash_key}")
+        hashes[name] = digest
+    return hashes
+
+
+def netlist_closure(env: dict, label: str) -> dict[str, str]:
+    """Index the recorded netlist hashes without dropping duplicate paths."""
+    entries = (env.get("environment") or {}).get("netlist_closure")
+    return _named_hashes(entries, f"{label} netlist_closure", name_key="path")
+
+
+def _check_same_hashes(left: dict, right: dict, label: str) -> None:
+    different = sorted(name for name in left.keys() | right.keys() if left.get(name) != right.get(name))
+    if different:
+        raise InputError(f"{label}: file hashes differ for {', '.join(different)}")
+
+
+def osdi_hashes(environment: dict, label: str) -> dict[str, str]:
+    """Read either KLT preload manifest, checking agreement when both are present."""
+    preloads = environment.get("osdi_preload")
+    resolved = environment.get("osdi_preload_runner_resolved")
+    if resolved is None:
+        return _named_hashes(preloads, f"{label} OSDI preload", osdi=True)
+    hashes = _named_hashes(resolved, f"{label} runner-resolved OSDI preload", osdi=True)
+    if preloads is not None:
+        _check_same_hashes(hashes, _named_hashes(preloads, f"{label} OSDI preload", osdi=True), f"{label} OSDI manifests")
+    return hashes
+
+
+def _batch_model_hashes(env: dict, label: str) -> dict[str, dict[str, str]]:
+    environment = env.get("environment") or {}
+    inputs = environment.get("staged_model_inputs")
+    source = _named_hashes(inputs, f"{label} model sources", hash_key="source_sha256")
+    staged = _named_hashes(inputs, f"{label} staged models")
+    osdi = osdi_hashes(environment, label)
+
+    # A rewritten .include gives a library different source and staged hashes.
+    # The client identifies its source library and each worker attests the staged bytes.
+    deck = (env.get("provenance") or {}).get("deck") or {}
+    root = deck.get("name")
+    if not isinstance(root, str) or root not in source or source[root] != environment.get("models_lib_sha256"):
+        raise InputError(f"{label}: model deck {root!r} disagrees with the staged source identity")
+    if deck.get("content_hash") != "sha256:" + source[root]:
+        raise InputError(f"{label}: model deck {root!r} disagrees with its provenance hash")
+    sections = _named_hashes(environment.get("corner_section_libs"), f"{label} corner section libraries")
+    for name, digest in sections.items():
+        if source.get(name) != digest:
+            raise InputError(f"{label}: corner section library {name} disagrees with its staged source identity")
+
+    for job in _batch_jobs(env, label):
+        job_label = f"{label} job {job.get('job_id')}"
+        if "runner_models_lib_sha256" in job and job["runner_models_lib_sha256"] != staged[root]:
+            raise InputError(f"{job_label}: {root} disagrees with its staged hash")
+        for field, expected in (("runner_model_inputs", staged), ("runner_osdi_preload", osdi),
+                                ("runner_corner_section_libs", {name: staged[name] for name in sections})):
+            if field in job:
+                _check_same_hashes(expected, _named_hashes(job[field], field), f"{job_label} {field}")
+        worker = job.get("worker_environment") or {}
+        if not isinstance(worker, dict):
+            raise InputError(f"{job_label}: malformed worker environment")
+        if "model_inputs" in worker:
+            _check_same_hashes(staged, _named_hashes(worker["model_inputs"], job_label), f"{job_label} worker models")
+    return {"model sources": source, "staged models": staged, "OSDI preload": osdi}
+
+
+def check_batch_model_inputs(cmrr: dict, psrr: dict) -> None:
+    """Require the same model sources, staged dependencies and preloaded binaries for a join."""
+    left = _batch_model_hashes(cmrr, "CMRR envelope")
+    right = _batch_model_hashes(psrr, "PSRR envelope")
+    for label in left:
+        _check_same_hashes(left[label], right[label], f"CMRR and PSRR {label}")
+
+
+def exact_pvt_key(corner: dict) -> Key:
+    """Require a nominal KLT corner whose ID agrees with its measured PVT coordinates."""
+    supply = corner.get("supply_v") if isinstance(corner, dict) else None
+    if not isinstance(supply, dict):
+        raise InputError(f"corner lacks supply_v: {supply!r}")
+    if set(supply) != {"vdd", "vinp"}:
+        raise InputError(f"corner supply_v must contain exactly vdd and vinp, got {supply!r}")
+    process, temp, vdd = corner.get("process"), corner.get("temperature_c"), supply.get("vdd")
+    supplies = DECIMAL_SUPPLIES if isinstance(vdd, Decimal) else SUPPLIES
+    if process not in PROCESSES or temp not in TEMPERATURES or vdd not in supplies:
+        raise InputError(f"corner {(process, temp, vdd)!r} is outside the expected grid")
+    if supply.get("vinp") != vdd / 2:
+        raise InputError(f"corner {(process, temp, vdd)!r}: supplies {supply!r} do not put Vcm at VDD/2")
+    nominal_id = f"{process}/vdd={vdd:.3f}_vinp={supply['vinp']:.3f}V/{int(temp)}C"
+    if corner.get("corner_id") != nominal_id:
+        raise InputError(f"corner_id {corner.get('corner_id')!r} disagrees with nominal PVT corner {nominal_id}")
+    for field in ("monte_carlo", "options", "params", "variant", "supply_waveforms"):
+        if corner.get(field) is not None:
+            raise InputError(f"corner {nominal_id}: {field} is outside the nominal PVT grid")
+    return process, int(temp), float(vdd)
+
+
+def check_nominal_pvt_summary(env: dict, expected_count: int) -> None:
+    """Require a nominal run with decided counts covering the full population."""
+    if (env.get("environment") or {}).get("monte_carlo") is not None:
+        raise InputError("environment.monte_carlo identifies a sampled run")
+    measurements = env.get("measurements", [])
+    if not isinstance(measurements, list):
+        raise InputError("expected a measurements[] summary")
+    for measurement in measurements:
+        if isinstance(measurement, dict) and measurement.get("monte_carlo") is not None:
+            raise InputError(f"measurement {measurement.get('name')!r} has monte_carlo statistics")
+    corners = env.get("corners")
+    if not isinstance(corners, list):
+        raise InputError("no corners[] array")
+    statuses = [c.get("status") for c in corners if isinstance(c, dict)]
+    passed, failed = statuses.count("pass"), statuses.count("fail")
+    if (len(corners) != expected_count or env.get("corner_count") != expected_count
+            or passed + failed != expected_count or env.get("passed") != passed or env.get("failed") != failed
+            or env.get("status") != ("fail" if failed else "pass")
+            or env.get("errored") != 0 or env.get("inconclusive") != 0):
+        raise InputError(f"need all {expected_count} corners decided: {passed} passed, {failed} failed in corners[]")
+    diagnostics = env.get("diagnostic_counts")
+    if not isinstance(diagnostics, dict) or diagnostics.get("corners_with_diagnostics") != 0:
+        raise InputError("corners carry diagnostics")
+
+
+def sha256_file(path: str | Path) -> str:
     h = hashlib.sha256()
     with open(path, "rb") as f:
         for chunk in iter(lambda: f.read(1 << 16), b""):
@@ -132,6 +360,20 @@ def check_grid(keys: Iterable[Key], label: str, problems: List[str],
         problems.append(f"{key_str(k)}: missing from {label}")
     for k in sorted(got - want):
         problems.append(f"{key_str(k)}: {extra}")
+
+
+def check_coverage(env: dict, label: str) -> None:
+    """Require checked coverage with no skipped limits before using the measurements."""
+    cov = env.get("coverage")
+    if not isinstance(cov, dict):
+        raise InputError(f"{label}: no coverage block")
+    if cov.get("nothing_checked") is not False:
+        raise InputError(f"{label}: coverage.nothing_checked is {cov.get('nothing_checked')!r}, expected false")
+    skipped = cov.get("skipped", [])
+    if not isinstance(skipped, list):
+        raise InputError(f"{label}: coverage.skipped must be a list")
+    if skipped:
+        raise InputError(f"{label}: coverage.skipped is non-empty ({len(skipped)} item(s)), e.g. {skipped[0]}")
 
 
 def index_envelope(env: dict, label: str, measurements: Sequence[str], *,
@@ -166,13 +408,7 @@ def index_envelope(env: dict, label: str, measurements: Sequence[str], *,
         raise InputError(f"{label}: no corners[] array")
     if env.get("corner_count") != len(corners):
         raise InputError(f"{label}: corner_count {env.get('corner_count')} != len(corners) {len(corners)}")
-    cov = env.get("coverage")
-    if not isinstance(cov, dict):
-        raise InputError(f"{label}: no coverage block")
-    if cov.get("nothing_checked") is not False:
-        raise InputError(f"{label}: coverage.nothing_checked is {cov.get('nothing_checked')!r}, expected false")
-    if cov.get("skipped"):
-        raise InputError(f"{label}: coverage.skipped is non-empty ({len(cov['skipped'])} item(s)), e.g. {cov['skipped'][0]}")
+    check_coverage(env, label)
     if env.get("status") not in ("pass", "fail"):
         raise InputError(f"{label}: aggregate status {env.get('status')!r} -- only a complete pass/fail run is evidence")
 

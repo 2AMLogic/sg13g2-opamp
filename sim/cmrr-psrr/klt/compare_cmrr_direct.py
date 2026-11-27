@@ -22,7 +22,7 @@ points:
   * Av0 of the CMRR deck equals Av0 of the PSRR direct deck at every point
     (same DUT, corner, temperature, VDD and options, so a stale or misjoined
     Av0 point shows as a named out-of-tolerance point);
-  * cmrr_db == av0_db - acm0_db (internal consistency);
+  * cmrr_db == av0_db - acm0_db and psrr_db == av0_db - avs0_db;
   * Acm0 against the superseded fixed-harness record (regression control).
 
 The harness record's Av0 (hence its CMRR) is NOT a regression control: its Av0
@@ -36,8 +36,10 @@ Exit status: 0 agree; 1 outside tolerance; 2 inputs unusable.
 
 from __future__ import annotations
 
+from decimal import Decimal, InvalidOperation
 import hashlib
 import os
+from pathlib import Path
 import re
 import sys
 from typing import Dict, List, Optional
@@ -53,6 +55,7 @@ MEASUREMENTS = ("av0_db", "acm0_db", "cmrr_db", "cmrr_plateau_delta_db")
 PSRR_MEASUREMENTS = ("av0_db", "avs0_db", "psrr_db", "psrr_plateau_delta_db")
 REJECT_STATUSES = ("skipped", "error", "inconclusive", "not_checked")
 CMRR_SYSTEMATIC_BOUND_DB = 30.75  # superseded DR-2 row, context only
+DIRECT_ANALYSIS = {"kind": "ac", "args": "dec 20 10m 1g"}
 PLATEAU_MAX_DB = 0.05
 DEFAULT_CMRR_BODY = os.path.join(HERE, "tb_cmrr_direct.body.spice")
 DEFAULT_PSRR_BODY = os.path.join(HERE, "tb_psrr_direct.body.spice")
@@ -79,64 +82,282 @@ def index_envelope(env: dict, label: str = "envelope", measurements=MEASUREMENTS
     return idx
 
 
-def _closure(env: dict) -> Dict[str, str]:
-    return {c["path"]: c["sha256"] for c in (env.get("environment") or {}).get("netlist_closure") or []}
+def check_sweep_settings(request: dict, env: dict, deck: str, envelope_label: str) -> list[str]:
+    """Require the fixed AC sweep and default solver. Return jobs that attest the requested init file."""
+    label = f"{deck} request"
+    if not isinstance(request, dict) or request.get("analysis") != DIRECT_ANALYSIS:
+        raise InputError(f"{label}: analysis must be {DIRECT_ANALYSIS}")
+    if request.get("analysis_overrides") not in (None, []):
+        raise InputError(f"{label}: analysis_overrides would replace the fixed AC window")
+    if request.get("analysis_steps") is not None:
+        raise InputError(f"{label}: analysis_steps cannot establish a single AC sweep")
+    for field in ("commands", "decks"):
+        if field in request:
+            raise InputError(f"{label}: {field} selects a different execution mode from the fixed AC sweep")
+
+    options = request.get("options", {})
+    environment = env.get("environment", {})
+    for settings, source in ((options, f"{label}: options"), (environment, f"{envelope_label}: environment")):
+        if not isinstance(settings, dict):
+            raise InputError(f"{source} must be an object")
+        if settings.get("ngspice_options") not in (None, {}):
+            raise InputError(f"{source}.ngspice_options must be empty for the default solver")
+        retry = settings.get("retry_on_convergence_error")
+        if retry is not None and retry is not False:
+            raise InputError(f"{source}.retry_on_convergence_error permits nondefault solver settings")
+
+    for field in ("nodeset", "initial_conditions"):
+        if options.get(field) not in (None, []):
+            raise InputError(f"{label}: options.{field} changes the solver's starting state")
+    for corner in env["corners"]:
+        if not isinstance(corner, dict):
+            raise InputError(f"{envelope_label}: expected a corner object")
+        for field in ("analysis_args", "steps", "nodeset", "initial_conditions"):
+            if corner.get(field) is not None:
+                raise InputError(f"{envelope_label}: corner {corner.get('corner_id')!r} reports {field} "
+                                 "outside the fixed AC sweep and default solver settings")
+
+    # The admitted batch envelopes identify the ngspice major only. A minor pin needs finer evidence.
+    pin = request.get("engine_version")
+    if pin is not None:
+        version = str(environment.get("engine_version"))
+        if (not isinstance(pin, str) or not re.fullmatch(r"[0-9]+", pin.strip())
+                or pin.strip().lstrip("0") != version.lstrip("0")):
+            raise InputError(f"{label}: engine_version {pin!r} is not satisfied by recorded ngspice-{version}")
+
+    requested_init = options.get("ngspice_init")
+    if requested_init != ["set measureprec=12", "set numdgt=12"]:
+        raise InputError(f"{label}: options.ngspice_init must contain the two documented print-precision settings")
+    return E.batch_init_digest_jobs(env, requested_init, envelope_label)
 
 
-def _body_path(env: dict) -> str:
-    n = env.get("netlist")
-    return n.get("path") if isinstance(n, dict) else str(n)
-
-
-def check_conditions(cmrr: dict, psrr: dict) -> None:
-    """The two envelopes must be the same run conditions, or they are not joined."""
+def check_conditions(cmrr: dict, psrr: dict, *, require_build_banner: bool = False) -> dict:
+    """Return the run conditions shared by both decks after checking their evidence."""
     problems: List[str] = []
     ec, ep = cmrr.get("environment") or {}, psrr.get("environment") or {}
     for f in ("engine", "engine_version", "models_lib_sha256"):
         if ec.get(f) != ep.get(f):
             problems.append(f"{f} differs (CMRR {ec.get(f)!r} vs PSRR {ep.get(f)!r})")
-    cc, cp = _closure(cmrr), _closure(psrr)
+    E.check_batch_model_inputs(cmrr, psrr)
+    cc = E.netlist_closure(cmrr, "CMRR envelope")
+    cp = E.netlist_closure(psrr, "PSRR envelope")
     if DUT not in cc or DUT not in cp:
         problems.append(f"{DUT} missing from a netlist closure")
     elif cc[DUT] != cp[DUT]:
         problems.append(f"DUT netlist hash differs (CMRR {cc[DUT][:12]} vs PSRR {cp[DUT][:12]}): Av0 is from a different DUT")
     if problems:
         raise InputError("misjoined envelopes: " + "; ".join(problems))
+    for env, label in ((cmrr, "CMRR envelope"), (psrr, "PSRR envelope")):
+        E.check_batch_ngspice(env, label, require_build_banner=require_build_banner)
+    return {"engine": ec["engine"], "engine_version": ec["engine_version"],
+            "dut_netlist_sha256": cc[DUT], "models_lib_sha256": ec["models_lib_sha256"]}
 
 
-def _sha(path: str) -> str:
-    with open(path, "rb") as f:
-        return hashlib.sha256(f.read()).hexdigest()
+def check_body_identity(env: dict, closure: dict, rel: str, digest: str, label: str) -> None:
+    netlist = env.get("netlist")
+    provenance = (env.get("provenance") or {}).get("input")
+    for field, actual, expected in (
+            ("netlist.path", netlist.get("path") if isinstance(netlist, dict) else None, rel),
+            ("netlist_closure", closure.get(rel), digest),
+            ("netlist_sha256", env["environment"].get("netlist_sha256"), digest),
+            ("input.content_hash", provenance.get("content_hash") if isinstance(provenance, dict) else None,
+             "sha256:" + digest)):
+        if actual != expected:
+            raise InputError(f"{label}: simulated bench body is not the pinned {rel}: {field} is {actual!r}, "
+                             f"expected {expected!r} (stale or different body)")
 
 
-def check_body_hash(env: dict, body_path: str, label: str) -> None:
-    got = _closure(env).get("sim/cmrr-psrr/klt/" + os.path.basename(body_path))
-    if got is None:
-        raise InputError(f"{label}: envelope closure does not name {os.path.basename(body_path)}")
-    if got != _sha(body_path):
-        raise InputError(f"{label}: simulated bench body hash {got[:12]} is not the committed {os.path.basename(body_path)} ({_sha(body_path)[:12]}): stale or different body")
+def check_body_hash(env: dict, body_path: str, label: str) -> str:
+    """Return the same bench text whose bytes were verified against the envelope."""
+    path = Path(body_path)
+    try:
+        body = path.read_bytes()
+        text = body.decode("utf-8")
+    except (OSError, UnicodeError) as exc:
+        raise InputError(f"{label}: unreadable bench body {path} ({exc})") from exc
+    rel = "sim/cmrr-psrr/klt/" + path.name
+    check_body_identity(env, E.netlist_closure(env, label), rel, hashlib.sha256(body).hexdigest(), label)
+    return text
 
 
-_AC_SRC = re.compile(r"^([VI]\w*)\s+.*\bac\s+[0-9.eE+-]+", re.MULTILINE | re.IGNORECASE)
+_BenchCard = tuple[list[str], bool]  # fields and whether the element is conditional
+_TOLERANCE_ASSIGNMENT = re.compile(
+    r"""(?:^|[\s,(])["']?(reltol|abstol|vntol)["']?\s*=|"[^"]*"|'[^']*'"""
+)
+
+
+def _bench_lines(body: str) -> list[tuple[str, bool]]:
+    """Join SPICE continuations and distinguish circuit cards from control commands."""
+    lines = []
+    control = False
+    for raw in body.lower().splitlines():
+        line = raw.strip()
+        command = control or line.startswith("*#")
+        if line.startswith("*#"):
+            line = line[2:].lstrip()
+        elif line.startswith("*"):
+            continue
+        if not command:
+            line = line.partition("$")[0]  # In control commands $ expands variables.
+        line = re.split(r";|//", line, maxsplit=1)[0].strip()
+        if not line:
+            continue
+        name = line.split(maxsplit=1)[0]
+        if name in (".control", ".endc"):
+            control = name == ".control"
+        elif not command and name == ".end":
+            break
+        elif lines and lines[-1][1] == command and line.startswith("+"):
+            lines[-1] = (lines[-1][0] + " " + line[1:], command)
+        elif lines and lines[-1][1] == command and lines[-1][0].endswith("\\\\"):
+            lines[-1] = (lines[-1][0][:-2] + " " + line, command)
+        else:
+            lines.append((line, command))
+    return lines
+
+
+def _bench_cards(lines: list[tuple[str, bool]]) -> list[_BenchCard]:
+    """Read circuit-level element cards, marking those inside any conditional branch."""
+    cards = []
+    subckt_depth = 0
+    conditional_depth = 0
+    for line, command in lines:
+        if command:
+            continue
+        fields = line.split()
+        name = fields[0]
+        if name == ".subckt":
+            subckt_depth += 1
+        elif subckt_depth:
+            if name == ".ends":
+                subckt_depth -= 1
+        elif name == ".if" or name.startswith(".if("):
+            conditional_depth += 1
+        elif name == ".endif" and conditional_depth:
+            conditional_depth -= 1
+        elif name[0].isalpha():
+            cards.append((fields, conditional_depth > 0))
+    return cards
+
+
+def output_load_f(body: str) -> Decimal | None:
+    """Read one identical numeric load from each output to vss in the direct bench."""
+    terminals = {"cloada": "outa", "cloadb": "outb"}
+    loads = {}
+    for fields, conditional in _bench_cards(_bench_lines(body)):
+        if not fields[0].startswith("c"):
+            continue
+        name = fields[0]
+        if name not in terminals and not any(pin in terminals.values() for pin in fields[1:3]):
+            continue
+        if (conditional or name not in terminals or name in loads
+                or len(fields) != 4 or fields[1:3] != [terminals[name], "vss"]):
+            return None
+        try:
+            value = Decimal(fields[3])
+        except InvalidOperation:
+            return None
+        if not value.is_finite() or value <= 0:
+            return None
+        loads[name] = value
+    load_a = loads.get("cloada")
+    return load_a if load_a == loads.get("cloadb") else None
+
+
+def gain_problems(cmrr: dict, psrr: dict) -> list[str]:
+    """Check the shared Av0 and the two in-deck subtractions at one PVT point."""
+    problems = []
+    if abs(cmrr["av0_db"] - psrr["av0_db"]) > AV0_JOIN_ABS_DB:
+        problems.append(f"av0_db: CMRR and PSRR Av0 ({cmrr['av0_db']:.9g}, {psrr['av0_db']:.9g}) "
+                        f"differ by more than {AV0_JOIN_ABS_DB:g} dB: stale or misjoined Av0")
+    for deck, operand, result in ((cmrr, "acm0_db", "cmrr_db"), (psrr, "avs0_db", "psrr_db")):
+        derived = deck["av0_db"] - deck[operand]
+        if abs(deck[result] - derived) > CONSISTENCY_ABS_DB:
+            problems.append(f"{result}: {deck[result]:.9g} != av0_db - {operand} = {derived:.9g}")
+    return problems
+
+
+_NUMBER = re.compile(r"[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:e[+-]?[0-9]+)?", re.I)
+
+
+def _is_one(value: str) -> bool:
+    try:
+        return bool(_NUMBER.fullmatch(value)) and Decimal(value) == 1
+    except InvalidOperation:
+        return False
+
+
+def _check_ac_sources(cards: list[_BenchCard], deck: str, expected: dict[str, str], problems: list[str]) -> None:
+    sources = []
+    for fields, conditional in cards:
+        name = fields[0]
+        if (deck == "CMRR" and name == "vsrip") or (deck == "PSRR" and name == "vcmb"):
+            problems.append(f"{deck} body carries {name.capitalize()}: swapped stimulus")
+        if name[0] not in "vi":
+            continue
+        if "ac" not in fields[3:]:
+            if name in expected:
+                problems.append(f"{deck} body: {name.capitalize()} must have unit AC magnitude")
+            continue
+        sources.append(name)
+        if name not in expected:
+            continue
+        label = name.capitalize()
+        if conditional:
+            problems.append(f"{deck} body: {label} must be an unconditional AC source")
+        if name == "vcmb" and fields[3:] != ["dc", "0", "ac", "1"]:
+            problems.append("CMRR body: common-mode source must be `Vcmb inpb midb dc 0 ac 1` (input of copy B)")
+        terminals = expected[name]
+        if fields[1:3] != terminals.split():
+            problems.append(f"{deck} body: {label} must drive {terminals}")
+        ac = fields.index("ac", 3)
+        magnitude = fields[ac + 1] if ac + 1 < len(fields) else ""
+        if fields[3:].count("ac") != 1 or not _is_one(magnitude):
+            problems.append(f"{deck} body: {label} must have unit AC magnitude (got {magnitude!r})")
+    if sorted(sources) != sorted(expected):
+        problems.append(f"{deck} body AC sources are {sorted(sources)}, need exactly {sorted(expected)}")
+
+
+def _check_input_coupling(cards: list[_BenchCard], deck: str, copy_b_reference: str, problems: list[str]) -> None:
+    """Require exactly one unconditional 1 F bench capacitor on each inverting input."""
+    references = {"inna": "vss", "innb": copy_b_reference}
+    connections = {node: [] for node in references}
+    for fields, conditional in cards:
+        if not fields[0].startswith("c"):
+            continue
+        for node, reference in references.items():
+            if node in fields[1:3]:
+                valid = (not conditional and len(fields) == 4
+                         and reference in fields[1:3] and _is_one(fields[3]))
+                connections[node].append(valid)
+    for node, reference in references.items():
+        if connections[node] != [True]:
+            problems.append(f"{deck} body: {node} must connect through one 1 F capacitor to {reference}")
+
+
+def _check_solver_tolerances(lines: list[tuple[str, bool]], deck: str, problems: list[str]) -> None:
+    # ngspice accepts .opt* cards even inside subcircuits and conditionals.
+    for line, command in lines:
+        name = line.split(maxsplit=1)[0]
+        option_card = name in ("option", "options", "set") if command else name.startswith(".opt")
+        if option_card:
+            for match in _TOLERANCE_ASSIGNMENT.finditer(line):
+                if tolerance := match[1]:  # Skip quoted values that merely mention a tolerance.
+                    problems.append(f"{deck} body: {tolerance} override violates DR-0005 default solver tolerances")
 
 
 def check_stimulus(cmrr_body: str, psrr_body: str) -> None:
-    """Refuse a swapped common-mode/supply stimulus."""
+    """Check the default solver tolerances, unit excitation and AC input connections."""
     problems = []
-    cm_srcs = sorted(m.group(1).lower() for m in _AC_SRC.finditer(cmrr_body))
-    if cm_srcs != ["vcmb", "vinp"]:
-        problems.append(f"CMRR body AC sources are {cm_srcs}, need exactly ['vcmb', 'vinp']")
-    if not re.search(r"^Vcmb\s+inpb\s+midb\s+dc\s+0\s+ac\s+1\s*$", cmrr_body, re.M | re.I):
-        problems.append("CMRR body: common-mode source must be `Vcmb inpb midb dc 0 ac 1` (input of copy B)")
-    if not re.search(r"^Ccmb\s+innb\s+inpb\s+1\s*$", cmrr_body, re.M | re.I):
-        problems.append("CMRR body: inn of copy B must follow inp through `Ccmb innb inpb 1`")
-    if re.search(r"^Vsrip\b", cmrr_body, re.M | re.I):
-        problems.append("CMRR body carries a supply AC source (Vsrip): swapped stimulus")
-    ps_srcs = sorted(m.group(1).lower() for m in _AC_SRC.finditer(psrr_body))
-    if ps_srcs != ["vinp", "vsrip"]:
-        problems.append(f"PSRR body AC sources are {ps_srcs}, need exactly ['vinp', 'vsrip']")
-    if re.search(r"^Vcmb\b", psrr_body, re.M | re.I):
-        problems.append("PSRR body carries a common-mode AC source (Vcmb): swapped stimulus")
+    for deck, body, sources, reference in (
+        ("CMRR", cmrr_body, {"vinp": "inpa 0", "vcmb": "inpb midb"}, "inpb"),
+        ("PSRR", psrr_body, {"vinp": "inpa 0", "vsrip": "vddb vdd"}, "vss"),
+    ):
+        lines = _bench_lines(body)
+        _check_solver_tolerances(lines, deck, problems)
+        cards = _bench_cards(lines)
+        _check_ac_sources(cards, deck, sources, problems)
+        _check_input_coupling(cards, deck, reference, problems)
     if problems:
         raise InputError("stimulus check: " + "; ".join(problems))
 
@@ -146,7 +367,7 @@ def load_harness(path: str) -> Dict[Key, Dict[str, object]]:
 
 
 def compare(cmrr_idx, psrr_idx, harness, cmrr_env: dict, psrr_env: dict, cmrr_body: str, psrr_body: str) -> dict:
-    check_conditions(cmrr_env, psrr_env)
+    conditions = check_conditions(cmrr_env, psrr_env)
     check_stimulus(cmrr_body, psrr_body)
     oot: List[str] = []
     plateau_fail: List[str] = []
@@ -154,11 +375,7 @@ def compare(cmrr_idx, psrr_idx, harness, cmrr_env: dict, psrr_env: dict, cmrr_bo
     for k in E.expected_keys():
         t, p, h = cmrr_idx[k], psrr_idx[k], harness[k]
         d_av = float(t["av0_db"]) - float(p["av0_db"])
-        if abs(d_av) > AV0_JOIN_ABS_DB:
-            oot.append(f"{key_str(k)} av0_db: CMRR deck {t['av0_db']:.9g} vs PSRR deck {p['av0_db']:.9g} (delta {d_av:.3g} dB): stale or misjoined Av0")
-        d_cons = float(t["cmrr_db"]) - (float(t["av0_db"]) - float(t["acm0_db"]))
-        if abs(d_cons) > CONSISTENCY_ABS_DB:
-            oot.append(f"{key_str(k)} cmrr_db: {t['cmrr_db']:.9g} != av0_db - acm0_db (delta {d_cons:.3g} dB)")
+        oot.extend(f"{key_str(k)} {problem}" for problem in gain_problems(t, p))
         d_acm = float(t["acm0_db"]) - float(h["acm0_db"])
         if abs(d_acm) > ACM0_HARNESS_ABS_DB:
             oot.append(f"{key_str(k)} acm0_db: batch {t['acm0_db']:.9g} vs harness {h['acm0_db']:.9g} (delta {d_acm:.3g} dB): wrong common-mode stimulus?")
@@ -180,8 +397,7 @@ def compare(cmrr_idx, psrr_idx, harness, cmrr_env: dict, psrr_env: dict, cmrr_bo
                            "acm0_vs_harness_abs_db": ACM0_HARNESS_ABS_DB},
             "out_of_tolerance": oot, "bound_verdict_disagreements": [],
             "plateau_guard_failures": plateau_fail,
-            "conditions": {"engine": cmrr_env["environment"].get("engine"), "engine_version": cmrr_env["environment"].get("engine_version"),
-                           "dut_netlist_sha256": _closure(cmrr_env)[DUT], "models_lib_sha256": cmrr_env["environment"].get("models_lib_sha256")},
+            "conditions": conditions,
             "row": {"context_bound": {"min": CMRR_SYSTEMATIC_BOUND_DB, "unit": "dB", "note": "superseded DR-2 systematic floor, context only"},
                     "worst": {"point": worst["point_id"], "value": worst["cmrr_db"], "verdict": "pass" if worst["meets_systematic_floor"] else "fail"},
                     "points_below_floor": [q["point_id"] for q in points if not q["meets_systematic_floor"]],
@@ -199,20 +415,12 @@ def _summary(rep: dict) -> str:
     return "\n".join(E.summary_tail(lines, rep))
 
 
-def _read(path: str) -> str:
-    try:
-        with open(path) as f:
-            return f.read()
-    except OSError as e:
-        raise InputError(f"{path}: unreadable ({e})")
-
-
 def _run(a, tool, env) -> dict:
     psrr_env = E.read_envelope(a.psrr_envelope)
     psrr_idx = E.index_envelope(psrr_env, "PSRR direct envelope", PSRR_MEASUREMENTS, reject_statuses=REJECT_STATUSES)
-    check_body_hash(env, a.cmrr_body, "CMRR envelope")
-    check_body_hash(psrr_env, a.psrr_body, "PSRR direct envelope")
-    return compare(tool, psrr_idx, load_harness(a.harness_csv), env, psrr_env, _read(a.cmrr_body), _read(a.psrr_body))
+    cmrr_body = check_body_hash(env, a.cmrr_body, "CMRR envelope")
+    psrr_body = check_body_hash(psrr_env, a.psrr_body, "PSRR direct envelope")
+    return compare(tool, psrr_idx, load_harness(a.harness_csv), env, psrr_env, cmrr_body, psrr_body)
 
 
 def main(argv: Optional[List[str]] = None) -> int:

@@ -20,7 +20,7 @@ import math
 from decimal import Decimal
 
 from common import SLEW_KLT_LIMITS, parse_decimal
-from paths import mc_samples, noise_post, offset_post, op_sanity, slew_post, swing_post
+from paths import cmrr_direct, mc_samples, noise_post, offset_post, op_sanity, slew_post, swing_post
 
 # --------------------------------------------------------------------------
 # definition checks: per-point identities a record's derived column must obey
@@ -439,6 +439,47 @@ def _check_offset_mc_statistics(point: dict, draws: dict | None) -> str | None:
     )
 
 
+# The harness Acm0 control prints 6 digits (observed max 4.3e-5 dB).
+# The record cells are %.9g serializations of the in-deck measurements.
+CMRR_PSRR_CONTROL_DB = Decimal("0.001")
+CMRR_PSRR_PLATEAU_DB = Decimal("0.05")
+
+
+def _check_cmrr_psrr_klt(point: dict, pop: dict | None) -> str | None:
+    """The record's cells must follow from the pinned batch envelopes
+    (CMRR_PSRR_KLT_AUDIT_RULE): operands, the in-deck differences, the two
+    decks' shared Av0, the plateau guards, and Acm0 against the harness control."""
+    if pop is None:
+        return "cannot evaluate (no batch cmrr-psrr envelope population available)"
+    pid = (point.get("point_id") or "").strip()
+    raw = pop["points"].get(pid)
+    if raw is None:
+        return "cannot evaluate (no pinned batch cmrr-psrr values for this point)"
+    c, p = raw["cmrr"], raw["psrr"]
+    problems = []
+    vcm_problem = _cell_problem("vcm_v", point.get("vcm_v"), format(c["vcm_v"], ".9g"),
+                                "pinned envelope supply_v.vinp", 9, nan_ok=False)
+    if vcm_problem:
+        problems.append(vcm_problem)
+    problems.extend(cmrr_direct.gain_problems(c, p))
+    for deck, d, name in (("CMRR", c, "cmrr_plateau_delta_db"), ("PSRR", p, "psrr_plateau_delta_db")):
+        if not 0 <= d[name] <= CMRR_PSRR_PLATEAU_DB:
+            problems.append(f"{deck} {name} {d[name]:.6g} dB is outside [0, {CMRR_PSRR_PLATEAU_DB}] (the 10 mHz figure is not a flat DC shelf)")
+    for field, want in (
+        ("av0_db", c["av0_db"]), ("acm0_db", c["acm0_db"]), ("cmrr_db", c["cmrr_db"]),
+        ("cmrr_plateau_delta_db", c["cmrr_plateau_delta_db"]), ("avs0_db", p["avs0_db"]),
+        ("psrr_db", p["psrr_db"]), ("psrr_plateau_delta_db", p["psrr_plateau_delta_db"]),
+    ):
+        problem = _cell_problem(field, point.get(field), format(float(want), ".9g"),
+                                "pinned envelopes", 9, nan_ok=False)
+        if problem:
+            problems.append(problem)
+    ctrl = pop["control_acm0"].get(pid)
+    if ctrl is None or abs(ctrl - c["acm0_db"]) > CMRR_PSRR_CONTROL_DB:
+        problems.append(f"Acm0 {c['acm0_db']:.9g} dB disagrees with the harness regression control {pop['control_csv']} ({ctrl}) by more than {CMRR_PSRR_CONTROL_DB:g} dB (wrong common-mode stimulus?)")
+    return "; ".join(problems) or None
+
+
 KLT_VOUT_TOL_V = 1e-5
 KLT_IVDD_TOL_A = 1e-8
 KLT_VCM_FRAC_TOL = 1e-4
@@ -589,6 +630,7 @@ DEFINITION_CHECKS = {
     "slew_worse_edge": (_check_slew_worse_edge, False),
     "slew_raw_audit": (_check_slew_raw, "slew"),
     "slew_klt_audit": (_check_slew_klt, "slew_klt"),
+    "cmrr_psrr_klt_audit": (_check_cmrr_psrr_klt, "cmrr_psrr_klt"),
     "swing_raw_audit": (_check_swing_raw, "swing"),
     "offset_magnitude": (_check_offset_magnitude, False),
     "offset_mc_statistics": (_check_offset_mc_statistics, "draws"),

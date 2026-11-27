@@ -108,6 +108,7 @@ POPULATION_AUDITS = (
     ("klt",   "open-loop-ac",  "klt_raw",    "open_loop_klt_audit"),
     ("noise", "input-noise",   "noise_raw",  "noise_raw_audit"),
     ("swing", "output-swing",  "swing_raw",  "swing_raw_audit"),
+    ("cmrr_psrr", "cmrr-psrr",  "cmrr_psrr_klt", "cmrr_psrr_klt_audit"),
 )
 
 
@@ -131,6 +132,8 @@ class Fixture:
                         files.update(pin["path"] for pin in entry.values())
             if "klt_raw" in rec:
                 files.update(pin["path"] for pin in rec["klt_raw"]["files"].values())
+            if "cmrr_psrr_klt" in rec:
+                files.update(pin["path"] for pin in rec["cmrr_psrr_klt"]["files"].values())
             if "offset_klt_raw" in rec:
                 files.update(pin["path"] for pin in rec["offset_klt_raw"]["files"].values())
         files.update({generate.SELECTION_REL, generate.GENERATOR_REL})
@@ -183,6 +186,14 @@ class Fixture:
         md.write_text(md.read_text(encoding="utf-8") + "\nRan on ngspice-46.\n", encoding="utf-8")
         rec["md_sha256"] = generate.sha256_file(md)
         self.save_selection()
+
+    keep_cmrr_psrr_audit = False
+
+    def detach_cmrr_psrr_population(self) -> None:
+        """Controls that perturb the cmrr-psrr summary for THEIR OWN purpose
+        (a bound comparison) drop the batch-envelope audit (issue #514);
+        CmrrPsrrKltAudit tests that audit itself."""
+        self.detach_population("cmrr_psrr")
 
     keep_noise_audit = False
 
@@ -365,7 +376,9 @@ class CommittedEvidence(unittest.TestCase):
         rows = rows_by_id(self.content)
         self.assertEqual(rows["dc_gain"]["measured_worst"]["point"], "mos_fs_125C_1.08V")
         self.assertEqual(rows["cmrr_mismatch"]["measured_worst"]["point"], "mos_ss_-40C_1.08V")
-        self.assertEqual(rows["psrr"]["measured_worst"]["point"], "mos_ff_125C_1.32V")
+        # The spec prose still names the superseded floating-inn harness corner
+        # (FF / 125 C / 1.32 V); the batch record (issue #514) binds at FS / 125 C / 1.08 V.
+        self.assertEqual(rows["psrr"]["measured_worst"]["point"], "mos_fs_125C_1.08V")
         self.assertEqual(rows["quiescent_current"]["measured_worst"]["point"], "mos_ss_-40C_1.32V")
 
     def test_literal_failures_are_graded_fail_and_disclosed(self):
@@ -2083,7 +2096,9 @@ class KltRawAudit(KltEnvelopeAuditControlMixin, RawAuditCase):
         pdk = json.loads(pdk_path.read_text(encoding="utf-8"))
         del pdk["osdi_toolchain"]["ngspice_min_major"]
         pdk_path.write_text(json.dumps(pdk), encoding="utf-8")
-        self.assertEqual(self.errors(self.fx.build()), [])
+        # The committed cmrr-psrr batch record ran ngspice-47 (issue #514), which the
+        # exact-pin fallback rightly refuses; this control is about the open-loop record.
+        self.assertEqual([e for e in self.errors(self.fx.build()) if not e.startswith("record cmrr-psrr:")], [])
         self.edit_json("ac", set_ver(47))
         self.edit_json("op", set_ver(47))
         self.assert_error("ngspice-47", "expected 'ngspice-46'")
@@ -2143,6 +2158,620 @@ class KltRawAudit(KltEnvelopeAuditControlMixin, RawAuditCase):
     def test_continuity_requires_dc_agreement(self):
         self.fx.set_cell("open-loop-ac-floating-inn", self.POINT, "vout_dc_v", "0.5")
         self.assert_error("differs from the dc_continuity record")
+
+
+class CmrrPsrrKltAudit(RawAuditCase):
+    """Issue #514: the cmrr-psrr record audited against the hash-pinned batch
+    CMRR and PSRR direct-deck `klt sim` envelopes (definition check
+    cmrr_psrr_klt_audit), with the harness record as the Acm0 regression
+    control."""
+
+    KEEP_AUDIT = "keep_cmrr_psrr_audit"
+    RECORD = "cmrr-psrr"
+    POINT = "mos_tt_27C_1.20V"
+    RAW_KEY = "cmrr_psrr_klt"
+    DEFINITION_CHECK = "cmrr_psrr_klt_audit"
+
+    def edit_env(self, kind, mutate, repin=True) -> None:
+        pin = self.raw()["files"][kind]
+        path = self.fx.root / pin["path"]
+        if kind.endswith("_body"):
+            path.write_text(mutate(path.read_text(encoding="utf-8")), encoding="utf-8")
+        else:
+            doc = json.loads(path.read_text(encoding="utf-8"))
+            mutate(doc)
+            path.write_text(json.dumps(doc), encoding="utf-8")
+        if repin:
+            pin["sha256"] = generate.sha256_file(path)
+            self.fx.save_selection()
+
+    @staticmethod
+    def corner(doc, pid):
+        for c in doc["corners"]:
+            if f"{c['process']}_{c['temperature_c']}C_{c['supply_v']['vdd']:.2f}V" == pid:
+                return c
+        raise KeyError(pid)
+
+    def meas(self, doc, name, pid=None):
+        return next(m for m in self.corner(doc, pid or self.POINT)["measurements"] if m["name"] == name)
+
+    def test_committed_selection_binds_the_batch_envelopes(self):
+        content = self.fx.build()
+        self.assertEqual(self.errors(content), [])
+        src = content["sources"][self.RECORD]
+        self.assertEqual((src["cmrr_psrr_klt"]["status"], src["cmrr_psrr_klt"]["points"]), ("verified", 45))
+        self.assertEqual(src["cmrr_psrr_klt"]["control"], "cmrr-psrr-harness")
+        self.assertEqual(len(src["cmrr_psrr_klt"]["jobs"]["cmrr"]), 5)
+        md = generate.render_markdown(generate.make_report(content, None, self.fx.root))
+        for deck in ("cmrr", "psrr"):
+            init = src[self.RAW_KEY]["ngspice_init"][deck]
+            self.assertEqual(init["requested_lines"], ["set measureprec=12", "set numdgt=12"])
+            self.assertEqual(init["jobs_with_matching_digest"], [])
+            self.assertEqual(init["simulator_application"], "unverified")
+            envelope = json.loads((REPO / self.raw()["files"][f"{deck}_envelope"]["path"]).read_bytes())
+            self.assertEqual(init["diagnostics"], envelope["diagnostics"])
+            self.assertIn(f"{deck.upper()} requested `set measureprec=12`, `set numdgt=12`. "
+                          "0 of 5 batch jobs reported a matching initialization digest", md)
+        self.assertIn("batch_ngspice_init_unverified", md)
+        self.assertEqual((src["valid_points"], src["ngspice"]), (45, "ngspice-47"))
+        self.assertIn("CMRR/PSRR batch-envelope audit", content["cmrr_psrr_klt_audit_rule"])
+        rows = rows_by_id(content)
+        self.assertEqual(rows["psrr"]["verdict"], "PASS")
+        self.assertNotIn("context", rows["psrr"])
+        self.assertEqual(rows["cmrr_systematic"]["verdict"], "PASS")
+        self.assertTrue(rows["psrr"]["load"].startswith("CL = 2 pF"), rows["psrr"]["load"])
+
+    def test_cmrr_db_is_the_av0_minus_acm0_difference_in_db(self):
+        doc = json.loads((REPO / self.raw()["files"]["cmrr_envelope"]["path"]).read_text(encoding="utf-8"))
+        want = self.meas(doc, "av0_db")["value"] - self.meas(doc, "acm0_db")["value"]
+        self.assertAlmostEqual(float(self.cell("cmrr_db")), want, places=6)
+        self.assertAlmostEqual(float(self.cell("av0_db")) - float(self.cell("acm0_db")), want, places=6)
+
+    def test_writer_and_grader_preserve_violations_that_round_onto_the_floor(self):
+        pid = "mos_fs_125C_1.08V"
+        cmrr = 30.74999999
+        psrr = 1.869999999
+        pins = self.raw()["files"]
+        envelopes = [self.fx.root / pins[f"{deck}_envelope"]["path"] for deck in ("cmrr", "psrr")]
+        acm = self.meas(json.loads(envelopes[0].read_bytes()), "acm0_db", pid)["value"]
+        av0 = acm + cmrr  # keep the independently checked Acm0 control
+
+        def change_cmrr(doc):
+            self.meas(doc, "av0_db", pid)["value"] = av0
+            self.meas(doc, "cmrr_db", pid)["value"] = cmrr
+
+        def change_psrr(doc):
+            self.meas(doc, "av0_db", pid)["value"] = av0
+            self.meas(doc, "avs0_db", pid)["value"] = av0 - psrr
+            self.meas(doc, "psrr_db", pid).update(value=psrr, status="fail", margin=psrr - 1.87)
+            self.corner(doc, pid)["status"] = "fail"
+            doc.update(status="fail", passed=44, failed=1)
+
+        self.edit_env("cmrr_envelope", change_cmrr)
+        self.edit_env("psrr_envelope", change_psrr)
+        record = self.fx.selection["records"][self.RECORD]
+        csv_path, md_path = (self.fx.root / record[kind] for kind in ("csv", "md"))
+        csv_path.unlink()
+        md_path.unlink()
+        subprocess.run([sys.executable, REPO / "sim/cmrr-psrr/klt/summarize_batch.py",
+                        *envelopes, csv_path, md_path], check=True, timeout=20)
+        record.update(csv_sha256=generate.sha256_file(csv_path), md_sha256=generate.sha256_file(md_path))
+        self.fx.save_selection()
+
+        content = self.fx.build()
+        self.assertEqual(self.errors(content), [])
+        for deck, row_id, floor, raw in (("psrr", "psrr", "1.87", psrr), ("cmrr", "cmrr_systematic", "30.75", cmrr)):
+            with self.subTest(row=row_id):
+                row = rows_by_id(content)[row_id]
+                self.assertEqual(row["source"]["envelope"], pins[f"{deck}_envelope"])
+                self.assertEqual(row["verdict"], "FAIL")
+                self.assertEqual(row["violating_points"], [pid])
+                worst = row["measured_worst"]
+                self.assertEqual(worst["point"], pid)
+                self.assertEqual(Decimal(worst["value"]), Decimal(str(raw)))
+                self.assertEqual(Decimal(worst["raw_margin"]), Decimal(str(raw)) - Decimal(floor))
+                self.assertEqual(Decimal(worst["rounded_to_bound_decimals"]), Decimal(floor))
+
+    def test_report_preserves_envelope_digits_beyond_binary_float_precision(self):
+        pin = self.raw()["files"]["psrr_envelope"]
+        path = self.fx.root / pin["path"]
+        text = path.read_text()
+        pid = "mos_fs_125C_1.08V"
+        original = str(self.meas(json.loads(text), "psrr_db", pid)["value"])
+        precise = original + "0000000001"
+        self.assertEqual(float(original), float(precise))
+        # Write the JSON number itself so Python's float encoder cannot round the fixture.
+        path.write_text(text.replace('"value": ' + original, '"value": ' + precise))
+        pin["sha256"] = generate.sha256_file(path)
+        self.fx.save_selection()
+        row = rows_by_id(self.fx.build())["psrr"]
+        self.assertEqual(row["errors"], [])
+        worst = row["measured_worst"]
+        self.assertEqual(worst["value"], precise)
+        self.assertEqual(Decimal(worst["raw_margin"]), Decimal(precise) - Decimal("1.87"))
+
+    def test_harness_record_stays_selected_as_the_control(self):
+        self.assertIn("cmrr-psrr-harness", self.fx.selection["records"])
+        self.assertEqual(self.raw()["control"], "cmrr-psrr-harness")
+
+    def test_edited_summary_cell_is_an_error(self):
+        edited = Decimal(self.cell("psrr_db")) + Decimal("0.0000001")
+        self.fx.set_cell(self.RECORD, self.POINT, "psrr_db", str(edited))
+        self.definition_error()
+
+    def test_csv_common_mode_voltage_must_match_the_envelope(self):
+        self.fx.set_cell(self.RECORD, self.POINT, "vcm_v", "0.12")
+        self.assert_error(self.POINT, "vcm_v", "supply_v.vinp")
+
+    def test_cmrr_summary_not_av0_minus_acm0_is_an_error(self):
+        self.fx.set_cell(self.RECORD, self.POINT, "cmrr_db", str(float(self.cell("cmrr_db")) + 1))
+        self.definition_error()
+
+    def test_stale_dut_hash_is_an_error(self):
+        def stale(doc):
+            for c in doc["environment"]["netlist_closure"]:
+                if c["path"].endswith("opamp_core.spice"):
+                    c["sha256"] = "0" * 64
+
+        self.edit_env("cmrr_envelope", stale)
+        self.assert_error("cmrr-psrr klt evidence", "is not the selected netlist snapshot")
+
+    def test_stale_dut_hash_in_one_deck_only_is_not_the_same_run_conditions(self):
+        # the PSRR envelope keeps the right DUT; only the CMRR one is stale
+        def stale(doc):
+            for c in doc["environment"]["netlist_closure"]:
+                if c["path"].endswith("opamp_core.spice"):
+                    c["sha256"] = "1" * 64
+
+        self.edit_env("cmrr_envelope", stale)
+        errors = self.assert_error("not the selected netlist snapshot")
+        self.assertTrue(any("not the same run conditions" in e for e in errors), errors)
+
+    def test_envelope_not_matching_its_request_is_an_error(self):
+        # the request's measurement definition no longer says what the envelope reports
+        def swap(doc):
+            for m in doc["measurements"]:
+                if m["name"] == "acm0_db":
+                    m["spice"] = ".meas ac acm0_db find vdb(outa) at=0.01"
+
+        self.edit_env("cmrr_request", swap)
+        self.assert_error("cmrr request: measurement acm0_db is")
+
+    def test_relaxed_request_limit_is_an_error(self):
+        def relax(doc):
+            for m in doc["measurements"]:
+                if m["name"] == "psrr_db":
+                    m["limits"] = {"min": 0.0}
+
+        self.edit_env("psrr_request", relax)
+        self.assert_error("limits are", "a validity bound is never relaxed")
+
+    def test_model_input_hashes_must_match_across_decks(self):
+        # Keep each job consistent with its own envelope. Only the cross-deck join can fail.
+        for deck in ("cmrr", "psrr"):
+            for name in ("sg13g2_moslv_mod.lib", "psp103.osdi"):
+                with self.subTest(deck=deck, name=name):
+                    self.fresh()
+
+                    def change_hash(doc):
+                        env = doc["environment"]
+                        manifests = [env["staged_model_inputs"], env["osdi_preload_runner_resolved"]]
+                        for job in env["remote"]["fleet"]:
+                            manifests.extend((job["runner_model_inputs"], job["worker_environment"]["model_inputs"],
+                                              job["runner_osdi_preload"]))
+                        for manifest in manifests:
+                            for item in manifest:
+                                if Path(item.get("entry") or item["name"]).name == name:
+                                    item["sha256"] = "0" * 64
+                                    if "source_sha256" in item:
+                                        item["source_sha256"] = "1" * 64
+
+                    self.edit_json(f"{deck}_envelope", change_hash)
+                    self.assert_error("CMRR and PSRR", name)
+
+    def test_unverified_request_cannot_add_a_compatibility_mode(self):
+        for deck in ("cmrr", "psrr"):
+            with self.subTest(deck=deck):
+                self.fresh()
+                self.edit_json(f"{deck}_request", lambda req: req["options"]["ngspice_init"].append("set ngbehavior=hsa"))
+                self.assert_error(f"{deck} request: options.ngspice_init")
+
+    def test_reported_init_must_match_the_request(self):
+        for deck in ("cmrr", "psrr"):
+            for location in ("envelope", "worker"):
+                for field, value in (("lines", ["set ngbehavior=hsa"]), ("sha256", "sha256:" + "0" * 64)):
+                    with self.subTest(deck=deck, location=location, field=field):
+                        self.fresh()
+
+                        def change(doc):
+                            metadata = doc["environment"]
+                            if location == "worker":
+                                metadata = metadata["remote"]["fleet"][-1]["worker_environment"]
+                            metadata["ngspice_init"] = {"source": "request", field: value}
+
+                        self.edit_json(f"{deck}_envelope", change)
+                        self.assert_error(f"{deck} envelope", "ngspice_init", field)
+
+    def test_worker_diagnostic_needs_the_digest_it_claims(self):
+        self.edit_json("cmrr_envelope", lambda doc: doc["diagnostics"][0]["jobs"][0].update(request_identity="digest_reported"))
+        self.assert_error("cmrr envelope", "without a matching worker digest")
+
+    def test_worker_init_digest_identifies_contents_only(self):
+        def record_identity(doc):
+            for index in (0, 1):
+                worker = doc["environment"]["remote"]["fleet"][index]["worker_environment"]
+                lines = ["set measureprec=12", "set numdgt=12"]
+                if index == 1:
+                    lines.insert(0, f"set num_threads={worker['threads_per_worker']}")
+                digest = generate.sha256_bytes(("\n".join(lines) + "\n").encode())
+                worker["ngspice_init"] = {"source": "request", "lines": lines, "sha256": digest}
+                doc["diagnostics"][0]["jobs"][index]["request_identity"] = "digest_reported"
+
+        self.edit_json("psrr_envelope", record_identity)
+        content = self.fx.build()
+        self.assertEqual(self.errors(content), [])
+        init = content["sources"][self.RECORD][self.RAW_KEY]["ngspice_init"]["psrr"]
+        self.assertCountEqual(init["jobs_with_matching_digest"], [j["job_id"] for j in init["diagnostics"][0]["jobs"][:2]])
+        md = generate.render_markdown(generate.make_report(content, None, self.fx.root))
+        self.assertIn("2 of 5 batch jobs reported a matching initialization digest. Simulator application is unverified.", md)
+
+    def test_request_must_match_the_recorded_execution(self):
+        for deck in ("cmrr", "psrr"):
+            body = f"tb_{deck}_direct.body.spice"
+            for field, mutate in (
+                ("models.lib", lambda r: r["models"].update(lib="libs.tech/ngspice/models/cornerMOShv.lib")),
+                ("models.lib", lambda r: r["models"].update(lib="other/cornerMOSlv.lib")),
+                ("models.pdk", lambda r: r["models"].update(pdk="other-pdk")),
+                ("engine", lambda r: r.update(engine="xyce")),
+                ("backend", lambda r: r.update(backend="local")),
+                ("netlist_source", lambda r: r.update(netlist_source="extracted")),
+                ("options.stage_model_inputs", lambda r: r["options"].update(stage_model_inputs=False)),
+                ("options.osdi_preload", lambda r: r["options"]["osdi_preload"].pop()),
+                ("netlist", lambda r: r.update(netlist=f"other/{body}")),
+            ):
+                with self.subTest(deck=deck, field=field):
+                    self.fresh()
+                    if field == "netlist":
+                        bench = self.fx.root / self.raw()["files"][f"{deck}_body"]["path"]
+                        other = bench.parent / "other" / bench.name
+                        other.parent.mkdir()
+                        shutil.copyfile(bench, other)
+                    self.edit_json(f"{deck}_request", mutate)
+                    self.assert_error(f"{deck} request", field)
+
+    def test_direct_request_requires_the_fixed_ac_sweep_and_solver(self):
+        for deck in ("cmrr", "psrr"):
+            for field, mutate in (
+                ("analysis_steps", lambda r: r.update(analysis_steps=[r["analysis"]])),
+                ("decks", lambda r: r.update(decks=[{"netlist": r["netlist"]}])),
+                ("commands", lambda r: r.update(commands=[])),
+                ("analysis_overrides", lambda r: r.update(analysis_overrides=[
+                    {"match": {"process": "mos_fs"}, "args": "dec 200 10m 1g"}])),
+                ("ngspice_options", lambda r: r["options"].update(ngspice_options={"reltol": 0.01})),
+                ("nodeset", lambda r: r["options"].update(nodeset=[{"match": {}, "values": {"outa": 0.5}}])),
+                ("retry_on_convergence_error", lambda r: r["options"].update(retry_on_convergence_error=True)),
+                ("engine_version", lambda r: r.update(engine_version="46")),
+                ("engine_version", lambda r: r.update(engine_version="47.1")),
+            ):
+                with self.subTest(deck=deck, field=field):
+                    self.fresh()
+                    self.edit_json(f"{deck}_request", mutate)
+                    self.assert_error(f"{deck} request", field)
+
+    def test_matching_engine_pin_and_empty_overrides_preserve_the_grade(self):
+        def pin(request):
+            request.update(engine_version="47", analysis_overrides=[])
+            request["options"].update(ngspice_options={}, retry_on_convergence_error=False)
+
+        for deck in ("cmrr", "psrr"):
+            self.edit_json(f"{deck}_request", pin)
+        content = self.fx.build()
+        self.assertEqual(self.errors(content), [])
+        self.assertEqual(content["sources"][self.RECORD]["valid_points"], 45)
+
+    def test_envelope_must_match_the_fixed_ac_sweep_and_solver(self):
+        for deck in ("cmrr", "psrr"):
+            for field, mutate in (
+                ("analysis_args", lambda e: self.corner(e, "mos_fs_125C_1.08V").update(
+                    analysis_args="dec 200 10m 1g")),
+                ("nodeset", lambda e: e["corners"][0].update(nodeset={"outa": 0.5})),
+                ("ngspice_options", lambda e: e["environment"].update(ngspice_options={"reltol": 0.01})),
+                ("retry_on_convergence_error", lambda e: e["environment"].update(
+                    retry_on_convergence_error={"reltol": 0.01})),
+            ):
+                with self.subTest(deck=deck, field=field):
+                    self.fresh()
+                    kind = f"{deck}_envelope"
+                    self.edit_json(kind, mutate)
+                    self.assert_error(field, self.raw()["files"][kind]["path"])
+
+    def test_request_axes_must_cover_the_envelope_grid(self):
+        for deck in ("cmrr", "psrr"):
+            for axis, mutate in (
+                ("temperature_c", lambda c: c.update(temperature_c=[27])),
+                ("process", lambda c: c["process"].pop()),
+                ("supply_v", lambda c: c["supply_v"]["vinp"].reverse()),
+            ):
+                with self.subTest(deck=deck, axis=axis):
+                    self.fresh()
+                    self.edit_env(f"{deck}_request", lambda d: mutate(d["corners"]))
+                    self.assert_error(f"{deck} request", axis)
+
+    def test_request_must_select_only_nominal_pvt45(self):
+        for deck in ("cmrr", "psrr"):
+            for field, mutate in (
+                ("exclude", lambda r: r.update(exclude=[{"process": "mos_fs"}])),
+                ("options", lambda r: r["corners"].update(options={"reltol": [0.001, 0.0001]})),
+                ("monte_carlo", lambda r: r.update(monte_carlo={"n": 1, "seed": 23, "vary": "mismatch"})),
+                ("_explicit_points", lambda r: r.update(_explicit_points=[])),
+            ):
+                with self.subTest(deck=deck, field=field):
+                    self.fresh()
+                    self.edit_json(f"{deck}_request", mutate)
+                    self.assert_error(f"{deck} request", field)
+
+    def test_sampled_envelope_cannot_bind_to_a_nominal_request(self):
+        def sampled(doc):
+            doc["environment"]["monte_carlo"] = {"n": 1, "seed": 23, "vary": "mismatch"}
+            for index, corner in enumerate(doc["corners"]):
+                corner["corner_id"] += "/mc0"
+                corner["monte_carlo"] = {"sample_index": 0, "seed": index + 1}
+
+        for deck in ("cmrr", "psrr"):
+            with self.subTest(deck=deck):
+                self.fresh()
+                kind = f"{deck}_envelope"
+                self.edit_json(kind, sampled)
+                self.assert_error(self.raw()["files"][kind]["path"], "environment.monte_carlo", "corner_id")
+
+    def test_request_and_reported_measurement_metadata_must_agree(self):
+        for deck in ("cmrr", "psrr"):
+            for side, field, value in (("request", "unit", "V"), ("envelope", "unit", "V"),
+                                       ("envelope", "limits", {"max": 0.5})):
+                name = f"{deck}_plateau_delta_db"
+
+                def alter(doc):
+                    m = next(m for m in doc["measurements"] if m["name"] == name)
+                    m[field] = value
+
+                with self.subTest(deck=deck, side=side, field=field):
+                    self.fresh()
+                    self.edit_env(f"{deck}_{side}", alter)
+                    self.assert_error(name, field)
+
+    def test_corner_measurement_unit_must_agree_with_request(self):
+        self.edit_env("cmrr_envelope", lambda d: self.meas(d, "acm0_db").update(unit="V"))
+        self.assert_error(self.POINT, "acm0_db", "unit")
+
+    def test_envelope_cannot_add_a_supply_to_the_requested_grid(self):
+        for deck in ("cmrr", "psrr"):
+            with self.subTest(deck=deck):
+                self.fresh()
+                self.edit_env(f"{deck}_envelope",
+                              lambda d: self.corner(d, self.POINT)["supply_v"].update(vss=0.12))
+                self.assert_error("supply_v", "vss")
+
+    def test_fractional_corner_coordinates_cannot_alias_a_selected_point(self):
+        for deck in ("cmrr", "psrr"):
+            for field in ("temperature_c", "vdd"):
+                def alter(doc):
+                    c = self.corner(doc, self.POINT)
+                    if field == "temperature_c":
+                        c[field] = 27.9
+                    else:
+                        c["supply_v"].update(vdd=1.204, vinp=0.602)
+
+                with self.subTest(deck=deck, field=field):
+                    self.fresh()
+                    self.edit_env(f"{deck}_envelope", alter)
+                    self.assert_error("outside the expected grid")
+
+    def test_request_naming_another_bench_body_is_an_error(self):
+        self.edit_env("cmrr_request", lambda d: d.__setitem__("netlist", "tb_psrr_direct.body.spice"))
+        self.assert_error("is not the pinned bench body")
+
+    def test_bench_body_not_the_simulated_one_is_an_error(self):
+        self.edit_env("psrr_body", lambda t: t + "* edited after the run\n")
+        self.assert_error("is not the pinned")
+
+    def edit_simulated_body(self, deck, mutate):
+        self.edit_env(f"{deck}_body", mutate)
+        pin = self.raw()["files"][f"{deck}_body"]
+
+        def repin_body(doc):
+            env = doc["environment"]
+            entry = next(e for e in env["netlist_closure"] if e["path"] == pin["path"])
+            entry["sha256"] = env["netlist_sha256"] = pin["sha256"].removeprefix("sha256:")
+            doc["provenance"]["input"]["content_hash"] = pin["sha256"]
+
+        self.edit_env(f"{deck}_envelope", repin_body)
+
+    def test_swapped_stimulus_in_a_pinned_bench_is_an_error(self):
+        for deck, other in (("psrr", "cmrr"), ("cmrr", "psrr")):
+            with self.subTest(deck=deck):
+                self.fresh()
+                pins = self.raw()["files"]
+                other_body = self.fx.root / pins[f"{other}_body"]["path"]
+                self.edit_simulated_body(deck, lambda _: other_body.read_text())
+                self.assert_error(f"stimulus check: {deck.upper()} body")
+
+    def test_miswired_inverting_input_capacitor_is_an_error(self):
+        for deck, copy_b in (("cmrr", "Ccmb innb inpb 1"), ("psrr", "Cinnb_acgnd innb vss 1")):
+            for card in ("Cinna_acgnd inna vss 1", copy_b):
+                with self.subTest(deck=deck, card=card):
+                    self.fresh()
+                    name, node, _, _ = card.split()
+                    self.edit_simulated_body(deck, lambda text: text.replace(card, f"{name} {node} vdd 1"))
+                    self.assert_error(f"{deck.upper()} body: {node}")
+
+    def test_bench_tolerance_override_is_an_error(self):
+        for deck in ("cmrr", "psrr"):
+            for setting in ("reltol=0.01", "abstol=1e-9", "vntol=1e-3"):
+                with self.subTest(deck=deck, setting=setting):
+                    self.fresh()
+                    self.edit_simulated_body(deck, lambda text: text.replace(
+                        ".options tnom=27", f".options tnom=27 {setting}"))
+                    self.assert_error(f"{deck.upper()} body: {setting.split('=')[0]}")
+
+    def test_conditional_cards_in_a_pinned_bench_are_an_error(self):
+        bench = REPO / "sim/cmrr-psrr/klt"
+        with mock.patch.object(sys, "path", [*sys.path, str(bench)]):
+            from stimulus_fixtures import disabled_bench_cards
+
+        for deck in ("cmrr", "psrr"):
+            for card, disabled, diagnostic in disabled_bench_cards(deck, f"{deck} bench body: Cloada/Cloadb"):
+                with self.subTest(deck=deck, card=card):
+                    self.fresh()
+                    self.edit_simulated_body(deck, lambda text: text.replace(card, disabled))
+                    self.assert_error(diagnostic)
+
+    def test_halved_stimulus_with_consistent_gains_is_an_error(self):
+        bench = REPO / "sim/cmrr-psrr/klt"
+        with mock.patch.object(sys, "path", [*sys.path, str(bench)]):
+            from stimulus_fixtures import halve_stimulus
+
+        for source, decks in (("Vsrip", ("psrr",)), ("Vinp", ("cmrr", "psrr"))):
+            with self.subTest(source=source):
+                self.fresh()
+                pins = self.raw()["files"]
+                cells = {}
+                for deck in decks:
+                    envelope = self.fx.root / pins[f"{deck}_envelope"]["path"]
+                    halve_stimulus(self.fx.root, envelope, source)
+                    for kind in (f"{deck}_body", f"{deck}_envelope"):
+                        pins[kind]["sha256"] = generate.sha256_file(self.fx.root / pins[kind]["path"])
+                    for corner in json.loads(envelope.read_bytes())["corners"]:
+                        pid = f"{corner['process']}_{corner['temperature_c']}C_{corner['supply_v']['vdd']:.2f}V"
+                        cells.setdefault(pid, {}).update({m["name"]: m["value"] for m in corner["measurements"]})
+
+                # Select the replayed values so the CSV agrees with the envelopes.
+                def replay_csv(lines):
+                    columns = lines[0].split(",")
+                    yield lines[0]
+                    for line in lines[1:]:
+                        row = line.split(",")
+                        for name, value in cells[row[0]].items():
+                            row[columns.index(name)] = format(value, ".9g")
+                        yield ",".join(row)
+
+                self.fx.rewrite_csv(self.RECORD, replay_csv)
+                self.assert_error(*(f"{deck.upper()} body: {source} must have unit AC magnitude" for deck in decks))
+
+    def test_bench_load_not_stated_by_the_record_is_an_error(self):
+        for load in ("5e-12", "2p"):
+            with self.subTest(load=load):
+                self.fresh()
+                self.edit_env("cmrr_body", lambda t: t.replace("Cloada outa vss 2e-12", f"Cloada outa vss {load}"))
+                self.assert_error("not one CL the record's own prose states")
+
+    def test_pinned_envelope_edited_without_repin_is_refused(self):
+        self.edit_env("psrr_envelope", lambda d: d.__setitem__("status", "fail"), repin=False)
+        self.assert_error("does not match its selection pin")
+
+    def test_coverage_must_be_checked_on_each_deck(self):
+        for deck in ("cmrr", "psrr"):
+            for message, mutate in (
+                    ("no coverage block", lambda d: d.pop("coverage")),
+                    ("coverage.nothing_checked", lambda d: d["coverage"].update(nothing_checked=True)),
+                    ("coverage.skipped", lambda d: d["coverage"].update(skipped=["plateau limit"]))):
+                with self.subTest(deck=deck, message=message):
+                    self.fresh()
+                    kind = f"{deck}_envelope"
+                    self.edit_json(kind, mutate)
+                    self.assert_error(self.raw()["files"][kind]["path"], message)
+
+    def test_missing_corner_is_an_error(self):
+        self.edit_env("psrr_envelope", lambda d: d["corners"].pop(0))
+        self.assert_error("no corner for point")
+
+    def test_errored_corner_is_an_error(self):
+        def err(doc):
+            self.corner(doc, self.POINT)["status"] = "error"
+
+        self.edit_env("cmrr_envelope", err)
+        self.assert_error("is not a decided corner")
+
+    def test_missing_measurement_is_an_error(self):
+        def drop(doc):
+            c = self.corner(doc, self.POINT)
+            c["measurements"] = [m for m in c["measurements"] if m["name"] != "avs0_db"]
+
+        self.edit_env("psrr_envelope", drop)
+        self.assert_error("missing or non-finite measurement")
+
+    def test_missing_plateau_guard_cell_is_an_error(self):
+        def drop(doc):
+            c = self.corner(doc, self.POINT)
+            c["measurements"] = [m for m in c["measurements"] if m["name"] != "cmrr_plateau_delta_db"]
+
+        self.edit_env("cmrr_envelope", drop)
+        self.assert_error("missing or non-finite measurement")
+
+    def test_plateau_guard_miss_is_an_error(self):
+        self.edit_env("cmrr_envelope", lambda d: self.meas(d, "cmrr_plateau_delta_db").__setitem__("value", 0.2))
+        errors = self.definition_error()
+        self.assertTrue(any("not a flat DC shelf" in e for e in errors), errors)
+
+    def test_av0_disagreeing_between_decks_is_an_error(self):
+        self.edit_env("psrr_envelope", lambda d: self.meas(d, "av0_db").__setitem__("value", self.meas(d, "av0_db")["value"] + 0.5))
+        errors = self.definition_error()
+        self.assertTrue(any("differ by more than" in e for e in errors), errors)
+
+    def test_acm0_off_the_harness_control_is_an_error(self):
+        self.edit_env("cmrr_envelope", lambda d: self.meas(d, "acm0_db").__setitem__("value", self.meas(d, "acm0_db")["value"] + 0.5))
+        errors = self.assert_error("disagrees with the harness regression control")
+        self.assertTrue(any("regression control" in e for e in errors), errors)
+
+    def test_control_record_edit_without_repin_is_refused(self):
+        path = self.fx.root / self.fx.selection["records"]["cmrr-psrr-harness"]["csv"]
+        path.write_text(path.read_text(encoding="utf-8") + "\n", encoding="utf-8")
+        self.assert_error("control record", "does not match its selection pin")
+
+    def test_inconsistent_simulator_version_is_an_error(self):
+        def ver(doc):
+            doc["environment"]["engine_version"] = "46"
+
+        self.edit_env("cmrr_envelope", ver)
+        self.assert_error("not the same run conditions")
+
+    def test_build_and_worker_banners_must_match_the_exact_ngspice_major(self):
+        for deck in ("cmrr", "psrr"):
+            for source in ("engine_build", "worker"):
+                with self.subTest(deck=deck, source=source):
+                    self.fresh()
+
+                    def change_banner(doc):
+                        env = doc["environment"]
+                        if source == "engine_build":
+                            env["engine_build"]["version_banner"] = "** ngspice-470 : build"
+                        else:
+                            job = env["remote"]["fleet"][1]
+                            job["worker_environment"]["simulator"]["version_banner"] = "** ngspice-45 : worker"
+
+                    self.edit_json(f"{deck}_envelope", change_banner)
+                    self.assert_error(source, "ngspice-47")
+
+    def test_envelope_not_from_a_batch_job_is_an_error(self):
+        self.edit_env("cmrr_envelope", lambda d: d["environment"].pop("remote"))
+        self.assert_error("no environment.remote batch job")
+
+    def test_cmrr_psrr_klt_without_its_audit_is_refused(self):
+        self.fx.selection["records"][self.RECORD]["definition_checks"] = []
+        self.fx.save_selection()
+        with self.assertRaises(generate.SelectionError):
+            self.fx.build()
+
+    def test_control_must_name_another_selected_record(self):
+        self.raw()["control"] = self.RECORD
+        self.fx.save_selection()
+        with self.assertRaises(generate.SelectionError):
+            self.fx.build()
+
+    def test_unselected_report_carries_no_cmrr_psrr_rule(self):
+        self.fx.selection["records"][self.RECORD].pop("cmrr_psrr_klt")
+        self.fx.selection["records"][self.RECORD]["definition_checks"] = []
+        self.fx.save_selection()
+        self.assertNotIn("cmrr_psrr_klt_audit_rule", self.fx.build())
 
 
 class OffsetKltAudit(KltEnvelopeAuditControlMixin, RawAuditCase):
@@ -2959,6 +3588,7 @@ class PinnedPopulationNeedsItsAudit(unittest.TestCase):
             "klt_raw": KltRawAudit.test_pinned_artifacts_without_their_audit_are_refused,
             "offset_klt_raw": OffsetKltAudit.test_pinned_artifacts_without_their_audit_are_refused,
             "slew_klt": SlewKltAudit.test_pinned_artifacts_without_their_audit_are_refused,
+            "cmrr_psrr_klt": CmrrPsrrKltAudit.test_cmrr_psrr_klt_without_its_audit_is_refused,
             "swing_two_pass": self.test_two_pass_swing_requires_the_swing_audit,
         }
         case_keys = {population for _, population, _ in self.CASES}

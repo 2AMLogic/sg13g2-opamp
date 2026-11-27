@@ -109,6 +109,9 @@ def render_markdown(report: dict) -> str:
             worst_txt = f"{_v(worst.get('value'), unit)} at `{worst.get('point')}`" if worst else "—"
             best_txt = f"{_v(best.get('value'), unit)} at `{best.get('point')}`" if best else "—"
             source_txt = f"`{src['csv']}` col `{src['column']}` (`{_short(src['csv_sha256'])}`)"
+            if "envelope" in src:
+                pin = src["envelope"]
+                source_txt += f", graded from `{pin['path']}` (`{_short(pin['sha256'])}`)"
             cond = f"{row['load']}; conditions (descriptive, unverified): {row['conditions']}"
             if with_bound:
                 bound = row["bound"]
@@ -273,6 +276,20 @@ def render_markdown(report: dict) -> str:
     slew_rule = content.get("slew_audit_rule")
     if slew_rule and any(src.get("slew_raw") for src in content["sources"].values()):
         w(f"\n{slew_rule}\n\n")
+    cp_rule = content.get("cmrr_psrr_klt_audit_rule")
+    if cp_rule and any(src.get("cmrr_psrr_klt") for src in content["sources"].values()):
+        w(f"\n{cp_rule}\n\n")
+        for src in content["sources"].values():
+            audit = src.get("cmrr_psrr_klt", {})
+            for deck, init in audit.get("ngspice_init", {}).items():
+                settings = ", ".join(f"`{line}`" for line in init["requested_lines"])
+                matched = len(init["jobs_with_matching_digest"])
+                total = len(audit["jobs"][deck])
+                w(f"- {deck.upper()} requested {settings}. {matched} of {total} batch jobs "
+                  f"reported a matching initialization digest. Simulator application is {init['simulator_application']}.")
+                for warning in init["diagnostics"]:
+                    w(f" Worker warning `{warning['code']}`.")
+                w("\n")
     slew_klt_rule = content.get("slew_klt_audit_rule")
     if slew_klt_rule and any(src.get("slew_klt") for src in content["sources"].values()):
         w(f"\n{slew_klt_rule}\n\n")
