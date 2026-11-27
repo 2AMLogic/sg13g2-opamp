@@ -380,9 +380,76 @@ tested.
 Run the tests (offline, no simulator):
 `python3 -m unittest discover -s sim/output-swing/klt -p 'test_*.py'`.
 
-### The 45-point envelope (grid result)
+### Two-pass batch swing audit
 
-`klt/run.sh grid` submits `klt/swing.request.json` (the nominal request with
+From the repository root, run `sim/output-swing/klt/run.sh grid` with the SG13G2 toolchain and Spot submit profile.
+The first request captures 45 coarse DC curves. The second uses klt
+`analysis_overrides` to centre each 10 µV sweep on that corner’s serialized
+crossing ±25 mV. Both batch submissions use the runner’s capacity wait.
+The runner prints the bundle path `sim/.evidence-scratch/swing-<run-id>/`.
+Each phase first uses `--submit-only` and saves klt’s receipt in the bundle.
+The request digest in that receipt covers the run path and SHA-256 hashes
+of the bench and DUT snapshots. Collection and replay check the request
+digest, both snapshots and the job ID. The comparison checks the ngspice
+build banner observed on each worker. The executable digest describes the
+collecting client.
+
+Before a new grid is submitted, the producer checks the retained bench against
+the SHA-256 pinned in `two_pass.py`. Replay and signoff require that digest
+in both passes at every PVT point. The pinned `tb_swing.body.spice` has a
+`Cload out vss 2e-12` element, which establishes the record’s 2 pF load.
+A bench revision requires reviewing the circuit and updating the supported
+digest before submitting a new grid. The DUT has a separate snapshot and digest.
+
+To recover an interrupted run, use its original bundle and run ID in
+`sim/output-swing/klt/run.sh grid <run-id>`. The runner collects the
+recorded jobs and submits the fine pass if it has yet to start.
+`SWING_KLT_ATTACH` and `SWING_KLT_FINE_ATTACH` optionally assert the
+expected coarse and fine job IDs. A missing or mismatched submission
+receipt stops recovery of that job. The runner reads the retained DUT
+even if the checkout has since changed.
+
+The bundle retains the submitted requests and receipts, simulator results,
+original waveform JSON, bench and DUT snapshots, audited CSV and per-pass
+files. `selection.json` contains the `csv`, `csv_sha256` and `swing_two_pass`
+fields for the report reader. Its presence marks a complete audited population. `compare.json`
+names the newest harness record with an identical DUT snapshot and reports
+each field by PVT. Exit 5 preserves the measurements when the comparison
+disagrees or a matching baseline is unavailable. The supporting voltages
+use the existing cross-host relative tolerance and voltage floor, gain and
+current use the relative term, and the PVT and validity fields must agree
+exactly.
+
+Replay with `python3 sim/output-swing/klt/grid.py replay <bundle>` from a
+checkout containing the retained bundle at its recorded repo-relative path.
+
+To store a completed run, set `id` to the printed run ID and run the
+following from the repository root with `KLT_ARTIFACT_BROKER` set. The
+archive contains the original repository-relative paths. The store stages
+its upload in a sibling directory and leaves the live bundle available for replay.
+
+```bash
+bundle="sim/.evidence-scratch/swing-$id"
+transfer=$(mktemp -d)
+test -s "$bundle/selection.json" &&
+  tar -czf "$transfer/swing.tar.gz" "$bundle" &&
+  python3 sim/tools/store_evidence.py --bench swing --run-id "$id" "$transfer/swing.tar.gz"
+```
+
+Commit the generated manifest and Markdown summary under `manifests/artifacts/`.
+In a fresh checkout, set the same `id` and restore the verified archive
+before replaying the pinned evidence.
+
+```bash
+transfer=$(mktemp -d)
+klt artifact get "manifests/artifacts/swing-${id}.manifest.json" -o "$transfer/swing.tar.gz" &&
+  tar -xkzf "$transfer/swing.tar.gz" &&
+  python3 sim/output-swing/klt/grid.py replay "sim/.evidence-scratch/swing-$id"
+```
+
+### Archived 45-point envelope
+
+The original grid runner submitted the fixed-window request (the nominal request with
 the ratified grid: `mos_tt/ss/ff/sf/fs` +
 `cornerCAP.lib cap_typ` + `cornerRES.lib res_typ` (DR-0012) x -40/27/125 C x
 VDD 1.08/1.20/1.32 V, `vcm` swept with `vdd`; same body, fixed `Vid` window,
@@ -424,8 +491,8 @@ fleet's 3600 s whole-job ceiling and suggests `request.remote.hosts >= 5`; the j
 finished in 1429 s on one host. A slower host could push the 263 s corner past
 `timeout_s` 300 s; if so, shard with `remote.hosts` or raise the timeout, do not drop points.
 
-### Not done here
+### Scope of the archived envelope
 
 - The manifest does not cite item 5 for these rows (`signoff/block-manifest.json` is unchanged): that waits until all ten ratified rows have envelopes (CMRR, statistical, remains a gap).
-- **Fixed sweep window.** The request cannot centre its fine window on a measured crossing (`analysis.args` is literal); the committed envelope shows the -10..+40 mV window never touched an edge guard. Tracked upstream: 2AMLogic/klayout-tools#3055 (since closed; the expression style was not changed). `<`/`>` are I/O redirection in `expr`, hence `lt`/`gt` (2AMLogic/klayout-tools#2940).
+- **Fixed sweep window.** This archived request used literal `analysis.args`. The committed envelope shows the −10 to +40 mV window stayed inside the edge guards at every archived corner. Tracked upstream: 2AMLogic/klayout-tools#3055 (since closed; the expression style was not changed). `<`/`>` are I/O redirection in `expr`, hence `lt`/`gt` (2AMLogic/klayout-tools#2940).
 - **Estimator checks on synthetic curves** (absent crossing, weak peak, disconnected qualifying regions, window-edge truncation) through ngspice remain optional hardening; the comparator tests cover the validity side.

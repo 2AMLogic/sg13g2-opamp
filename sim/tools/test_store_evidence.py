@@ -78,6 +78,18 @@ class StoreTest(unittest.TestCase):
         self.assertIn(hashlib.sha256(b"alpha\n").hexdigest(), md)
         self.assertFalse((self.root / se.SCRATCH_REL / "b-r1").exists())
 
+    def test_source_in_scratch_survives_failed_upload_and_retry(self):
+        source = self.root / se.SCRATCH_REL / "b-r1"
+        source.mkdir(parents=True)
+        raw = source / "waveform.json"
+        raw.write_bytes(b"original waveform")
+        os.environ["STUB_PUT_FAIL"] = "1"
+        self.assertNotEqual(self.go(paths=[source]), 0)
+        self.assertEqual(raw.read_bytes(), b"original waveform")
+        del os.environ["STUB_PUT_FAIL"]
+        self.assertEqual(self.go(paths=[source]), 0)
+        self.assertEqual(raw.read_bytes(), b"original waveform")
+
     def test_broker_unset(self):
         del os.environ["KLT_ARTIFACT_BROKER"]
         self.assertNotEqual(self.go(), 0)

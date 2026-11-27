@@ -1354,7 +1354,8 @@ def _load_swing_population(repo: Path, key: str, sw: dict, expected: list, error
     return None if len(errors) > n_err else points
 
 
-def _load_swing_two_pass_population(repo: Path, key: str, sw: dict, expected: list, errors: list) -> dict | None:
+def _load_swing_two_pass_population(repo: Path, key: str, sw: dict, expected: list, errors: list,
+                                    snapshot_hash: str, simulator: str) -> dict | None:
     """Pin-check each grid point's coarse/fine pass-evidence JSON, pair them
     (same DUT, bench, simulator and PVT point; fine window = the coarse
     crossing +- half-span; both clipping plateaus; one crossing) and measure
@@ -1391,6 +1392,22 @@ def _load_swing_two_pass_population(repo: Path, key: str, sw: dict, expected: li
     if len(errors) > n_err:
         return None
     audited, problems = swing_two_pass.audit_population(expected_ids, passes["coarse"], passes["fine"])
+    # Pairwise agreement alone also admits two passes from the same wrong DUT
+    # or PVT. Bind the agreed identity to the selected record and grid.
+    coordinates = dict(expected)
+    for doc in passes["coarse"]:
+        pid = doc["pid"]
+        if pid not in audited:
+            continue
+        point = coordinates[pid]
+        if (doc["process"], doc["temp_c"], doc["vdd_v"]) != (
+            point["corner"], float(point["temp"]), float(point["vdd"])
+        ):
+            problems.append(f"point {pid}: pass PVT differs from the selected grid")
+        if doc["dut_sha256"] != snapshot_hash.removeprefix("sha256:"):
+            problems.append(f"point {pid}: simulated DUT differs from the selected snapshot")
+        if doc["simulator"] != simulator:
+            problems.append(f"point {pid}: simulator {doc['simulator']!r} differs from {simulator!r}")
     errors.extend(f"record {key}: swing two-pass evidence: {p}" for p in problems)
     if problems:
         return None
@@ -1684,7 +1701,8 @@ def load_record(repo: Path, key: str, spec: dict, grid: dict, env: dict, records
     swing_pop: dict | None = None
     swtp = spec.get("swing_two_pass")
     if swtp is not None:
-        swing_pop = _load_swing_two_pass_population(repo, key, swtp, expected, errors)
+        swing_pop = _load_swing_two_pass_population(
+            repo, key, swtp, expected, errors, src["netlist_snapshot_sha256"], src["ngspice"])
         src["swing_two_pass"] = {
             "status": "verified" if swing_pop is not None else "error",
             "points": len(swtp["files"]),

@@ -2,7 +2,7 @@
 """Pure, stdlib-only pairing and audit of the two-pass output-swing batch
 evidence (issue #503).
 
-The fixed fine window of swing.request.json (-10..+40 mV) cannot show that a
+The archived single-pass window (-10..+40 mV) cannot show that a
 changed circuit's crossing lies inside it. The harness definition centres a
 +-25 mV fine sweep on the coarse pass's measured Vout = Vcm crossing; klt
 cannot centre a sweep on a measured value, so the producer runs the coarse
@@ -19,6 +19,7 @@ A "pass" is a dict:
   dut_sha256   hash of the simulated circuit (netlist closure)
   bench_sha256 hash of the simulated bench body
   simulator    engine + version string
+  worker_version_banner, ami_id, model_inputs   worker build, image and model hashes
   process, temp_c, vdd_v, vcm_v   the PVT key actually simulated
   start, stop, step               the Vid sweep actually run
   vid, vout [, ivdd]              the sampled curves (ivdd: fine pass only)
@@ -27,6 +28,7 @@ A "pass" is a dict:
 from __future__ import annotations
 
 import os
+import re
 import sys
 from decimal import Decimal, InvalidOperation
 
@@ -34,10 +36,13 @@ sys.path.insert(0, os.path.normpath(os.path.join(os.path.dirname(os.path.abspath
 import swing_post  # noqa: E402
 
 # Ratified limits (spec/target-spec.md section 2 [DR-2]); literal numbers, as
-# swing.request.json carries them. Source of truth: signoff/characterization/
+# the native fine measurements carry them. Source of truth: signoff/characterization/
 # selection.json rows swing_headroom_vdd / swing_headroom_vss / swing_span;
-# this copy is interim until admission through selection.py/defchecks.py lands.
+# the characterization reader applies those limits to the audited values.
 LIMITS = {"headroom_hi_v": 0.251, "headroom_lo_v": 0.141, "swing_span_v": 0.571}
+# tb_swing.body.spice with Cload out vss 2e-12. The record's "CL = 2 pF"
+# statement applies to this exact bench, even when replaying after a bench edit.
+BENCH_2PF_SHA256 = "20d7d6b5a2a7fb9d4b63329f23090479487fbe341395cb41981b0c7a157646e2"
 IDENTITY_KEYS = ("dut_sha256", "bench_sha256", "simulator", "process", "temp_c", "vdd_v", "vcm_v")
 
 
@@ -99,6 +104,24 @@ def _identity(pid, label, p):
     for k in IDENTITY_KEYS + ("start", "stop", "step") + curves:
         if k not in p:
             raise PairError(pid, f"{label} pass records no {k}")
+    if p["bench_sha256"] != BENCH_2PF_SHA256:
+        raise PairError(pid, f"{label} pass bench_sha256 {p['bench_sha256']!r} differs from the supported 2 pF bench")
+    for field in ("worker_version_banner", "ami_id"):
+        value = p.get(field)
+        if not isinstance(value, str) or not value.strip():
+            raise PairError(pid, f"{label} pass records no {field}")
+    models = p.get("model_inputs")
+    if not isinstance(models, dict) or not models or not all(
+        isinstance(name, str) and name.strip() and isinstance(digest, str) and re.fullmatch("[0-9a-f]{64}", digest)
+        for name, digest in models.items()
+    ):
+        raise PairError(pid, f"{label} pass records invalid model_inputs")
+
+
+def _check_same_worker(pid, label, evidence, reference):
+    for field in ("worker_version_banner", "ami_id", "model_inputs"):
+        if evidence[field] != reference[field]:
+            raise PairError(pid, f"{label} worker differs from the coarse pass at {reference['pid']} on {field}")
 
 
 def audit_pair(pid, coarse, fine, criterion=None):
@@ -111,6 +134,7 @@ def audit_pair(pid, coarse, fine, criterion=None):
         _identity(pid, label, p)
         if p.get("pid") != pid:
             raise PairError(pid, f"{label} pass is for point {p.get('pid')!r}")
+    _check_same_worker(pid, "fine", fine, coarse)
     for k in IDENTITY_KEYS:
         if coarse[k] != fine[k]:
             raise PairError(pid, f"coarse/fine passes disagree on {k} ({coarse[k]!r} vs {fine[k]!r}) -- not the same DUT/corner")
@@ -195,8 +219,8 @@ def check_summary(pid, summary, audited):
 
 
 def audit_population(pids, coarse_passes, fine_passes):
-    """Audit every expected corner. Missing, duplicate or mismatched passes
-    and measurement failures are collected per corner, never abort the rest."""
+    """Audit every expected corner against a common worker environment.
+    Collect missing, duplicate or mismatched passes and measurement failures per corner."""
     problems, out = [], {}
     index = {}
     for label, passes in (("coarse", coarse_passes), ("fine", fine_passes)):
@@ -209,13 +233,20 @@ def audit_population(pids, coarse_passes, fine_passes):
         index[label] = seen
         for pid in sorted(set(seen) - set(pids), key=str):
             problems.append(f"point {pid}: {label} pass is outside the expected grid")
+    reference = None
     for pid in pids:
         for label in ("coarse", "fine"):
             if pid not in index[label]:
                 problems.append(f"point {pid}: missing {label} pass")
         if pid in index["coarse"] and pid in index["fine"]:
             try:
-                out[pid] = audit_pair(pid, index["coarse"][pid], index["fine"][pid])
+                coarse = index["coarse"][pid]
+                measured = audit_pair(pid, coarse, index["fine"][pid])
+                if reference is None:
+                    reference = coarse
+                else:
+                    _check_same_worker(pid, "coarse", coarse, reference)
+                out[pid] = measured
             except PairError as exc:
                 problems.append(str(exc))
     return out, problems

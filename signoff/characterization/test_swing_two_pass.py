@@ -47,8 +47,12 @@ class Fixture:
 
     def load(self):
         errors: list = []
+        expected = []
+        for p in self.pids:
+            corner, temp, vdd = p.rsplit("_", 2)
+            expected.append((p, {"corner": corner, "temp": temp[:-1], "vdd": vdd[:-1]}))
         pop = records._load_swing_two_pass_population(
-            self.root, "rec", {"files": self.files}, [(p, None) for p in self.pids], errors)
+            self.root, "rec", {"files": self.files}, expected, errors, "sha256:" + "a" * 64, "ngspice-45")
         return pop, errors
 
 
@@ -68,6 +72,16 @@ class SwingTwoPassAdmission(unittest.TestCase):
         a = TP.T.audit_pair(PID, *self.good())
         row = dict(a["fields"], point_id=PID)
         self.assertIsNone(defchecks._check_swing_raw(row, pop))
+
+    def test_matching_wrong_passes_cannot_replace_the_selected_dut_or_corner(self):
+        for field, value, expected in (("dut_sha256", "c" * 64, "selected snapshot"),
+                                       ("process", "mos_ss", "selected grid"),
+                                       ("simulator", "ngspice-46", "simulator")):
+            with self.subTest(field=field):
+                self.fx.write(PID, *(dict(p, **{field: value}) for p in self.good()))
+                pop, errors = self.fx.load()
+                self.assertIsNone(pop)
+                self.assertTrue(any(PID in e and expected in e for e in errors), errors)
 
     def test_tampered_headroom_fails_the_definition_check(self):
         self.fx.write(PID, *self.good())
@@ -103,6 +117,26 @@ class SwingTwoPassAdmission(unittest.TestCase):
         pop, errors = self.fx.load()
         self.assertIsNone(pop)
         self.assertTrue(any(f"point {PID}: coarse/fine passes disagree on dut_sha256" in e for e in errors), errors)
+
+    def test_worker_environment_mismatch_names_corner_and_field(self):
+        for field, value in (("worker_version_banner", "another build"), ("ami_id", "another-ami"),
+                             ("model_inputs", {"fixture.lib": "d" * 64})):
+            with self.subTest(field=field):
+                coarse, fine = self.good()
+                fine[field] = value
+                self.fx.write(PID, coarse, fine)
+                pop, errors = self.fx.load()
+                self.assertIsNone(pop)
+                self.assertTrue(any(PID in e and field in e for e in errors), errors)
+
+    def test_identically_incomplete_worker_evidence_is_refused(self):
+        for field, value in (("worker_version_banner", " "), ("ami_id", None),
+                             ("model_inputs", {}), ("model_inputs", {"fixture.lib": ""})):
+            with self.subTest(field=field, value=value):
+                self.fx.write(PID, *(dict(p, **{field: value}) for p in self.good()))
+                pop, errors = self.fx.load()
+                self.assertIsNone(pop)
+                self.assertTrue(any(PID in e and field in e for e in errors), errors)
 
     def test_edited_evidence_without_repin_is_refused(self):
         self.fx.write(PID, *self.good())
