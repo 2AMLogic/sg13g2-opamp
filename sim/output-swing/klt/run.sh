@@ -18,44 +18,31 @@
 #
 #   records/<id>.nominal.compare.json
 #
-# `run.sh grid` instead submits swing.request.json (45 points) on the BATCH
-# backend and writes records/<id>.sim.json / .compare.json.
-#
-# (Nominal mode) This is NOT the 45-point envelope and is not evidence for T1 item 5
-# (signoff/README.md); that work is deferred (README.md "Prototype vs accepted
-# evidence"). This runner never declares or submits the 45-point grid, and it
-# refuses to run any backend but local: a grid does not run on a shared
-# dispatch host, and a batch submit is out of scope for the prototype.
+# Grid mode submits two Spot batch jobs. Both passes, the original worker
+# waveforms, derived summary, report-reader pins and baseline comparison
+# are retained together in sim/.evidence-scratch/swing-<id>/.
 #
 # KLT selects the klt executable (default: `klt` on PATH), e.g.
 # KLT="uvx --from klayout-tools==X.Y.Z klt".
 #
-# Exit status: 0 records written and the join agrees; 3 preflight failed
-# (PDK/OSDI/ngspice/klt missing -- nothing written); 4 the run produced no
-# gradable envelope (PDK/model identity drifted during the run, issue #209;
-# klt error, errored/inconclusive, incomplete coverage,
-# failed validation -- nothing written to records/, the raw output is kept in
-# a scratch dir named on stderr); 5 records written but compare.py found a
-# point outside tolerance or an unexplained verdict disagreement (see the
-# compare.json it wrote -- reported, never hidden). The envelope's own
-# pass/fail verdict does not change the exit status: a ratified bound missed
-# is a result, recorded as such.
+# Exit 0 means the archived comparison agrees. Exit 3 identifies a
+# preflight failure and 4 an incomplete capture or evidence validation
+# failure. Exit 5 retains the measurements and reports a disagreement
+# or an unavailable same-DUT baseline.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SIM_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 REPO_ROOT="$(cd "${SIM_DIR}/.." && pwd)"
 
-# shellcheck source=/dev/null
+# shellcheck source=sim/preflight.sh
 source "${SIM_DIR}/preflight.sh"
+# shellcheck disable=SC2119 # the optional --no-hint flag belongs to this helper
 sg13g2_preflight_require_netlist
-# shellcheck source=/dev/null
+# shellcheck source=sim/tools/klt_run_common.sh
 source "${SIM_DIR}/tools/klt_run_common.sh"
 
 klt_check_client
-
-HARNESS_ID="20260921-151759-707b34c"
-HARNESS_CSV="sim/output-swing/records/${HARNESS_ID}.csv"
 
 MODE="${1:-nominal}"
 case "${MODE}" in
@@ -64,6 +51,7 @@ case "${MODE}" in
 esac
 
 if [[ "${MODE}" == nominal ]]; then
+  HARNESS_CSV="sim/output-swing/records/20260921-151759-707b34c.csv"
   klt_begin_record swing .nominal
   req="${SCRIPT_DIR}/swing.nominal.request.json"
   out="${SCRATCH}/swing.nominal.sim.json"
@@ -80,21 +68,30 @@ if [[ "${MODE}" == nominal ]]; then
   exit 0
 fi
 
-# Grid: 45 points, batch backend only. A failed submit is reported, never
-# retried locally (shared dispatch host).
+# Each run owns a fresh bundle. selection.json is written last, after both
+# envelopes, the model-identity recheck and the per-corner audit succeed.
 klt_begin_record swing
-req="${SCRIPT_DIR}/swing.request.json"
-out="${SCRATCH}/swing.sim.json"
-# SWING_KLT_ATTACH=<job id> re-attaches to an already-submitted batch job
-# (e.g. after the client was interrupted) instead of submitting a new grid.
-ATTACH_ARGS=()
-[[ -n "${SWING_KLT_ATTACH:-}" ]] && ATTACH_ARGS=(--attach "${SWING_KLT_ATTACH}")
-klt_run_request "${req}" "${out}" "${SCRATCH}/swing.stderr" --backend batch "${ATTACH_ARGS[@]}"
-klt_validate_envelope "${out}" --points grid
-klt_require_complete
-klt_write_envelope "${out}"
-KLT_PROVENANCE_EXTRA=(
-  "command=${KLT_CMD[*]} sim swing.request.json --backend batch --format json"
-  "request_sha256=$(sha256sum "${req}" | cut -d' ' -f1)"
-  "remote=$(python3 -c 'import json,sys; print(json.dumps(json.load(open(sys.argv[1])).get("environment",{}).get("remote")))' "${out}")")
-klt_compare_and_finish --points grid --harness-csv "${HARNESS_CSV}"
+bundle="${SIM_DIR}/.evidence-scratch/swing-${RECORD_ID}"
+mkdir -p "${SIM_DIR}/.evidence-scratch"
+sg13g2_exclusive_mkdir "${bundle}" || exit 3
+echo "run.sh: retaining swing evidence in ${bundle}; klt artifacts in ${SCRATCH}" >&2
+python3 "${SCRIPT_DIR}/grid.py" coarse-request "${bundle}" || exit 4
+for phase in coarse fine; do
+  attach="${SWING_KLT_ATTACH:-}"
+  if [[ "${phase}" == fine ]]; then
+    python3 "${SCRIPT_DIR}/grid.py" fine-request "${bundle}" "${SCRATCH}/coarse" || exit 4
+    attach="${SWING_KLT_FINE_ATTACH:-}"
+  fi
+  args=(--backend batch --outdir "${SCRATCH}/${phase}")
+  [[ -z "${attach}" ]] || args+=(--attach "${attach}")
+  klt_run_request "${bundle}/${phase}.request.json" "${bundle}/${phase}.sim.json" \
+    "${SCRATCH}/${phase}.stderr" "${args[@]}"
+  klt_require_complete
+done
+sg13g2_env_identity_finalize "${RECORD_ID}" "${SCRATCH}/${RECORD_ID}.env.json" "${bundle}/environment.json"
+rc=0
+python3 "${SCRIPT_DIR}/grid.py" finish "${bundle}" "${SCRATCH}/fine" || rc=$?
+case "${rc}" in
+  0|5) rm -rf "${SCRATCH}"; exit "${rc}" ;;
+  *) exit 4 ;;
+esac

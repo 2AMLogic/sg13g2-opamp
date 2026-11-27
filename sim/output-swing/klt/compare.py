@@ -55,6 +55,7 @@ from __future__ import annotations
 
 import os
 import sys
+from pathlib import Path
 from typing import Dict, List, Optional, Sequence
 
 _TOOLS = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "tools"))
@@ -295,6 +296,54 @@ def compare(tool: Dict[Key, Dict[str, object]], harness: Dict[Key, Dict[str, obj
         "points": point_reports,
         "status": "agree" if not out_of_tol and not unexplained else "disagree",
     }
+
+
+def swing_baseline(bench: Path, dut_sha256: str) -> Path | None:
+    """Newest harness CSV whose flat DUT snapshot is byte-identical."""
+    for csv_path in sorted((bench / "records").glob("*.csv"), reverse=True):
+        snapshot = bench / "netlist-snapshots" / csv_path.stem / "opamp_core.spice"
+        if snapshot.is_file() and E.sha256_file(snapshot) == dut_sha256:
+            return csv_path
+    return None
+
+
+def compare_pairs(audited, csv_path, points=POINT_SETS["grid"]):
+    """Compare reconstructed measurements, including the supporting fields."""
+    from two_pass import swing_post
+
+    harness = E.load_harness_csv_rows(csv_path, ("temp_c", *swing_post.AUDIT_FIELDS), "harness CSV",
+                                      points=points, flag_columns=())
+    tool = {}
+    for key in points:
+        if (harness[key]["temp_c"], harness[key]["vdd_v"]) != key[1:]:
+            raise InputError(f"{key_str(key)}: harness PVT columns differ from the expected point")
+        audit = audited[key_str(key)]
+        tool[key] = {metric: float(audit["fields"][field]) for metric, field in HARNESS_COLUMN.items()}
+        for metric, passed in audit["verdicts"].items():
+            tool[key][metric + "__status"] = "pass" if passed else "fail"
+    report = compare(tool, harness, points)
+    report["schema"] = "sg13g2-opamp/output-swing/two-pass-compare/1"
+    for key, point in zip(points, report["points"]):
+        fields = audited[key_str(key)]["fields"]
+        for field in swing_post.AUDIT_FIELDS:
+            if field in HARNESS_COLUMN.values():
+                continue
+            ref, measured = harness[key][field], float(fields[field])
+            # PVT and validity are exact. Supporting physical measurements
+            # use the existing cross-host relative term and the voltage floor.
+            tol = REL_CROSS_HOST * abs(ref)
+            if field.endswith("_v") and field != "peak_inc_gain_v_v":
+                tol += ABS_FLOOR_V
+            if field in ("op_pass", "vdd_v", "vcm_v"):
+                tol = 0.0
+            delta = measured - ref
+            point["metrics"][field] = {"harness": ref, "tool": measured, "delta": delta,
+                                       "tolerance": tol, "within": abs(delta) <= tol}
+            if abs(delta) > tol:
+                report["out_of_tolerance"].append(
+                    f"{key_str(key)} {field}: tool {measured:.9g} vs harness {ref:.9g} (tolerance {tol:.3g})")
+                report["status"] = "disagree"
+    return report
 
 
 def _text_summary(rep: dict) -> str:

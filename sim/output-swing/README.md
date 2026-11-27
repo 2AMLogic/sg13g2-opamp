@@ -380,9 +380,35 @@ tested.
 Run the tests (offline, no simulator):
 `python3 -m unittest discover -s sim/output-swing/klt -p 'test_*.py'`.
 
-### The 45-point envelope (grid result)
+### Two-pass batch swing audit
 
-`klt/run.sh grid` submits `klt/swing.request.json` (the nominal request with
+Run `klt/run.sh grid` with the SG13G2 toolchain and Spot submit profile.
+The first request captures 45 coarse DC curves. The second uses klt
+`analysis_overrides` to centre each 10 µV sweep on that corner’s serialized
+crossing ±25 mV. Both batch submissions use the runner’s capacity wait.
+`SWING_KLT_ATTACH` and `SWING_KLT_FINE_ATTACH` accept the corresponding
+job IDs when recovering an interrupted run with the same inputs.
+
+The runner prints its bundle directory under `sim/.evidence-scratch/`.
+It retains the submitted requests, simulator results, original waveform JSON,
+bench and DUT snapshots, audited CSV and per-pass files. `selection.json`
+contains the `csv`, `csv_sha256` and `swing_two_pass` fields for the report
+reader. Its presence marks a complete audited population. `compare.json`
+names the newest harness record with an identical DUT snapshot and reports
+each field by PVT. Exit 5 preserves the measurements when the comparison
+disagrees or a matching baseline is unavailable. The supporting voltages
+use the existing cross-host relative tolerance and voltage floor, gain and
+current use the relative term, and the PVT and validity fields must agree
+exactly.
+
+Replay with `python3 sim/output-swing/klt/grid.py replay <bundle>` from a
+checkout containing the retained bundle at its recorded repo-relative path.
+For a new signoff record, store the bundle using the artifact manifest
+workflow in `manifests/README.md`.
+
+### Archived 45-point envelope
+
+The original grid runner submitted the fixed-window request (the nominal request with
 the ratified grid: `mos_tt/ss/ff/sf/fs` +
 `cornerCAP.lib cap_typ` + `cornerRES.lib res_typ` (DR-0012) x -40/27/125 C x
 VDD 1.08/1.20/1.32 V, `vcm` swept with `vdd`; same body, fixed `Vid` window,
@@ -424,8 +450,8 @@ fleet's 3600 s whole-job ceiling and suggests `request.remote.hosts >= 5`; the j
 finished in 1429 s on one host. A slower host could push the 263 s corner past
 `timeout_s` 300 s; if so, shard with `remote.hosts` or raise the timeout, do not drop points.
 
-### Not done here
+### Scope of the archived envelope
 
 - The manifest does not cite item 5 for these rows (`signoff/block-manifest.json` is unchanged): that waits until all ten ratified rows have envelopes (CMRR, statistical, remains a gap).
-- **Fixed sweep window.** The request cannot centre its fine window on a measured crossing (`analysis.args` is literal); the committed envelope shows the -10..+40 mV window never touched an edge guard. Tracked upstream: 2AMLogic/klayout-tools#3055 (since closed; the expression style was not changed). `<`/`>` are I/O redirection in `expr`, hence `lt`/`gt` (2AMLogic/klayout-tools#2940).
+- **Fixed sweep window.** This archived request used literal `analysis.args`. The committed envelope shows the −10 to +40 mV window stayed inside the edge guards at every archived corner. Tracked upstream: 2AMLogic/klayout-tools#3055 (since closed; the expression style was not changed). `<`/`>` are I/O redirection in `expr`, hence `lt`/`gt` (2AMLogic/klayout-tools#2940).
 - **Estimator checks on synthetic curves** (absent crossing, weak peak, disconnected qualifying regions, window-edge truncation) through ngspice remain optional hardening; the comparator tests cover the validity side.

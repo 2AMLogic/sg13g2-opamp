@@ -2,7 +2,7 @@
 """Pure, stdlib-only pairing and audit of the two-pass output-swing batch
 evidence (issue #503).
 
-The fixed fine window of swing.request.json (-10..+40 mV) cannot show that a
+The archived single-pass window (-10..+40 mV) cannot show that a
 changed circuit's crossing lies inside it. The harness definition centres a
 +-25 mV fine sweep on the coarse pass's measured Vout = Vcm crossing; klt
 cannot centre a sweep on a measured value, so the producer runs the coarse
@@ -34,9 +34,9 @@ sys.path.insert(0, os.path.normpath(os.path.join(os.path.dirname(os.path.abspath
 import swing_post  # noqa: E402
 
 # Ratified limits (spec/target-spec.md section 2 [DR-2]); literal numbers, as
-# swing.request.json carries them. Source of truth: signoff/characterization/
+# the native fine measurements carry them. Source of truth: signoff/characterization/
 # selection.json rows swing_headroom_vdd / swing_headroom_vss / swing_span;
-# this copy is interim until admission through selection.py/defchecks.py lands.
+# the characterization reader applies those limits to the audited values.
 LIMITS = {"headroom_hi_v": 0.251, "headroom_lo_v": 0.141, "swing_span_v": 0.571}
 IDENTITY_KEYS = ("dut_sha256", "bench_sha256", "simulator", "process", "temp_c", "vdd_v", "vcm_v")
 

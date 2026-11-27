@@ -47,8 +47,12 @@ class Fixture:
 
     def load(self):
         errors: list = []
+        expected = []
+        for p in self.pids:
+            corner, temp, vdd = p.rsplit("_", 2)
+            expected.append((p, {"corner": corner, "temp": temp[:-1], "vdd": vdd[:-1]}))
         pop = records._load_swing_two_pass_population(
-            self.root, "rec", {"files": self.files}, [(p, None) for p in self.pids], errors)
+            self.root, "rec", {"files": self.files}, expected, errors, "sha256:" + "a" * 64, "ngspice-45")
         return pop, errors
 
 
@@ -68,6 +72,16 @@ class SwingTwoPassAdmission(unittest.TestCase):
         a = TP.T.audit_pair(PID, *self.good())
         row = dict(a["fields"], point_id=PID)
         self.assertIsNone(defchecks._check_swing_raw(row, pop))
+
+    def test_matching_wrong_passes_cannot_replace_the_selected_dut_or_corner(self):
+        for field, value, expected in (("dut_sha256", "c" * 64, "selected snapshot"),
+                                       ("process", "mos_ss", "selected grid"),
+                                       ("simulator", "ngspice-46", "simulator")):
+            with self.subTest(field=field):
+                self.fx.write(PID, *(dict(p, **{field: value}) for p in self.good()))
+                pop, errors = self.fx.load()
+                self.assertIsNone(pop)
+                self.assertTrue(any(PID in e and expected in e for e in errors), errors)
 
     def test_tampered_headroom_fails_the_definition_check(self):
         self.fx.write(PID, *self.good())
