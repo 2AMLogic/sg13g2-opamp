@@ -1084,15 +1084,39 @@ class RawAuditCase(unittest.TestCase):
         return next(r for r in generate.read_csv_rows(self.fx.csv_path(self.RECORD))[1]
                     if r["point_id"] == (pid or self.POINT))[column]
 
-    def edit_json(self, kind, mutate, repin=True) -> None:
-        pin = self.raw()["files"][kind]
-        path = self.fx.root / pin["path"]
-        doc = json.loads(path.read_text(encoding="utf-8"))
-        mutate(doc)
-        path.write_text(json.dumps(doc), encoding="utf-8")
+    def rawfile(self, kind):
+        return self.fx.root / self.raw()["files"][kind]["path"]
+
+    def edit_text(self, kind, transform, repin=True) -> None:
+        path = self.rawfile(kind)
+        path.write_text(transform(path.read_text(encoding="utf-8")), encoding="utf-8")
         if repin:
-            pin["sha256"] = generate.sha256_file(path)
+            self.raw()["files"][kind]["sha256"] = generate.sha256_file(path)
             self.fx.save_selection()
+
+    def edit_json(self, kind, mutate, repin=True) -> None:
+        def transform(text):
+            doc = json.loads(text)
+            mutate(doc)
+            return json.dumps(doc)
+
+        self.edit_text(kind, transform, repin)
+
+    def corner(self, doc: dict, pid: str | None = None) -> dict:
+        pid = pid or self.POINT
+        for c in doc["corners"]:
+            if f"{c['process']}_{int(c['temperature_c'])}C_{float(c['supply_v']['vdd']):.2f}V" == pid:
+                return c
+        raise KeyError(pid)
+
+    def meas(self, doc, name, pid=None):
+        return next(m for m in self.corner(doc, pid)["measurements"] if m["name"] == name)
+
+    def set_value(self, doc, name, value, status=None, pid=None) -> None:
+        measurement = self.meas(doc, name, pid)
+        measurement["value"] = value
+        if status is not None:
+            measurement["status"] = status
 
     def add_klt_dut_copy(self, kind):
         def add_copy(doc):
@@ -1101,41 +1125,6 @@ class RawAuditCase(unittest.TestCase):
             closure.append(dict(dut, path="copy/opamp_core.spice"))
 
         self.edit_json(kind, add_copy)
-
-    def assert_malformed_klt_closure_rejected(self, kind):
-        self.edit_json(kind, lambda doc: doc["environment"]["netlist_closure"].append(None))
-        content = self.fx.build()
-        self.assertEqual(content["sources"][self.RECORD][self.RAW_KEY]["status"], "error")
-        errors = self.errors(content)
-        self.assertTrue(any("malformed netlist_closure entry" in e for e in errors), errors)
-
-    def assert_klt_optional_object(self, kind, path, invalid_string):
-        *parents, field = path.split(".")
-
-        def parent(doc):
-            for key in parents:
-                doc = doc.setdefault(key, {})
-            return doc
-
-        for value in (invalid_string, [], None):
-            with self.subTest(kind=kind, path=path, value=value):
-                self.edit_json(kind, lambda doc, value=value: parent(doc).update({field: value}))
-                content = self.fx.build()
-                audit = content["sources"][self.RECORD][self.RAW_KEY]
-                if value is None:
-                    self.assertEqual(audit["status"], "verified")
-                else:
-                    self.assertEqual(audit["status"], "error")
-                    errors = self.errors(content)
-                    self.assertTrue(any(f"{path} must be an object" in e for e in errors), errors)
-
-        with self.subTest(kind=kind, missing=path):
-            self.edit_json(kind, lambda doc: parent(doc).pop(field))
-            self.assertEqual(self.fx.build()["sources"][self.RECORD][self.RAW_KEY]["status"], "verified")
-
-    def assert_klt_worker_simulator_validation(self, kind):
-        self.assert_klt_optional_object(kind, "environment.remote.worker_environment.simulator", "ngspice-460")
-        self.assert_klt_optional_object(kind, "environment.remote.worker_environment", "legacy-worker")
 
     def _edit_pinned_lines(self, entry, transform, repin=True) -> None:
         path = self.fx.root / entry["path"]
@@ -1230,6 +1219,161 @@ class PointRawPinControlMixin:
         self.fx.save_selection()
         with self.assertRaisesRegex(generate.SelectionError, self.RAW_KEY):
             self.fx.build()
+
+
+class KltEnvelopeAuditControlMixin:
+    """Shared controls for the flat artifact pins and envelopes of a batch audit."""
+
+    @contextlib.contextmanager
+    def _artifact_subtest(self, kind):
+        """Give each mutation the original artifact bytes and selection pin."""
+        with self.subTest(kind=kind):
+            pin = self.raw()["files"][kind]
+            path = self.rawfile(kind)
+            original, sha = path.read_bytes(), pin["sha256"]
+            try:
+                yield path
+            finally:
+                path.write_bytes(original)
+                pin["sha256"] = sha
+                self.fx.save_selection()
+
+    def test_pinned_artifacts_without_their_audit_are_refused(self):
+        self.fx.selection["records"][self.RECORD]["definition_checks"] = list(self.NON_AUDIT_CHECKS)
+        self.fx.save_selection()
+        with self.assertRaisesRegex(generate.SelectionError, f"{self.DEFINITION_CHECK!r} must run"):
+            self.fx.build()
+
+    def test_audit_without_pinned_artifacts_is_refused(self):
+        del self.fx.selection["records"][self.RECORD][self.RAW_KEY]
+        self.fx.save_selection()
+        with self.assertRaisesRegex(generate.SelectionError, f"hash-pinned `{self.RAW_KEY}`"):
+            self.fx.build()
+
+    def _assert_selection_key_required(self, mapping, key, message):
+        original = mapping.pop(key)
+        try:
+            self.fx.save_selection()
+            with self.assertRaisesRegex(generate.SelectionError, re.escape(message)):
+                self.fx.build()
+        finally:
+            mapping[key] = original
+            self.fx.save_selection()
+
+    def test_every_artifact_must_be_pinned(self):
+        files = self.raw()["files"]
+        for kind in self.REQUIRED_ARTIFACT_KINDS:
+            with self.subTest(missing=kind):
+                self._assert_selection_key_required(files, kind, f"`{self.RAW_KEY}`.files must have")
+        for kind in self.ALL_ARTIFACT_KINDS:
+            with self.subTest(unpinned=kind):
+                self._assert_selection_key_required(files[kind], "sha256", f".files.{kind} needs string `path` and `sha256`")
+
+    def test_stale_pin_is_rejected_for_every_artifact(self):
+        for kind in self.ALL_ARTIFACT_KINDS:
+            with self._artifact_subtest(kind) as path:
+                with path.open("ab") as artifact:
+                    artifact.write(b"\n")
+                self.assert_error(f"{self.raw()['files'][kind]['path']} does not match its selection pin")
+
+    def test_missing_artifact_is_rejected(self):
+        for kind in self.ALL_ARTIFACT_KINDS:
+            with self._artifact_subtest(kind) as path:
+                path.unlink()
+                self.assert_error(f"missing {self.MISSING_ARTIFACT_LABEL} {kind}")
+
+    def _assert_envelope_error(self, mutate, *messages):
+        for kind in self.ENVELOPE_KINDS:
+            with self._artifact_subtest(kind):
+                self.edit_json(kind, mutate)
+                self.assert_error(*messages)
+
+    def test_missing_corner_is_rejected(self):
+        self._assert_envelope_error(lambda d: d["corners"].remove(self.corner(d)), f"no corner for point {self.POINT}")
+
+    def test_duplicate_corner_is_rejected(self):
+        self._assert_envelope_error(lambda d: d["corners"].append(self.corner(d)), f"duplicate corner {self.POINT}")
+
+    def test_errored_corner_is_rejected(self):
+        self._assert_envelope_error(
+            lambda d: self.corner(d).update(status="error"), f"point {self.POINT} is not a decided corner"
+        )
+
+    def test_malformed_closure_entry_is_rejected(self):
+        for kind in self.ENVELOPE_KINDS:
+            with self._artifact_subtest(kind):
+                self.edit_json(kind, lambda d: d["environment"]["netlist_closure"].append(None))
+                content = self.fx.build()
+                self.assertEqual(content["sources"][self.RECORD][self.RAW_KEY]["status"], "error")
+                errors = self.errors(content)
+                self.assertTrue(any("malformed netlist_closure entry" in e for e in errors), errors)
+
+    def _assert_optional_object(self, path, invalid_string):
+        *parents, field = path.split(".")
+
+        def parent(doc):
+            for key in parents:
+                doc = doc.setdefault(key, {})
+            return doc
+
+        for kind in self.ENVELOPE_KINDS:
+            with self._artifact_subtest(kind):
+                for value in (invalid_string, [], None):
+                    with self.subTest(path=path, value=value):
+                        self.edit_json(kind, lambda d: parent(d).update({field: value}))
+                        content = self.fx.build()
+                        status = content["sources"][self.RECORD][self.RAW_KEY]["status"]
+                        if value is None:
+                            self.assertEqual(status, "verified")
+                        else:
+                            self.assertEqual(status, "error")
+                            errors = self.errors(content)
+                            self.assertTrue(any(f"{path} must be an object" in e for e in errors), errors)
+                with self.subTest(missing=path):
+                    self.edit_json(kind, lambda d: parent(d).pop(field))
+                    self.assertEqual(self.fx.build()["sources"][self.RECORD][self.RAW_KEY]["status"], "verified")
+
+    def test_engine_build_is_an_optional_object(self):
+        self._assert_optional_object("environment.engine_build", "legacy-build")
+
+    def test_worker_simulator_metadata_is_optional(self):
+        self._assert_optional_object("environment.remote.worker_environment.simulator", "ngspice-460")
+        self._assert_optional_object("environment.remote.worker_environment", "legacy-worker")
+
+    def test_version_prefix_and_engine_build_banner_mismatch_are_rejected(self):
+        version = self.EXPECTED_NGSPICE_VERSION
+
+        def worker_prefix(doc):
+            worker = doc["environment"]["remote"].setdefault("worker_environment", {})
+            worker.setdefault("simulator", {})["version_banner"] = f"ngspice-{version}0"
+
+        def wrong_engine_build(doc):
+            doc["environment"]["engine_build"] = {"version_banner": f"ngspice-{version - 1}"}
+
+        for mutate, label in ((worker_prefix, "worker"), (wrong_engine_build, "engine_build")):
+            with self.subTest(banner=label):
+                self._assert_envelope_error(
+                    mutate, f"{label} banner does not name ngspice-{version}", "contradictory simulator version"
+                )
+
+    def test_simulated_dut_must_be_the_selected_snapshot(self):
+        def stale_dut(doc):
+            closure = doc["environment"]["netlist_closure"]
+            dut = next(entry for entry in closure if Path(entry["path"]).name == "opamp_core.spice")
+            dut["sha256"] = "0" * 64
+
+        self._assert_envelope_error(stale_dut, "is not the selected netlist snapshot")
+        # A comment changes the snapshot bytes while preserving the normalized design hash.
+        snap = self.fx.root / self.fx.selection["records"][self.RECORD]["netlist_snapshot"]
+        with snap.open("a", encoding="utf-8") as snapshot:
+            snapshot.write("* touched\n")
+        self.assert_error("is not the selected netlist snapshot")
+
+    def test_load_must_be_a_stated_cl(self):
+        for kind in self.BENCH_BODY_KINDS:
+            with self._artifact_subtest(kind):
+                self.edit_text(kind, lambda t: t.replace("Cload out vss 2e-12", "Cload out vss 5e-12"))
+                self.assert_error("Cload 5e-12 is not a CL the record's own prose states")
 
 
 class OffsetMcStatistics(RawAuditCase):
@@ -1823,7 +1967,7 @@ class NoiseRawAudit(PointRawPinControlMixin, RawAuditCase):
         self.assertNotIn("PYEOF", runner.split("noise_post.py")[1].split("done")[0])
 
 
-class KltRawAudit(RawAuditCase):
+class KltRawAudit(KltEnvelopeAuditControlMixin, RawAuditCase):
     """Issue #101: the corrected open-loop record carries no `op_pass` /
     `gm_status` columns, so its four graded rows are audited against the
     hash-pinned `klt sim` envelopes (definition check open_loop_klt_audit).
@@ -1833,26 +1977,14 @@ class KltRawAudit(RawAuditCase):
     POINT = "mos_tt_27C_1.20V"
     KEEP_AUDIT = "keep_klt_audit"
     RAW_KEY = "klt_raw"
-
-    def edit_text(self, kind, transform, repin=True) -> None:
-        pin = self.raw()["files"][kind]
-        path = self.fx.root / pin["path"]
-        path.write_text(transform(path.read_text(encoding="utf-8")), encoding="utf-8")
-        if repin:
-            pin["sha256"] = generate.sha256_file(path)
-            self.fx.save_selection()
-
-    def corner(self, doc, pid=None):
-        pid = pid or self.POINT
-        for c in doc["corners"]:
-            if f"{c['process']}_{c['temperature_c']}C_{c['supply_v']['vdd']:.2f}V" == pid:
-                return c
-        raise KeyError(pid)
-
-    def set_value(self, doc, name, value, pid=None):
-        for m in self.corner(doc, pid)["measurements"]:
-            if m["name"] == name:
-                m["value"] = value
+    DEFINITION_CHECK = "open_loop_klt_audit"
+    ALL_ARTIFACT_KINDS = common.KLT_RAW_KINDS
+    REQUIRED_ARTIFACT_KINDS = common.KLT_RAW_REQUIRED_KINDS
+    ENVELOPE_KINDS = ("ac", "op")
+    BENCH_BODY_KINDS = ("bench_body",)
+    MISSING_ARTIFACT_LABEL = "raw klt artifact"
+    EXPECTED_NGSPICE_VERSION = 46
+    NON_AUDIT_CHECKS = ()
 
     # --- committed evidence -------------------------------------------------
 
@@ -1894,34 +2026,6 @@ class KltRawAudit(RawAuditCase):
 
     # --- selection shape ----------------------------------------------------
 
-    def test_klt_raw_without_its_audit_is_refused(self):
-        self.fx.selection["records"][self.RECORD]["definition_checks"] = []
-        self.fx.save_selection()
-        with self.assertRaises(generate.SelectionError):
-            self.fx.build()
-
-    def test_audit_without_pinned_raw_evidence_is_refused(self):
-        del self.fx.selection["records"][self.RECORD]["klt_raw"]
-        self.fx.save_selection()
-        with self.assertRaises(generate.SelectionError):
-            self.fx.build()
-
-    def test_every_artifact_must_be_pinned(self):
-        for kind in generate.KLT_RAW_REQUIRED_KINDS:
-            with self.subTest(missing=kind):
-                self.fresh()
-                del self.raw()["files"][kind]
-                self.fx.save_selection()
-                with self.assertRaises(generate.SelectionError):
-                    self.fx.build()
-        for kind in generate.KLT_RAW_KINDS:
-            with self.subTest(unpinned=kind):
-                self.fresh()
-                del self.raw()["files"][kind]["sha256"]
-                self.fx.save_selection()
-                with self.assertRaises(generate.SelectionError):
-                    self.fx.build()
-
     def test_continuity_record_must_be_another_selected_record(self):
         for name in ("nope", self.RECORD):
             with self.subTest(name=name):
@@ -1931,18 +2035,6 @@ class KltRawAudit(RawAuditCase):
                     self.fx.build()
 
     # --- tampering ----------------------------------------------------------
-
-    def test_stale_pin_is_rejected_for_every_artifact(self):
-        for kind in generate.KLT_RAW_KINDS:
-            with self.subTest(kind=kind):
-                self.fresh()
-                path = self.fx.root / self.raw()["files"][kind]["path"]
-                path.write_text(path.read_text(encoding="utf-8") + "\n", encoding="utf-8")
-                self.assert_error("does not match its selection pin")
-
-    def test_missing_artifact_is_rejected(self):
-        (self.fx.root / self.raw()["files"]["op"]["path"]).unlink()
-        self.assert_error("missing raw klt artifact op")
 
     def test_coherent_envelope_edit_still_fails_against_the_summary(self):
         self.edit_json("ac", lambda d: self.set_value(d, "av0_db", 41.0))
@@ -1962,10 +2054,6 @@ class KltRawAudit(RawAuditCase):
     def test_failed_envelope_is_not_evidence(self):
         self.edit_json("op", lambda d: d.update(status="fail", failed=1, passed=44))
         self.assert_error("op envelope", "klt raw evidence")
-
-    def test_missing_corner_is_rejected(self):
-        self.edit_json("ac", lambda d: d.update(corners=[c for c in d["corners"] if c is not self.corner(d)]))
-        self.assert_error("no corner for point " + self.POINT)
 
     def test_corner_diagnostics_are_rejected(self):
         self.edit_json("ac", lambda d: self.corner(d).update(diagnostics=[{"code": "nonconvergence"}]))
@@ -2019,35 +2107,12 @@ class KltRawAudit(RawAuditCase):
         self.edit_json("ac", lambda d: d["environment"].update(models_lib_sha256="0" * 64))
         self.assert_error("model deck")
 
-    def test_malformed_closure_entry_is_rejected(self):
-        for kind in ("ac", "op"):
-            with self.subTest(kind=kind):
-                self.fresh()
-                self.assert_malformed_klt_closure_rejected(kind)
-
-    def test_engine_build_is_an_optional_object(self):
-        for kind in ("ac", "op"):
-            self.assert_klt_optional_object(kind, "environment.engine_build", "legacy-build")
-
-    def test_worker_simulator_metadata_is_optional(self):
-        for kind in ("ac", "op"):
-            self.assert_klt_worker_simulator_validation(kind)
-
-    def test_simulated_dut_must_be_the_selected_snapshot(self):
-        snap = self.fx.root / self.fx.selection["records"][self.RECORD]["netlist_snapshot"]
-        snap.write_text(snap.read_text(encoding="utf-8") + "* touched\n", encoding="utf-8")
-        self.assert_error("is not the selected netlist snapshot")
-
     # --- the bench itself ---------------------------------------------------
 
     def test_inn_must_be_ac_grounded(self):
         self.edit_text("bench_body", lambda t: t.replace("Cinn_acgnd inn vss 1", "* removed"))
         errors = self.assert_error("element Cinn_acgnd")
         self.assertTrue(any("simulated bench body is not the pinned" in e for e in errors), errors)
-
-    def test_load_must_be_one_the_record_states(self):
-        self.edit_text("bench_body", lambda t: t.replace("Cload out vss 2e-12", "Cload out vss 5e-12"))
-        self.assert_error("is not a CL the record's own prose states")
 
     def test_second_load_is_rejected(self):
         self.edit_text("bench_body", lambda t: t + "Cload out vss 2e-12\n")
@@ -2627,7 +2692,7 @@ class CmrrPsrrKltAudit(RawAuditCase):
         self.assertNotIn("cmrr_psrr_klt_audit_rule", self.fx.build())
 
 
-class OffsetKltAudit(RawAuditCase):
+class OffsetKltAudit(KltEnvelopeAuditControlMixin, RawAuditCase):
     """Issue #504: the input-offset batch record -- the null + closed-loop
     `klt sim` envelopes joined with the selected open-loop record's Av0 --
     is selectable in place of the harness CSV, and every published cell
@@ -2638,6 +2703,12 @@ class OffsetKltAudit(RawAuditCase):
     POINT = "mos_tt_27C_1.20V"
     RAW_KEY = "offset_klt_raw"
     DEFINITION_CHECK = "offset_klt_audit"
+    REQUIRED_ARTIFACT_KINDS = ALL_ARTIFACT_KINDS = common.OFFSET_KLT_RAW_KINDS
+    ENVELOPE_KINDS = ("null", "cl")
+    BENCH_BODY_KINDS = ("null_body", "cl_body")
+    MISSING_ARTIFACT_LABEL = "raw offset-klt artifact"
+    EXPECTED_NGSPICE_VERSION = 47
+    NON_AUDIT_CHECKS = ("offset_magnitude",)
 
     def setUp(self) -> None:
         super().setUp()
@@ -2646,21 +2717,6 @@ class OffsetKltAudit(RawAuditCase):
     def fresh(self) -> None:
         super().fresh()
         self.fx.select_offset_batch_record()
-
-    def rawfile(self, kind):
-        return self.fx.root / self.raw()["files"][kind]["path"]
-
-    def edit_envelope(self, kind, pid, name, value, repin=True) -> None:
-        doc = json.loads(self.rawfile(kind).read_text(encoding="utf-8"))
-        for c in doc["corners"]:
-            if f"{c['process']}_{c['temperature_c']}C_{c['supply_v']['vdd']:.2f}V" == pid:
-                for m in c["measurements"]:
-                    if m["name"] == name:
-                        m["value"] = value
-        self.rawfile(kind).write_text(json.dumps(doc), encoding="utf-8")
-        if repin:
-            self.raw()["files"][kind]["sha256"] = generate.sha256_file(self.rawfile(kind))
-            self.fx.save_selection()
 
     def edit_join_row(self, mutate) -> None:
         """Rewrite (and repin) one row of the joined open-loop record CSV."""
@@ -2710,27 +2766,6 @@ class OffsetKltAudit(RawAuditCase):
 
     # --- selection shape ----------------------------------------------------
 
-    def test_offset_klt_raw_without_its_audit_is_refused(self):
-        self.fx.selection["records"][self.RECORD]["definition_checks"] = ["offset_magnitude"]
-        self.fx.save_selection()
-        with self.assertRaises(generate.SelectionError):
-            self.fx.build()
-
-    def test_audit_without_pinned_raw_evidence_is_refused(self):
-        del self.fx.selection["records"][self.RECORD]["offset_klt_raw"]
-        self.fx.save_selection()
-        with self.assertRaises(generate.SelectionError):
-            self.fx.build()
-
-    def test_every_artifact_must_be_pinned(self):
-        for kind in generate.OFFSET_KLT_RAW_KINDS:
-            with self.subTest(kind=kind):
-                self.fresh()
-                del self.raw()["files"][kind]
-                self.fx.save_selection()
-                with self.assertRaises(generate.SelectionError):
-                    self.fx.build()
-
     def test_av0_join_must_be_another_selected_record(self):
         for name in ("nope", self.RECORD):
             with self.subTest(name=name):
@@ -2741,117 +2776,36 @@ class OffsetKltAudit(RawAuditCase):
 
     # --- tampering ----------------------------------------------------------
 
-    def test_stale_pin_is_rejected_for_every_artifact(self):
-        for kind in generate.OFFSET_KLT_RAW_KINDS:
-            with self.subTest(kind=kind):
-                self.fresh()
-                path = self.rawfile(kind)
-                path.write_text(path.read_text(encoding="utf-8") + "\n", encoding="utf-8")
-                self.assert_error("does not match its selection pin")
-
-    def test_missing_artifact_is_rejected(self):
-        self.rawfile("cl").unlink()
-        self.assert_error("missing raw offset-klt artifact cl")
-
     def test_coherent_envelope_edit_still_fails_against_the_summary(self):
-        self.edit_envelope("null", self.POINT, "vos_null_v", 0.005)
+        self.edit_json("null", lambda d: self.set_value(d, "vos_null_v", 0.005))
         errors = self.assert_error(f"point {self.POINT} fails definition check {self.DEFINITION_CHECK}")
         self.assertTrue(any("vos_null_v" in e for e in errors), errors)
 
-    def test_missing_corner_is_rejected(self):
-        doc = json.loads(self.rawfile("null").read_text(encoding="utf-8"))
-        doc["corners"] = [c for c in doc["corners"]
-                          if f"{c['process']}_{c['temperature_c']}C_{c['supply_v']['vdd']:.2f}V" != self.POINT]
-        self.rawfile("null").write_text(json.dumps(doc), encoding="utf-8")
-        self.raw()["files"]["null"]["sha256"] = generate.sha256_file(self.rawfile("null"))
-        self.fx.save_selection()
-        self.assert_error("no corner for point " + self.POINT)
-
-    def test_duplicate_corner_is_rejected(self):
-        doc = json.loads(self.rawfile("cl").read_text(encoding="utf-8"))
-        doc["corners"].append(json.loads(json.dumps(doc["corners"][0])))
-        self.rawfile("cl").write_text(json.dumps(doc), encoding="utf-8")
-        self.raw()["files"]["cl"]["sha256"] = generate.sha256_file(self.rawfile("cl"))
-        self.fx.save_selection()
-        self.assert_error("duplicate corner")
-
-    def test_errored_corner_is_rejected(self):
-        doc = json.loads(self.rawfile("null").read_text(encoding="utf-8"))
-        for c in doc["corners"]:
-            if f"{c['process']}_{c['temperature_c']}C_{c['supply_v']['vdd']:.2f}V" == self.POINT:
-                c["status"] = "error"
-        self.rawfile("null").write_text(json.dumps(doc), encoding="utf-8")
-        self.raw()["files"]["null"]["sha256"] = generate.sha256_file(self.rawfile("null"))
-        self.fx.save_selection()
-        self.assert_error("is not a decided corner")
-
     def test_non_finite_raw_value_is_rejected(self):
-        self.edit_envelope("null", self.POINT, "vos_null_v", None)
+        self.edit_json("null", lambda d: self.set_value(d, "vos_null_v", None))
         self.assert_error("missing or non-finite raw value")
 
     def test_engines_must_agree(self):
-        doc = json.loads(self.rawfile("cl").read_text(encoding="utf-8"))
-        doc["environment"]["engine_version"] = "46"
-        self.rawfile("cl").write_text(json.dumps(doc), encoding="utf-8")
-        self.raw()["files"]["cl"]["sha256"] = generate.sha256_file(self.rawfile("cl"))
-        self.fx.save_selection()
+        self.edit_json("cl", lambda d: d["environment"].update(engine_version="46"))
         self.assert_error("disagree on the engine")
 
     def test_below_the_toolchain_floor_is_rejected(self):
-        for kind in ("null", "cl"):
-            doc = json.loads(self.rawfile(kind).read_text(encoding="utf-8"))
-            doc["environment"]["engine_version"] = "45"
-            banner = doc["environment"]["remote"]["worker_environment"]["simulator"]["version_banner"]
-            doc["environment"]["remote"]["worker_environment"]["simulator"]["version_banner"] = banner.replace("ngspice-47", "ngspice-45")
-            if (doc["environment"].get("engine_build") or {}).get("version_banner"):
-                doc["environment"]["engine_build"]["version_banner"] = (
-                    doc["environment"]["engine_build"]["version_banner"].replace("ngspice-47", "ngspice-45")
-                )
-            self.rawfile(kind).write_text(json.dumps(doc), encoding="utf-8")
-            self.raw()["files"][kind]["sha256"] = generate.sha256_file(self.rawfile(kind))
-        self.fx.save_selection()
+        def lower_version(doc):
+            env = doc["environment"]
+            env["engine_version"] = "45"
+            simulator = env["remote"]["worker_environment"]["simulator"]
+            simulator["version_banner"] = simulator["version_banner"].replace("ngspice-47", "ngspice-45")
+            build = env.get("engine_build") or {}
+            if build.get("version_banner"):
+                build["version_banner"] = build["version_banner"].replace("ngspice-47", "ngspice-45")
+
+        for kind in self.ENVELOPE_KINDS:
+            self.edit_json(kind, lower_version)
         self.assert_error("rejected by sim/pdk.json")
 
     def test_missing_passed_count_is_rejected_without_crashing(self):
-        doc = json.loads(self.rawfile("null").read_text(encoding="utf-8"))
-        doc.pop("passed", None)
-        self.rawfile("null").write_text(json.dumps(doc), encoding="utf-8")
-        self.raw()["files"]["null"]["sha256"] = generate.sha256_file(self.rawfile("null"))
-        self.fx.save_selection()
+        self.edit_json("null", lambda d: d.pop("passed"))
         self.assert_error("offset klt raw evidence", "passed=None")
-
-    def test_version_prefix_and_engine_build_banner_mismatch_are_rejected(self):
-        # Prefix match ("ngspice-470" contains "ngspice-47") must not satisfy version "47".
-        doc = json.loads(self.rawfile("null").read_text(encoding="utf-8"))
-        sim = doc["environment"]["remote"]["worker_environment"]["simulator"]
-        sim["version_banner"] = sim["version_banner"].replace("ngspice-47", "ngspice-470")
-        self.rawfile("null").write_text(json.dumps(doc), encoding="utf-8")
-        self.raw()["files"]["null"]["sha256"] = generate.sha256_file(self.rawfile("null"))
-        self.fx.save_selection()
-        self.assert_error("worker banner does not name ngspice-47")
-
-        # engine_build.version_banner must also agree with engine_version.
-        self.fresh()
-        doc = json.loads(self.rawfile("cl").read_text(encoding="utf-8"))
-        doc["environment"]["engine_build"]["version_banner"] = "** ngspice-46 : mismatch"
-        self.rawfile("cl").write_text(json.dumps(doc), encoding="utf-8")
-        self.raw()["files"]["cl"]["sha256"] = generate.sha256_file(self.rawfile("cl"))
-        self.fx.save_selection()
-        self.assert_error("engine_build banner does not name ngspice-47")
-
-    def test_malformed_closure_entry_is_rejected(self):
-        for kind in ("null", "cl"):
-            with self.subTest(kind=kind):
-                self.fresh()
-                self.assert_malformed_klt_closure_rejected(kind)
-
-    def test_engine_build_is_an_optional_object(self):
-        for kind in ("null", "cl"):
-            self.assert_klt_optional_object(kind, "environment.engine_build", "legacy-build")
-
-    def test_worker_simulator_metadata_is_optional(self):
-        for kind in ("null", "cl"):
-            self.assert_klt_worker_simulator_validation(kind)
 
     def test_bench_dut_is_verified_against_a_renamed_snapshot(self):
         record = self.fx.selection["records"][self.RECORD]
@@ -2869,56 +2823,41 @@ class OffsetKltAudit(RawAuditCase):
         self.add_klt_dut_copy("null")
         self.assert_error("is not the selected netlist snapshot")
 
-    def test_simulated_dut_must_be_the_selected_snapshot(self):
-        # A comment-only touch leaves the normalized (design-identity) hash
-        # alone, so the ONLY thing that fires is the envelope-closure binding
-        # of the simulated DUT to the selected snapshot: the stale-DUT rule.
-        snap = self.fx.root / self.fx.selection["records"][self.RECORD]["netlist_snapshot"]
-        snap.write_text(snap.read_text(encoding="utf-8") + "* touched\n", encoding="utf-8")
-        self.assert_error("is not the selected netlist snapshot")
-
     def test_request_measurement_definitions_are_checked(self):
-        doc = json.loads(self.rawfile("null_request").read_text(encoding="utf-8"))
-        doc["measurements"][0]["limits"] = {"min": -0.05, "max": 0.05}
-        self.rawfile("null_request").write_text(json.dumps(doc), encoding="utf-8")
-        self.raw()["files"]["null_request"]["sha256"] = generate.sha256_file(self.rawfile("null_request"))
-        self.fx.save_selection()
+        self.edit_json("null_request", lambda d: d["measurements"][0].update(limits={"min": -0.05, "max": 0.05}))
         self.assert_error("measurement vos_null_v limits")
 
     def test_closed_loop_body_must_carry_the_loop_break(self):
-        body = self.rawfile("cl_body")
-        body.write_text(body.read_text(encoding="utf-8").replace("Lbreak inn out 1e18", "* removed"), encoding="utf-8")
-        self.raw()["files"]["cl_body"]["sha256"] = generate.sha256_file(body)
-        self.fx.save_selection()
+        self.edit_text("cl_body", lambda t: t.replace("Lbreak inn out 1e18", "* removed"))
         errors = self.assert_error("element Lbreak")
         self.assertTrue(any("simulated bench body is not the pinned" in e for e in errors), errors)
 
     # --- the derivation's own negative controls ------------------------------
 
     def test_multiple_crossings_fail_op_validity(self):
-        self.edit_envelope("null", self.POINT, "vos_crossings_n", 3.0)
+        self.edit_json("null", lambda d: self.set_value(d, "vos_crossings_n", 3.0))
         errors = self.assert_error(f"point {self.POINT} fails definition check {self.DEFINITION_CHECK}")
         self.assertTrue(any("crossings (expected exactly 1)" in e for e in errors), errors)
 
     def test_zero_crossings_fail_op_validity(self):
-        self.edit_envelope("null", self.POINT, "vos_crossings_n", 0.0)
+        self.edit_json("null", lambda d: self.set_value(d, "vos_crossings_n", 0.0))
         errors = self.assert_error(f"point {self.POINT} fails definition check {self.DEFINITION_CHECK}")
         self.assertTrue(any("crossings (expected exactly 1)" in e for e in errors), errors)
 
     def test_railed_node_fails_op_validity(self):
-        self.edit_envelope("null", self.POINT, "vtail_dc_v", 1.19)
+        self.edit_json("null", lambda d: self.set_value(d, "vtail_dc_v", 1.19))
         errors = self.assert_error(f"point {self.POINT} fails definition check {self.DEFINITION_CHECK}")
         self.assertTrue(any("op_pass" in e for e in errors), errors)
 
     def test_method_disagreement_fails_the_cross_check(self):
-        self.edit_envelope("cl", self.POINT, "vout_cl_v", 0.58)
+        self.edit_json("cl", lambda d: self.set_value(d, "vout_cl_v", 0.58))
         errors = self.assert_error(f"point {self.POINT} fails definition check {self.DEFINITION_CHECK}")
         self.assertTrue(any("xcheck_pass" in e and "tolerance" in e for e in errors), errors)
 
     def test_flag_flips_that_match_the_derivation_are_coverage_not_errors(self):
         """op_pass=0 in the cell AND in the derivation is an invalid point
         (counted as missing coverage), never a silently passing one."""
-        self.edit_envelope("null", self.POINT, "vos_crossings_n", 3.0)
+        self.edit_json("null", lambda d: self.set_value(d, "vos_crossings_n", 3.0))
         self.fx.set_cell(self.RECORD, self.POINT, "op_pass", "0")
         content = self.fx.build()
         self.assertEqual(self.errors(content), [])
@@ -2987,7 +2926,7 @@ class OffsetKltAudit(RawAuditCase):
         PASSES on a value the old fixed harness CSV never held."""
         pid = "mos_fs_125C_1.08V"
         new_vos = 0.0151
-        self.edit_envelope("null", pid, "vos_null_v", new_vos)
+        self.edit_json("null", lambda d: self.set_value(d, "vos_null_v", new_vos, pid=pid))
         # A coherent new measurement moves the closed-loop reading with the
         # null (the two methods measure one offset): choose vout_cl so the
         # referred-back vos_cl IS the new null, exactly as a re-measured
@@ -2996,17 +2935,14 @@ class OffsetKltAudit(RawAuditCase):
                          (self.fx.root / self.fx.selection["records"][self.raw()["av0_join"]]["csv"]).read_text().splitlines()[1:]
                          if r.split(",")[0] == pid))
         av = 10.0 ** (av0 / 20.0)
-        self.edit_envelope("cl", pid, "vout_cl_v", 1.08 / 2 - new_vos * av / (1.0 + av))
+        self.edit_json("cl", lambda d: self.set_value(d, "vout_cl_v", 1.08 / 2 - new_vos * av / (1.0 + av), pid=pid))
         # regenerate the CSV's derived cells for the edited corner the way the
         # bench writer does (the same shared derivation).
         doc = json.loads(self.rawfile("null").read_text(encoding="utf-8"))
-        corner = next(c for c in doc["corners"]
-                      if f"{c['process']}_{c['temperature_c']}C_{c['supply_v']['vdd']:.2f}V" == pid)
+        corner = self.corner(doc, pid)
         n = {m["name"]: m["value"] for m in corner["measurements"]}
         cl_doc = json.loads(self.rawfile("cl").read_text(encoding="utf-8"))
-        cl_corner = next(c for c in cl_doc["corners"]
-                         if f"{c['process']}_{c['temperature_c']}C_{c['supply_v']['vdd']:.2f}V" == pid)
-        vout_cl = {m["name"]: m["value"] for m in cl_corner["measurements"]}["vout_cl_v"]
+        vout_cl = self.meas(cl_doc, "vout_cl_v", pid)["value"]
         d = offset_post.derive_point(n, vout_cl, 1.08, av0)
         def rewrite(lines):
             header = lines[0].split(",")
@@ -3261,7 +3197,7 @@ class SlewRawAudit(PointRawPinControlMixin, RawAuditCase):
         self.assertIn("non-finite", res.stderr)
 
 
-class SlewKltAudit(RawAuditCase):
+class SlewKltAudit(KltEnvelopeAuditControlMixin, RawAuditCase):
     """Issue #501: the slew-rate summary audited against the hash-pinned batch
     `klt sim` envelope (crossings, not waveforms), definition check
     slew_klt_audit. The committed selection still pins the local waveforms;
@@ -3271,6 +3207,12 @@ class SlewKltAudit(RawAuditCase):
     POINT = "mos_tt_27C_1.20V"
     RAW_KEY = "slew_klt"
     DEFINITION_CHECK = "slew_klt_audit"
+    REQUIRED_ARTIFACT_KINDS = ALL_ARTIFACT_KINDS = common.SLEW_KLT_KINDS
+    ENVELOPE_KINDS = ("envelope",)
+    BENCH_BODY_KINDS = ("bench_body",)
+    MISSING_ARTIFACT_LABEL = "batch slew artifact"
+    EXPECTED_NGSPICE_VERSION = 46
+    NON_AUDIT_CHECKS = ("slew_worse_edge",)
     FILES = {
         "envelope": "sim/slew-rate/klt/records/20261015-063443-80878d7.sim.json",
         "request": "sim/slew-rate/klt/slew.request.json",
@@ -3317,16 +3259,6 @@ class SlewKltAudit(RawAuditCase):
 
     def edit_env(self, mutate, kind="envelope", repin=True) -> None:
         self.edit_json(kind, mutate, repin)
-
-    def corner(self, doc, pid=None):
-        pid = pid or self.POINT
-        for c in doc["corners"]:
-            if f"{c['process']}_{c['temperature_c']}C_{c['supply_v']['vdd']:.2f}V" == pid:
-                return c
-        raise KeyError(pid)
-
-    def meas(self, doc, name, pid=None):
-        return next(m for m in self.corner(doc, pid)["measurements"] if m["name"] == name)
 
     # --- issue #513: item 1, columns no batch check covers ----------------------
 
@@ -3467,33 +3399,6 @@ class SlewKltAudit(RawAuditCase):
         self.assertEqual(compare.TOLERANCES["vout_dc_v"]["abs"], defchecks.SLEW_KLT_DC_ABS)
         self.assertEqual(compare.TOLERANCES["vout_dc_v"]["rel"], defchecks.SLEW_KLT_DC_REL)
 
-    # --- selection shape ----------------------------------------------------
-
-    def test_envelope_without_its_audit_is_refused(self):
-        self.fx.selection["records"][self.RECORD]["definition_checks"] = ["slew_worse_edge"]
-        self.fx.save_selection()
-        with self.assertRaises(generate.SelectionError):
-            self.fx.build()
-
-    def test_audit_without_pinned_envelope_is_refused(self):
-        del self.fx.selection["records"][self.RECORD]["slew_klt"]
-        self.fx.save_selection()
-        with self.assertRaises(generate.SelectionError):
-            self.fx.build()
-
-    def test_every_artifact_must_be_pinned(self):
-        for kind in self.FILES:
-            with self.subTest(kind=kind):
-                self.fresh_batch()
-                del self.raw()["files"][kind]
-                self.fx.save_selection()
-                with self.assertRaises(generate.SelectionError):
-                    self.fx.build()
-
-    def test_drifted_envelope_is_refused(self):
-        self.edit_env(lambda d: d.update(note="x"), repin=False)
-        self.assert_error("does not match its selection pin")
-
     # --- tamper / missing / stale / incomplete ------------------------------
 
     def test_missing_crossing_names_corner_and_field(self):
@@ -3528,15 +3433,6 @@ class SlewKltAudit(RawAuditCase):
         self.edit_env(mutate)
         self.assert_error("drive_pass '1' but the pinned envelope's reported quantities")
 
-    def test_malformed_closure_entry_is_rejected(self):
-        self.assert_malformed_klt_closure_rejected("envelope")
-
-    def test_engine_build_is_an_optional_object(self):
-        self.assert_klt_optional_object("envelope", "environment.engine_build", "legacy-build")
-
-    def test_worker_simulator_metadata_is_optional(self):
-        self.assert_klt_worker_simulator_validation("envelope")
-
     def test_all_matching_dut_paths_must_have_the_snapshot_hash(self):
         self.add_klt_dut_copy("envelope")
         content = self.fx.build()
@@ -3547,29 +3443,9 @@ class SlewKltAudit(RawAuditCase):
         self.edit_env(lambda doc: doc["environment"]["netlist_closure"][-1].update(sha256="0" * 64))
         self.assert_error("is not the selected netlist snapshot")
 
-    def test_stale_dut_hash(self):
-        def mutate(doc):
-            for c in doc["environment"]["netlist_closure"]:
-                if c["path"] == "design/netlist/opamp_core.spice":
-                    c["sha256"] = "0" * 64
-        self.edit_env(mutate)
-        self.assert_error("is not the selected netlist snapshot")
-
     def test_stale_bench_body(self):
         self.edit_env(lambda d: d["environment"].update(netlist_sha256="1" * 64))
         self.assert_error("simulated bench body")
-
-    def test_incomplete_corner_set(self):
-        self.edit_env(lambda d: d["corners"].pop())
-        self.assert_error("no corner for point mos_fs_125C_1.32V")
-
-    def test_duplicate_corner(self):
-        self.edit_env(lambda d: d["corners"].append(json.loads(json.dumps(d["corners"][0]))))
-        self.assert_error("duplicate corner mos_tt_-40C_1.08V")
-
-    def test_errored_corner_is_not_evidence(self):
-        self.edit_env(lambda d: self.corner(d).update(status="error"))
-        self.assert_error(f"point {self.POINT} is not a decided corner")
 
     def test_contradictory_simulator_version(self):
         def mutate(doc):
@@ -3577,19 +3453,6 @@ class SlewKltAudit(RawAuditCase):
             remote.setdefault("worker_environment", {}).setdefault("simulator", {})["version_banner"] = "ngspice-45 : x"
         self.edit_env(mutate)
         self.assert_error("contradictory simulator version")
-
-    def test_version_prefix_and_engine_build_banner_mismatch_are_rejected(self):
-        # Prefix match ("ngspice-460" contains "ngspice-46") must not satisfy version "46".
-        def set_prefix(doc):
-            remote = doc["environment"]["remote"]
-            remote.setdefault("worker_environment", {}).setdefault("simulator", {})["version_banner"] = "ngspice-460 : x"
-        self.edit_env(set_prefix)
-        self.assert_error("worker banner does not name ngspice-46", "contradictory simulator version")
-
-        # engine_build.version_banner must also agree with engine_version.
-        self.fresh_batch()
-        self.edit_env(lambda d: d["environment"].update(engine_build={"version_banner": "** ngspice-45 : mismatch"}))
-        self.assert_error("engine_build banner does not name ngspice-46", "contradictory simulator version")
 
     def test_envelope_version_must_match_the_record_prose(self):
         self.edit_env(lambda d: d["environment"].update(engine_version="45"))
@@ -3600,16 +3463,6 @@ class SlewKltAudit(RawAuditCase):
             next(m for m in doc["measurements"] if m["name"] == "lin_rise_ratio")["limits"] = {"min": 0.5, "max": 1.5}
         self.edit_env(mutate, kind="request")
         self.assert_error("lin_rise_ratio limits are")
-
-    def test_load_must_be_a_stated_cl(self):
-        def edit(text):
-            return text.replace("Cload out vss 2e-12", "Cload out vss 5e-12")
-        pin = self.raw()["files"]["bench_body"]
-        path = self.fx.root / pin["path"]
-        path.write_text(edit(path.read_text(encoding="utf-8")), encoding="utf-8")
-        pin["sha256"] = generate.sha256_file(path)
-        self.fx.save_selection()
-        self.assert_error("Cload 5e-12 is not a CL the record's own prose states")
 
     # --- limit miss is a result, not an error ---------------------------------
 
@@ -3650,9 +3503,9 @@ class PinnedPopulationNeedsItsAudit(unittest.TestCase):
     def test_every_population_has_a_missing_audit_refusal_test(self):
         import selection
         other_refusal_tests = {
-            "klt_raw": KltRawAudit.test_klt_raw_without_its_audit_is_refused,
-            "offset_klt_raw": OffsetKltAudit.test_offset_klt_raw_without_its_audit_is_refused,
-            "slew_klt": SlewKltAudit.test_envelope_without_its_audit_is_refused,
+            "klt_raw": KltRawAudit.test_pinned_artifacts_without_their_audit_are_refused,
+            "offset_klt_raw": OffsetKltAudit.test_pinned_artifacts_without_their_audit_are_refused,
+            "slew_klt": SlewKltAudit.test_pinned_artifacts_without_their_audit_are_refused,
             "cmrr_psrr_klt": CmrrPsrrKltAudit.test_cmrr_psrr_klt_without_its_audit_is_refused,
             "swing_two_pass": self.test_two_pass_swing_requires_the_swing_audit,
         }
@@ -4254,30 +4107,6 @@ class SchematicOpenLoopAndVersionPolicy(RawAuditCase):
         self.fx.save_selection()
         return {"rid": rid, "cdir": cdir, "csv": out_csv, "md": out_md, "snap": snap}
 
-    def edit_klt_json(self, kind: str, mutate, repin: bool = True) -> None:
-        pin = self.raw()["files"][kind]
-        path = self.fx.root / pin["path"]
-        doc = json.loads(path.read_text(encoding="utf-8"))
-        mutate(doc)
-        path.write_text(json.dumps(doc), encoding="utf-8")
-        if repin:
-            pin["sha256"] = generate.sha256_file(path)
-            self.fx.save_selection()
-
-    def corner(self, doc: dict, pid: str | None = None) -> dict:
-        pid = pid or self.POINT
-        for c in doc["corners"]:
-            if f"{c['process']}_{int(c['temperature_c'])}C_{float(c['supply_v']['vdd']):.2f}V" == pid:
-                return c
-        raise KeyError(pid)
-
-    def set_value(self, doc: dict, name: str, value, status: str | None = None, pid: str | None = None) -> None:
-        for m in self.corner(doc, pid)["measurements"]:
-            if m["name"] == name:
-                m["value"] = value
-                if status is not None:
-                    m["status"] = status
-
     def make_sidecar(self, record_id: str, ngspice: str) -> dict:
         sys.path.insert(0, str(REPO / "sim" / "tools"))
         import env_identity
@@ -4391,7 +4220,7 @@ class SchematicOpenLoopAndVersionPolicy(RawAuditCase):
         # (d) envelope engine_version (47) vs worker banner (ngspice-46)
         self.fresh()
         self.install_schematic_run(engine_version="47")
-        self.edit_klt_json(
+        self.edit_json(
             "op",
             lambda d: d["environment"]["remote"]["worker_environment"]["simulator"].update(
                 version_banner="******\n** ngspice-46 : Circuit level simulation program\n******\n"
@@ -4469,7 +4298,7 @@ class SchematicOpenLoopAndVersionPolicy(RawAuditCase):
                     self.corner(d)["status"] = "fail"
                     d.update(status="fail", passed=44, failed=1)
 
-                self.edit_klt_json("op", rail_internal)
+                self.edit_json("op", rail_internal)
                 errors = self.assert_error(f"point {self.POINT} fails definition check open_loop_klt_audit")
                 self.assertTrue(any("operating point" in e for e in errors), errors)
 
@@ -4480,12 +4309,12 @@ class SchematicOpenLoopAndVersionPolicy(RawAuditCase):
 
         self.fresh()
         self.install_schematic_run(engine_version="47")
-        self.edit_klt_json("op", lambda d: self.set_value(d, "op_vd1_rail_frac", 0.5))
+        self.edit_json("op", lambda d: self.set_value(d, "op_vd1_rail_frac", 0.5))
         self.assert_error("op_vd1_rail_frac")
 
     def test_osdi_mismatch_between_envelopes_is_rejected(self):
         self.install_schematic_run(engine_version="47")
-        self.edit_klt_json("op", lambda d: d["environment"]["osdi_preload"][0].update(sha256="0" * 64))
+        self.edit_json("op", lambda d: d["environment"]["osdi_preload"][0].update(sha256="0" * 64))
         self.assert_error("OSDI")
 
         # Runner-resolved OSDI preload (klt >= 0.9 batch schema) and engine_build banner:
@@ -4500,11 +4329,11 @@ class SchematicOpenLoopAndVersionPolicy(RawAuditCase):
             ]
             d["environment"]["engine_build"] = {"version_banner": "** ngspice-47 : Circuit level simulation program"}
 
-        self.edit_klt_json("ac", to_runner_osdi)
-        self.edit_klt_json("op", to_runner_osdi)
+        self.edit_json("ac", to_runner_osdi)
+        self.edit_json("op", to_runner_osdi)
         self.assertEqual(self.errors(self.fx.build()), [])
 
-        self.edit_klt_json("op", lambda d: d["environment"]["engine_build"].update(version_banner="** ngspice-46 : mismatch"))
+        self.edit_json("op", lambda d: d["environment"]["engine_build"].update(version_banner="** ngspice-46 : mismatch"))
         self.assert_error("engine_build banner does not name ngspice-47")
 
     def test_changed_design_requires_new_run_and_rejects_stale_dut_or_stale_continuity(self):
@@ -4605,7 +4434,7 @@ class SchematicOpenLoopAndVersionPolicy(RawAuditCase):
             self.corner(d)["status"] = "fail"
             d.update(status="fail", passed=44, failed=1)
 
-        self.edit_klt_json("ac", miss_av0)
+        self.edit_json("ac", miss_av0)
         content = self.fx.build()
         self.assertEqual(self.errors(content), [])
         row = rows_by_id(content)["dc_gain"]
