@@ -1,6 +1,7 @@
 """Prepare the batch swing requests and replay their retained evidence offline."""
 import argparse
 import csv
+import hashlib
 import json
 import math
 import os
@@ -31,6 +32,33 @@ def pin(path):
     return {"path": str(path.relative_to(ROOT)), "sha256": "sha256:" + C.E.sha256_file(path)}
 
 
+def submission_inputs(bundle):
+    return {
+        "bundle": str(bundle.relative_to(ROOT)),
+        "bench_sha256": C.E.sha256_file(bundle / BENCH),
+        "dut_sha256": C.E.sha256_file(bundle / DUT),
+    }
+
+
+def submission_job(bundle, phase, expected=None):
+    """Verify klt's submit-only receipt against the original request and snapshots."""
+    request = read(bundle / f"{phase}.request.json")
+    if request["netlist"] != str(BENCH) or request["_comment"] != submission_inputs(bundle):
+        raise C.InputError(f"{phase} submitted bench or DUT differs from the retained snapshots")
+    receipt = read(bundle / phase / "batch-receipt.json")
+    # klt hashes canonical JSON, excluding submission-only batch flags. The
+    # on-disk request carries batch={} and the capacity wait is a CLI flag.
+    canonical = json.dumps(request, sort_keys=True, separators=(",", ":")).encode()
+    if receipt["request_sha256"] != hashlib.sha256(canonical).hexdigest():
+        raise C.InputError(f"{phase} request differs from the submission receipt")
+    job = receipt["job_id"]
+    if not isinstance(job, str) or not re.fullmatch(r"[A-Za-z0-9._-]+", job):
+        raise C.InputError(f"{phase} submission receipt has an invalid job ID")
+    if expected is not None and job != expected:
+        raise C.InputError(f"{phase} job ID differs from the submission receipt")
+    return job
+
+
 def coarse_request(bundle):
     # Keep the same relative .include and the exact bytes that both jobs stage.
     for rel in (BENCH, DUT):
@@ -38,7 +66,7 @@ def coarse_request(bundle):
         path.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(ROOT / rel, path)
     request = read(HERE / "swing.request.json")
-    request["netlist"] = str(BENCH)
+    request.update(netlist=str(BENCH), batch={}, _comment=submission_inputs(bundle))
     write(bundle / "coarse.request.json", request)
 
 
@@ -55,7 +83,6 @@ def fine_request(coarse_request, passes):
     options = dict(coarse_request["options"], capture_only=False,
                    save_vectors=["v(id)", "v(out)", "i(vdd)", "v(vdd)", "v(vss)"])
     return dict(coarse_request, analysis={"kind": "dc", "args": rules[0]["args"]},
-                _comment=["Fine DC pass. Every point has its own measured crossing."],
                 analysis_overrides=rules, options=options,
                 measurements=read(HERE / "swing.nominal.request.json")["measurements"])
 
@@ -77,6 +104,12 @@ def identity(result, bundle):
         raise C.InputError("worker result does not identify the SG13G2 MOS model deck")
     if e["engine"] != "ngspice" or not e["engine_version"] or e.get("engine_host") != "worker":
         raise C.InputError("missing worker ngspice identity")
+    worker = remote["worker_environment"]
+    simulator = worker.get("simulator") or {}
+    banner = simulator.get("version_banner")
+    if (worker.get("capture") != "ok" or simulator.get("version_probe") != "ok"
+            or not isinstance(banner, str) or not banner.strip()):
+        raise C.InputError("missing worker ngspice build banner")
     staged = sorted((m["name"], m["sha256"]) for m in e["staged_model_inputs"])
     observed = sorted((m["name"], m["sha256"]) for m in remote["runner_model_inputs"])
     if (not staged or staged != observed or not remote.get("ami_id")
@@ -86,7 +119,8 @@ def identity(result, bundle):
         "bench_sha256": bench["sha256"].removeprefix("sha256:"),
         "dut_sha256": dut["sha256"].removeprefix("sha256:"),
         "simulator": "ngspice-" + str(e["engine_version"]),
-        "engine_sha256": e["engine_build"]["binary_sha256"],
+        "worker_version_banner": banner,
+        "client_engine_sha256": e["engine_build"]["binary_sha256"],
         "model_inputs": dict(observed),
         "ami_id": remote["ami_id"],
     }
@@ -116,7 +150,9 @@ def extract(bundle, phase, artifacts=None):
         if result["coverage"].get("capture_only") is not True or result["status"] != "pass":
             raise C.InputError("coarse waveform capture did not pass")
     ident = identity(result, bundle)
-    sources = {"request": pin(req_path), "result": pin(res_path)}
+    job = submission_job(bundle, phase, result["environment"]["remote"]["job_id"])
+    sources = {"request": pin(req_path), "result": pin(res_path),
+               "receipt": pin(bundle / phase / "batch-receipt.json")}
     overrides = {}
     for rule in request.get("analysis_overrides", []):
         match = rule["match"]
@@ -155,7 +191,7 @@ def extract(bundle, phase, artifacts=None):
             shutil.copyfile(path, waveform)
         start, stop, step = float(start), float(stop), float(step)
         vid, data = read_curves(waveform, vectors, pid, phase, start, stop, step)
-        p = dict(ident, pid=pid, process=process, temp_c=temp, vdd_v=supply["vdd"], vcm_v=supply["vcm"],
+        p = dict(ident, job_id=job, pid=pid, process=process, temp_c=temp, vdd_v=supply["vdd"], vcm_v=supply["vcm"],
                  start=start, stop=stop, step=step, vid=vid, vout=data[0],
                  sources=dict(sources, waveform=pin(waveform)))
         if phase == "fine":
@@ -209,7 +245,7 @@ def finish(bundle, fine_artifacts=None, *, replay=False):
     for phase, passes in (("coarse", coarse), ("fine", fine)):
         for p in passes:
             pid = p["pid"]
-            for field in ("model_inputs", "ami_id", "engine_sha256"):
+            for field in ("model_inputs", "ami_id", "worker_version_banner"):
                 if p[field] != coarse[0][field]:
                     raise T.PairError(pid, f"{phase} worker differs on {field}")
             path = bundle / f"{pid}_{phase}.json"
@@ -260,13 +296,26 @@ def main():
         sub.add_argument("bundle", type=Path)
         if name in ("fine-request", "finish"):
             sub.add_argument("artifacts", type=Path)
+    sub = commands.add_parser("submission-job")
+    sub.add_argument("bundle", type=Path)
+    sub.add_argument("phase", choices=("coarse", "fine"))
+    sub.add_argument("expected", nargs="?")
     args = ap.parse_args()
     bundle = args.bundle.resolve()
     if args.command == "coarse-request":
         coarse_request(bundle)
+    elif args.command == "submission-job":
+        print(submission_job(bundle, args.phase, args.expected))
     elif args.command == "fine-request":
         passes = extract(bundle, "coarse", args.artifacts)
-        write(bundle / "fine.request.json", fine_request(read(bundle / "coarse.request.json"), passes))
+        request = fine_request(read(bundle / "coarse.request.json"), passes)
+        path = bundle / "fine.request.json"
+        if path.exists():
+            if read(path) != request:
+                raise C.InputError("original fine request differs from the recovered coarse curves")
+        else:
+            write(path.with_suffix(".tmp"), request)
+            os.replace(path.with_suffix(".tmp"), path)
     elif args.command == "finish":
         return finish(bundle, args.artifacts)
     else:

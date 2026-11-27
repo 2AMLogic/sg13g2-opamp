@@ -382,18 +382,30 @@ Run the tests (offline, no simulator):
 
 ### Two-pass batch swing audit
 
-Run `klt/run.sh grid` with the SG13G2 toolchain and Spot submit profile.
+From the repository root, run `sim/output-swing/klt/run.sh grid` with the SG13G2 toolchain and Spot submit profile.
 The first request captures 45 coarse DC curves. The second uses klt
 `analysis_overrides` to centre each 10 µV sweep on that corner’s serialized
 crossing ±25 mV. Both batch submissions use the runner’s capacity wait.
-`SWING_KLT_ATTACH` and `SWING_KLT_FINE_ATTACH` accept the corresponding
-job IDs when recovering an interrupted run with the same inputs.
+The runner prints the bundle path `sim/.evidence-scratch/swing-<run-id>/`.
+Each phase first uses `--submit-only` and saves klt’s receipt in the bundle.
+The request digest in that receipt covers the run path and SHA-256 hashes
+of the bench and DUT snapshots. Collection and replay check the request
+digest, both snapshots and the job ID. The comparison checks the ngspice
+build banner observed on each worker. The executable digest describes the
+collecting client.
 
-The runner prints its bundle directory under `sim/.evidence-scratch/`.
-It retains the submitted requests, simulator results, original waveform JSON,
-bench and DUT snapshots, audited CSV and per-pass files. `selection.json`
-contains the `csv`, `csv_sha256` and `swing_two_pass` fields for the report
-reader. Its presence marks a complete audited population. `compare.json`
+To recover an interrupted run, use its original bundle and run ID in
+`sim/output-swing/klt/run.sh grid <run-id>`. The runner collects the
+recorded jobs and submits the fine pass if it has yet to start.
+`SWING_KLT_ATTACH` and `SWING_KLT_FINE_ATTACH` optionally assert the
+expected coarse and fine job IDs. A missing or mismatched submission
+receipt stops recovery of that job. The runner reads the retained DUT
+even if the checkout has since changed.
+
+The bundle retains the submitted requests and receipts, simulator results,
+original waveform JSON, bench and DUT snapshots, audited CSV and per-pass
+files. `selection.json` contains the `csv`, `csv_sha256` and `swing_two_pass`
+fields for the report reader. Its presence marks a complete audited population. `compare.json`
 names the newest harness record with an identical DUT snapshot and reports
 each field by PVT. Exit 5 preserves the measurements when the comparison
 disagrees or a matching baseline is unavailable. The supporting voltages
@@ -403,8 +415,30 @@ exactly.
 
 Replay with `python3 sim/output-swing/klt/grid.py replay <bundle>` from a
 checkout containing the retained bundle at its recorded repo-relative path.
-For a new signoff record, store the bundle using the artifact manifest
-workflow in `manifests/README.md`.
+
+To store a completed run, set `id` to the printed run ID and run the
+following from the repository root with `KLT_ARTIFACT_BROKER` set. The
+archive contains the original repository-relative paths. The store stages
+its upload in a sibling directory and leaves the live bundle available for replay.
+
+```bash
+bundle="sim/.evidence-scratch/swing-$id"
+transfer=$(mktemp -d)
+test -s "$bundle/selection.json" &&
+  tar -czf "$transfer/swing.tar.gz" "$bundle" &&
+  python3 sim/tools/store_evidence.py --bench swing --run-id "$id" "$transfer/swing.tar.gz"
+```
+
+Commit the generated manifest and Markdown summary under `manifests/artifacts/`.
+In a fresh checkout, set the same `id` and restore the verified archive
+before replaying the pinned evidence.
+
+```bash
+transfer=$(mktemp -d)
+klt artifact get "manifests/artifacts/swing-${id}.manifest.json" -o "$transfer/swing.tar.gz" &&
+  tar -xkzf "$transfer/swing.tar.gz" &&
+  python3 sim/output-swing/klt/grid.py replay "sim/.evidence-scratch/swing-$id"
+```
 
 ### Archived 45-point envelope
 

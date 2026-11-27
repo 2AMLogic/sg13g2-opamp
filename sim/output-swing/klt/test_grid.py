@@ -1,5 +1,6 @@
 """Producer controls using the archived harness curves as test inputs."""
 import csv
+import hashlib
 import json
 import shutil
 import sys
@@ -62,18 +63,33 @@ class ArchivedCurves(unittest.TestCase):
         for name, value in (("ROOT", root), ("HERE", here), ("POINTS", self.points)):
             self.enterContext(patch.object(grid, name, value))
         self.bundle = root / "bundle"
+        self.capture()
+
+    def capture(self):
         grid.coarse_request(self.bundle)
+        self.submit("coarse")
         self.emit("coarse")
-        passes = grid.extract(self.bundle, "coarse", root / "coarse")
+        passes = grid.extract(self.bundle, "coarse", grid.ROOT / "coarse")
         grid.write(self.bundle / "fine.request.json",
                    grid.fine_request(grid.read(self.bundle / "coarse.request.json"), passes))
+        self.submit("fine")
         self.emit("fine")
+
+    def submit(self, phase):
+        # klt --submit-only uses the canonical request digest without capacity flags.
+        req = grid.read(self.bundle / f"{phase}.request.json")
+        digest = hashlib.sha256(json.dumps(req, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+        out = self.bundle / phase
+        out.mkdir()
+        grid.write(out / "batch-receipt.json", {"job_id": f"{self.bundle.name}-{phase}", "request_sha256": digest})
 
     def emit(self, phase):
         req = grid.read(self.bundle / f"{phase}.request.json")
         env = grid.read(HERE / "records/20261101-010941-b7a1a86.sim.json")
         for item in env["environment"]["netlist_closure"]:
-            item["path"] = "bundle/" + item["path"]
+            retained = self.bundle / item["path"]
+            item.update(path=str(retained.relative_to(grid.ROOT)), sha256=compare.E.sha256_file(retained))
+        env["environment"]["remote"]["job_id"] = f"{self.bundle.name}-{phase}"
         corners = []
         for corner in env["corners"]:
             supply = corner["supply_v"]
@@ -128,22 +144,69 @@ class FullGridAdmission(ArchivedCurves):
 
 class SwingGridControls(ArchivedCurves):
     def test_changed_dut_without_a_baseline_retains_audited_results(self):
-        snapshot = self.bundle / grid.DUT
-        snapshot.write_text(snapshot.read_text().replace("w=3.2u", "w=6.4u", 1))
-        digest = compare.E.sha256_file(snapshot)
-        self.assertNotEqual(digest, compare.E.sha256_file(grid.ROOT / grid.DUT))
-        for phase in ("coarse", "fine"):
-            path = self.bundle / f"{phase}.sim.json"
-            envelope = grid.read(path)
-            for item in envelope["environment"]["netlist_closure"]:
-                if item["path"].endswith(str(grid.DUT)):
-                    item["sha256"] = digest
-            grid.write(path, envelope)
+        dut = grid.ROOT / grid.DUT
+        dut.write_text(dut.read_text().replace("w=3.2u", "w=6.4u", 1))
+        self.bundle = grid.ROOT / "changed"
+        self.capture()
         self.assertEqual(grid.finish(self.bundle, grid.ROOT / "fine"), 5)
         self.assertEqual(grid.finish(self.bundle, replay=True), 5)
         report = grid.read(self.bundle / "compare.json")
         self.assertIsNone(report["baseline"])
         self.assertFalse(report["verdicts"]["mos_ss_125C_1.08V"]["swing_span_v"])
+
+    def test_recovery_after_dut_edit_uses_the_submitted_snapshot(self):
+        (grid.ROOT / grid.DUT).write_text("* edited after submission")
+        for phase in ("coarse", "fine"):
+            job = f"{self.bundle.name}-{phase}"
+            self.assertEqual(grid.submission_job(self.bundle, phase, job), job)
+            with self.assertRaisesRegex(compare.InputError, "job ID"):
+                grid.submission_job(self.bundle, phase, "another-job")
+        self.assertEqual(grid.finish(self.bundle, grid.ROOT / "fine"), 0)
+
+        # The collecting client can regenerate its closure from a changed
+        # snapshot. Even a rewritten request cannot match the old receipt.
+        shutil.copyfile(grid.ROOT / grid.DUT, self.bundle / grid.DUT)
+        for phase in ("coarse", "fine"):
+            self.emit(phase)
+            with self.assertRaisesRegex(compare.InputError, "submitted bench or DUT"):
+                grid.extract(self.bundle, phase)
+            path = self.bundle / f"{phase}.request.json"
+            grid.write(path, dict(grid.read(path), _comment=grid.submission_inputs(self.bundle)))
+            with self.assertRaisesRegex(compare.InputError, "submission receipt"):
+                grid.extract(self.bundle, phase)
+
+    def test_result_job_and_submit_receipt_are_required(self):
+        path = self.bundle / "fine.sim.json"
+        envelope = grid.read(path)
+        envelope["environment"]["remote"]["job_id"] = "another-job"
+        grid.write(path, envelope)
+        with self.assertRaisesRegex(compare.InputError, "job ID"):
+            grid.finish(self.bundle, grid.ROOT / "fine")
+        (self.bundle / "fine/batch-receipt.json").unlink()
+        with self.assertRaises(FileNotFoundError):
+            grid.submission_job(self.bundle, "fine")
+
+    def test_compares_worker_build_banners_independently_of_client_digest(self):
+        path = self.bundle / "fine.sim.json"
+        envelope = grid.read(path)
+        env = envelope["environment"]
+        worker = env["remote"]["worker_environment"]["simulator"]
+        banner = worker["version_banner"]
+        worker["version_banner"] = banner.replace("Oct  1", "Oct  2")
+        grid.write(path, envelope)
+        with self.assertRaisesRegex(two_pass.PairError, "worker_version_banner"):
+            grid.finish(self.bundle, grid.ROOT / "fine")
+        worker["version_banner"] = ""
+        grid.write(path, envelope)
+        with self.assertRaisesRegex(compare.InputError, "worker ngspice build banner"):
+            grid.finish(self.bundle, grid.ROOT / "fine")
+        worker["version_banner"] = banner
+        env["engine_build"]["binary_sha256"] = "a" * 64
+        grid.write(path, envelope)
+        self.assertEqual(grid.finish(self.bundle, grid.ROOT / "fine"), 0)
+        evidence = grid.read(self.bundle / f"{PID}_fine.json")
+        self.assertEqual(evidence["client_engine_sha256"], "a" * 64)
+        self.assertEqual(evidence["worker_version_banner"], banner)
 
     def test_supporting_field_discrepancy_names_the_field_and_corner(self):
         # Give the fixture its own CSV, preserving the original snapshot and DUT.

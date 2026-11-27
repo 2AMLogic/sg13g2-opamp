@@ -24,6 +24,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
@@ -96,10 +97,10 @@ def store(root: Path, bench: str, run_id: str, paths: list[Path], klt: str) -> P
         raise StoreError(f"{manifest_path.name} already exists (append-only)")
     files = collect(paths)
 
-    scratch = root / SCRATCH_REL / stem
-    if scratch.exists():
-        shutil.rmtree(scratch)
-    try:
+    scratch_root = root / SCRATCH_REL
+    scratch_root.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix=f"{stem}-", dir=scratch_root) as staging:
+        scratch = Path(staging)
         for src, name in files:
             dst = scratch / "objects" / name
             dst.parent.mkdir(parents=True, exist_ok=True)
@@ -128,8 +129,6 @@ def store(root: Path, bench: str, run_id: str, paths: list[Path], klt: str) -> P
             f.write(tmp_manifest.read_text())
         with summary_path.open("x") as f:
             f.write(summary_md(bench, run_id, manifest))
-    finally:
-        shutil.rmtree(scratch, ignore_errors=True)
     return manifest_path
 
 
