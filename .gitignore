@@ -87,6 +87,7 @@ node_modules/
 .loom/api-keys-*/
 .loom/account-health.json
 .loom/account-health.lock
+.loom/account-ranking.codex
 .loom/CANARY
 .loom/*.log
 .loom/*.sock
@@ -102,6 +103,8 @@ node_modules/
 .loom/gh-config-by-owner.*/
 .loom/gh-config-by-owner-*/
 /.loom-local/
+/node_modules/
+/pnpm-lock.yaml
 # <<< loom-managed <<<
 # fleet-dispatcher account-ranking state (repo-local until Loom's default ignore set covers it)
 .loom/account-ranking.*
